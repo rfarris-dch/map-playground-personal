@@ -1,0 +1,59 @@
+# DDD Baseline (Early Stage)
+
+## Purpose
+
+Keep the codebase structured from day one without introducing layers that do not pay for themselves yet.
+
+## Current Bounded Contexts
+
+- `geo-serving`: API endpoints that return map-facing geospatial data.
+- `map-web`: viewport-driven data loading and map rendering behavior.
+- `shared-contracts`: cross-app schemas, routes, headers, and transport helpers.
+
+## What We Enforce Now
+
+1. Contracts are centralized in `packages/contracts` and reused by API and web.
+2. Route modules own HTTP concerns: parsing, status codes, headers, and response shape.
+3. Feature logic in web is feature-owned (`src/features/<feature>/...`), not global-hook buckets.
+4. Map runtime capabilities stay behind `packages/map-engine`.
+5. Request correlation (`x-request-id`) is preserved across web and API boundaries.
+
+## Current API Shape (Right-Sized for Read Slices)
+
+```text
+apps/api/src/geo/facilities/
+  facilities.route.ts      # HTTP + query parsing + response build
+  facilities.repo.ts       # Postgres read access
+  facilities.mapper.ts     # row -> typed Feature mapping
+```
+
+This keeps the route transport-focused while preserving a single Postgres-backed runtime path.
+Current facilities endpoints include bbox collection fetch and by-id detail fetch.
+
+## When To Split Route Into More Layers
+
+Promote to `route -> service -> repository -> mapper` only when one or more are true:
+
+1. Data source logic is no longer trivial (real DB joins, reusable query policies).
+2. The same domain rules are reused across endpoints.
+3. Mapping from persistence rows to contract payloads becomes substantial.
+4. Route handlers exceed a maintainable size or mix transport and domain decisions.
+
+## What We Avoid (For Now)
+
+- Generic repository abstractions that hide SQL intent.
+- Domain events and aggregates for simple read-only endpoints.
+- Inheritance-heavy base services.
+- One-file-per-concept ceremony before complexity requires it.
+- Runtime fallback branches that hide missing infrastructure.
+
+## Ubiquitous Language (Current Terms)
+
+- **Facility**: a single site feature shown on the map.
+- **BBox Query**: viewport-bounded facilities fetch.
+- **Feature Collection**: GeoJSON feature set plus response metadata.
+
+## Rule Of Thumb
+
+Keep modules small and explicit.
+Add new layers only when they remove real coupling or repeated logic, not to satisfy a template architecture.

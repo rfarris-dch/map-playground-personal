@@ -1,0 +1,24 @@
+{
+  "name": "@map-migration/map-layer-catalog",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "echo 'map-layer-catalog tests not implemented yet'",
+    "lint": "echo 'map-layer-catalog lint not implemented yet'",
+    "dev": "tsc -w -p tsconfig.json"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ]
+}
