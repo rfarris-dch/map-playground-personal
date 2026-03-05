@@ -1,27 +1,44 @@
 import { z } from "zod";
-import { GeometrySchema, ResponseMetaSchema } from "./shared-contracts";
+import {
+  BBoxSchema,
+  GeometrySchema,
+  PolygonGeometrySchema,
+  ResponseMetaSchema,
+} from "@/shared-contracts";
+
+export type {
+  ParcelAoi,
+  ParcelDetailResponse,
+  ParcelEnrichRequest,
+  ParcelFeature,
+  ParcelGeometryMode,
+  ParcelLookupRequest,
+  ParcelProfile,
+  ParcelResponseMeta,
+  ParcelSyncDbLoadProgress,
+  ParcelSyncPhase,
+  ParcelSyncProgress,
+  ParcelSyncRunReason,
+  ParcelSyncRunStatus,
+  ParcelSyncStateProgress,
+  ParcelSyncTileBuildProgress,
+  ParcelsFeatureCollection,
+  ParcelsSyncStatusResponse,
+} from "./parcels-contracts.types";
 
 export const ParcelGeometryModeSchema = z.enum(["none", "centroid", "simplified", "full"]);
 // Profile currently represents caller intent metadata and does not yet alter payload shaping.
 export const ParcelProfileSchema = z.enum(["analysis_v1", "full_170"]);
 export const ParcelAoiTypeSchema = z.enum(["bbox", "polygon", "county", "tileSet"]);
 
-const ParcelLongitudeSchema = z.number().finite().min(-180).max(180);
-const ParcelLatitudeSchema = z.number().finite().min(-90).max(90);
-
 export const ParcelAoiBboxSchema = z.object({
   type: z.literal("bbox"),
-  bbox: z.object({
-    west: ParcelLongitudeSchema,
-    south: ParcelLatitudeSchema,
-    east: ParcelLongitudeSchema,
-    north: ParcelLatitudeSchema,
-  }),
+  bbox: BBoxSchema,
 });
 
 export const ParcelAoiPolygonSchema = z.object({
   type: z.literal("polygon"),
-  geometry: GeometrySchema,
+  geometry: PolygonGeometrySchema,
 });
 
 export const ParcelAoiCountySchema = z.object({
@@ -48,24 +65,6 @@ export const ParcelAoiSchema = z
     ParcelAoiTileSetSchema,
   ])
   .superRefine((aoi, ctx) => {
-    if (aoi.type === "bbox") {
-      if (aoi.bbox.west >= aoi.bbox.east) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "bbox requires west < east",
-          path: ["bbox", "east"],
-        });
-      }
-      if (aoi.bbox.south >= aoi.bbox.north) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "bbox requires south < north",
-          path: ["bbox", "north"],
-        });
-      }
-      return;
-    }
-
     if (aoi.type !== "tileSet") {
       return;
     }
@@ -172,6 +171,40 @@ export const ParcelSyncStateProgressSchema = z.object({
   isCompleted: z.boolean().optional(),
 });
 
+export const ParcelSyncDbLoadProgressSchema = z.object({
+  stepKey: z.string().min(1),
+  percent: z.number().min(0).max(100).nullable().optional(),
+  loadedFiles: z.number().int().nonnegative().nullable().optional(),
+  totalFiles: z.number().int().positive().nullable().optional(),
+  currentFile: z.string().nullable().optional(),
+  completedStates: z.number().int().nonnegative().nullable().optional(),
+  totalStates: z.number().int().nonnegative().nullable().optional(),
+  activeWorkers: z.array(z.string().min(1)).optional(),
+});
+
+export const ParcelSyncTileBuildProgressSchema = z.object({
+  stage: z.enum(["build", "convert", "ready"]),
+  percent: z.number().min(0).max(100).nullable().optional(),
+  logBytes: z.number().int().nonnegative().nullable().optional(),
+  readFeatures: z.number().int().nonnegative().nullable().optional(),
+  totalFeatures: z.number().int().nonnegative().nullable().optional(),
+  workDone: z.number().int().nonnegative().nullable().optional(),
+  workLeft: z.number().int().nonnegative().nullable().optional(),
+  workTotal: z.number().int().nonnegative().nullable().optional(),
+  convertPercent: z.number().min(0).max(100).nullable().optional(),
+  convertDone: z.number().int().nonnegative().nullable().optional(),
+  convertTotal: z.number().int().nonnegative().nullable().optional(),
+  convertAttempt: z.number().int().positive().nullable().optional(),
+  convertAttemptTotal: z.number().int().positive().nullable().optional(),
+});
+
+export const ParcelSyncProgressSchema = z.object({
+  schemaVersion: z.literal(1),
+  phase: ParcelSyncPhaseSchema,
+  dbLoad: ParcelSyncDbLoadProgressSchema.optional(),
+  tileBuild: ParcelSyncTileBuildProgressSchema.optional(),
+});
+
 export const ParcelSyncRunStatusSchema = z.object({
   runId: z.string().nullable(),
   reason: ParcelSyncRunReasonSchema.nullable(),
@@ -182,6 +215,7 @@ export const ParcelSyncRunStatusSchema = z.object({
   durationMs: z.number().int().nonnegative().nullable(),
   exitCode: z.number().int().nullable(),
   summary: z.string().nullable(),
+  progress: ParcelSyncProgressSchema.nullable().optional(),
   states: z.array(ParcelSyncStateProgressSchema),
   statesCompleted: z.number().int().nonnegative(),
   statesTotal: z.number().int().nonnegative(),
@@ -202,18 +236,3 @@ export const ParcelsSyncStatusResponseSchema = z.object({
   latestRunCompletedAt: z.string().datetime().nullable(),
   run: ParcelSyncRunStatusSchema,
 });
-
-export type ParcelGeometryMode = z.infer<typeof ParcelGeometryModeSchema>;
-export type ParcelProfile = z.infer<typeof ParcelProfileSchema>;
-export type ParcelAoi = z.infer<typeof ParcelAoiSchema>;
-export type ParcelFeature = z.infer<typeof ParcelFeatureSchema>;
-export type ParcelResponseMeta = z.infer<typeof ParcelResponseMetaSchema>;
-export type ParcelDetailResponse = z.infer<typeof ParcelDetailResponseSchema>;
-export type ParcelsFeatureCollection = z.infer<typeof ParcelsFeatureCollectionSchema>;
-export type ParcelLookupRequest = z.infer<typeof ParcelLookupRequestSchema>;
-export type ParcelEnrichRequest = z.infer<typeof ParcelEnrichRequestSchema>;
-export type ParcelSyncPhase = z.infer<typeof ParcelSyncPhaseSchema>;
-export type ParcelSyncRunReason = z.infer<typeof ParcelSyncRunReasonSchema>;
-export type ParcelSyncStateProgress = z.infer<typeof ParcelSyncStateProgressSchema>;
-export type ParcelSyncRunStatus = z.infer<typeof ParcelSyncRunStatusSchema>;
-export type ParcelsSyncStatusResponse = z.infer<typeof ParcelsSyncStatusResponseSchema>;

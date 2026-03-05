@@ -1,5 +1,12 @@
 <script setup lang="ts">
-  import { ChevronDown, PanelLeftClose, PanelLeftOpen } from "lucide-vue-next";
+  import {
+    ChevronDown,
+    Eye,
+    EyeOff,
+    PanelLeftClose,
+    PanelLeftOpen,
+    ScanSearch,
+  } from "lucide-vue-next";
   import {
     AccordionContent,
     AccordionHeader,
@@ -7,7 +14,9 @@
     AccordionRoot,
     AccordionTrigger,
   } from "reka-ui";
+  import Button from "@/components/ui/button/button.vue";
   import { useAppShell } from "@/features/app/use-app-shell";
+  import BasemapControls from "@/features/basemap/components/basemap-controls.vue";
   import BoundariesControls from "@/features/boundaries/components/boundaries-controls.vue";
   import BoundaryHoverTooltip from "@/features/boundaries/components/boundary-hover-tooltip.vue";
   import FacilitiesControls from "@/features/facilities/components/facilities-controls.vue";
@@ -15,20 +24,25 @@
   import FacilityDetailDrawer from "@/features/facilities/facility-detail/components/facility-detail-drawer.vue";
   import FiberLocatorControls from "@/features/fiber-locator/components/fiber-locator-controls.vue";
   import FiberLocatorHoverTooltip from "@/features/fiber-locator/components/fiber-locator-hover-tooltip.vue";
+  import MeasureAnalysisPanel from "@/features/measure/components/measure-analysis-panel.vue";
   import MeasureToolbar from "@/features/measure/components/measure-toolbar.vue";
   import ParcelsControls from "@/features/parcels/components/parcels-controls.vue";
   import ParcelDetailDrawer from "@/features/parcels/parcel-detail/components/parcel-detail-drawer.vue";
   import PowerControls from "@/features/power/components/power-controls.vue";
   import PowerHoverTooltip from "@/features/power/components/power-hover-tooltip.vue";
+  import QuickViewOverlay from "@/features/quick-view/components/quick-view-overlay.vue";
+  import ScannerPanel from "@/features/scanner/components/scanner-panel.vue";
 
   const {
     mapContainer,
+    map,
     selectedFacility,
     selectedParcel,
     hoveredFacility,
     hoveredBoundary,
     hoveredFiber,
     hoveredPower,
+    basemapVisibility,
     boundaryVisibility,
     boundaryFacetOptions,
     boundaryFacetSelection,
@@ -43,6 +57,20 @@
     fiberSourceLayerOptions,
     selectedFiberSourceLayerNames,
     measureState,
+    measureSelectionSummary,
+    measureSelectionError,
+    isMeasureSelectionLoading,
+    quickViewActive,
+    scannerActive,
+    scannerSummary,
+    scannerFacilities,
+    scannerTotalCount,
+    scannerIsFiltered,
+    isScannerParcelsLoading,
+    scannerParcelsError,
+    isQuickViewVisible,
+    isScannerVisible,
+    isQuickViewDensityOk,
     isLayerPanelOpen,
     isMeasurePanelOpen,
     facilityDetailQuery,
@@ -50,6 +78,7 @@
     setPerspectiveVisibility,
     setBoundaryVisible,
     setBoundarySelectedRegionIds,
+    setBasemapLayerVisible,
     setParcelsVisible,
     setPowerLayerVisible,
     setFiberLayerVisibility,
@@ -58,9 +87,16 @@
     setMeasureMode,
     setMeasureAreaShape,
     finishMeasureSelection,
+    exportMeasureSelection,
+    exportScannerSelection,
     clearMeasure,
     clearSelectedFacility,
+    selectFacilityFromAnalysis,
     clearSelectedParcel,
+    toggleQuickView,
+    toggleScanner,
+    setScannerActive,
+    setQuickViewObjectCount,
     toggleLayerPanel,
     toggleMeasurePanel,
   } = useAppShell();
@@ -68,7 +104,11 @@
 
 <template>
   <main class="h-full w-full">
-    <section ref="map-container" class="relative h-full w-full" aria-label="Map preview">
+    <section
+      ref="map-container"
+      class="map-page-shell relative h-full w-full"
+      aria-label="Map preview"
+    >
       <button
         type="button"
         class="pointer-events-auto absolute left-4 top-4 z-40 inline-flex items-center gap-2 rounded-md border border-border/90 bg-card/95 px-3 py-2 text-xs font-semibold shadow-lg backdrop-blur-sm transition hover:bg-card"
@@ -93,6 +133,37 @@
           :default-value="[]"
           class="w-full overflow-hidden rounded-lg border border-border/90 bg-card/95 shadow-lg backdrop-blur-sm"
         >
+          <AccordionItem value="basemap" class="border-b border-border/70 last:border-b-0">
+            <AccordionHeader>
+              <AccordionTrigger
+                class="flex w-full items-center justify-between px-3 py-2 text-left text-xs font-semibold tracking-wide transition hover:bg-muted/40 [&[data-state=open]>svg]:rotate-180"
+              >
+                Basemap
+                <ChevronDown
+                  class="h-4 w-4 shrink-0 transition-transform duration-200"
+                  aria-hidden="true"
+                />
+              </AccordionTrigger>
+            </AccordionHeader>
+            <AccordionContent class="px-3 pb-3 pt-1">
+              <BasemapControls
+                :embedded="true"
+                :satellite-visible="basemapVisibility.satellite"
+                :landmarks-visible="basemapVisibility.landmarks"
+                :labels-visible="basemapVisibility.labels"
+                :roads-visible="basemapVisibility.roads"
+                :boundaries-visible="basemapVisibility.boundaries"
+                :buildings3d-visible="basemapVisibility.buildings3d"
+                @update:satellite-visible="setBasemapLayerVisible('satellite', $event)"
+                @update:landmarks-visible="setBasemapLayerVisible('landmarks', $event)"
+                @update:labels-visible="setBasemapLayerVisible('labels', $event)"
+                @update:roads-visible="setBasemapLayerVisible('roads', $event)"
+                @update:boundaries-visible="setBasemapLayerVisible('boundaries', $event)"
+                @update:buildings3d-visible="setBasemapLayerVisible('buildings3d', $event)"
+              />
+            </AccordionContent>
+          </AccordionItem>
+
           <AccordionItem value="boundaries" class="border-b border-border/70 last:border-b-0">
             <AccordionHeader>
               <AccordionTrigger
@@ -231,6 +302,39 @@
         </AccordionRoot>
       </aside>
 
+      <div class="map-quick-actions pointer-events-auto absolute z-40 flex gap-1.5">
+        <Button
+          size="sm"
+          variant="secondary"
+          :disabled="scannerTotalCount === 0"
+          :class="
+            quickViewActive
+              ? 'border border-cyan-500/30 bg-cyan-500/10 shadow-lg backdrop-blur-sm'
+              : 'border border-border/60 bg-card/95 shadow-lg backdrop-blur-sm'
+          "
+          @click="toggleQuickView"
+        >
+          <EyeOff v-if="quickViewActive" class="mr-1.5 h-3.5 w-3.5" />
+          <Eye v-else class="mr-1.5 h-3.5 w-3.5" />
+          Quick View
+          <span class="ml-1 text-[10px] text-muted-foreground">(G)</span>
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          :class="
+            scannerActive
+              ? 'border border-cyan-500/30 bg-cyan-500/10 shadow-lg backdrop-blur-sm'
+              : 'border border-border/60 bg-card/95 shadow-lg backdrop-blur-sm'
+          "
+          @click="toggleScanner"
+        >
+          <ScanSearch class="mr-1.5 h-3.5 w-3.5" />
+          Scanner
+          <span class="ml-1 text-[10px] text-muted-foreground">(V)</span>
+        </Button>
+      </div>
+
       <button
         type="button"
         class="pointer-events-auto absolute bottom-4 left-4 z-40 inline-flex items-center gap-2 rounded-md border border-border/90 bg-card/95 px-3 py-2 text-xs font-semibold shadow-lg backdrop-blur-sm transition hover:bg-card"
@@ -253,6 +357,46 @@
         @finish="finishMeasureSelection"
         @clear="clearMeasure"
       />
+
+      <MeasureAnalysisPanel
+        v-if="measureState.selectionRing !== null"
+        :summary="measureSelectionSummary"
+        :error-message="measureSelectionError"
+        :is-loading="isMeasureSelectionLoading"
+        @clear="clearMeasure"
+        @export="exportMeasureSelection"
+        @select-facility="selectFacilityFromAnalysis"
+      />
+
+      <QuickViewOverlay
+        v-if="isQuickViewVisible"
+        :active="isQuickViewVisible"
+        :facilities="scannerFacilities"
+        :map="map"
+        :density-limit="15"
+        @object-count="setQuickViewObjectCount"
+      />
+
+      <ScannerPanel
+        v-if="isScannerVisible"
+        :summary="scannerSummary"
+        :is-filtered="scannerIsFiltered"
+        :is-parcels-loading="isScannerParcelsLoading"
+        :parcels-error-message="scannerParcelsError"
+        @close="setScannerActive(false)"
+        @export="exportScannerSelection"
+        @select-facility="selectFacilityFromAnalysis"
+      />
+
+      <div
+        class="pointer-events-none absolute bottom-4 left-1/2 z-20 -translate-x-1/2 rounded-full border border-border/70 bg-card/90 px-3 py-1 text-[11px] text-muted-foreground shadow-lg backdrop-blur-sm"
+      >
+        Esc clears drawing/selection, then Scanner, then Quick View
+        <span v-if="quickViewActive && !isQuickViewDensityOk">
+          · showing largest facilities only</span
+        >
+        <span v-else-if="scannerTotalCount === 0"> · no facilities in current viewport</span>
+      </div>
 
       <FacilityHoverTooltip :hover-state="hoveredFacility" />
       <BoundaryHoverTooltip :hover-state="hoveredBoundary" />
@@ -277,3 +421,15 @@
     </section>
   </main>
 </template>
+
+<style>
+  .map-quick-actions {
+    top: 0.75rem;
+    right: 0.75rem;
+  }
+
+  .map-page-shell .maplibregl-ctrl-top-right {
+    top: 3.9rem;
+    right: 0.75rem;
+  }
+</style>

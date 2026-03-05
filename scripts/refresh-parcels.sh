@@ -2,10 +2,10 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-if [[ -f "${ROOT_DIR}/.env" ]]; then
+if [[ -f "${ROOT_DIR}/apps/api/.env" ]]; then
   set -a
   # shellcheck disable=SC1091
-  source "${ROOT_DIR}/.env"
+  source "${ROOT_DIR}/apps/api/.env"
   set +a
 fi
 
@@ -26,12 +26,13 @@ write_active_status() {
   local phase="$1"
   local is_running="$2"
   local summary="${3:-__none__}"
-  python3 - "${ACTIVE_STATUS_PATH}" "${RUN_ID}" "${phase}" "${is_running}" "${summary}" <<'PY'
+  local progress_json="${4:-__none__}"
+  python3 - "${ACTIVE_STATUS_PATH}" "${RUN_ID}" "${phase}" "${is_running}" "${summary}" "${progress_json}" <<'PY'
 import json
 import sys
 from datetime import datetime, timezone
 
-path, run_id, phase, is_running, summary = sys.argv[1:6]
+path, run_id, phase, is_running, summary, progress_raw = sys.argv[1:7]
 payload = {
     "runId": run_id,
     "phase": phase,
@@ -39,6 +40,19 @@ payload = {
     "updatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
     "summary": None if summary == "__none__" else summary,
 }
+
+progress = None
+if progress_raw != "__none__":
+    try:
+        candidate = json.loads(progress_raw)
+    except Exception:
+        candidate = None
+    if isinstance(candidate, dict):
+        progress = candidate
+
+if progress is not None:
+    payload["progress"] = progress
+
 with open(path, "w", encoding="utf-8") as handle:
     json.dump(payload, handle, indent=2)
     handle.write("\n")
@@ -49,10 +63,11 @@ start_status_heartbeat() {
   local phase="$1"
   local summary="${2:-__none__}"
   local interval_seconds="${3:-5}"
+  local progress_json="${4:-__none__}"
 
   (
     while true; do
-      write_active_status "${phase}" "1" "${summary}"
+      write_active_status "${phase}" "1" "${summary}" "${progress_json}"
       sleep "${interval_seconds}"
     done
   ) &
@@ -75,7 +90,7 @@ on_exit() {
   local code=$?
   stop_status_heartbeat "${STATUS_HEARTBEAT_PID}"
   if [[ ${code} -ne 0 ]]; then
-    write_active_status "failed" "0" "exit_code=${code}"
+    write_active_status "failed" "0" "exit_code=${code}" '{"schemaVersion":1,"phase":"failed"}'
   fi
 }
 
@@ -144,7 +159,7 @@ fi
 echo "[parcels] refresh start runId=${RUN_ID}"
 echo "[parcels] snapshot root=${SNAPSHOT_ROOT}"
 echo "[parcels] publish root=${PUBLISH_ROOT}"
-write_active_status "extracting" "1"
+write_active_status "extracting" "1" "__none__" '{"schemaVersion":1,"phase":"extracting"}'
 
 EXTRACT_CMD=(
   bun
@@ -171,12 +186,12 @@ if [[ ! -d "${RUN_DIR}" ]]; then
 fi
 
 echo "[parcels] loading canonical table and swapping current snapshot"
-write_active_status "loading" "1"
+write_active_status "loading" "1" "__none__" '{"schemaVersion":1,"phase":"loading"}'
 ACTIVE_STATUS_PATH="${ACTIVE_STATUS_PATH}" \
   bash "${ROOT_DIR}/scripts/load-parcels-canonical.sh" "${RUN_DIR}" "${RUN_ID}"
 
 echo "[parcels] building parcels draw PMTiles"
-write_active_status "building" "1"
+write_active_status "building" "1" "tiles:building" '{"schemaVersion":1,"phase":"building","tileBuild":{"stage":"build"}}'
 # Faster tile-build defaults for nationwide runs.
 : "${PARCELS_TILES_STAGE_GEOJSON_FILE:=1}"
 : "${PARCELS_TILES_REUSE_GEOJSON_FILE:=1}"
@@ -194,7 +209,7 @@ SCHEMA_METADATA_PATH="${PARCELS_TILE_SCHEMA_FILE:-${RUN_DIR}/layer-metadata.json
 BUILD_LOG_PATH="${SNAPSHOT_ROOT}/postextract-${RUN_ID}.log"
 echo "[parcels] tile schema metadata=${SCHEMA_METADATA_PATH}"
 echo "[parcels] tile build log path=${BUILD_LOG_PATH}"
-STATUS_HEARTBEAT_PID="$(start_status_heartbeat "building" "tiles:building" "5")"
+STATUS_HEARTBEAT_PID="$(start_status_heartbeat "building" "tiles:building" "5" '{"schemaVersion":1,"phase":"building","tileBuild":{"stage":"build"}}')"
 set +e
 PARCELS_TILE_SCHEMA_FILE="${SCHEMA_METADATA_PATH}" \
   bash "${ROOT_DIR}/scripts/build-parcels-draw-pmtiles.sh" "${RUN_ID}" 2>&1 | tee "${BUILD_LOG_PATH}"
@@ -215,7 +230,7 @@ if [[ -z "${PMTILES_PATH}" || ! -f "${PMTILES_PATH}" ]]; then
 fi
 
 echo "[parcels] publishing PMTiles manifest"
-write_active_status "publishing" "1"
+write_active_status "publishing" "1" "__none__" '{"schemaVersion":1,"phase":"publishing"}'
 bun run "${ROOT_DIR}/scripts/publish-parcels-manifest.ts" \
   "--dataset=parcels-draw-v1" \
   "--output-root=${PUBLISH_ROOT}" \
@@ -223,4 +238,4 @@ bun run "${ROOT_DIR}/scripts/publish-parcels-manifest.ts" \
   "--pmtiles-path=${PMTILES_PATH}"
 
 echo "[parcels] refresh complete runId=${RUN_ID}"
-write_active_status "completed" "0"
+write_active_status "completed" "0" "__none__" '{"schemaVersion":1,"phase":"completed"}'

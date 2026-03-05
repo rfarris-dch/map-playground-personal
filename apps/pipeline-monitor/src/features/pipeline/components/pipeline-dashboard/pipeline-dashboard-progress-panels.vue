@@ -1,8 +1,12 @@
 <script setup lang="ts">
   import { computed } from "vue";
-  import { formatCount } from "../../pipeline.service";
-  import type { PipelineDashboardProgressProps } from "./pipeline-dashboard.types";
-  import { formatBuildRate, formatBytes, formatEta } from "./pipeline-dashboard-format.service";
+  import type { PipelineDashboardProgressProps } from "@/features/pipeline/components/pipeline-dashboard/pipeline-dashboard.types";
+  import {
+    formatBuildRate,
+    formatBytes,
+    formatEta,
+  } from "@/features/pipeline/components/pipeline-dashboard/pipeline-dashboard-format.service";
+  import { formatCount } from "@/features/pipeline/pipeline.service";
 
   const props = defineProps<PipelineDashboardProgressProps>();
 

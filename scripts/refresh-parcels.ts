@@ -2,81 +2,20 @@
 import { createWriteStream, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import type { Writable } from "node:stream";
-
-interface CliArgs {
-  readonly maxPagesPerState: number | null;
-  readonly minimumAcres: number;
-  readonly outputDir: string;
-  readonly pageSize: number;
-  readonly resume: boolean;
-  readonly runId: string;
-  readonly stateConcurrency: number;
-  readonly states: readonly string[];
-}
-
-interface ArcgisTokenResponse {
-  readonly access_token: string;
-  readonly expires_in: number;
-}
-
-interface ArcgisTokenProvider {
-  getLatestExpiresInSeconds(): number;
-  getToken(minValiditySeconds?: number): Promise<string>;
-}
-
-interface ArcgisQueryFeature {
-  readonly attributes: Record<string, unknown>;
-  readonly geometry?: unknown;
-}
-
-interface ArcgisQueryResponse {
-  readonly features: readonly ArcgisQueryFeature[];
-}
-
-interface ArcgisCountResponse {
-  readonly count: number;
-}
-
-interface ArcgisQueryErrorPayload {
-  readonly code: number | null;
-  readonly message: string;
-}
-
-interface ArcgisLayerMetadata {
-  readonly fields: readonly unknown[];
-  readonly name: string;
-  readonly objectIdField: string;
-}
-
-interface StateProgress {
-  readonly expectedCount: number;
-  readonly isCompleted: boolean;
-  readonly lastSourceId: number | null;
-  readonly lastTieBreakerId: number | null;
-  readonly pagesFetched: number;
-  readonly state: string;
-  readonly writtenCount: number;
-}
-
-interface SyncRunSummary {
-  readonly acreageField: string;
-  readonly completedAt: string;
-  readonly featureLayerUrl: string;
-  readonly minimumAcres: number;
-  readonly pageSize: number;
-  readonly runId: string;
-  readonly startedAt: string;
-  readonly stateConcurrency: number;
-  readonly states: readonly StateProgress[];
-  readonly tokenExpiresInSeconds: number;
-}
-
-interface StateSyncCounters {
-  lastSourceId: number | null;
-  lastTieBreakerId: number | null;
-  pagesFetched: number;
-  writtenCount: number;
-}
+import type {
+  ArcgisCountResponse,
+  ArcgisLayerMetadata,
+  ArcgisQueryErrorPayload,
+  ArcgisQueryFeature,
+  ArcgisQueryResponse,
+  ArcgisTokenProvider,
+  ArcgisTokenResponse,
+  CliArgs,
+  StateProgress,
+  StateSyncCounters,
+  SyncRunSummary,
+  SyncStateArgs,
+} from "./refresh-parcels.types";
 
 const BASE_STATES: readonly string[] = [
   "AL",
@@ -1236,54 +1175,125 @@ function validateStateCountMatch(
   }
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: sync loop intentionally handles retries, paging, and checkpoint recovery in one flow
-async function syncState(args: {
-  readonly expectedCount: number;
-  readonly getToken: (minValiditySeconds?: number) => Promise<string>;
-  readonly objectIdField: string;
-  readonly tieBreakerField: string | null;
-  readonly runDir: string;
-  readonly state2: string;
-  readonly pageSize: number;
-  readonly acreageWhereClause: string;
-  readonly maxPagesPerState: number | null;
-  readonly resume: boolean;
-}): Promise<StateProgress> {
-  const dataPath = join(args.runDir, `state-${args.state2}.ndjson`);
-  const checkpointPath = join(args.runDir, `state-${args.state2}.checkpoint.json`);
-  const existingCheckpoint = readCheckpoint(checkpointPath);
+function toStateCounters(progress: StateProgress): StateSyncCounters {
+  return {
+    lastSourceId: progress.lastSourceId,
+    lastTieBreakerId: progress.lastTieBreakerId,
+    pagesFetched: progress.pagesFetched,
+    writtenCount: progress.writtenCount,
+  };
+}
 
-  if (
+function tryReuseCompletedCheckpoint(
+  args: SyncStateArgs,
+  checkpointPath: string,
+  existingCheckpoint: StateProgress | null
+): StateProgress | null {
+  const canReuseCheckpoint =
     args.resume &&
     args.maxPagesPerState === null &&
     existingCheckpoint !== null &&
     existingCheckpoint.state === args.state2 &&
-    existingCheckpoint.isCompleted
-  ) {
-    const normalizedExpected = normalizeExpectedCount(
-      existingCheckpoint.expectedCount,
-      existingCheckpoint.writtenCount
+    existingCheckpoint.isCompleted;
+  if (!canReuseCheckpoint || existingCheckpoint === null) {
+    return null;
+  }
+
+  const normalizedExpected = normalizeExpectedCount(
+    existingCheckpoint.expectedCount,
+    existingCheckpoint.writtenCount
+  );
+  if (normalizedExpected !== existingCheckpoint.expectedCount) {
+    writeStateCheckpoint(
+      checkpointPath,
+      args.state2,
+      normalizedExpected,
+      toStateCounters(existingCheckpoint),
+      true
     );
-    if (normalizedExpected !== existingCheckpoint.expectedCount) {
-      writeStateCheckpoint(
-        checkpointPath,
-        args.state2,
-        normalizedExpected,
-        {
-          lastSourceId: existingCheckpoint.lastSourceId,
-          lastTieBreakerId: existingCheckpoint.lastTieBreakerId,
-          pagesFetched: existingCheckpoint.pagesFetched,
-          writtenCount: existingCheckpoint.writtenCount,
-        },
-        true
-      );
-      return {
-        ...existingCheckpoint,
-        expectedCount: normalizedExpected,
-      };
-    }
-    console.log(`[sync] state=${args.state2} already completed from checkpoint; skipping`);
-    return existingCheckpoint;
+    return {
+      ...existingCheckpoint,
+      expectedCount: normalizedExpected,
+    };
+  }
+
+  console.log(`[sync] state=${args.state2} already completed from checkpoint; skipping`);
+  return existingCheckpoint;
+}
+
+async function fetchStatePage(args: SyncStateArgs, counters: StateSyncCounters) {
+  return fetchPage(
+    await args.getToken(),
+    args.state2,
+    args.pageSize,
+    counters.lastSourceId,
+    counters.lastTieBreakerId,
+    args.objectIdField,
+    args.tieBreakerField,
+    args.acreageWhereClause
+  );
+}
+
+async function appendStatePageAndAdvanceCursor(
+  args: SyncStateArgs,
+  writer: Writable,
+  counters: StateSyncCounters,
+  expectedCount: number,
+  features: readonly ArcgisQueryFeature[]
+): Promise<number> {
+  const pageResult = await appendPage(
+    writer,
+    features,
+    counters.lastSourceId,
+    counters.lastTieBreakerId,
+    args.objectIdField,
+    args.tieBreakerField
+  );
+  const previousLastSourceId = counters.lastSourceId;
+  const previousLastTieBreakerId = counters.lastTieBreakerId;
+  counters.lastSourceId = pageResult.nextSourceId;
+  counters.lastTieBreakerId = pageResult.nextTieBreakerId;
+  const advanced = didCursorAdvance({
+    previousSourceId: previousLastSourceId,
+    nextSourceId: counters.lastSourceId,
+    previousTieBreakerId: previousLastTieBreakerId,
+    nextTieBreakerId: counters.lastTieBreakerId,
+    tieBreakerField: args.tieBreakerField,
+  });
+  if (previousLastSourceId !== null && !advanced) {
+    throw new Error(
+      `State ${args.state2} cursor did not advance for objectIdField=${args.objectIdField} (previous=${String(previousLastSourceId)} next=${String(counters.lastSourceId)} previousTie=${String(previousLastTieBreakerId)} nextTie=${String(counters.lastTieBreakerId)} tieBreaker=${args.tieBreakerField ?? "none"}).`
+    );
+  }
+  counters.pagesFetched += 1;
+  counters.writtenCount += pageResult.writtenDelta;
+  return normalizeExpectedCount(expectedCount, counters.writtenCount);
+}
+
+function toStateProgress(
+  state2: string,
+  expectedCount: number,
+  isCompleted: boolean,
+  counters: StateSyncCounters
+): StateProgress {
+  return {
+    state: state2,
+    expectedCount,
+    isCompleted,
+    pagesFetched: counters.pagesFetched,
+    writtenCount: counters.writtenCount,
+    lastSourceId: counters.lastSourceId,
+    lastTieBreakerId: counters.lastTieBreakerId,
+  };
+}
+
+async function syncState(args: SyncStateArgs): Promise<StateProgress> {
+  const dataPath = join(args.runDir, `state-${args.state2}.ndjson`);
+  const checkpointPath = join(args.runDir, `state-${args.state2}.checkpoint.json`);
+  const existingCheckpoint = readCheckpoint(checkpointPath);
+  const completedCheckpoint = tryReuseCompletedCheckpoint(args, checkpointPath, existingCheckpoint);
+  if (completedCheckpoint !== null) {
+    return completedCheckpoint;
   }
 
   const counters = readResumeCounters(checkpointPath, args.state2, args.resume);
@@ -1303,48 +1313,19 @@ async function syncState(args: {
         break;
       }
 
-      const features = await fetchPage(
-        await args.getToken(),
-        args.state2,
-        args.pageSize,
-        counters.lastSourceId,
-        counters.lastTieBreakerId,
-        args.objectIdField,
-        args.tieBreakerField,
-        args.acreageWhereClause
-      );
+      const features = await fetchStatePage(args, counters);
       if (features.length === 0) {
         isCompleted = args.maxPagesPerState === null;
         break;
       }
 
-      const pageResult = await appendPage(
+      expectedCount = await appendStatePageAndAdvanceCursor(
+        args,
         writer,
-        features,
-        counters.lastSourceId,
-        counters.lastTieBreakerId,
-        args.objectIdField,
-        args.tieBreakerField
+        counters,
+        expectedCount,
+        features
       );
-      const previousLastSourceId = counters.lastSourceId;
-      const previousLastTieBreakerId = counters.lastTieBreakerId;
-      counters.lastSourceId = pageResult.nextSourceId;
-      counters.lastTieBreakerId = pageResult.nextTieBreakerId;
-      const advanced = didCursorAdvance({
-        previousSourceId: previousLastSourceId,
-        nextSourceId: counters.lastSourceId,
-        previousTieBreakerId: previousLastTieBreakerId,
-        nextTieBreakerId: counters.lastTieBreakerId,
-        tieBreakerField: args.tieBreakerField,
-      });
-      if (previousLastSourceId !== null && !advanced) {
-        throw new Error(
-          `State ${args.state2} cursor did not advance for objectIdField=${args.objectIdField} (previous=${String(previousLastSourceId)} next=${String(counters.lastSourceId)} previousTie=${String(previousLastTieBreakerId)} nextTie=${String(counters.lastTieBreakerId)} tieBreaker=${args.tieBreakerField ?? "none"}).`
-        );
-      }
-      counters.pagesFetched += 1;
-      counters.writtenCount += pageResult.writtenDelta;
-      expectedCount = normalizeExpectedCount(expectedCount, counters.writtenCount);
 
       writeStateCheckpoint(checkpointPath, args.state2, expectedCount, counters, false);
 
@@ -1367,15 +1348,7 @@ async function syncState(args: {
     initialExpectedCount
   );
 
-  return {
-    state: args.state2,
-    expectedCount,
-    isCompleted,
-    pagesFetched: counters.pagesFetched,
-    writtenCount: counters.writtenCount,
-    lastSourceId: counters.lastSourceId,
-    lastTieBreakerId: counters.lastTieBreakerId,
-  };
+  return toStateProgress(args.state2, expectedCount, isCompleted, counters);
 }
 
 async function main(): Promise<void> {
@@ -1467,7 +1440,77 @@ async function main(): Promise<void> {
     pendingStates.push(state2);
   }
   const workerCount = Math.min(Math.max(1, cli.stateConcurrency), pendingStates.length);
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: worker loop intentionally handles retry + checkpoint fallback semantics
+
+  function readExpectedCountForState(state2: string): number {
+    const checkpointPath = join(runDir, `state-${state2}.checkpoint.json`);
+    const checkpoint = readCheckpoint(checkpointPath);
+    return normalizeExpectedCount(expectedByState.get(state2) ?? 0, checkpoint?.writtenCount ?? 0);
+  }
+
+  function nextPageSizeAfterFailure(state2: string, currentPageSize: number): number {
+    if (currentPageSize <= 25) {
+      return currentPageSize;
+    }
+
+    const nextPageSize = Math.max(25, Math.floor(currentPageSize / 2));
+    if (nextPageSize < currentPageSize) {
+      console.warn(
+        `[sync] state=${state2} reducing pageSize ${String(currentPageSize)} -> ${String(nextPageSize)} after failure`
+      );
+      return nextPageSize;
+    }
+
+    return currentPageSize;
+  }
+
+  async function syncStateWithRetries(state2: string): Promise<StateProgress | null> {
+    let pageSizeForState = cli.pageSize;
+
+    for (let attempt = 1; attempt <= STATE_SYNC_MAX_ATTEMPTS; attempt += 1) {
+      try {
+        return await syncState({
+          expectedCount: readExpectedCountForState(state2),
+          runDir,
+          state2,
+          getToken: (minValiditySeconds): Promise<string> =>
+            tokenProvider.getToken(minValiditySeconds),
+          objectIdField,
+          tieBreakerField: validatedTieBreakerField,
+          pageSize: pageSizeForState,
+          acreageWhereClause,
+          maxPagesPerState: cli.maxPagesPerState,
+          resume: cli.resume,
+        });
+      } catch (error) {
+        console.warn(
+          `[sync] state=${state2} attempt ${String(attempt)}/${String(STATE_SYNC_MAX_ATTEMPTS)} failed: ${readErrorMessage(error)}`
+        );
+        pageSizeForState = nextPageSizeAfterFailure(state2, pageSizeForState);
+        if (attempt < STATE_SYNC_MAX_ATTEMPTS) {
+          const waitMs = computeBackoffMs(STATE_SYNC_RETRY_BASE_DELAY_MS, attempt);
+          console.warn(`[sync] state=${state2} retrying in ${String(waitMs)}ms before advancing`);
+          await sleep(waitMs);
+        }
+      }
+    }
+
+    return null;
+  }
+
+  function preserveCheckpointProgress(state2: string): void {
+    const checkpointPath = join(runDir, `state-${state2}.checkpoint.json`);
+    const checkpoint = readCheckpoint(checkpointPath);
+    if (checkpoint !== null) {
+      stateProgressList.push(checkpoint);
+      console.error(
+        `[sync] state=${state2} skipped after retries; preserving checkpoint progress written=${String(checkpoint.writtenCount)} pages=${String(checkpoint.pagesFetched)}`
+      );
+      return;
+    }
+
+    console.error(`[sync] state=${state2} skipped after retries with no checkpoint progress`);
+  }
+
   const runWorker = async (): Promise<void> => {
     while (pendingStates.length > 0) {
       const state2 = pendingStates.shift();
@@ -1475,63 +1518,10 @@ async function main(): Promise<void> {
         return;
       }
 
-      let next: StateProgress | null = null;
-      let pageSizeForState = cli.pageSize;
-      for (let attempt = 1; attempt <= STATE_SYNC_MAX_ATTEMPTS; attempt += 1) {
-        try {
-          const checkpointPath = join(runDir, `state-${state2}.checkpoint.json`);
-          const checkpoint = readCheckpoint(checkpointPath);
-          const expectedCount = normalizeExpectedCount(
-            expectedByState.get(state2) ?? 0,
-            checkpoint?.writtenCount ?? 0
-          );
-
-          next = await syncState({
-            expectedCount,
-            runDir,
-            state2,
-            getToken: (minValiditySeconds): Promise<string> =>
-              tokenProvider.getToken(minValiditySeconds),
-            objectIdField,
-            tieBreakerField: validatedTieBreakerField,
-            pageSize: pageSizeForState,
-            acreageWhereClause,
-            maxPagesPerState: cli.maxPagesPerState,
-            resume: cli.resume,
-          });
-          break;
-        } catch (error) {
-          console.warn(
-            `[sync] state=${state2} attempt ${String(attempt)}/${String(STATE_SYNC_MAX_ATTEMPTS)} failed: ${readErrorMessage(error)}`
-          );
-          if (pageSizeForState > 25) {
-            const nextPageSize = Math.max(25, Math.floor(pageSizeForState / 2));
-            if (nextPageSize < pageSizeForState) {
-              console.warn(
-                `[sync] state=${state2} reducing pageSize ${String(pageSizeForState)} -> ${String(nextPageSize)} after failure`
-              );
-              pageSizeForState = nextPageSize;
-            }
-          }
-          if (attempt < STATE_SYNC_MAX_ATTEMPTS) {
-            const waitMs = computeBackoffMs(STATE_SYNC_RETRY_BASE_DELAY_MS, attempt);
-            console.warn(`[sync] state=${state2} retrying in ${String(waitMs)}ms before advancing`);
-            await sleep(waitMs);
-          }
-        }
-      }
+      const next = await syncStateWithRetries(state2);
 
       if (next === null) {
-        const checkpointPath = join(runDir, `state-${state2}.checkpoint.json`);
-        const checkpoint = readCheckpoint(checkpointPath);
-        if (checkpoint !== null) {
-          stateProgressList.push(checkpoint);
-          console.error(
-            `[sync] state=${state2} skipped after retries; preserving checkpoint progress written=${String(checkpoint.writtenCount)} pages=${String(checkpoint.pagesFetched)}`
-          );
-        } else {
-          console.error(`[sync] state=${state2} skipped after retries with no checkpoint progress`);
-        }
+        preserveCheckpointProgress(state2);
         continue;
       }
 

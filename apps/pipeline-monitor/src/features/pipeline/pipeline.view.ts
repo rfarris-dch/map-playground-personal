@@ -1,19 +1,22 @@
 import { computed, onBeforeUnmount, onMounted, type Ref, ref } from "vue";
-import { fetchPipelineStatus } from "./pipeline.service";
+import { fetchPipelineStatus } from "@/features/pipeline/pipeline.service";
 import type {
   PipelineFetchFailure,
   PipelineLiveEvent,
   PipelineLiveSample,
   PipelineStatusController,
   PipelineStatusPayload,
-} from "./pipeline.types";
+} from "@/features/pipeline/pipeline.types";
 import {
   appendPipelineLiveEvents,
   appendPipelineLiveSample,
+} from "@/features/pipeline/pipeline-tracking/pipeline-tracking-history.service";
+import {
   buildPipelineFetchErrorEvent,
   buildPipelineLiveEvents,
-  buildPipelineLiveSample,
-} from "./pipeline-tracking.service";
+} from "@/features/pipeline/pipeline-tracking/pipeline-tracking-live-event.service";
+import { buildPipelineLiveSample } from "@/features/pipeline/pipeline-tracking/pipeline-tracking-live-sample.service";
+import type { MutablePollingState } from "./pipeline.view.types";
 
 const RUNNING_REFRESH_INTERVAL_MS = 3000;
 const IDLE_REFRESH_INTERVAL_MS = 15_000;
@@ -29,14 +32,6 @@ function nextRefreshInterval(payload: PipelineStatusPayload | null): number {
   }
 
   return IDLE_REFRESH_INTERVAL_MS;
-}
-
-interface MutablePollingState {
-  abortController: AbortController | null;
-  destroyed: boolean;
-  heartbeatTimer: ReturnType<typeof setInterval> | null;
-  refreshGeneration: number;
-  timer: ReturnType<typeof setTimeout> | null;
 }
 
 function clearPendingTimer(state: MutablePollingState, nextPollAt: Ref<string | null>): void {

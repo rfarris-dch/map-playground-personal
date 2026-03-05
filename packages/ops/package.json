@@ -6,11 +6,14 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "echo 'ops tests not implemented yet'",
-    "lint": "echo 'ops lint not implemented yet'",
+    "lint": "biome check .",
     "dev": "tsc -w -p tsconfig.json"
+  },
+  "dependencies": {
+    "@map-migration/contracts": "workspace:*"
   },
   "exports": {
     ".": {

@@ -2,26 +2,13 @@ import {
   type ApiErrorResponse,
   ApiErrorResponseSchema,
   ApiHeaders,
+  type SafeParseSchema,
 } from "@map-migration/contracts";
 import { createRequestId } from "@map-migration/ops";
 import type { Context } from "hono";
+import type { ErrorEnvelopeArgs, JsonErrorArgs } from "./api-response.types";
 
-interface SafeParseSchema<T> {
-  safeParse(input: unknown): { success: true; data: T } | { success: false; error: unknown };
-}
-
-interface ErrorEnvelopeArgs {
-  readonly code: string;
-  readonly details?: unknown;
-  readonly message: string;
-  readonly requestId: string;
-}
-
-interface JsonErrorArgs extends ErrorEnvelopeArgs {
-  readonly httpStatus: number;
-}
-
-const REQUEST_ID_MAX_LENGTH = 128;
+export const REQUEST_ID_MAX_LENGTH = 128;
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9._-]+$/;
 
 function buildErrorEnvelope(args: ErrorEnvelopeArgs): ApiErrorResponse {
@@ -71,6 +58,13 @@ export function normalizeRequestIdHeader(value: string | undefined): string | nu
 }
 
 export function getOrCreateRequestId(c: Context, prefix = "api"): string {
+  const fromContext = c.get("requestId");
+  const normalizedFromContext =
+    typeof fromContext === "string" ? normalizeRequestIdHeader(fromContext) : null;
+  if (typeof normalizedFromContext === "string") {
+    return normalizedFromContext;
+  }
+
   const normalized = normalizeRequestIdHeader(c.req.header(ApiHeaders.requestId));
   if (typeof normalized === "string") {
     return normalized;

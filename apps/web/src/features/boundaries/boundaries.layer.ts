@@ -1,211 +1,27 @@
-import type { BoundaryPowerFeature } from "@map-migration/contracts";
 import type { IMap } from "@map-migration/map-engine";
-import { fetchBoundaryPower } from "./api";
+import { fetchBoundaryPower } from "@/features/boundaries/api";
 import {
   boundaryFillColorExpression,
   boundaryFillOpacity,
   boundaryOutlineColorExpression,
   emptyBoundarySourceData,
-} from "./boundaries.service";
+} from "@/features/boundaries/boundaries.service";
 import type {
-  BoundaryFacetOption,
-  BoundaryHoverState,
   BoundaryLayerController,
-  BoundaryLayerId,
   BoundaryLayerOptions,
-  BoundaryLayerState,
-} from "./boundaries.types";
-
-const BASEMAP_BOUNDARY_LAYER_IDS: readonly string[] = [
-  "boundary_2",
-  "boundary_3",
-  "boundary_disputed",
-];
-
-const BASEMAP_COUNTRY_LAYER_IDS: readonly string[] = ["boundary_2", "boundary_disputed"];
-
-function initialState(): BoundaryLayerState {
-  return {
-    allFeatures: [],
-    abortController: null,
-    dataLoaded: false,
-    hoveredFeatureId: null,
-    includedRegionIds: null,
-    ready: false,
-    requestSequence: 0,
-    visible: false,
-  };
-}
-
-function isBoundaryFeatureId(value: unknown): value is string | number {
-  return typeof value === "string" || typeof value === "number";
-}
-
-function readProperty(properties: unknown, key: string): unknown {
-  if (typeof properties !== "object" || properties === null) {
-    return null;
-  }
-
-  return Reflect.get(properties, key);
-}
-
-function readStringProperty(properties: unknown, key: string): string | null {
-  const value = readProperty(properties, key);
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const normalized = value.trim();
-  if (normalized.length === 0) {
-    return null;
-  }
-
-  return normalized;
-}
-
-function readNumberProperty(properties: unknown, key: string): number | null {
-  const value = readProperty(properties, key);
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-
-  if (typeof value === "string" && value.length > 0) {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) {
-      return parsed;
-    }
-  }
-
-  return null;
-}
-
-function toHoverState(
-  feature: { properties: unknown },
-  layerId: BoundaryLayerId,
-  screenPoint: readonly [number, number]
-): BoundaryHoverState | null {
-  const regionId = readStringProperty(feature.properties, "regionId");
-  const regionName = readStringProperty(feature.properties, "regionName");
-  const commissionedPowerMw = readNumberProperty(feature.properties, "commissionedPowerMw");
-  if (regionId === null || regionName === null || commissionedPowerMw === null) {
-    return null;
-  }
-
-  return {
-    boundaryId: layerId,
-    regionId,
-    regionName,
-    parentRegionName: readStringProperty(feature.properties, "parentRegionName"),
-    commissionedPowerMw,
-    screenPoint,
-  };
-}
-
-function toFacetOptions(features: readonly BoundaryPowerFeature[]): BoundaryFacetOption[] {
-  const options = features.map((feature) => ({
-    regionId: feature.properties.regionId,
-    regionName: feature.properties.regionName,
-    parentRegionName: feature.properties.parentRegionName,
-    commissionedPowerMw: feature.properties.commissionedPowerMw,
-  }));
-
-  options.sort((a, b) => {
-    if (b.commissionedPowerMw !== a.commissionedPowerMw) {
-      return b.commissionedPowerMw - a.commissionedPowerMw;
-    }
-
-    return a.regionName.localeCompare(b.regionName);
-  });
-
-  return options;
-}
-
-function normalizeIncludedRegionIds(regionIds: readonly string[] | null): readonly string[] | null {
-  if (regionIds === null) {
-    return null;
-  }
-
-  const deduped = new Set<string>();
-  for (const regionId of regionIds) {
-    const trimmed = regionId.trim();
-    if (trimmed.length === 0) {
-      continue;
-    }
-
-    deduped.add(trimmed);
-  }
-
-  return [...deduped];
-}
-
-function areSameIncludedRegionIds(
-  left: readonly string[] | null,
-  right: readonly string[] | null
-): boolean {
-  if (left === right) {
-    return true;
-  }
-
-  if (left === null || right === null) {
-    return false;
-  }
-
-  if (left.length !== right.length) {
-    return false;
-  }
-
-  for (const [index, value] of left.entries()) {
-    if (value !== right[index]) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-function toFilteredFeatures(
-  features: readonly BoundaryPowerFeature[],
-  includedRegionIds: readonly string[] | null
-): readonly BoundaryPowerFeature[] {
-  if (includedRegionIds === null) {
-    return features;
-  }
-
-  if (includedRegionIds.length === 0) {
-    return [];
-  }
-
-  const included = new Set(includedRegionIds);
-  return features.filter((feature) => included.has(feature.properties.regionId));
-}
-
-function lineWidthStops(layerId: BoundaryLayerId): {
-  readonly highZoom: number;
-  readonly lowZoom: number;
-  readonly midZoom: number;
-} {
-  if (layerId === "country") {
-    return {
-      lowZoom: 2.2,
-      midZoom: 2.8,
-      highZoom: 3.4,
-    };
-  }
-
-  if (layerId === "state") {
-    return {
-      lowZoom: 1.4,
-      midZoom: 1.9,
-      highZoom: 2.5,
-    };
-  }
-
-  return {
-    lowZoom: 0.85,
-    midZoom: 1.15,
-    highZoom: 1.6,
-  };
-}
+} from "@/features/boundaries/boundaries.types";
+import {
+  areSameIncludedRegionIds,
+  BASEMAP_BOUNDARY_LAYER_IDS,
+  BASEMAP_COUNTRY_LAYER_IDS,
+  initialBoundaryLayerState,
+  isBoundaryFeatureId,
+  lineWidthStops,
+  normalizeIncludedRegionIds,
+  toFacetOptions,
+  toFilteredFeatures,
+  toHoverState,
+} from "@/features/boundaries/boundaries-layer.service";
 
 export function mountBoundaryLayer(
   map: IMap,
@@ -215,7 +31,7 @@ export function mountBoundaryLayer(
   const sourceId = `boundaries.${layerId}.source`;
   const fillLayerId = `${layerId}.fill`;
   const outlineLayerId = layerId;
-  const state = initialState();
+  const state = initialBoundaryLayerState();
 
   function readStyleLayerId(layer: unknown): string | null {
     if (typeof layer !== "object" || layer === null) {

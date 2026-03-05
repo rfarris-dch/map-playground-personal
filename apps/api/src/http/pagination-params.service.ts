@@ -1,23 +1,9 @@
-export interface PaginationParams {
-  readonly offset: number;
-  readonly page: number;
-  readonly pageSize: number;
-}
+import type {
+  ResolvePaginationOptions,
+  ResolvePaginationResult,
+} from "./pagination-params.service.types";
 
-interface ResolvePaginationOptions {
-  readonly defaultPageSize: number;
-  readonly maxPageSize: number;
-}
-
-type ResolvePaginationResult =
-  | {
-      readonly ok: true;
-      readonly value: PaginationParams;
-    }
-  | {
-      readonly ok: false;
-      readonly message: string;
-    };
+export type { PaginationParams } from "./pagination-params.service.types";
 
 function parseInteger(value: string): number | null {
   if (value.trim().length === 0) {

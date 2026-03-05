@@ -3,8 +3,8 @@ import {
   type BoundaryPowerLevel,
   buildBoundaryPowerRoute,
 } from "@map-migration/contracts";
+import type { BoundaryPowerFetchResult } from "@/features/boundaries/boundaries.types";
 import { apiGetJson } from "@/lib/api-client";
-import type { BoundaryPowerFetchResult } from "./boundaries.types";
 
 export function fetchBoundaryPower(
   level: BoundaryPowerLevel,

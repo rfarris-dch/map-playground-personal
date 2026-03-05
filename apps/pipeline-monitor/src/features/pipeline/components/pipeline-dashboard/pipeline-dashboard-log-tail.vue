@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { PipelineDashboardLogTailProps } from "./pipeline-dashboard.types";
+  import type { PipelineDashboardLogTailProps } from "@/features/pipeline/components/pipeline-dashboard/pipeline-dashboard.types";
 
   const props = defineProps<PipelineDashboardLogTailProps>();
 </script>

@@ -1,7 +1,57 @@
-import type { FacilityPerspective } from "@map-migration/contracts";
-import type { IMap } from "@map-migration/map-engine";
-import type { IControl } from "maplibre-gl";
+import type { FacilitiesFeatureCollection, FacilityPerspective } from "@map-migration/contracts";
+import type { IMap, MapControl } from "@map-migration/map-engine";
 import { computed, onBeforeUnmount, onMounted, shallowRef, useTemplateRef, watch } from "vue";
+import {
+  facilitiesLayerId,
+  PARCELS_LAYER_ID,
+  powerLayerId,
+} from "@/features/app/app-shell.constants";
+import {
+  initialBasemapVisibilityState,
+  initialBoundaryFacetOptionsState,
+  initialBoundaryFacetSelectionState,
+  initialBoundaryVisibilityState,
+  initialMeasureState,
+  initialParcelsStatus,
+  initialPerspectiveStatusState,
+  initialPerspectiveVisibilityState,
+  initialPowerVisibilityState,
+  isSamePerspective,
+} from "@/features/app/app-shell.defaults";
+import {
+  initializeAppShellMap,
+  suppressMapLibreGlyphWarnings,
+} from "@/features/app/app-shell.map.service";
+import type {
+  BoundaryFacetOptionsState,
+  BoundaryFacetSelectionState,
+  BoundaryVisibilityState,
+  PerspectiveStatusState,
+  PerspectiveVisibilityState,
+} from "@/features/app/app-shell.types";
+import {
+  initialBoundaryControllerState,
+  initialBoundaryHoverByLayerState,
+  resolveBoundaryHoverState,
+  withBoundaryController,
+} from "@/features/app/app-shell-boundary.service";
+import type {
+  BoundaryControllerState,
+  BoundaryHoverByLayerState,
+} from "@/features/app/app-shell-boundary.types";
+import { resolveDisableParcelsGuardrails } from "@/features/app/app-shell-runtime.service";
+import {
+  buildEmptyMeasureSelectionSummary,
+  queryMeasureSelectionSummary,
+} from "@/features/app/measure-selection.service";
+import { useAppShellFiber } from "@/features/app/use-app-shell-fiber";
+import { useMapOverlays } from "@/features/app/use-map-overlays";
+import { basemapLayerIds } from "@/features/basemap/basemap.service";
+import type {
+  BasemapLayerId,
+  BasemapLayerVisibilityController,
+  BasemapVisibilityState,
+} from "@/features/basemap/basemap.types";
 import { mountBoundaryLayer } from "@/features/boundaries/boundaries.layer";
 import {
   boundaryLayerIds,
@@ -36,6 +86,8 @@ import type {
   MeasureMode,
   MeasureState,
 } from "@/features/measure/measure.types";
+import { buildMeasureSelectionCsv } from "@/features/measure/measure-analysis.service";
+import type { MeasureSelectionSummary } from "@/features/measure/measure-analysis.types";
 import { useParcelDetailQuery } from "@/features/parcels/parcel-detail/detail";
 import { mountParcelsLayer } from "@/features/parcels/parcels.layer";
 import { formatParcelsStatus } from "@/features/parcels/parcels.service";
@@ -53,89 +105,10 @@ import type {
 } from "@/features/power/power.types";
 import { mountPowerHover } from "@/features/power/power-hover";
 import type { PowerHoverController, PowerHoverState } from "@/features/power/power-hover.types";
-import { facilitiesLayerId, PARCELS_LAYER_ID, powerLayerId } from "./app-shell.constants";
-import {
-  initialBoundaryFacetOptionsState,
-  initialBoundaryFacetSelectionState,
-  initialBoundaryVisibilityState,
-  initialMeasureState,
-  initialParcelsStatus,
-  initialPerspectiveStatusState,
-  initialPerspectiveVisibilityState,
-  initialPowerVisibilityState,
-  isSamePerspective,
-} from "./app-shell.defaults";
-import { initializeAppShellMap, suppressMapLibreGlyphWarnings } from "./app-shell.map.service";
-import type {
-  BoundaryFacetOptionsState,
-  BoundaryFacetSelectionState,
-  BoundaryVisibilityState,
-  PerspectiveStatusState,
-  PerspectiveVisibilityState,
-} from "./app-shell.types";
-import { useAppShellFiber } from "./use-app-shell-fiber";
 
-interface BoundaryHoverByLayerState {
-  readonly country: BoundaryHoverState | null;
-  readonly county: BoundaryHoverState | null;
-  readonly state: BoundaryHoverState | null;
-}
-
-interface BoundaryControllerState {
-  readonly country: BoundaryLayerController | null;
-  readonly county: BoundaryLayerController | null;
-  readonly state: BoundaryLayerController | null;
-}
-
-function initialBoundaryControllerState(): BoundaryControllerState {
-  return {
-    county: null,
-    state: null,
-    country: null,
-  };
-}
-
-function withBoundaryController(
-  state: BoundaryControllerState,
-  boundaryId: BoundaryLayerId,
-  controller: BoundaryLayerController | null
-): BoundaryControllerState {
-  if (boundaryId === "county") {
-    return {
-      county: controller,
-      state: state.state,
-      country: state.country,
-    };
-  }
-
-  if (boundaryId === "state") {
-    return {
-      county: state.county,
-      state: controller,
-      country: state.country,
-    };
-  }
-
-  return {
-    county: state.county,
-    state: state.state,
-    country: controller,
-  };
-}
-
-function initialBoundaryHoverByLayerState(): BoundaryHoverByLayerState {
-  return {
-    county: null,
-    state: null,
-    country: null,
-  };
-}
-
-function resolveBoundaryHoverState(
-  hoverByLayer: BoundaryHoverByLayerState
-): BoundaryHoverState | null {
-  return hoverByLayer.county ?? hoverByLayer.state ?? hoverByLayer.country;
-}
+const FACILITIES_LAYER_MIN_ZOOM = 3.5;
+const FACILITIES_LAYER_LIMIT = 1000;
+const FACILITIES_LAYER_DEBOUNCE_MS = 350;
 
 export function useAppShell() {
   const mapContainer = useTemplateRef<HTMLDivElement>("map-container");
@@ -156,10 +129,11 @@ export function useAppShell() {
   const facilitiesHoverController = shallowRef<FacilitiesHoverController | null>(null);
   const powerHoverController = shallowRef<PowerHoverController | null>(null);
   const measureController = shallowRef<MeasureLayerController | null>(null);
-  const disposeBasemapEnhancements = shallowRef<(() => void) | null>(null);
+  const basemapLayerController = shallowRef<BasemapLayerVisibilityController | null>(null);
   const disposePmtilesProtocol = shallowRef<(() => void) | null>(null);
   const restoreConsoleWarn = shallowRef<(() => void) | null>(null);
-  const mapControls = shallowRef<readonly IControl[]>([]);
+  const mapControls = shallowRef<readonly MapControl[]>([]);
+  const basemapVisibility = shallowRef<BasemapVisibilityState>(initialBasemapVisibilityState());
   const facilitiesStatus = shallowRef<PerspectiveStatusState>(initialPerspectiveStatusState());
   const parcelsStatus = shallowRef<ParcelsStatus>(initialParcelsStatus());
   const parcelsVisible = shallowRef<boolean>(false);
@@ -175,6 +149,13 @@ export function useAppShell() {
     initialPerspectiveVisibilityState()
   );
   const measureState = shallowRef<MeasureState>(initialMeasureState());
+  const measureSelectionSummary = shallowRef<MeasureSelectionSummary | null>(null);
+  const measureSelectionError = shallowRef<string | null>(null);
+  const isMeasureSelectionLoading = shallowRef<boolean>(false);
+  const colocationViewportFeatures = shallowRef<FacilitiesFeatureCollection["features"]>([]);
+  const hyperscaleViewportFeatures = shallowRef<FacilitiesFeatureCollection["features"]>([]);
+  let measureSelectionAbortController: AbortController | null = null;
+  let measureSelectionRequestSequence = 0;
   const isLayerPanelOpen = shallowRef<boolean>(true);
   const isMeasurePanelOpen = shallowRef<boolean>(true);
 
@@ -195,6 +176,16 @@ export function useAppShell() {
     layerRuntime,
     isInteractionEnabled: () => areFacilityInteractionsEnabled.value,
   });
+  const mapOverlays = useMapOverlays({
+    map,
+    measureState,
+    visiblePerspectives,
+    colocationViewportFeatures,
+    hyperscaleViewportFeatures,
+    clearMeasure,
+    finishMeasureSelection,
+    setMeasureMode,
+  });
 
   function clearSelectedFacility(): void {
     facilitiesControllers.value.reduce((_, controller) => {
@@ -202,6 +193,14 @@ export function useAppShell() {
       return 0;
     }, 0);
     selectedFacility.value = null;
+  }
+
+  function selectFacilityFromAnalysis(facility: SelectedFacilityRef): void {
+    facilitiesControllers.value.reduce((_, controller) => {
+      controller.clearSelection();
+      return 0;
+    }, 0);
+    selectedFacility.value = facility;
   }
 
   function clearSelectedParcel(): void {
@@ -220,6 +219,18 @@ export function useAppShell() {
     parcelsStatus.value = status;
   }
 
+  function setViewportFacilities(
+    perspective: FacilityPerspective,
+    features: FacilitiesFeatureCollection["features"]
+  ): void {
+    if (perspective === "colocation") {
+      colocationViewportFeatures.value = features;
+      return;
+    }
+
+    hyperscaleViewportFeatures.value = features;
+  }
+
   function setPerspectiveVisibility(perspective: FacilityPerspective, visible: boolean): void {
     visiblePerspectives.value = {
       ...visiblePerspectives.value,
@@ -227,6 +238,10 @@ export function useAppShell() {
     };
 
     layerRuntime.value?.setUserVisible(facilitiesLayerId(perspective), visible);
+
+    if (!visible) {
+      setViewportFacilities(perspective, []);
+    }
   }
 
   function setParcelsVisible(visible: boolean): void {
@@ -236,6 +251,66 @@ export function useAppShell() {
     if (!visible) {
       clearSelectedParcel();
     }
+  }
+
+  function basemapLayerIdsVisibility(layerId: BasemapLayerId): boolean {
+    if (layerId === "boundaries") {
+      return basemapVisibility.value.boundaries;
+    }
+
+    if (layerId === "buildings3d") {
+      return basemapVisibility.value.buildings3d;
+    }
+
+    if (layerId === "labels") {
+      return basemapVisibility.value.labels;
+    }
+
+    if (layerId === "landmarks") {
+      return basemapVisibility.value.landmarks;
+    }
+
+    if (layerId === "roads") {
+      return basemapVisibility.value.roads;
+    }
+
+    return basemapVisibility.value.satellite;
+  }
+
+  function setBasemapLayerVisible(layerId: BasemapLayerId, visible: boolean): void {
+    if (layerId === "boundaries") {
+      basemapVisibility.value = {
+        ...basemapVisibility.value,
+        boundaries: visible,
+      };
+    } else if (layerId === "buildings3d") {
+      basemapVisibility.value = {
+        ...basemapVisibility.value,
+        buildings3d: visible,
+      };
+    } else if (layerId === "labels") {
+      basemapVisibility.value = {
+        ...basemapVisibility.value,
+        labels: visible,
+      };
+    } else if (layerId === "landmarks") {
+      basemapVisibility.value = {
+        ...basemapVisibility.value,
+        landmarks: visible,
+      };
+    } else if (layerId === "roads") {
+      basemapVisibility.value = {
+        ...basemapVisibility.value,
+        roads: visible,
+      };
+    } else {
+      basemapVisibility.value = {
+        ...basemapVisibility.value,
+        satellite: visible,
+      };
+    }
+
+    basemapLayerController.value?.setVisible(layerId, visible);
   }
 
   function setPowerLayerVisible(layerId: PowerLayerId, visible: boolean): void {
@@ -339,10 +414,16 @@ export function useAppShell() {
     perspective: FacilityPerspective
   ): void {
     const controller = mountFacilitiesLayer(nextMap, {
+      debounceMs: FACILITIES_LAYER_DEBOUNCE_MS,
+      limit: FACILITIES_LAYER_LIMIT,
+      minZoom: FACILITIES_LAYER_MIN_ZOOM,
       perspective,
       isInteractionEnabled: () => areFacilityInteractionsEnabled.value,
       onStatus: (status) => {
         setPerspectiveStatus(perspective, status);
+      },
+      onViewportUpdate: (snapshot) => {
+        setViewportFacilities(perspective, snapshot.features);
       },
       onSelectFacility: (facility) => {
         if (facility === null) {
@@ -366,6 +447,46 @@ export function useAppShell() {
     nextControllers.push(controller);
   }
 
+  async function refreshMeasureSelectionSummary(): Promise<void> {
+    const selectionRing = measureState.value.selectionRing;
+    if (selectionRing === null) {
+      measureSelectionAbortController?.abort();
+      measureSelectionAbortController = null;
+      measureSelectionRequestSequence += 1;
+      isMeasureSelectionLoading.value = false;
+      measureSelectionError.value = null;
+      measureSelectionSummary.value = null;
+      return;
+    }
+
+    measureSelectionRequestSequence += 1;
+    const requestSequence = measureSelectionRequestSequence;
+    measureSelectionAbortController?.abort();
+    const abortController = new AbortController();
+    measureSelectionAbortController = abortController;
+    isMeasureSelectionLoading.value = true;
+    measureSelectionError.value = null;
+    measureSelectionSummary.value = buildEmptyMeasureSelectionSummary(selectionRing);
+
+    const queryResult = await queryMeasureSelectionSummary({
+      selectionRing,
+      visiblePerspectives: visiblePerspectives.value,
+      signal: abortController.signal,
+    });
+
+    if (requestSequence !== measureSelectionRequestSequence) {
+      return;
+    }
+
+    isMeasureSelectionLoading.value = false;
+    if (!queryResult.ok) {
+      return;
+    }
+
+    measureSelectionError.value = queryResult.value.errorMessage;
+    measureSelectionSummary.value = queryResult.value.summary;
+  }
+
   function setMeasureMode(mode: MeasureMode): void {
     measureController.value?.setMode(mode);
   }
@@ -380,6 +501,23 @@ export function useAppShell() {
 
   function clearMeasure(): void {
     measureController.value?.clear();
+  }
+
+  function exportMeasureSelection(): void {
+    const summary = measureSelectionSummary.value;
+    if (summary === null || summary.totalCount === 0) {
+      return;
+    }
+
+    const csv = buildMeasureSelectionCsv(summary);
+    const dateLabel = new Date().toISOString().slice(0, 10);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const downloadLink = document.createElement("a");
+    downloadLink.href = url;
+    downloadLink.download = `map-selection-${dateLabel}.csv`;
+    downloadLink.click();
+    URL.revokeObjectURL(url);
   }
 
   function toggleLayerPanel(): void {
@@ -400,8 +538,12 @@ export function useAppShell() {
     disposePmtilesProtocol.value = mapSetup.disposePmtilesProtocol;
     map.value = mapSetup.map;
     layerRuntime.value = createLayerRuntime(mapSetup.map);
-    disposeBasemapEnhancements.value = mapSetup.disposeBasemapEnhancements;
+    basemapLayerController.value = mapSetup.basemapLayerController;
     mapControls.value = mapSetup.controls;
+
+    for (const layerId of basemapLayerIds()) {
+      mapSetup.basemapLayerController.setVisible(layerId, basemapLayerIdsVisibility(layerId));
+    }
 
     const nextBoundaryControllers = boundaryLayerIds().reduce<BoundaryControllerState>(
       (controllers, boundaryId) => {
@@ -433,7 +575,9 @@ export function useAppShell() {
     facilitiesControllers.value = nextFacilitiesControllers;
 
     parcelsController.value = mountParcelsLayer(mapSetup.map, {
-      disableGuardrails: true,
+      disableGuardrails: resolveDisableParcelsGuardrails(),
+      maxViewportWidthKm: 500,
+      maxPredictedTiles: 500,
       isInteractionEnabled: () => areFacilityInteractionsEnabled.value,
       onSelectParcel: (parcel) => {
         selectedParcel.value = parcel;
@@ -534,6 +678,20 @@ export function useAppShell() {
     }
   );
 
+  watch(
+    [
+      () => measureState.value.selectionRing,
+      () => visiblePerspectives.value.colocation,
+      () => visiblePerspectives.value.hyperscale,
+    ],
+    () => {
+      refreshMeasureSelectionSummary().catch((error: unknown) => {
+        console.error("[map] measure selection summary refresh failed", error);
+      });
+    },
+    { immediate: true }
+  );
+
   onMounted(() => {
     try {
       restoreConsoleWarn.value = suppressMapLibreGlyphWarnings();
@@ -544,8 +702,13 @@ export function useAppShell() {
   });
 
   onBeforeUnmount(() => {
-    disposeBasemapEnhancements.value?.();
-    disposeBasemapEnhancements.value = null;
+    measureSelectionAbortController?.abort();
+    measureSelectionAbortController = null;
+    isMeasureSelectionLoading.value = false;
+    measureSelectionError.value = null;
+
+    basemapLayerController.value?.destroy();
+    basemapLayerController.value = null;
 
     facilitiesHoverController.value?.destroy();
     facilitiesHoverController.value = null;
@@ -572,6 +735,7 @@ export function useAppShell() {
     parcelsController.value = null;
 
     const currentMap = map.value;
+
     fiber.destroy(currentMap);
 
     powerControllers.value.reduce((_, controller) => {
@@ -609,12 +773,14 @@ export function useAppShell() {
 
   return {
     mapContainer,
+    map,
     selectedFacility,
     selectedParcel,
     hoveredFacility,
     hoveredBoundary,
     hoveredFiber: fiber.hoveredFiber,
     hoveredPower,
+    basemapVisibility,
     boundaryVisibility,
     boundaryFacetOptions,
     boundaryFacetSelection,
@@ -629,6 +795,21 @@ export function useAppShell() {
     fiberSourceLayerOptions: fiber.fiberSourceLayerOptions,
     selectedFiberSourceLayerNames: fiber.selectedFiberSourceLayerNames,
     measureState,
+    measureSelectionSummary,
+    measureSelectionError,
+    isMeasureSelectionLoading,
+    quickViewActive: mapOverlays.quickViewActive,
+    scannerActive: mapOverlays.scannerActive,
+    scannerSummary: mapOverlays.scannerSummary,
+    scannerFacilities: mapOverlays.scannerFacilities,
+    scannerTotalCount: mapOverlays.scannerTotalCount,
+    scannerIsFiltered: mapOverlays.scannerIsFiltered,
+    isScannerParcelsLoading: mapOverlays.isScannerParcelsLoading,
+    scannerParcelsError: mapOverlays.scannerParcelsError,
+    isQuickViewVisible: mapOverlays.isQuickViewVisible,
+    isScannerVisible: mapOverlays.isScannerVisible,
+    isQuickViewDensityOk: mapOverlays.isQuickViewDensityOk,
+    quickViewObjectCount: mapOverlays.quickViewObjectCount,
     isLayerPanelOpen,
     isMeasurePanelOpen,
     facilityDetailQuery,
@@ -636,6 +817,7 @@ export function useAppShell() {
     setPerspectiveVisibility,
     setBoundaryVisible,
     setBoundarySelectedRegionIds,
+    setBasemapLayerVisible,
     setParcelsVisible,
     setPowerLayerVisible,
     setFiberLayerVisibility: fiber.setFiberLayerVisibility,
@@ -644,9 +826,17 @@ export function useAppShell() {
     setMeasureMode,
     setMeasureAreaShape,
     finishMeasureSelection,
+    exportMeasureSelection,
+    exportScannerSelection: mapOverlays.exportScannerSelection,
     clearMeasure,
     clearSelectedFacility,
+    selectFacilityFromAnalysis,
     clearSelectedParcel,
+    setQuickViewActive: mapOverlays.setQuickViewActive,
+    toggleQuickView: mapOverlays.toggleQuickView,
+    setScannerActive: mapOverlays.setScannerActive,
+    toggleScanner: mapOverlays.toggleScanner,
+    setQuickViewObjectCount: mapOverlays.setQuickViewObjectCount,
     toggleLayerPanel,
     toggleMeasurePanel,
   };

@@ -1,9 +1,9 @@
 <script setup lang="ts">
   import { computed } from "vue";
   import Button from "@/components/ui/button/button.vue";
-  import type { SelectedParcelRef } from "../../parcels.types";
-  import { toParcelAttributeEntries } from "../detail.service";
-  import type { ParcelDetailPayload } from "../detail.types";
+  import { toParcelAttributeEntries } from "@/features/parcels/parcel-detail/detail.service";
+  import type { ParcelDetailPayload } from "@/features/parcels/parcel-detail/detail.types";
+  import type { SelectedParcelRef } from "@/features/parcels/parcels.types";
 
   interface ParcelDetailDrawerProps {
     readonly detail: ParcelDetailPayload | null;

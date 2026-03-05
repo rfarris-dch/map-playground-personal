@@ -1,10 +1,9 @@
 import { useQuery } from "@tanstack/vue-query";
 import { computed, type Ref } from "vue";
-import type { SelectedParcelRef } from "../parcels.types";
-import { fetchParcelDetail } from "./detail.api";
-import { unwrapParcelDetailResult } from "./detail.service";
-
-type ParcelDetailQueryKey = readonly ["parcel-detail", string | null, string | null];
+import { fetchParcelDetail } from "@/features/parcels/parcel-detail/detail.api";
+import { unwrapParcelDetailResult } from "@/features/parcels/parcel-detail/detail.service";
+import type { SelectedParcelRef } from "@/features/parcels/parcels.types";
+import type { ParcelDetailQueryKey } from "./detail.types";
 
 function buildParcelDetailQueryKey(selectedParcel: SelectedParcelRef | null): ParcelDetailQueryKey {
   if (selectedParcel === null) {

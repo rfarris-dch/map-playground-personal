@@ -1,16 +1,20 @@
-export type QueryName =
-  | "facilities_bbox_colocation"
-  | "facilities_bbox_hyperscale"
-  | "facility_detail_colocation"
-  | "facility_detail_hyperscale"
-  | "county_metrics";
+import type {
+  ParcelBboxFilter,
+  ParcelEnrichQueryOptions,
+  ParcelGeometryModeSql,
+  ParcelSqlQuery,
+  QueryName,
+  QuerySpec,
+} from "./index.types";
 
-export interface QuerySpec {
-  endpointClass: "feature-collection" | "administrative-aggregation" | "proximity-enrichment";
-  maxRows: number;
-  name: QueryName;
-  sql: string;
-}
+export type {
+  ParcelBboxFilter,
+  ParcelEnrichQueryOptions,
+  ParcelGeometryModeSql,
+  ParcelSqlQuery,
+  QueryName,
+  QuerySpec,
+} from "./index.types";
 
 export const QUERY_SPECS: Record<QueryName, QuerySpec> = {
   facilities_bbox_colocation: {
@@ -22,16 +26,21 @@ WITH bounds AS (
   SELECT ST_Transform(ST_MakeEnvelope($1, $2, $3, $4, 4326), 3857) AS bbox_3857
 )
 SELECT
-  facility_id,
-  provider_id,
-  county_fips,
-  commissioned_power_mw,
-  commissioned_semantic,
+  s.facility_id,
+  s.facility_name,
+  s.provider_id,
+  p."NAME" AS provider_name,
+  s.county_fips,
+  s.commissioned_power_mw,
+  s.commissioned_semantic,
   NULL::text AS lease_or_own,
-  ST_AsGeoJSON(geom)::jsonb AS geom_json
-FROM serve.facility_site, bounds
-WHERE geom_3857 && bounds.bbox_3857
-  AND ST_Intersects(geom_3857, bounds.bbox_3857)
+  ST_AsGeoJSON(s.geom)::jsonb AS geom_json
+FROM serve.facility_site AS s
+LEFT JOIN mirror."HAWK_PROVIDER_PROFILE" AS p
+  ON p."PROVIDER_PROFILE_ID"::text = s.provider_id::text
+, bounds
+WHERE s.geom_3857 && bounds.bbox_3857
+  AND ST_Intersects(s.geom_3857, bounds.bbox_3857)
 LIMIT $5;`,
   },
   facilities_bbox_hyperscale: {
@@ -43,17 +52,74 @@ WITH bounds AS (
   SELECT ST_Transform(ST_MakeEnvelope($1, $2, $3, $4, 4326), 3857) AS bbox_3857
 )
 SELECT
-  hyperscale_id AS facility_id,
-  provider_id,
-  county_fips,
-  commissioned_power_mw,
-  commissioned_semantic,
-  lease_or_own,
-  ST_AsGeoJSON(geom)::jsonb AS geom_json
-FROM serve.hyperscale_site, bounds
-WHERE geom_3857 && bounds.bbox_3857
-  AND ST_Intersects(geom_3857, bounds.bbox_3857)
+  s.hyperscale_id AS facility_id,
+  s.facility_name,
+  s.provider_id,
+  p."NAME" AS provider_name,
+  s.county_fips,
+  s.commissioned_power_mw,
+  s.commissioned_semantic,
+  s.lease_or_own,
+  ST_AsGeoJSON(s.geom)::jsonb AS geom_json
+FROM serve.hyperscale_site AS s
+LEFT JOIN mirror."HAWK_PROVIDER_PROFILE" AS p
+  ON p."PROVIDER_PROFILE_ID"::text = s.provider_id::text
+, bounds
+WHERE s.geom_3857 && bounds.bbox_3857
+  AND ST_Intersects(s.geom_3857, bounds.bbox_3857)
 LIMIT $5;`,
+  },
+  facilities_polygon_colocation: {
+    name: "facilities_polygon_colocation",
+    endpointClass: "feature-collection",
+    maxRows: 5000,
+    sql: `
+WITH aoi AS (
+  SELECT ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON($1), 4326), 3857) AS geom_3857
+)
+SELECT
+  f.facility_id,
+  f.facility_name,
+  f.provider_id,
+  p."NAME" AS provider_name,
+  f.county_fips,
+  f.commissioned_power_mw,
+  f.commissioned_semantic,
+  NULL::text AS lease_or_own,
+  ST_AsGeoJSON(f.geom)::jsonb AS geom_json
+FROM serve.facility_site AS f
+LEFT JOIN mirror."HAWK_PROVIDER_PROFILE" AS p
+  ON p."PROVIDER_PROFILE_ID"::text = f.provider_id::text
+, aoi
+WHERE f.geom_3857 && aoi.geom_3857
+  AND ST_Intersects(f.geom_3857, aoi.geom_3857)
+LIMIT $2;`,
+  },
+  facilities_polygon_hyperscale: {
+    name: "facilities_polygon_hyperscale",
+    endpointClass: "feature-collection",
+    maxRows: 5000,
+    sql: `
+WITH aoi AS (
+  SELECT ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON($1), 4326), 3857) AS geom_3857
+)
+SELECT
+  h.hyperscale_id AS facility_id,
+  h.facility_name,
+  h.provider_id,
+  p."NAME" AS provider_name,
+  h.county_fips,
+  h.commissioned_power_mw,
+  h.commissioned_semantic,
+  h.lease_or_own,
+  ST_AsGeoJSON(h.geom)::jsonb AS geom_json
+FROM serve.hyperscale_site AS h
+LEFT JOIN mirror."HAWK_PROVIDER_PROFILE" AS p
+  ON p."PROVIDER_PROFILE_ID"::text = h.provider_id::text
+, aoi
+WHERE h.geom_3857 && aoi.geom_3857
+  AND ST_Intersects(h.geom_3857, aoi.geom_3857)
+LIMIT $2;`,
   },
   facility_detail_colocation: {
     name: "facility_detail_colocation",
@@ -61,18 +127,22 @@ LIMIT $5;`,
     maxRows: 1,
     sql: `
 SELECT
-  facility_id,
-  provider_id,
-  county_fips,
-  commissioned_power_mw,
-  planned_power_mw,
-  under_construction_power_mw,
-  available_power_mw,
-  commissioned_semantic,
+  s.facility_id,
+  s.facility_name,
+  s.provider_id,
+  p."NAME" AS provider_name,
+  s.county_fips,
+  s.commissioned_power_mw,
+  s.planned_power_mw,
+  s.under_construction_power_mw,
+  s.available_power_mw,
+  s.commissioned_semantic,
   NULL::text AS lease_or_own,
-  ST_AsGeoJSON(geom)::jsonb AS geom_json
-FROM serve.facility_site
-WHERE facility_id = $1
+  ST_AsGeoJSON(s.geom)::jsonb AS geom_json
+FROM serve.facility_site AS s
+LEFT JOIN mirror."HAWK_PROVIDER_PROFILE" AS p
+  ON p."PROVIDER_PROFILE_ID"::text = s.provider_id::text
+WHERE s.facility_id = $1
 LIMIT 1;`,
   },
   facility_detail_hyperscale: {
@@ -81,18 +151,22 @@ LIMIT 1;`,
     maxRows: 1,
     sql: `
 SELECT
-  hyperscale_id AS facility_id,
-  provider_id,
-  county_fips,
-  commissioned_power_mw,
-  planned_power_mw,
-  under_construction_power_mw,
+  s.hyperscale_id AS facility_id,
+  s.facility_name,
+  s.provider_id,
+  p."NAME" AS provider_name,
+  s.county_fips,
+  s.commissioned_power_mw,
+  s.planned_power_mw,
+  s.under_construction_power_mw,
   NULL::numeric AS available_power_mw,
-  commissioned_semantic,
-  lease_or_own,
-  ST_AsGeoJSON(geom)::jsonb AS geom_json
-FROM serve.hyperscale_site
-WHERE hyperscale_id = $1
+  s.commissioned_semantic,
+  s.lease_or_own,
+  ST_AsGeoJSON(s.geom)::jsonb AS geom_json
+FROM serve.hyperscale_site AS s
+LEFT JOIN mirror."HAWK_PROVIDER_PROFILE" AS p
+  ON p."PROVIDER_PROFILE_ID"::text = s.provider_id::text
+WHERE s.hyperscale_id = $1
 LIMIT 1;`,
   },
   county_metrics: {
@@ -114,26 +188,6 @@ FROM analytics.county_scores_v1;`,
 
 export function getQuerySpec(name: QueryName): QuerySpec {
   return QUERY_SPECS[name];
-}
-
-export type ParcelGeometryModeSql = "none" | "centroid" | "simplified" | "full";
-
-export interface ParcelBboxFilter {
-  readonly east: number;
-  readonly north: number;
-  readonly south: number;
-  readonly west: number;
-}
-
-export interface ParcelSqlQuery {
-  readonly params: readonly (number | string)[];
-  readonly sql: string;
-}
-
-export interface ParcelEnrichQueryOptions {
-  readonly cursor?: string | null;
-  readonly includeGeometry: ParcelGeometryModeSql;
-  readonly limit: number;
 }
 
 const PARCELS_CANONICAL_TABLE = "parcel_current.parcels";

@@ -1,10 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import {
-  DEFAULT_LAYER_CATALOG,
-  LAYER_IDS,
-  validateLayerCatalog,
-  visibleLayerCount,
-} from "../src/index";
+import { DEFAULT_LAYER_CATALOG, LAYER_IDS, validateLayerCatalog, visibleLayerCount } from "@/index";
 
 describe("default layer catalog", () => {
   it("passes catalog validation", () => {
@@ -23,6 +18,10 @@ describe("default layer catalog", () => {
 
   it("retains the current default visible-layer baseline", () => {
     expect(visibleLayerCount(DEFAULT_LAYER_CATALOG)).toBe(2);
+    const visibleLayerIds = LAYER_IDS.filter(
+      (layerId) => DEFAULT_LAYER_CATALOG[layerId].defaultVisible
+    );
+    expect(visibleLayerIds).toEqual(["facilities.colocation", "facilities.hyperscale"]);
   });
 
   it("keeps power overlays ungated by minimum zoom", () => {

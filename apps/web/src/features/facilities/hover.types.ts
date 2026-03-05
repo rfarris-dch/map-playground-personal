@@ -8,9 +8,11 @@ export interface FacilityHoverState {
   readonly commissionedPowerMw: number | null;
   readonly commissionedSemantic: CommissionedSemantic;
   readonly facilityId: string;
+  readonly facilityName: string;
   readonly leaseOrOwn: LeaseOrOwn | null;
   readonly perspective: FacilityPerspective;
   readonly providerId: string;
+  readonly providerName: string;
   readonly screenPoint: readonly [number, number];
 }
 
@@ -23,4 +25,9 @@ export interface FacilitiesHoverOptions {
 export interface FacilitiesHoverController {
   clear(): void;
   destroy(): void;
+}
+
+export interface HoverTarget {
+  readonly featureId: number | string;
+  readonly sourceId: string;
 }

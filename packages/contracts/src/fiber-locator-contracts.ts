@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { ResponseMetaSchema } from "./shared-contracts";
+import { ResponseMetaSchema } from "@/shared-contracts";
+
+export type {
+  FiberLocatorCatalogResponse,
+  FiberLocatorLayer,
+  FiberLocatorLayersInViewResponse,
+} from "./fiber-locator-contracts.types";
 
 export const FiberLocatorLayerSchema = z.object({
   layerName: z.string(),
@@ -18,9 +24,3 @@ export const FiberLocatorLayersInViewResponseSchema = z.object({
   layers: z.array(z.string()),
   meta: ResponseMetaSchema,
 });
-
-export type FiberLocatorLayer = z.infer<typeof FiberLocatorLayerSchema>;
-export type FiberLocatorCatalogResponse = z.infer<typeof FiberLocatorCatalogResponseSchema>;
-export type FiberLocatorLayersInViewResponse = z.infer<
-  typeof FiberLocatorLayersInViewResponseSchema
->;

@@ -1,5 +1,5 @@
 import { ApiHeaders, type ResponseMeta } from "@map-migration/contracts";
-import { getApiRuntimeConfig } from "../../../http/runtime-config";
+import { getApiRuntimeConfig } from "@/http/runtime-config";
 
 const PASSTHROUGH_HEADER_NAMES: readonly string[] = [
   "cache-control",

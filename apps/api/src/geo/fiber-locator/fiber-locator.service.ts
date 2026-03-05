@@ -1,23 +1,27 @@
-import { type BBox, type FiberLocatorLayer, formatBboxParam } from "@map-migration/contracts";
+import { type BBox, formatBboxParam } from "@map-migration/contracts";
 import type {
   FiberLocatorCatalogResult,
   FiberLocatorConfig,
   FiberLocatorLayersInViewResult,
   FiberLocatorTileRequest,
   FiberLocatorUpstreamLayer,
-} from "./fiber-locator.types";
-
-interface FetchWithTimeoutResult {
-  readonly response: Response;
-}
-
-interface FiberLocatorTileSnapshot {
-  readonly body: Uint8Array;
-  readonly cachedAtMs: number;
-  readonly headers: Headers;
-  readonly status: number;
-  readonly statusText: string;
-}
+} from "@/geo/fiber-locator/fiber-locator.types";
+import {
+  type FiberLocatorConfigDefaults,
+  readFiberLocatorConfig as readFiberLocatorConfigFromEnv,
+} from "@/geo/fiber-locator/fiber-locator-config.service";
+import {
+  createLineSortOrder,
+  layerLineSortIndex,
+  normalizeUpstreamLayer,
+  normalizeUpstreamLayerName,
+  payloadRecordOrThrow,
+  toCatalogLayer,
+} from "@/geo/fiber-locator/fiber-locator-upstream-payload.service";
+import type {
+  FetchWithTimeoutResult,
+  FiberLocatorTileSnapshot,
+} from "./fiber-locator.service.types";
 
 const FIBER_LOCATOR_TILE_RETRY_MAX_ATTEMPTS = 3;
 const FIBER_LOCATOR_TILE_RETRY_BASE_DELAY_MS = 250;
@@ -26,60 +30,11 @@ const FIBER_LOCATOR_TILE_CACHE_MAX_ENTRIES = 512;
 
 const tileSnapshotByKey = new Map<string, FiberLocatorTileSnapshot>();
 const tileSnapshotInFlightByKey = new Map<string, Promise<FiberLocatorTileSnapshot>>();
-
-function normalizeApiBaseUrl(value: string): string {
-  const trimmed = value.trim();
-  return trimmed.endsWith("/") ? trimmed.slice(0, -1) : trimmed;
-}
-
-function parsePositiveIntEnv(name: string, defaultValue: number): number {
-  const raw = process.env[name];
-  if (typeof raw !== "string") {
-    return defaultValue;
-  }
-
-  const parsed = Number(raw);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return defaultValue;
-  }
-
-  return Math.floor(parsed);
-}
-
-function parseLineIds(raw: string | undefined): readonly string[] {
-  if (typeof raw !== "string") {
-    throw new Error("FIBERLOCATOR_LINE_IDS is required (comma-separated layer ids)");
-  }
-
-  const values = raw
-    .split(",")
-    .map((value) => value.trim())
-    .filter((value) => value.length > 0)
-    .map((value) => value.toLowerCase());
-
-  const dedupeInitialState: {
-    seen: Set<string>;
-    uniqueValues: string[];
-  } = {
-    seen: new Set<string>(),
-    uniqueValues: [],
-  };
-
-  const uniqueValues = values.reduce((state, value) => {
-    if (!state.seen.has(value)) {
-      state.seen.add(value);
-      state.uniqueValues.push(value);
-    }
-
-    return state;
-  }, dedupeInitialState).uniqueValues;
-
-  if (uniqueValues.length === 0) {
-    throw new Error("FIBERLOCATOR_LINE_IDS must include at least one layer id");
-  }
-
-  return uniqueValues;
-}
+const fiberLocatorConfigDefaults: FiberLocatorConfigDefaults = {
+  requestTimeoutMs: 30_000,
+  tileCacheMaxEntries: FIBER_LOCATOR_TILE_CACHE_MAX_ENTRIES,
+  tileCacheTtlMs: FIBER_LOCATOR_TILE_CACHE_TTL_MS,
+};
 
 function buildTokenPathUrl(config: FiberLocatorConfig, path: string): string {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
@@ -90,109 +45,6 @@ function buildInViewPath(config: FiberLocatorConfig, bbox: BBox): string {
   const encodedBbox = encodeURIComponent(formatBboxParam(bbox));
   const encodedBranches = config.lineIds.map((lineId) => encodeURIComponent(lineId)).join(",");
   return `/layers/inview/${encodedBbox}/${encodedBranches}`;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function readString(record: Record<string, unknown>, key: string): string | null {
-  const value = Reflect.get(record, key);
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const normalized = value.trim();
-  return normalized.length > 0 ? normalized : null;
-}
-
-function readNullableString(record: Record<string, unknown>, key: string): string | null {
-  const value = Reflect.get(record, key);
-  if (typeof value === "undefined" || value === null) {
-    return null;
-  }
-
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const normalized = value.trim();
-  return normalized.length > 0 ? normalized : null;
-}
-
-function normalizeUpstreamLayer(value: unknown): FiberLocatorUpstreamLayer | null {
-  if (!isRecord(value)) {
-    return null;
-  }
-
-  const layerName = readString(value, "layer_name");
-  if (layerName === null) {
-    return null;
-  }
-
-  const commonName = readString(value, "common_name") ?? layerName;
-  const branch = readNullableString(value, "branch");
-  const geomType = readNullableString(value, "geom_type");
-  const color = readNullableString(value, "color");
-
-  return {
-    layerName,
-    commonName,
-    branch,
-    geomType,
-    color,
-  };
-}
-
-function normalizeUpstreamLayerName(value: unknown): string | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const normalized = value.trim().toLowerCase();
-  if (normalized.length === 0) {
-    return null;
-  }
-
-  return normalized;
-}
-
-function toCatalogLayer(layer: FiberLocatorUpstreamLayer): FiberLocatorLayer {
-  return {
-    layerName: layer.layerName,
-    commonName: layer.commonName,
-    branch: layer.branch,
-    geomType: layer.geomType,
-    color: layer.color,
-  };
-}
-
-function createLineSortOrder(lineIds: readonly string[]): Map<string, number> {
-  return lineIds.reduce((sortOrder, lineId, index) => {
-    sortOrder.set(lineId.toLowerCase(), index);
-    return sortOrder;
-  }, new Map<string, number>());
-}
-
-function layerLineSortIndex(
-  layer: FiberLocatorUpstreamLayer,
-  lineSortOrder: ReadonlyMap<string, number>
-): number {
-  const branch = layer.branch?.toLowerCase() ?? null;
-  if (branch !== null) {
-    const branchIndex = lineSortOrder.get(branch);
-    if (typeof branchIndex === "number") {
-      return branchIndex;
-    }
-  }
-
-  const layerName = layer.layerName.toLowerCase();
-  const layerNameIndex = lineSortOrder.get(layerName);
-  if (typeof layerNameIndex === "number") {
-    return layerNameIndex;
-  }
-
-  return lineSortOrder.size;
 }
 
 function shouldRetryUpstreamResponse(response: Response): boolean {
@@ -407,31 +259,7 @@ export function isAllowedFiberLocatorLayer(config: FiberLocatorConfig, layerName
 }
 
 export function readFiberLocatorConfig(): FiberLocatorConfig {
-  const apiBaseUrl = process.env.FIBERLOCATOR_API_BASE_URL;
-  const staticToken = process.env.FIBERLOCATOR_STATIC_TOKEN;
-
-  if (typeof apiBaseUrl !== "string" || apiBaseUrl.trim().length === 0) {
-    throw new Error("FIBERLOCATOR_API_BASE_URL is required");
-  }
-
-  if (typeof staticToken !== "string" || staticToken.trim().length === 0) {
-    throw new Error("FIBERLOCATOR_STATIC_TOKEN is required");
-  }
-
-  return {
-    apiBaseUrl: normalizeApiBaseUrl(apiBaseUrl),
-    requestTimeoutMs: parsePositiveIntEnv("FIBERLOCATOR_REQUEST_TIMEOUT_MS", 30_000),
-    lineIds: parseLineIds(process.env.FIBERLOCATOR_LINE_IDS),
-    staticToken: staticToken.trim(),
-    tileCacheMaxEntries: parsePositiveIntEnv(
-      "FIBERLOCATOR_TILE_CACHE_MAX_ENTRIES",
-      FIBER_LOCATOR_TILE_CACHE_MAX_ENTRIES
-    ),
-    tileCacheTtlMs: parsePositiveIntEnv(
-      "FIBERLOCATOR_TILE_CACHE_TTL_MS",
-      FIBER_LOCATOR_TILE_CACHE_TTL_MS
-    ),
-  };
+  return readFiberLocatorConfigFromEnv(fiberLocatorConfigDefaults);
 }
 
 export async function fetchFiberLocatorCatalog(
@@ -464,16 +292,14 @@ export async function fetchFiberLocatorCatalog(
     throw new Error("fiberlocator layers response was not valid JSON");
   }
 
-  if (!isRecord(payload)) {
-    throw new Error("fiberlocator layers response payload was not an object");
-  }
+  const payloadRecord = payloadRecordOrThrow(payload, "fiberlocator layers response");
 
-  const status = Reflect.get(payload, "status");
+  const status = Reflect.get(payloadRecord, "status");
   if (status !== "ok") {
     throw new Error("fiberlocator layers response status was not ok");
   }
 
-  const result = Reflect.get(payload, "result");
+  const result = Reflect.get(payloadRecord, "result");
   if (!Array.isArray(result)) {
     throw new Error("fiberlocator layers response did not include result[]");
   }
@@ -550,16 +376,14 @@ export async function fetchFiberLocatorLayersInView(
     throw new Error("fiberlocator layers/inview response was not valid JSON");
   }
 
-  if (!isRecord(payload)) {
-    throw new Error("fiberlocator layers/inview response payload was not an object");
-  }
+  const payloadRecord = payloadRecordOrThrow(payload, "fiberlocator layers/inview response");
 
-  const status = Reflect.get(payload, "status");
+  const status = Reflect.get(payloadRecord, "status");
   if (status !== "ok") {
     throw new Error("fiberlocator layers/inview response status was not ok");
   }
 
-  const result = Reflect.get(payload, "result");
+  const result = Reflect.get(payloadRecord, "result");
   if (!Array.isArray(result)) {
     throw new Error("fiberlocator layers/inview response did not include result[]");
   }

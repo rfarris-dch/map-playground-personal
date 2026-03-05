@@ -14,6 +14,13 @@ export interface FacilitiesBboxRequest {
 
 export type FacilitiesFetchResult = ApiResult<FacilitiesFeatureCollection>;
 
+export interface FacilitiesViewportSnapshot {
+  readonly features: FacilitiesFeatureCollection["features"];
+  readonly perspective: FacilityPerspective;
+  readonly requestId: string;
+  readonly truncated: boolean;
+}
+
 export interface SelectedFacilityRef {
   readonly facilityId: string;
   readonly perspective: FacilityPerspective;
@@ -51,6 +58,7 @@ export interface FacilitiesLayerOptions {
   minZoom?: number;
   readonly onSelectFacility?: (facility: SelectedFacilityRef | null) => void;
   readonly onStatus?: (status: FacilitiesStatus) => void;
+  readonly onViewportUpdate?: (snapshot: FacilitiesViewportSnapshot) => void;
   perspective?: FacilityPerspective;
 }
 
@@ -74,11 +82,4 @@ export interface FacilitiesLayerState {
 export interface FacilitiesSourceData {
   readonly features: FacilitiesFeatureCollection["features"];
   readonly type: "FeatureCollection";
-}
-
-export interface MapBoundsLike {
-  readonly east: number;
-  readonly north: number;
-  readonly south: number;
-  readonly west: number;
 }

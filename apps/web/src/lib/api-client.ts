@@ -1,41 +1,15 @@
-import { ApiErrorResponseSchema, ApiHeaders } from "@map-migration/contracts";
+import { ApiErrorResponseSchema, ApiHeaders, type SafeParseSchema } from "@map-migration/contracts";
 import { createRequestId } from "@map-migration/ops";
+import type {
+  ApiResult,
+  FailedJson,
+  FailedResponse,
+  OkJson,
+  OkResponse,
+  ParsedApiError,
+} from "./api-client.types";
 
-export type ApiResult<T> =
-  | { ok: true; requestId: string; data: T }
-  | {
-      code?: string;
-      message?: string;
-      ok: false;
-      requestId: string;
-      reason: "aborted" | "http" | "schema" | "network";
-      status?: number;
-      details?: unknown;
-    };
-
-interface SafeParseSchema<T> {
-  safeParse(input: unknown): { success: true; data: T } | { success: false; error: unknown };
-}
-
-interface FailedResponse {
-  error: unknown;
-  ok: false;
-}
-
-interface OkResponse {
-  ok: true;
-  response: Response;
-}
-
-interface FailedJson {
-  error: unknown;
-  ok: false;
-}
-
-interface OkJson {
-  json: unknown;
-  ok: true;
-}
+export type { ApiResult } from "./api-client.types";
 
 async function safeFetch(url: string, init: RequestInit): Promise<FailedResponse | OkResponse> {
   try {
@@ -83,13 +57,6 @@ async function readHttpErrorDetails(response: Response): Promise<unknown> {
   }
 
   return undefined;
-}
-
-interface ParsedApiError {
-  readonly code: string;
-  readonly details: unknown;
-  readonly message: string;
-  readonly requestId: string;
 }
 
 function parseApiError(details: unknown): ParsedApiError | null {

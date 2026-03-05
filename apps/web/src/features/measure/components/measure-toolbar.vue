@@ -1,8 +1,12 @@
 <script setup lang="ts">
   import { computed } from "vue";
   import Button from "@/components/ui/button/button.vue";
-  import { formatArea, formatDistance } from "../measure.service";
-  import type { MeasureAreaShape, MeasureMode, MeasureState } from "../measure.types";
+  import { formatArea, formatDistance } from "@/features/measure/measure.service";
+  import type {
+    MeasureAreaShape,
+    MeasureMode,
+    MeasureState,
+  } from "@/features/measure/measure.types";
 
   interface MeasureToolbarProps {
     readonly state: MeasureState;
@@ -23,14 +27,18 @@
     }
 
     if (props.state.mode === "distance") {
-      return "Click map to add path vertices";
+      return "Click map to add path vertices. Press Esc to cancel";
+    }
+
+    if (props.state.isSelectionComplete) {
+      return "Selection complete. Review results panel or press Esc to clear";
     }
 
     if (props.state.areaShape === "freeform") {
-      return "Click points, click the first point or Finish to close";
+      return "Click points, click first point or Enter to close. Press Esc to cancel";
     }
 
-    return "Click once to anchor, click again to finalize";
+    return "Click once to anchor, click again to finalize. Press Esc to cancel";
   });
 
   function setMode(mode: MeasureMode): void {

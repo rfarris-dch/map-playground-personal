@@ -1,16 +1,16 @@
-import { responseError, toDebugDetails } from "../../../http/api-response";
 import {
   fetchFiberLocatorTile,
   isAllowedFiberLocatorLayer,
   readFiberLocatorConfig,
-} from "../fiber-locator.service";
-import type { FiberLocatorConfig } from "../fiber-locator.types";
-import type { ProxyFiberLocatorTileRequestArgs } from "./fiber-locator-route.types";
-import { copyFiberLocatorPassthroughHeaders } from "./fiber-locator-route-meta.service";
+} from "@/geo/fiber-locator/fiber-locator.service";
+import type { FiberLocatorConfig } from "@/geo/fiber-locator/fiber-locator.types";
+import type { ProxyFiberLocatorTileRequestArgs } from "@/geo/fiber-locator/route/fiber-locator-route.types";
+import { copyFiberLocatorPassthroughHeaders } from "@/geo/fiber-locator/route/fiber-locator-route-meta.service";
 import {
   parseFiberLocatorLayerName,
   parseFiberLocatorTileCoordinates,
-} from "./fiber-locator-route-param.service";
+} from "@/geo/fiber-locator/route/fiber-locator-route-param.service";
+import { responseError, toDebugDetails } from "@/http/api-response";
 
 export async function proxyFiberLocatorTileRequest(
   args: ProxyFiberLocatorTileRequestArgs

@@ -2,7 +2,7 @@ import type {
   FiberLocatorLayerController,
   FiberLocatorLineId,
   FiberLocatorSourceLayerOption,
-} from "./fiber-locator.types";
+} from "@/features/fiber-locator/fiber-locator.types";
 
 export interface FiberLocatorHoverState {
   readonly featureId: number | string;
@@ -28,4 +28,10 @@ export interface FiberLocatorHoverOptions {
 export interface FiberLocatorHoverController {
   clear(): void;
   destroy(): void;
+}
+
+export interface HoverTarget {
+  readonly featureId: number | string;
+  readonly sourceId: string;
+  readonly sourceLayerName: string;
 }

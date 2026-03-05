@@ -1,17 +1,15 @@
 import type { IMap, MapPointerEvent } from "@map-migration/map-engine";
-import { fiberLocatorLineLabel } from "./fiber-locator.service";
-import type { FiberLocatorLineId, FiberLocatorSourceLayerOption } from "./fiber-locator.types";
+import { fiberLocatorLineLabel } from "@/features/fiber-locator/fiber-locator.service";
+import type {
+  FiberLocatorLineId,
+  FiberLocatorSourceLayerOption,
+} from "@/features/fiber-locator/fiber-locator.types";
 import type {
   FiberLocatorHoverController,
   FiberLocatorHoverOptions,
   FiberLocatorHoverState,
-} from "./hover.types";
-
-interface HoverTarget {
-  readonly featureId: number | string;
-  readonly sourceId: string;
-  readonly sourceLayerName: string;
-}
+} from "@/features/fiber-locator/hover.types";
+import type { HoverTarget } from "./hover.types";
 
 function isFeatureId(value: unknown): value is number | string {
   return typeof value === "number" || typeof value === "string";

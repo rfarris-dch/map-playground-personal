@@ -1,16 +1,16 @@
-import type {
-  CommissionedSemantic,
-  FacilitiesDetailFeature,
-  FacilitiesFeature,
-  FacilityPerspective,
-  LeaseOrOwn,
+import {
+  type CommissionedSemantic,
+  type FacilitiesDetailFeature,
+  type FacilitiesFeature,
+  type FacilityPerspective,
+  type LeaseOrOwn,
+  parseCommissionedSemantic,
+  parseLeaseOrOwn,
 } from "@map-migration/contracts";
-import type { FacilitiesBboxRow, FacilityDetailRow } from "./facilities.repo";
+import type { FacilitiesBboxRow, FacilityDetailRow } from "@/geo/facilities/facilities.repo";
+import type { PointGeometry } from "./facilities.mapper.types";
 
-interface PointGeometry {
-  readonly coordinates: [number, number];
-  readonly type: "Point";
-}
+const NUMERIC_IDENTIFIER_RE = /^[0-9]+$/;
 
 function parseJsonObject(text: string): unknown {
   try {
@@ -73,33 +73,74 @@ function readNullableNumber(value: number | string | null | undefined): number |
 }
 
 function readCommissionedSemantic(value: string | null | undefined): CommissionedSemantic {
-  if (
-    value === "leased" ||
-    value === "operational" ||
-    value === "under_construction" ||
-    value === "planned" ||
-    value === "unknown"
-  ) {
-    return value;
-  }
-
-  return "unknown";
+  return parseCommissionedSemantic(value) ?? "unknown";
 }
 
 function readLeaseOrOwn(value: string | null | undefined): LeaseOrOwn | null {
-  if (value === "lease" || value === "own" || value === "unknown") {
-    return value;
+  return parseLeaseOrOwn(value);
+}
+
+function readNullableText(value: string | null | undefined): string | null {
+  if (typeof value !== "string") {
+    return null;
   }
 
-  return null;
+  const normalized = value.trim();
+  if (normalized.length === 0) {
+    return null;
+  }
+
+  return normalized;
+}
+
+function readRequiredText(value: string | null | undefined, field: string): string {
+  const normalized = readNullableText(value);
+  if (normalized === null) {
+    throw new Error(`Invalid facilities row: missing ${field}`);
+  }
+
+  return normalized;
+}
+
+function readFacilityName(value: string | null | undefined): string {
+  return readRequiredText(value, "facility_name");
+}
+
+function readProviderName(args: {
+  readonly facilityName: string | null | undefined;
+  readonly perspective: FacilityPerspective;
+  readonly providerId: string | null | undefined;
+  readonly providerName: string | null | undefined;
+}): string {
+  const resolvedProviderName = readNullableText(args.providerName);
+  const resolvedProviderId = readNullableText(args.providerId);
+  if (resolvedProviderName !== null) {
+    const providerLooksLikeId =
+      resolvedProviderName === resolvedProviderId ||
+      NUMERIC_IDENTIFIER_RE.test(resolvedProviderName);
+    if (!(args.perspective === "hyperscale" && providerLooksLikeId)) {
+      return resolvedProviderName;
+    }
+  }
+
+  if (args.perspective === "hyperscale") {
+    const fallbackFromFacilityName = readFacilityName(args.facilityName);
+    return fallbackFromFacilityName;
+  }
+
+  if (resolvedProviderName !== null) {
+    return resolvedProviderName;
+  }
+
+  if (resolvedProviderId !== null && !NUMERIC_IDENTIFIER_RE.test(resolvedProviderId)) {
+    return resolvedProviderId;
+  }
+
+  throw new Error("Invalid facilities row: provider_name is required");
 }
 
 function readProviderId(value: string | null | undefined): string {
-  if (typeof value === "string" && value.length > 0) {
-    return value;
-  }
-
-  return "unknown-provider";
+  return readRequiredText(value, "provider_id");
 }
 
 export function mapFacilitiesRowsToFeatures(
@@ -113,7 +154,14 @@ export function mapFacilitiesRowsToFeatures(
     properties: {
       perspective,
       facilityId: row.facility_id,
+      facilityName: readFacilityName(row.facility_name),
       providerId: readProviderId(row.provider_id),
+      providerName: readProviderName({
+        providerName: row.provider_name,
+        providerId: row.provider_id,
+        facilityName: row.facility_name,
+        perspective,
+      }),
       countyFips: row.county_fips,
       commissionedPowerMw: readNullableNumber(row.commissioned_power_mw),
       commissionedSemantic: readCommissionedSemantic(row.commissioned_semantic),
@@ -133,7 +181,14 @@ export function mapFacilityDetailRowToFeature(
     properties: {
       perspective,
       facilityId: row.facility_id,
+      facilityName: readFacilityName(row.facility_name),
       providerId: readProviderId(row.provider_id),
+      providerName: readProviderName({
+        providerName: row.provider_name,
+        providerId: row.provider_id,
+        facilityName: row.facility_name,
+        perspective,
+      }),
       countyFips: row.county_fips,
       commissionedSemantic: readCommissionedSemantic(row.commissioned_semantic),
       leaseOrOwn: readLeaseOrOwn(row.lease_or_own),

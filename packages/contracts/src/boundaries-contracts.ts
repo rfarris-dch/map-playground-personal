@@ -1,5 +1,13 @@
 import { z } from "zod";
-import { GeometrySchema, ResponseMetaSchema } from "./shared-contracts";
+import { GeometrySchema, ResponseMetaSchema } from "@/shared-contracts";
+import type { BoundaryPowerLevel } from "./boundaries-contracts.types";
+
+export type {
+  BoundaryPowerFeature,
+  BoundaryPowerFeatureCollection,
+  BoundaryPowerLevel,
+  BoundaryPowerProperties,
+} from "./boundaries-contracts.types";
 
 export const BoundaryPowerLevelSchema = z.enum(["county", "state", "country"]);
 
@@ -36,8 +44,3 @@ export const BoundaryPowerFeatureCollectionSchema = z.object({
   features: z.array(BoundaryPowerFeatureSchema),
   meta: ResponseMetaSchema,
 });
-
-export type BoundaryPowerLevel = z.infer<typeof BoundaryPowerLevelSchema>;
-export type BoundaryPowerProperties = z.infer<typeof BoundaryPowerPropertiesSchema>;
-export type BoundaryPowerFeature = z.infer<typeof BoundaryPowerFeatureSchema>;
-export type BoundaryPowerFeatureCollection = z.infer<typeof BoundaryPowerFeatureCollectionSchema>;

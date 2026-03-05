@@ -3,20 +3,22 @@ import {
   type BoundaryPowerFeatureCollection,
   BoundaryPowerFeatureCollectionSchema,
   type BoundaryPowerLevel,
-  BoundaryPowerLevelSchema,
+  parseBoundaryPowerLevelParam,
   type ResponseMeta,
+  type Warning,
 } from "@map-migration/contracts";
-import type { Hono } from "hono";
-import { getOrCreateRequestId, jsonError, jsonOk, toDebugDetails } from "../../http/api-response";
-import { getApiRuntimeConfig } from "../../http/runtime-config";
-import { mapBoundaryPowerRowsToFeatures } from "./boundaries.mapper";
-import { type BoundaryPowerRow, listBoundaryPower } from "./boundaries.repo";
+import type { Env, Hono } from "hono";
+import { mapBoundaryPowerRowsToFeatures } from "@/geo/boundaries/boundaries.mapper";
+import { type BoundaryPowerRow, listBoundaryPower } from "@/geo/boundaries/boundaries.repo";
+import { getOrCreateRequestId, jsonError, jsonOk, toDebugDetails } from "@/http/api-response";
+import { getApiRuntimeConfig } from "@/http/runtime-config";
+import type { MapFeaturesResult, QueryRowsResult } from "./boundaries.route.types";
 
 function buildResponseMeta(args: {
   readonly requestId: string;
   readonly recordCount: number;
   readonly truncated: boolean;
-  readonly warnings: ReadonlyArray<{ code: string; message: string }>;
+  readonly warnings: readonly Warning[];
 }): ResponseMeta {
   const runtimeConfig = getApiRuntimeConfig();
   return {
@@ -35,17 +37,12 @@ function defaultBoundaryLevel(): BoundaryPowerLevel {
 }
 
 function parseBoundaryLevel(value: string | undefined): BoundaryPowerLevel | null {
-  const parsed = BoundaryPowerLevelSchema.safeParse(value ?? defaultBoundaryLevel());
-  if (!parsed.success) {
-    return null;
+  if (typeof value === "undefined") {
+    return defaultBoundaryLevel();
   }
 
-  return parsed.data;
+  return parseBoundaryPowerLevelParam(value);
 }
-
-type QueryRowsResult =
-  | { readonly ok: true; readonly rows: readonly BoundaryPowerRow[] }
-  | { readonly error: unknown; readonly ok: false };
 
 function queryBoundaryRows(level: BoundaryPowerLevel): Promise<QueryRowsResult> {
   return listBoundaryPower(level).then(
@@ -59,10 +56,6 @@ function queryBoundaryRows(level: BoundaryPowerLevel): Promise<QueryRowsResult> 
     })
   );
 }
-
-type MapFeaturesResult =
-  | { readonly features: BoundaryPowerFeatureCollection["features"]; readonly ok: true }
-  | { readonly error: unknown; readonly ok: false };
 
 function mapBoundaryFeatures(
   rows: readonly BoundaryPowerRow[],
@@ -82,7 +75,7 @@ function mapBoundaryFeatures(
   }
 }
 
-export function registerBoundariesRoute(app: Hono): void {
+export function registerBoundariesRoute<E extends Env>(app: Hono<E>): void {
   app.get(ApiRoutes.boundariesPower, async (c) => {
     const requestId = getOrCreateRequestId(c, "api");
     const level = parseBoundaryLevel(c.req.query("level"));

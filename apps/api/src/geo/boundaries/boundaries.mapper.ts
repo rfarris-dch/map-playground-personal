@@ -3,12 +3,8 @@ import type {
   BoundaryPowerLevel,
   BoundaryPowerProperties,
 } from "@map-migration/contracts";
-import type { BoundaryPowerRow } from "./boundaries.repo";
-
-interface GeoJsonGeometry {
-  readonly coordinates: unknown;
-  readonly type: string;
-}
+import type { BoundaryPowerRow } from "@/geo/boundaries/boundaries.repo";
+import type { GeoJsonGeometry } from "./boundaries.mapper.types";
 
 function parseJsonObject(input: string): unknown {
   try {
@@ -51,10 +47,10 @@ function readCommissionedPowerMw(value: number | string | null | undefined): num
     }
   }
 
-  return 0;
+  throw new Error("Invalid boundary row: commissioned_power_mw must be a nonnegative number");
 }
 
-function readRequiredLabel(value: string | null | undefined, fallback: string): string {
+function readRequiredLabel(value: string | null | undefined, field: string): string {
   if (typeof value === "string") {
     const trimmed = value.trim();
     if (trimmed.length > 0) {
@@ -62,7 +58,7 @@ function readRequiredLabel(value: string | null | undefined, fallback: string): 
     }
   }
 
-  return fallback;
+  throw new Error(`Invalid boundary row: ${field} is required`);
 }
 
 function readOptionalLabel(value: string | null | undefined): string | null {
@@ -82,7 +78,7 @@ function toProperties(row: BoundaryPowerRow, level: BoundaryPowerLevel): Boundar
   return {
     level,
     regionId: row.region_id,
-    regionName: readRequiredLabel(row.region_name, row.region_id),
+    regionName: readRequiredLabel(row.region_name, "region_name"),
     parentRegionName: readOptionalLabel(row.parent_region_name),
     commissionedPowerMw: readCommissionedPowerMw(row.commissioned_power_mw),
   };

@@ -1,10 +1,10 @@
 import { ApiRoutes, ParcelsSyncStatusResponseSchema } from "@map-migration/contracts";
-import type { Hono } from "hono";
-import { getOrCreateRequestId, jsonOk } from "../../../http/api-response";
-import { getParcelsSyncStatusSnapshot } from "../../../sync/parcels-sync.service";
-import { EXPOSE_SYNC_INTERNALS } from "./parcels-route-meta.service";
+import type { Env, Hono } from "hono";
+import { EXPOSE_SYNC_INTERNALS } from "@/geo/parcels/route/parcels-route-meta.service";
+import { getOrCreateRequestId, jsonOk } from "@/http/api-response";
+import { getParcelsSyncStatusSnapshot } from "@/sync/parcels-sync.service";
 
-export function registerParcelsSyncStatusRoute(app: Hono): void {
+export function registerParcelsSyncStatusRoute<E extends Env>(app: Hono<E>): void {
   app.get(ApiRoutes.parcelsSyncStatus, (c) => {
     const requestId = getOrCreateRequestId(c, "api");
 

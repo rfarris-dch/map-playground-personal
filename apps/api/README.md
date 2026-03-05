@@ -15,4 +15,5 @@ Current slice:
 - `POST /api/geo/parcels/enrich` for AOI-based parcel enrichment (`bbox|polygon|county|tileSet`).
 - Facilities and parcels routes are Postgres-only (no fixtures or fallback source mode).
 - Route + repository + mapper split is used per geo slice.
+- Sync loops run in a separate worker entrypoint (`src/sync-worker.ts`) instead of the HTTP server runtime.
 - Bun-native Postgres access via `Bun.sql` with graceful shutdown cleanup.

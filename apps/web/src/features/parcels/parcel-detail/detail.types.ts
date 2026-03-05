@@ -3,8 +3,8 @@ import type {
   ParcelGeometryMode,
   ParcelProfile,
 } from "@map-migration/contracts";
+import type { SelectedParcelRef } from "@/features/parcels/parcels.types";
 import type { ApiResult } from "@/lib/api-client";
-import type { SelectedParcelRef } from "../parcels.types";
 
 export interface ParcelDetailRequest extends SelectedParcelRef {
   readonly includeGeometry?: ParcelGeometryMode;
@@ -18,3 +18,5 @@ export interface ParcelDetailPayload {
   readonly requestId: string;
   readonly response: ParcelDetailResponse;
 }
+
+export type ParcelDetailQueryKey = readonly ["parcel-detail", string | null, string | null];

@@ -5,26 +5,13 @@ import {
   buildParcelsEnrichByCountyQuery,
   buildParcelsEnrichByPolygonQuery,
   type ParcelBboxFilter,
+  type ParcelEnrichQueryOptions,
   type ParcelGeometryModeSql,
 } from "@map-migration/geo-sql";
-import { runQuery } from "../../db/postgres";
+import { runQuery } from "@/db/postgres";
+import type { ParcelRow } from "./parcels.repo.types";
 
-export interface ParcelRow {
-  readonly attrs_json: unknown;
-  readonly geoid: string | null | undefined;
-  readonly geom_json: unknown;
-  readonly ingestion_run_id: string | null | undefined;
-  readonly parcel_id: string;
-  readonly source_oid: number | string | null | undefined;
-  readonly source_updated_at: Date | string | null | undefined;
-  readonly state2: string | null | undefined;
-}
-
-interface ParcelEnrichQueryOptions {
-  readonly cursor?: string | null;
-  readonly includeGeometry: ParcelGeometryModeSql;
-  readonly limit: number;
-}
+export type { ParcelRow } from "./parcels.repo.types";
 
 export function getParcelById(
   parcelId: string,

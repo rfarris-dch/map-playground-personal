@@ -1,5 +1,5 @@
 import type { MarketTableRow } from "@map-migration/contracts";
-import type { MarketListRow } from "./markets.repo";
+import type { MarketListRow } from "@/geo/markets/markets.repo";
 
 function readNullableNumber(value: number | string | null | undefined): number | null {
   if (typeof value === "number" && Number.isFinite(value)) {

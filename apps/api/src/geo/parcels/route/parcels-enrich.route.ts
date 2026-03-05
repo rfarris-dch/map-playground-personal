@@ -4,43 +4,57 @@ import {
   type ParcelsFeatureCollection,
   ParcelsFeatureCollectionSchema,
 } from "@map-migration/contracts";
-import type { Hono } from "hono";
-import { getOrCreateRequestId, jsonOk } from "../../../http/api-response";
-import { mapParcelRowsToFeatures } from "../parcels.mapper";
-import { type EnrichRowsResult, queryEnrichRowsByAoi } from "./parcels-route-aoi-query.service";
+import type { Env, Hono } from "hono";
+import { mapParcelRowsToFeatures } from "@/geo/parcels/parcels.mapper";
+import {
+  type EnrichRowsResult,
+  queryEnrichRowsByAoi,
+} from "@/geo/parcels/route/parcels-route-aoi-query.service";
 import {
   coerceCursor,
   paginateEnrichFeatures,
   resolvePageSize,
-} from "./parcels-route-enrich.service";
+} from "@/geo/parcels/route/parcels-route-enrich.service";
 import {
   parcelMappingFailed,
   postgisQueryFailed,
   rejectWithBadRequest,
-} from "./parcels-route-errors.service";
+  rejectWithPolicyError,
+} from "@/geo/parcels/route/parcels-route-errors.service";
 import {
   buildParcelMeta,
   conflictResponseIfNeeded,
   profileMetadataWarnings,
   readExpectedIngestionRunId,
   readIngestionRunId,
-} from "./parcels-route-meta.service";
+} from "@/geo/parcels/route/parcels-route-meta.service";
+import { getOrCreateRequestId, jsonOk } from "@/http/api-response";
+import { readJsonBody } from "@/http/json-request.service";
+import { isDatasetQueryAllowed } from "@/http/spatial-analysis-policy.service";
 
-export function registerParcelsEnrichRoute(app: Hono): void {
+export function registerParcelsEnrichRoute<E extends Env>(app: Hono<E>): void {
   app.post(`${ApiRoutes.parcels}/enrich`, async (c) => {
     const requestId = getOrCreateRequestId(c, "api");
     const expectedIngestionRunId = readExpectedIngestionRunId(c);
-
-    let body: unknown;
-    try {
-      body = await c.req.json();
-    } catch {
-      return rejectWithBadRequest(c, requestId, "invalid JSON body");
+    const bodyResult = await readJsonBody(c, {
+      requestId,
+      invalidJsonMessage: "invalid JSON body",
+    });
+    if (!bodyResult.ok) {
+      return bodyResult.response;
     }
 
-    const parsed = ParcelEnrichRequestSchema.safeParse(body);
+    const parsed = ParcelEnrichRequestSchema.safeParse(bodyResult.value);
     if (!parsed.success) {
       return rejectWithBadRequest(c, requestId, "invalid parcel enrich request payload");
+    }
+
+    if (!isDatasetQueryAllowed("parcels", parsed.data.aoi.type)) {
+      return rejectWithPolicyError(
+        c,
+        requestId,
+        `query granularity "${parsed.data.aoi.type}" is not allowed for parcels`
+      );
     }
 
     const pageSizeResolution = resolvePageSize(parsed.data.pageSize);

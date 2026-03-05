@@ -1,8 +1,9 @@
 import type {
   ParcelsSyncMode,
   ParcelsSyncPhase,
+  ParcelsSyncRunProgress,
   ParcelsSyncRunReason,
-} from "../parcels-sync.types";
+} from "@/sync/parcels-sync.types";
 
 export interface MutableParcelsSyncRunStatus {
   durationMs: number | null;
@@ -12,6 +13,7 @@ export interface MutableParcelsSyncRunStatus {
   isRunning: boolean;
   logTail: string[];
   phase: ParcelsSyncPhase;
+  progress: ParcelsSyncRunProgress | null;
   reason: ParcelsSyncRunReason | null;
   runId: string | null;
   startedAt: string | null;
@@ -68,6 +70,7 @@ export interface ActiveExternalRunCandidate {
 export interface ActiveRunMarker {
   readonly isRunning: boolean;
   readonly phase: ParcelsSyncPhase;
+  readonly progress: ParcelsSyncRunProgress | null;
   readonly runId: string;
   readonly summary: string | null;
   readonly updatedAt: string | null;

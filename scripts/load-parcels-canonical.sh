@@ -3,10 +3,10 @@ set -euo pipefail
 shopt -s nullglob
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-if [[ -f "${ROOT_DIR}/.env" ]]; then
+if [[ -f "${ROOT_DIR}/apps/api/.env" ]]; then
   set -a
   # shellcheck disable=SC1091
-  source "${ROOT_DIR}/.env"
+  source "${ROOT_DIR}/apps/api/.env"
   set +a
 fi
 
@@ -75,10 +75,88 @@ update_active_status() {
 
   python3 - "${ACTIVE_STATUS_PATH}" "${RUN_ID}" "${summary}" <<'PY'
 import json
+import re
 import sys
 from datetime import datetime, timezone
 
 path, run_id, summary = sys.argv[1:4]
+
+def parse_db_load_progress(summary_text: str):
+    normalized = summary_text.strip()
+    if not normalized.startswith("db-load:"):
+        return None
+
+    detail_text = normalized[len("db-load:") :].strip()
+    if len(detail_text) == 0:
+        return None
+
+    parts = detail_text.split(None, 1)
+    step_key = parts[0].strip().lower()
+    detail = parts[1].strip() if len(parts) > 1 else ""
+
+    db_load = {
+        "stepKey": step_key,
+        "activeWorkers": [],
+    }
+
+    ratio_match = re.search(r"([0-9]+)\/([0-9]+)", detail)
+    if step_key == "staging":
+        if ratio_match is not None:
+            loaded = int(ratio_match.group(1))
+            total = int(ratio_match.group(2))
+            db_load["loadedFiles"] = loaded
+            if total > 0:
+                db_load["totalFiles"] = total
+                db_load["percent"] = round((loaded / total) * 100, 2)
+            remaining_detail = detail[ratio_match.end() :].strip()
+            if len(remaining_detail) > 0:
+                db_load["currentFile"] = remaining_detail
+        elif len(detail) > 0:
+            db_load["currentFile"] = detail
+    elif step_key == "materialize":
+        if ratio_match is not None:
+            completed = int(ratio_match.group(1))
+            total = int(ratio_match.group(2))
+            if total > 0:
+                db_load["percent"] = round((completed / total) * 100, 2)
+
+        states_match = re.search(r"\bstates=([0-9]+)\/([0-9]+)\b", detail)
+        if states_match is not None:
+            db_load["completedStates"] = int(states_match.group(1))
+            db_load["totalStates"] = int(states_match.group(2))
+
+        active_match = re.search(r"\bactive=([^ ]+)", detail)
+        if active_match is not None:
+            active_token = active_match.group(1).strip()
+            if len(active_token) > 0 and active_token.lower() != "none":
+                db_load["activeWorkers"] = [
+                    token.strip()
+                    for token in active_token.split(",")
+                    if len(token.strip()) > 0
+                ]
+
+        if len(detail) > 0:
+            db_load["currentFile"] = detail
+    elif step_key == "index-stage-state2":
+        if ratio_match is not None:
+            completed = int(ratio_match.group(1))
+            total = int(ratio_match.group(2))
+            if total > 0:
+                db_load["percent"] = round((completed / total) * 100, 2)
+        if len(detail) > 0:
+            db_load["currentFile"] = detail
+    else:
+        if len(detail) > 0:
+            db_load["currentFile"] = detail
+        if step_key == "complete":
+            db_load["percent"] = 100.0
+
+    return {
+        "schemaVersion": 1,
+        "phase": "loading",
+        "dbLoad": db_load,
+    }
+
 payload = {
     "runId": run_id,
     "phase": "loading",
@@ -86,6 +164,9 @@ payload = {
     "updatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
     "summary": summary,
 }
+progress = parse_db_load_progress(summary)
+if progress is not None:
+    payload["progress"] = progress
 try:
     with open(path, "r", encoding="utf-8") as handle:
         existing = json.load(handle)

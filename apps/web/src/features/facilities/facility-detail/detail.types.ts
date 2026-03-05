@@ -1,6 +1,6 @@
-import type { FacilitiesDetailResponse } from "@map-migration/contracts";
+import type { FacilitiesDetailResponse, FacilityPerspective } from "@map-migration/contracts";
+import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";
 import type { ApiResult } from "@/lib/api-client";
-import type { SelectedFacilityRef } from "../facilities.types";
 
 export type FacilityDetailResult = ApiResult<FacilitiesDetailResponse>;
 
@@ -12,3 +12,9 @@ export interface FacilityDetailPayload {
 export interface FacilityDetailRequest extends SelectedFacilityRef {
   readonly signal?: AbortSignal;
 }
+
+export type FacilityDetailQueryKey = readonly [
+  "facility-detail",
+  FacilityPerspective | null,
+  string | null,
+];

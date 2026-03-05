@@ -1,11 +1,11 @@
 import { buildFiberLocatorVectorTileRoute } from "@map-migration/contracts";
-import { fiberLocatorLineColor } from "./fiber-locator.service";
+import { fiberLocatorLineColor } from "@/features/fiber-locator/fiber-locator.service";
 import type {
   FiberLocatorLayerController,
   FiberLocatorLayerOptions,
   FiberLocatorLayerState,
   FiberLocatorSourceLayerOption,
-} from "./fiber-locator.types";
+} from "@/features/fiber-locator/fiber-locator.types";
 
 const FIBER_SOURCE_LAYER_ID_RE = /[^a-z0-9._-]+/gi;
 const FIBER_MIN_ZOOM = 4;

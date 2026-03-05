@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { ParcelEnrichRequestSchema } from "../src/index";
+import { ParcelEnrichRequestSchema } from "@/index";
 
 describe("parcel AOI contracts", () => {
   it("accepts a valid bbox AOI", () => {
@@ -63,6 +63,48 @@ describe("parcel AOI contracts", () => {
     });
 
     expect(parsed.success).toBe(true);
+  });
+
+  it("accepts a closed polygon AOI", () => {
+    const parsed = ParcelEnrichRequestSchema.safeParse({
+      aoi: {
+        type: "polygon",
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [-97.9, 30.1],
+              [-97.6, 30.1],
+              [-97.6, 30.5],
+              [-97.9, 30.1],
+            ],
+          ],
+        },
+      },
+    });
+
+    expect(parsed.success).toBe(true);
+  });
+
+  it("rejects polygon AOIs with an open ring", () => {
+    const parsed = ParcelEnrichRequestSchema.safeParse({
+      aoi: {
+        type: "polygon",
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [-97.9, 30.1],
+              [-97.6, 30.1],
+              [-97.6, 30.5],
+              [-97.9, 30.4],
+            ],
+          ],
+        },
+      },
+    });
+
+    expect(parsed.success).toBe(false);
   });
 
   it("rejects tileSet x/y out of range for z", () => {

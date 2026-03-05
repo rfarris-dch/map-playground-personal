@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { PipelineDashboardRunAlertsProps } from "./pipeline-dashboard.types";
+  import type { PipelineDashboardRunAlertsProps } from "@/features/pipeline/components/pipeline-dashboard/pipeline-dashboard.types";
 
   const props = defineProps<PipelineDashboardRunAlertsProps>();
 </script>

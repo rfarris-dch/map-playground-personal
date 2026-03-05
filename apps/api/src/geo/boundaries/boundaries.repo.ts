@@ -1,13 +1,8 @@
 import type { BoundaryPowerLevel } from "@map-migration/contracts";
-import { runQuery } from "../../db/postgres";
+import { runQuery } from "@/db/postgres";
+import type { BoundaryPowerRow } from "./boundaries.repo.types";
 
-export interface BoundaryPowerRow {
-  readonly commissioned_power_mw: number | string | null | undefined;
-  readonly geom_json: unknown;
-  readonly parent_region_name: string | null | undefined;
-  readonly region_id: string;
-  readonly region_name: string | null | undefined;
-}
+export type { BoundaryPowerRow } from "./boundaries.repo.types";
 
 const FACILITY_POWER_CTE = `
 WITH facility_power AS (

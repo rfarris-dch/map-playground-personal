@@ -1,12 +1,6 @@
 import type { IMap } from "@map-migration/map-engine";
-import type { LayerId } from "@map-migration/map-layer-catalog";
-import type { PowerLayerId, PowerLayerVisibilityController } from "./power.types";
-
-interface MountPowerLayerVisibilityOptions {
-  readonly layerId: PowerLayerId;
-  readonly map: IMap;
-  readonly styleLayerId: LayerId;
-}
+import type { PowerLayerId, PowerLayerVisibilityController } from "@/features/power/power.types";
+import type { MountPowerLayerVisibilityOptions } from "./power.layer.types";
 
 const POWER_SOURCE_ID = "power.infrastructure";
 const POWER_VECTOR_TILE_URL = "https://openinframap.org/map/power/{z}/{x}/{y}.pbf";
@@ -76,10 +70,17 @@ function ensurePowerLayers(map: IMap): void {
           "#fb923c",
         ],
         "circle-opacity": [
-          "case",
-          ["boolean", ["feature-state", "hover"], false],
-          0.2,
-          ["interpolate", ["linear"], ["zoom"], 0, 0.08, 6, 0.09, 10, 0.08, 14, 0.06],
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          0,
+          ["case", ["boolean", ["feature-state", "hover"], false], 0.2, 0.08],
+          6,
+          ["case", ["boolean", ["feature-state", "hover"], false], 0.2, 0.09],
+          10,
+          ["case", ["boolean", ["feature-state", "hover"], false], 0.2, 0.08],
+          14,
+          ["case", ["boolean", ["feature-state", "hover"], false], 0.2, 0.06],
         ],
         "circle-radius": ["interpolate", ["linear"], ["zoom"], 0, 4.2, 6, 6.8, 10, 9.5, 14, 12],
       },
@@ -103,10 +104,17 @@ function ensurePowerLayers(map: IMap): void {
         "circle-stroke-width": ["case", ["boolean", ["feature-state", "hover"], false], 1.5, 1],
         "circle-opacity": ["case", ["boolean", ["feature-state", "hover"], false], 1, 0.9],
         "circle-radius": [
-          "case",
-          ["boolean", ["feature-state", "hover"], false],
-          ["interpolate", ["linear"], ["zoom"], 0, 3.8, 6, 4.5, 10, 6.1, 14, 8.2],
-          ["interpolate", ["linear"], ["zoom"], 0, 3.1, 6, 3.8, 10, 5.2, 14, 7],
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          0,
+          ["case", ["boolean", ["feature-state", "hover"], false], 3.8, 3.1],
+          6,
+          ["case", ["boolean", ["feature-state", "hover"], false], 4.5, 3.8],
+          10,
+          ["case", ["boolean", ["feature-state", "hover"], false], 6.1, 5.2],
+          14,
+          ["case", ["boolean", ["feature-state", "hover"], false], 8.2, 7],
         ],
       },
     });
@@ -127,10 +135,19 @@ function ensurePowerLayers(map: IMap): void {
         ],
         "fill-outline-color": "#15803d",
         "fill-opacity": [
-          "case",
-          ["boolean", ["feature-state", "hover"], false],
-          0.24,
-          ["interpolate", ["linear"], ["zoom"], 0, 0.16, 6, 0.14, 10, 0.12, 14, 0.1, 18, 0.08],
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          0,
+          ["case", ["boolean", ["feature-state", "hover"], false], 0.24, 0.16],
+          6,
+          ["case", ["boolean", ["feature-state", "hover"], false], 0.24, 0.14],
+          10,
+          ["case", ["boolean", ["feature-state", "hover"], false], 0.24, 0.12],
+          14,
+          ["case", ["boolean", ["feature-state", "hover"], false], 0.24, 0.1],
+          18,
+          ["case", ["boolean", ["feature-state", "hover"], false], 0.24, 0.08],
         ],
       },
     });
@@ -153,10 +170,17 @@ function ensurePowerLayers(map: IMap): void {
         "circle-stroke-width": ["case", ["boolean", ["feature-state", "hover"], false], 1.5, 1],
         "circle-opacity": ["case", ["boolean", ["feature-state", "hover"], false], 1, 0.85],
         "circle-radius": [
-          "case",
-          ["boolean", ["feature-state", "hover"], false],
-          ["interpolate", ["linear"], ["zoom"], 0, 3.4, 6, 4.2, 10, 5.6, 14, 7.1],
-          ["interpolate", ["linear"], ["zoom"], 0, 2.8, 6, 3.5, 10, 4.8, 14, 6.3],
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          0,
+          ["case", ["boolean", ["feature-state", "hover"], false], 3.4, 2.8],
+          6,
+          ["case", ["boolean", ["feature-state", "hover"], false], 4.2, 3.5],
+          10,
+          ["case", ["boolean", ["feature-state", "hover"], false], 5.6, 4.8],
+          14,
+          ["case", ["boolean", ["feature-state", "hover"], false], 7.1, 6.3],
         ],
       },
     });

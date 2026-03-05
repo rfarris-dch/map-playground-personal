@@ -3,7 +3,7 @@ import type {
   FiberLocatorLineId,
   FiberLocatorSourceLayerOption,
   FiberLocatorStatus,
-} from "./fiber-locator.types";
+} from "@/features/fiber-locator/fiber-locator.types";
 
 export function initialFiberLocatorStatus(): FiberLocatorStatus {
   return {

@@ -23,3 +23,14 @@ export interface PowerHoverController {
   clear(): void;
   destroy(): void;
 }
+
+export interface HoverCandidate {
+  readonly nextHover: PowerHoverState;
+  readonly nextTarget: HoverTarget | null;
+}
+
+export interface HoverTarget {
+  readonly featureId: number | string;
+  readonly sourceId: string;
+  readonly sourceLayerName: string;
+}

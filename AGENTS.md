@@ -1,5 +1,9 @@
 # AGENTS Rules (map)
 
+## Ultracite (Codex)
+- Keep Biome aligned with Ultracite presets (`ultracite/biome/core` and `ultracite/biome/vue`).
+- Before finishing changes, run `bun x ultracite fix` (or `bun run ultracite:fix`) and ensure checks pass with `bun x ultracite check`.
+
 ## Export Wrappers
 - Do not create files whose only purpose is a one-line re-export (for example: `export * from "..."`).
 - Prefer exporting from the nearest meaningful barrel (`index.ts`) or from the real module directly.

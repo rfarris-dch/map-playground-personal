@@ -1,18 +1,18 @@
 <script setup lang="ts">
-  import {
-    formatCount,
-    formatDurationMs,
-    formatPhaseLabel,
-    formatTimestamp,
-  } from "../../pipeline.service";
-  import type { PipelineDashboardOverviewProps } from "./pipeline-dashboard.types";
+  import type { PipelineDashboardOverviewProps } from "@/features/pipeline/components/pipeline-dashboard/pipeline-dashboard.types";
   import {
     formatBuildRate,
     formatEta,
     formatRate,
     formatRelativeDuration,
     formatRowsPerSecondValue,
-  } from "./pipeline-dashboard-format.service";
+  } from "@/features/pipeline/components/pipeline-dashboard/pipeline-dashboard-format.service";
+  import {
+    formatCount,
+    formatDurationMs,
+    formatPhaseLabel,
+    formatTimestamp,
+  } from "@/features/pipeline/pipeline.service";
 
   const props = defineProps<PipelineDashboardOverviewProps>();
 

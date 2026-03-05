@@ -1,27 +1,8 @@
-import type { MarketSortBy, SortDirection } from "@map-migration/contracts";
-import { runQuery } from "../../db/postgres";
+import type { MarketSortBy } from "@map-migration/contracts";
+import { runQuery } from "@/db/postgres";
+import type { MarketCountRow, MarketListRow, MarketPageQuery } from "./markets.repo.types";
 
-interface MarketCountRow {
-  readonly total_count: number | string;
-}
-
-export interface MarketListRow {
-  readonly absorption: number | string | null;
-  readonly country: string | null;
-  readonly market_id: number | string;
-  readonly name: string | null;
-  readonly region: string | null;
-  readonly state: string | null;
-  readonly updated_at: Date | string | null;
-  readonly vacancy: number | string | null;
-}
-
-interface MarketPageQuery {
-  readonly limit: number;
-  readonly offset: number;
-  readonly sortBy: MarketSortBy;
-  readonly sortOrder: SortDirection;
-}
+export type { MarketListRow } from "./markets.repo.types";
 
 function parseCount(value: number | string): number {
   const numeric = Number(value);

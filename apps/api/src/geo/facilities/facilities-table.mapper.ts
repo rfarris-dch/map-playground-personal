@@ -1,10 +1,12 @@
-import type {
-  CommissionedSemantic,
-  FacilityPerspective,
-  FacilityTableRow as FacilityTableRowContract,
-  LeaseOrOwn,
+import {
+  type CommissionedSemantic,
+  type FacilityPerspective,
+  type FacilityTableRow as FacilityTableRowContract,
+  type LeaseOrOwn,
+  parseCommissionedSemantic,
+  parseLeaseOrOwn,
 } from "@map-migration/contracts";
-import type { FacilityTableRow as FacilityTableRowRepo } from "./facilities.repo";
+import type { FacilityTableRow as FacilityTableRowRepo } from "@/geo/facilities/facilities.repo";
 
 function readNullableNumber(value: number | string | null | undefined): number | null {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -44,25 +46,11 @@ function readRequiredText(value: string | null | undefined, field: string): stri
 }
 
 function readCommissionedSemantic(value: string | null | undefined): CommissionedSemantic {
-  if (
-    value === "leased" ||
-    value === "operational" ||
-    value === "under_construction" ||
-    value === "planned" ||
-    value === "unknown"
-  ) {
-    return value;
-  }
-
-  return "unknown";
+  return parseCommissionedSemantic(value) ?? "unknown";
 }
 
 function readLeaseOrOwn(value: string | null | undefined): LeaseOrOwn | null {
-  if (value === "lease" || value === "own" || value === "unknown") {
-    return value;
-  }
-
-  return null;
+  return parseLeaseOrOwn(value);
 }
 
 function readNullableTimestamp(value: Date | string | null | undefined): string | null {

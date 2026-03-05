@@ -5,18 +5,14 @@ import {
   createStressGovernor,
   evaluateParcelsGuardrails,
   loadParcelsManifest,
-} from "./parcels.service";
+} from "@/features/parcels/parcels.service";
 import type {
   ParcelsLayerController,
   ParcelsLayerOptions,
   ParcelsLayerState,
   ParcelsStatus,
-} from "./parcels.types";
-
-interface ParcelFeatureTarget {
-  readonly featureId: number | string;
-  readonly parcelId: string;
-}
+} from "@/features/parcels/parcels.types";
+import type { ParcelFeatureTarget } from "./parcels.layer.types";
 
 function initialState(): ParcelsLayerState {
   return {
@@ -72,6 +68,25 @@ function toParcelFeatureTarget(feature: {
     featureId: feature.id,
     parcelId,
   };
+}
+
+const FACILITIES_LAYER_IDS: readonly string[] = [
+  "facilities.colocation.clusters",
+  "facilities.colocation.cluster-count",
+  "facilities.colocation.points",
+  "facilities.hyperscale.clusters",
+  "facilities.hyperscale.cluster-count",
+  "facilities.hyperscale.points",
+];
+
+function resolveBeforeLayerId(map: IMap): string | undefined {
+  for (const layerId of FACILITIES_LAYER_IDS) {
+    if (map.hasLayer(layerId)) {
+      return layerId;
+    }
+  }
+
+  return undefined;
 }
 
 export function mountParcelsLayer(
@@ -303,58 +318,66 @@ export function mountParcelsLayer(
       }
 
       if (!map.hasLayer(fillLayerId)) {
-        map.addLayer({
-          id: fillLayerId,
-          type: "fill",
-          source: sourceId,
-          "source-layer": sourceLayer,
-          paint: {
-            "fill-color": [
-              "case",
-              ["boolean", ["feature-state", "selected"], false],
-              "#f59e0b",
-              ["boolean", ["feature-state", "hover"], false],
-              "#fbbf24",
-              "#fcd34d",
-            ],
-            "fill-opacity": [
-              "case",
-              ["boolean", ["feature-state", "selected"], false],
-              0.24,
-              ["boolean", ["feature-state", "hover"], false],
-              0.16,
-              0.1,
-            ],
+        const beforeLayerId = resolveBeforeLayerId(map);
+        map.addLayer(
+          {
+            id: fillLayerId,
+            type: "fill",
+            source: sourceId,
+            "source-layer": sourceLayer,
+            paint: {
+              "fill-color": [
+                "case",
+                ["boolean", ["feature-state", "selected"], false],
+                "#f59e0b",
+                ["boolean", ["feature-state", "hover"], false],
+                "#fbbf24",
+                "#fcd34d",
+              ],
+              "fill-opacity": [
+                "case",
+                ["boolean", ["feature-state", "selected"], false],
+                0.24,
+                ["boolean", ["feature-state", "hover"], false],
+                0.16,
+                0.1,
+              ],
+            },
           },
-        });
+          beforeLayerId
+        );
       }
 
       if (!map.hasLayer(outlineLayerId)) {
-        map.addLayer({
-          id: outlineLayerId,
-          type: "line",
-          source: sourceId,
-          "source-layer": sourceLayer,
-          paint: {
-            "line-width": [
-              "case",
-              ["boolean", ["feature-state", "selected"], false],
-              1.9,
-              ["boolean", ["feature-state", "hover"], false],
-              1.4,
-              0.8,
-            ],
-            "line-color": [
-              "case",
-              ["boolean", ["feature-state", "selected"], false],
-              "#b45309",
-              ["boolean", ["feature-state", "hover"], false],
-              "#92400e",
-              "#854d0e",
-            ],
-            "line-opacity": 0.95,
+        const beforeLayerId = resolveBeforeLayerId(map);
+        map.addLayer(
+          {
+            id: outlineLayerId,
+            type: "line",
+            source: sourceId,
+            "source-layer": sourceLayer,
+            paint: {
+              "line-width": [
+                "case",
+                ["boolean", ["feature-state", "selected"], false],
+                1.9,
+                ["boolean", ["feature-state", "hover"], false],
+                1.4,
+                0.8,
+              ],
+              "line-color": [
+                "case",
+                ["boolean", ["feature-state", "selected"], false],
+                "#b45309",
+                ["boolean", ["feature-state", "hover"], false],
+                "#92400e",
+                "#854d0e",
+              ],
+              "line-opacity": 0.95,
+            },
           },
-        });
+          beforeLayerId
+        );
       }
 
       const layerOrderFailures = validateLayerOrder(

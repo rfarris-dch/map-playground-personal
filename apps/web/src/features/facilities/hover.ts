@@ -1,20 +1,17 @@
-import type {
-  CommissionedSemantic,
-  FacilityPerspective,
-  LeaseOrOwn,
+import {
+  type FacilityPerspective,
+  parseCommissionedSemantic,
+  parseFacilityPerspective,
+  parseLeaseOrOwn,
 } from "@map-migration/contracts";
 import type { IMap, MapPointerEvent } from "@map-migration/map-engine";
-import { isFeatureId } from "./facilities.service";
+import { isFeatureId } from "@/features/facilities/facilities.service";
 import type {
   FacilitiesHoverController,
   FacilitiesHoverOptions,
   FacilityHoverState,
-} from "./hover.types";
-
-interface HoverTarget {
-  readonly featureId: number | string;
-  readonly sourceId: string;
-}
+} from "@/features/facilities/hover.types";
+import type { HoverTarget } from "./hover.types";
 
 function pointLayerIdForPerspective(perspective: FacilityPerspective): string {
   return `facilities.${perspective}.points`;
@@ -22,24 +19,6 @@ function pointLayerIdForPerspective(perspective: FacilityPerspective): string {
 
 function sourceIdForPerspective(perspective: FacilityPerspective): string {
   return `facilities.${perspective}`;
-}
-
-function isFacilityPerspective(value: unknown): value is FacilityPerspective {
-  return value === "colocation" || value === "hyperscale";
-}
-
-function isLeaseOrOwn(value: unknown): value is LeaseOrOwn {
-  return value === "lease" || value === "own" || value === "unknown";
-}
-
-function isCommissionedSemantic(value: unknown): value is CommissionedSemantic {
-  return (
-    value === "leased" ||
-    value === "operational" ||
-    value === "under_construction" ||
-    value === "planned" ||
-    value === "unknown"
-  );
 }
 
 function readProperty(properties: unknown, key: string): unknown {
@@ -92,28 +71,35 @@ function toHoverState(
     return null;
   }
 
-  const perspectiveValue = readStringProperty(feature.properties, "perspective");
-  if (!isFacilityPerspective(perspectiveValue)) {
+  const perspective = parseFacilityPerspective(
+    readStringProperty(feature.properties, "perspective")
+  );
+  if (perspective === null) {
     return null;
   }
 
-  const semanticValue = readStringProperty(feature.properties, "commissionedSemantic");
-  if (!isCommissionedSemantic(semanticValue)) {
+  const commissionedSemantic = parseCommissionedSemantic(
+    readStringProperty(feature.properties, "commissionedSemantic")
+  );
+  if (commissionedSemantic === null) {
     return null;
   }
 
-  const providerId = readStringProperty(feature.properties, "providerId") ?? "unknown-provider";
   const facilityId = readStringProperty(feature.properties, "facilityId") ?? String(feature.id);
-  const leaseOrOwnValue = readStringProperty(feature.properties, "leaseOrOwn");
-  const leaseOrOwn = isLeaseOrOwn(leaseOrOwnValue) ? leaseOrOwnValue : null;
+  const facilityName = readStringProperty(feature.properties, "facilityName") ?? "Unknown facility";
+  const providerId = readStringProperty(feature.properties, "providerId") ?? "unknown-provider";
+  const providerName = readStringProperty(feature.properties, "providerName") ?? "Unknown provider";
+  const leaseOrOwn = parseLeaseOrOwn(readStringProperty(feature.properties, "leaseOrOwn"));
   const commissionedPowerMw = readNullableNumberProperty(feature.properties, "commissionedPowerMw");
 
   return {
-    perspective: perspectiveValue,
+    perspective,
     facilityId,
+    facilityName,
     providerId,
+    providerName,
     commissionedPowerMw,
-    commissionedSemantic: semanticValue,
+    commissionedSemantic,
     leaseOrOwn,
     screenPoint,
   };

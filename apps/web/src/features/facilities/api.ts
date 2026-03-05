@@ -1,24 +1,26 @@
 import {
-  ApiRoutes,
+  buildFacilitiesBboxRoute,
   FacilitiesFeatureCollectionSchema,
-  formatBboxParam,
 } from "@map-migration/contracts";
+import type {
+  FacilitiesBboxRequest,
+  FacilitiesFetchResult,
+} from "@/features/facilities/facilities.types";
 import { apiGetJson } from "@/lib/api-client";
-import type { FacilitiesBboxRequest, FacilitiesFetchResult } from "./facilities.types";
 
 export function fetchFacilitiesByBbox(args: FacilitiesBboxRequest): Promise<FacilitiesFetchResult> {
-  const params = new URLSearchParams();
-  params.set("bbox", formatBboxParam(args.bbox));
-  params.set("perspective", args.perspective);
-  if (typeof args.limit === "number") {
-    params.set("limit", String(args.limit));
-  }
-
   const requestInit: RequestInit = {};
   if (args.signal) {
     requestInit.signal = args.signal;
   }
 
-  const url = `${ApiRoutes.facilities}?${params.toString()}`;
-  return apiGetJson(url, FacilitiesFeatureCollectionSchema, requestInit);
+  return apiGetJson(
+    buildFacilitiesBboxRoute({
+      bbox: args.bbox,
+      perspective: args.perspective,
+      limit: args.limit,
+    }),
+    FacilitiesFeatureCollectionSchema,
+    requestInit
+  );
 }

@@ -1,5 +1,14 @@
 import type { IMap } from "@map-migration/map-engine";
-import type { BasemapProfile } from "./basemap.types";
+import type {
+  BasemapLayerId,
+  BasemapLayerVisibilityController,
+  BasemapProfile,
+  BasemapVisibilityState,
+} from "@/features/basemap/basemap.types";
+import type {
+  BasemapLayerGroups,
+  MountBasemapLayerVisibilityOptions,
+} from "./basemap.service.types";
 
 const DEFAULT_BASEMAP_PROFILE: BasemapProfile = {
   styleUrl: "https://tiles.openfreemap.org/styles/positron",
@@ -9,19 +18,113 @@ const DEFAULT_BASEMAP_PROFILE: BasemapProfile = {
   buildingsOpacity: 0.65,
 };
 
+const DEFAULT_BASEMAP_VISIBILITY_STATE: BasemapVisibilityState = {
+  boundaries: false,
+  buildings3d: true,
+  labels: true,
+  landmarks: false,
+  roads: true,
+  satellite: false,
+};
+
+const BASEMAP_LAYER_IDS: BasemapLayerId[] = [
+  "satellite",
+  "landmarks",
+  "labels",
+  "roads",
+  "boundaries",
+  "buildings3d",
+];
+
+const SATELLITE_SOURCE_ID = "basemap.satellite-source";
+const SATELLITE_LAYER_ID = "basemap.satellite";
+const OPENMAPTILES_SOURCE_ID = "openmaptiles";
+const LANDMARKS_POI_LAYER_ID = "basemap.landmarks.poi";
+const LANDMARKS_PEAK_LAYER_ID = "basemap.landmarks.peak";
+const DEFAULT_SATELLITE_TILE_URLS = [
+  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+];
+const DEFAULT_SATELLITE_ATTRIBUTION =
+  "Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community";
+const DEFAULT_SATELLITE_MAX_ZOOM = 19;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function uniqueStrings(values: readonly string[]): readonly string[] {
+  const seen = new Set<string>();
+  const unique: string[] = [];
+
+  for (const value of values) {
+    if (seen.has(value)) {
+      continue;
+    }
+
+    seen.add(value);
+    unique.push(value);
+  }
+
+  return unique;
+}
+
+function parseCsvUrls(value: string): readonly string[] {
+  const urls = value
+    .split(",")
+    .map((token) => token.trim())
+    .filter((token) => token.length > 0);
+  return uniqueStrings(urls);
+}
+
+function readSatelliteTileUrls(): readonly string[] {
+  const multiUrlValue = import.meta.env.VITE_SATELLITE_BASEMAP_URLS;
+  if (typeof multiUrlValue === "string" && multiUrlValue.trim().length > 0) {
+    const parsedUrls = parseCsvUrls(multiUrlValue);
+    if (parsedUrls.length > 0) {
+      return parsedUrls;
+    }
+  }
+
+  const singleUrlValue = import.meta.env.VITE_SATELLITE_BASEMAP_URL;
+  if (typeof singleUrlValue === "string" && singleUrlValue.trim().length > 0) {
+    return [singleUrlValue.trim()];
+  }
+
+  return DEFAULT_SATELLITE_TILE_URLS;
+}
+
+function readSatelliteMaxZoom(): number {
+  const rawValue = import.meta.env.VITE_SATELLITE_MAX_ZOOM;
+  if (typeof rawValue !== "string" || rawValue.trim().length === 0) {
+    return DEFAULT_SATELLITE_MAX_ZOOM;
+  }
+
+  const parsedValue = Number(rawValue);
+  if (!Number.isFinite(parsedValue)) {
+    return DEFAULT_SATELLITE_MAX_ZOOM;
+  }
+
+  const normalizedValue = Math.floor(parsedValue);
+  if (normalizedValue < 0 || normalizedValue > 22) {
+    return DEFAULT_SATELLITE_MAX_ZOOM;
+  }
+
+  return normalizedValue;
+}
+
 function findBuildingSourceId(map: IMap, profile: BasemapProfile): string {
   const style = map.getStyle();
   const layers = style.layers ?? [];
 
   for (const layer of layers) {
-    if (!("source-layer" in layer)) {
+    if (readSourceLayerId(layer) !== profile.buildingSourceLayer) {
       continue;
     }
-    if (layer["source-layer"] !== profile.buildingSourceLayer) {
-      continue;
-    }
-    if ("source" in layer && typeof layer.source === "string") {
-      return layer.source;
+
+    const sourceId = readSourceId(layer);
+    if (sourceId !== null) {
+      return sourceId;
     }
   }
 
@@ -46,8 +149,21 @@ function findFirstLabelLayerId(map: IMap): string | undefined {
   return undefined;
 }
 
+function findSatelliteInsertLayerId(map: IMap): string | undefined {
+  const style = map.getStyle();
+  const layers = style.layers ?? [];
+
+  for (const layer of layers) {
+    if (layer.type === "line" || layer.type === "symbol") {
+      return layer.id;
+    }
+  }
+
+  return undefined;
+}
+
 function readLayerId(layer: unknown): string | null {
-  if (typeof layer !== "object" || layer === null) {
+  if (!isRecord(layer)) {
     return null;
   }
 
@@ -59,8 +175,34 @@ function readLayerId(layer: unknown): string | null {
   return layerId;
 }
 
+function readSourceId(layer: unknown): string | null {
+  if (!isRecord(layer)) {
+    return null;
+  }
+
+  const sourceId = Reflect.get(layer, "source");
+  if (typeof sourceId !== "string" || sourceId.trim().length === 0) {
+    return null;
+  }
+
+  return sourceId;
+}
+
+function readLayerType(layer: unknown): string | null {
+  if (!isRecord(layer)) {
+    return null;
+  }
+
+  const layerType = Reflect.get(layer, "type");
+  if (typeof layerType !== "string" || layerType.trim().length === 0) {
+    return null;
+  }
+
+  return layerType;
+}
+
 function readSourceLayerId(layer: unknown): string | null {
-  if (typeof layer !== "object" || layer === null) {
+  if (!isRecord(layer)) {
     return null;
   }
 
@@ -72,31 +214,171 @@ function readSourceLayerId(layer: unknown): string | null {
   return sourceLayerId;
 }
 
-function hideBasemapBoundaryLines(map: IMap): void {
+function hasTextFieldLayout(layer: unknown): boolean {
+  if (!isRecord(layer)) {
+    return false;
+  }
+
+  const layout = Reflect.get(layer, "layout");
+  if (!isRecord(layout)) {
+    return false;
+  }
+
+  return typeof Reflect.get(layout, "text-field") !== "undefined";
+}
+
+function collectBasemapLayerGroups(map: IMap, profile: BasemapProfile): BasemapLayerGroups {
   const style = map.getStyle();
   const styleLayers = style.layers ?? [];
+  const boundaryLayerIds: string[] = [];
+  const labelLayerIds: string[] = [];
+  const roadLayerIds: string[] = [];
 
   for (const styleLayer of styleLayers) {
-    const layerType = Reflect.get(styleLayer, "type");
-    if (layerType !== "line") {
-      continue;
-    }
-
-    const sourceLayerId = readSourceLayerId(styleLayer);
-    if (sourceLayerId === null || !sourceLayerId.toLowerCase().includes("boundar")) {
-      continue;
-    }
-
     const layerId = readLayerId(styleLayer);
     if (layerId === null) {
       continue;
     }
 
-    map.setLayerVisibility(layerId, false);
+    if (
+      layerId === profile.buildingsLayerId ||
+      layerId === SATELLITE_LAYER_ID ||
+      layerId === LANDMARKS_POI_LAYER_ID ||
+      layerId === LANDMARKS_PEAK_LAYER_ID
+    ) {
+      continue;
+    }
+
+    const layerType = readLayerType(styleLayer);
+    if (layerType === null) {
+      continue;
+    }
+
+    const sourceLayerId = readSourceLayerId(styleLayer);
+
+    if (layerType === "line" && sourceLayerId !== null && sourceLayerId.includes("boundar")) {
+      boundaryLayerIds.push(layerId);
+    }
+
+    if (sourceLayerId === "transportation" && (layerType === "fill" || layerType === "line")) {
+      roadLayerIds.push(layerId);
+    }
+
+    if (layerType === "symbol" && hasTextFieldLayout(styleLayer)) {
+      labelLayerIds.push(layerId);
+    }
+  }
+
+  return {
+    boundaryLayerIds,
+    labelLayerIds,
+    roadLayerIds,
+  };
+}
+
+function ensureSatelliteLayer(map: IMap): void {
+  const satelliteTileUrls = readSatelliteTileUrls();
+  const satelliteMaxZoom = readSatelliteMaxZoom();
+
+  if (!map.hasSource(SATELLITE_SOURCE_ID)) {
+    map.addSource(SATELLITE_SOURCE_ID, {
+      type: "raster",
+      tiles: [...satelliteTileUrls],
+      tileSize: 256,
+      maxzoom: satelliteMaxZoom,
+      attribution: DEFAULT_SATELLITE_ATTRIBUTION,
+    });
+  }
+
+  if (!map.hasLayer(SATELLITE_LAYER_ID)) {
+    map.addLayer(
+      {
+        id: SATELLITE_LAYER_ID,
+        type: "raster",
+        source: SATELLITE_SOURCE_ID,
+        paint: {
+          "raster-opacity": 1,
+          "raster-fade-duration": 0,
+        },
+      },
+      findSatelliteInsertLayerId(map)
+    );
+  }
+}
+
+function ensureLandmarkLayers(map: IMap): void {
+  if (!map.hasSource(OPENMAPTILES_SOURCE_ID)) {
+    throw new Error(`[basemap] Missing "${OPENMAPTILES_SOURCE_ID}" vector source for landmarks.`);
+  }
+
+  const beforeId = findFirstLabelLayerId(map);
+
+  if (!map.hasLayer(LANDMARKS_POI_LAYER_ID)) {
+    map.addLayer(
+      {
+        id: LANDMARKS_POI_LAYER_ID,
+        type: "symbol",
+        source: OPENMAPTILES_SOURCE_ID,
+        "source-layer": "poi",
+        minzoom: 10,
+        filter: [
+          "all",
+          ["has", "name"],
+          ["<=", ["coalesce", ["to-number", ["get", "rank"]], 99], 8],
+        ],
+        layout: {
+          "text-field": ["coalesce", ["get", "name_en"], ["get", "name"]],
+          "text-font": ["Noto Sans Regular"],
+          "text-size": ["interpolate", ["linear"], ["zoom"], 10, 10, 14, 13],
+          "text-anchor": "top",
+          "text-offset": [0, 0.8],
+        },
+        paint: {
+          "text-color": "#1f2937",
+          "text-halo-color": "#ffffff",
+          "text-halo-width": 1,
+        },
+      },
+      beforeId
+    );
+  }
+
+  if (!map.hasLayer(LANDMARKS_PEAK_LAYER_ID)) {
+    map.addLayer(
+      {
+        id: LANDMARKS_PEAK_LAYER_ID,
+        type: "symbol",
+        source: OPENMAPTILES_SOURCE_ID,
+        "source-layer": "mountain_peak",
+        minzoom: 9,
+        filter: [
+          "all",
+          ["has", "name"],
+          ["<=", ["coalesce", ["to-number", ["get", "rank"]], 99], 6],
+        ],
+        layout: {
+          "text-field": ["concat", "▲ ", ["coalesce", ["get", "name_en"], ["get", "name"]]],
+          "text-font": ["Noto Sans Regular"],
+          "text-size": ["interpolate", ["linear"], ["zoom"], 9, 10, 14, 12],
+          "text-anchor": "top",
+          "text-offset": [0, 0.7],
+        },
+        paint: {
+          "text-color": "#334155",
+          "text-halo-color": "#ffffff",
+          "text-halo-width": 1,
+        },
+      },
+      beforeId
+    );
   }
 }
 
 function add3DBuildings(map: IMap, profile: BasemapProfile): void {
+  if (map.hasLayer(profile.buildingsLayerId)) {
+    return;
+  }
+
   const sourceId = findBuildingSourceId(map, profile);
   const firstLabelLayerId = findFirstLabelLayerId(map);
 
@@ -118,23 +400,153 @@ function add3DBuildings(map: IMap, profile: BasemapProfile): void {
   );
 }
 
+function applyLayerVisibility(map: IMap, layerIds: readonly string[], visible: boolean): void {
+  for (const layerId of layerIds) {
+    map.setLayerVisibility(layerId, visible);
+  }
+}
+
+function applyBasemapVisibility(args: {
+  readonly groups: BasemapLayerGroups;
+  readonly map: IMap;
+  readonly profile: BasemapProfile;
+  readonly visibility: BasemapVisibilityState;
+}): void {
+  applyLayerVisibility(args.map, args.groups.boundaryLayerIds, args.visibility.boundaries);
+  applyLayerVisibility(args.map, args.groups.roadLayerIds, args.visibility.roads);
+  applyLayerVisibility(args.map, args.groups.labelLayerIds, args.visibility.labels);
+
+  const landmarksVisible = args.visibility.landmarks && args.visibility.labels;
+  args.map.setLayerVisibility(LANDMARKS_POI_LAYER_ID, landmarksVisible);
+  args.map.setLayerVisibility(LANDMARKS_PEAK_LAYER_ID, landmarksVisible);
+  args.map.setLayerVisibility(args.profile.buildingsLayerId, args.visibility.buildings3d);
+  args.map.setLayerVisibility(SATELLITE_LAYER_ID, args.visibility.satellite);
+}
+
+function withUpdatedVisibility(
+  visibility: BasemapVisibilityState,
+  layerId: BasemapLayerId,
+  visible: boolean
+): BasemapVisibilityState {
+  if (layerId === "boundaries") {
+    return {
+      ...visibility,
+      boundaries: visible,
+    };
+  }
+
+  if (layerId === "buildings3d") {
+    return {
+      ...visibility,
+      buildings3d: visible,
+    };
+  }
+
+  if (layerId === "labels") {
+    return {
+      ...visibility,
+      labels: visible,
+    };
+  }
+
+  if (layerId === "landmarks") {
+    return {
+      ...visibility,
+      landmarks: visible,
+    };
+  }
+
+  if (layerId === "roads") {
+    return {
+      ...visibility,
+      roads: visible,
+    };
+  }
+
+  return {
+    ...visibility,
+    satellite: visible,
+  };
+}
+
+function layerVisible(visibility: BasemapVisibilityState, layerId: BasemapLayerId): boolean {
+  if (layerId === "boundaries") {
+    return visibility.boundaries;
+  }
+
+  if (layerId === "buildings3d") {
+    return visibility.buildings3d;
+  }
+
+  if (layerId === "labels") {
+    return visibility.labels;
+  }
+
+  if (layerId === "landmarks") {
+    return visibility.landmarks;
+  }
+
+  if (layerId === "roads") {
+    return visibility.roads;
+  }
+
+  return visibility.satellite;
+}
+
 export function defaultBasemapStyleUrl(): string {
   return DEFAULT_BASEMAP_PROFILE.styleUrl;
 }
 
-export function mountBasemap3DBuildings(
+export function basemapLayerIds(): readonly BasemapLayerId[] {
+  return BASEMAP_LAYER_IDS;
+}
+
+export function defaultBasemapVisibilityState(): BasemapVisibilityState {
+  return DEFAULT_BASEMAP_VISIBILITY_STATE;
+}
+
+export function mountBasemapLayerVisibility(
   map: IMap,
-  profile: BasemapProfile = DEFAULT_BASEMAP_PROFILE
-): () => void {
+  options: MountBasemapLayerVisibilityOptions = {}
+): BasemapLayerVisibilityController {
+  const profile = options.profile ?? DEFAULT_BASEMAP_PROFILE;
+  let visibility = options.visibility ?? DEFAULT_BASEMAP_VISIBILITY_STATE;
+  let groups: BasemapLayerGroups | null = null;
+
   const onLoad = (): void => {
-    map.off("load", onLoad);
-    hideBasemapBoundaryLines(map);
+    ensureSatelliteLayer(map);
+    ensureLandmarkLayers(map);
     add3DBuildings(map, profile);
+    groups = collectBasemapLayerGroups(map, profile);
+    applyBasemapVisibility({
+      map,
+      profile,
+      groups,
+      visibility,
+    });
   };
 
   map.on("load", onLoad);
 
-  return (): void => {
-    map.off("load", onLoad);
+  return {
+    setVisible(layerId: BasemapLayerId, nextVisible: boolean): void {
+      visibility = withUpdatedVisibility(visibility, layerId, nextVisible);
+      if (groups === null) {
+        return;
+      }
+
+      applyBasemapVisibility({
+        map,
+        profile,
+        groups,
+        visibility,
+      });
+    },
+    getVisible(layerId: BasemapLayerId): boolean {
+      return layerVisible(visibility, layerId);
+    },
+    destroy(): void {
+      map.off("load", onLoad);
+    },
   };
 }

@@ -1,6 +1,7 @@
 import { closeSync, existsSync, openSync, readSync, statSync } from "node:fs";
 import { join } from "node:path";
-import type { TileBuildProgressSnapshot } from "./parcels-sync-runtime.types";
+import type { TileBuildProgressSnapshot } from "@/sync/parcels-sync/parcels-sync-runtime.types";
+import type { TileBuildWorkProgress } from "./tile-build-progress.service.types";
 
 const TILE_BUILD_PROGRESS_RE = /([0-9]{1,3}(?:\.[0-9]+)?)%\s+[0-9]+\/[0-9]+\/[0-9]+/g;
 const TILE_READ_MILLION_PROGRESS_RE = /Read\s+([0-9]+(?:\.[0-9]+)?)\s+million features/g;
@@ -313,13 +314,6 @@ function estimateTileBuildPercentFromRead(
   }
 
   return Math.max(0, Math.min(99.9, rawPercent));
-}
-
-interface TileBuildWorkProgress {
-  readonly stage: "read" | "write";
-  readonly workDone: number;
-  readonly workLeft: number;
-  readonly workTotal: number;
 }
 
 function deriveTileBuildWorkProgress(

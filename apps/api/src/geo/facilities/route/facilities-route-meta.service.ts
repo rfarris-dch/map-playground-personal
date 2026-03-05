@@ -1,11 +1,11 @@
-import type { ResponseMeta } from "@map-migration/contracts";
-import { getApiRuntimeConfig } from "../../../http/runtime-config";
+import type { ResponseMeta, Warning } from "@map-migration/contracts";
+import { getApiRuntimeConfig } from "@/http/runtime-config";
 
 export function buildFacilitiesRouteMeta(args: {
   readonly requestId: string;
   readonly recordCount: number;
   readonly truncated: boolean;
-  readonly warnings: ReadonlyArray<{ code: string; message: string }>;
+  readonly warnings: readonly Warning[];
 }): ResponseMeta {
   const runtimeConfig = getApiRuntimeConfig();
   return {

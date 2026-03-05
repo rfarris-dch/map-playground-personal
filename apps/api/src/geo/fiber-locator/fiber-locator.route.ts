@@ -7,18 +7,18 @@ import {
   FiberLocatorLayersInViewResponseSchema,
   parseBboxParam,
 } from "@map-migration/contracts";
-import type { Hono } from "hono";
-import { getOrCreateRequestId, jsonError, jsonOk, toDebugDetails } from "../../http/api-response";
+import type { Env, Hono } from "hono";
 import {
   fetchFiberLocatorCatalog,
   fetchFiberLocatorLayersInView,
   readFiberLocatorConfig,
-} from "./fiber-locator.service";
-import { buildFiberLocatorResponseMeta } from "./route/fiber-locator-route-meta.service";
-import { decodeFiberLocatorPathParam } from "./route/fiber-locator-route-param.service";
-import { proxyFiberLocatorTileRequest } from "./route/fiber-locator-route-proxy.service";
+} from "@/geo/fiber-locator/fiber-locator.service";
+import { buildFiberLocatorResponseMeta } from "@/geo/fiber-locator/route/fiber-locator-route-meta.service";
+import { decodeFiberLocatorPathParam } from "@/geo/fiber-locator/route/fiber-locator-route-param.service";
+import { proxyFiberLocatorTileRequest } from "@/geo/fiber-locator/route/fiber-locator-route-proxy.service";
+import { getOrCreateRequestId, jsonError, jsonOk, toDebugDetails } from "@/http/api-response";
 
-export function registerFiberLocatorRoute(app: Hono): void {
+export function registerFiberLocatorRoute<E extends Env>(app: Hono<E>): void {
   app.get(ApiRoutes.fiberLocatorLayers, async (c) => {
     const requestId = getOrCreateRequestId(c, "api");
 

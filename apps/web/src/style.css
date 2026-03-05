@@ -54,11 +54,5 @@ body,
 }
 
 body {
-  background-image: radial-gradient(
-    circle at 20% 20%,
-    #eef8f4 0%,
-    #f7f4eb 40%,
-    #f4efe6 100%
-  );
   @apply bg-background text-foreground antialiased;
 }

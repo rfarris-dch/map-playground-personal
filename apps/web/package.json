@@ -8,11 +8,12 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "echo 'web tests not implemented yet'",
-    "lint": "echo 'web lint not implemented yet'",
+    "lint": "biome check .",
     "typecheck": "vue-tsc --noEmit -p tsconfig.app.json"
   },
   "dependencies": {
     "@map-migration/contracts": "workspace:*",
+    "@map-migration/geo-tiles": "workspace:*",
     "@map-migration/map-engine": "workspace:*",
     "@map-migration/map-layer-catalog": "workspace:*",
     "@map-migration/map-style": "workspace:*",

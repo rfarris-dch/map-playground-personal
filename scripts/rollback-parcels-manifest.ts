@@ -3,14 +3,12 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import {
   buildTileLatestManifestPath,
+  createPublishManifest,
+  parseTileDataset,
+  parseTilePublishManifest,
   type TileDataset,
-  type TileManifestEntry,
-} from "../packages/geo-tiles/src/index";
-
-interface CliArgs {
-  readonly dataset: TileDataset;
-  readonly outputRoot: string;
-}
+} from "@/packages/geo-tiles/src/index";
+import type { CliArgs } from "./rollback-parcels-manifest.types";
 
 const LEADING_SLASHES_RE = /^[/\\]+/;
 
@@ -26,15 +24,11 @@ function parseArg(name: string): string | null {
 }
 
 function parseDataset(raw: string | null): TileDataset {
-  if (
-    raw === "parcels" ||
-    raw === "parcels-draw-v1" ||
-    raw === "parcels-analysis-v1" ||
-    raw === "infrastructure" ||
-    raw === "power" ||
-    raw === "telecom"
-  ) {
-    return raw;
+  if (typeof raw === "string") {
+    const parsed = parseTileDataset(raw);
+    if (parsed !== null) {
+      return parsed;
+    }
   }
 
   throw new Error(
@@ -50,24 +44,6 @@ function parseArgs(): CliArgs {
     dataset,
     outputRoot: resolve(outputRoot),
   };
-}
-
-function isEntry(value: unknown): value is TileManifestEntry {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-
-  const dataset = Reflect.get(value, "dataset");
-  const version = Reflect.get(value, "version");
-  const checksum = Reflect.get(value, "checksum");
-  const url = Reflect.get(value, "url");
-
-  return (
-    typeof dataset === "string" &&
-    typeof version === "string" &&
-    typeof checksum === "string" &&
-    typeof url === "string"
-  );
 }
 
 function normalizeOutputRelativePath(pathValue: string): string {
@@ -92,33 +68,23 @@ function main(): void {
 
   const raw = readFileSync(latestPath, "utf8");
   const parsed = JSON.parse(raw);
-  if (typeof parsed !== "object" || parsed === null) {
-    throw new Error("Latest manifest is invalid JSON object");
-  }
-
-  const previous = Reflect.get(parsed, "previous");
-  if (!isEntry(previous)) {
+  const manifest = parseTilePublishManifest(parsed);
+  if (manifest.previous === null) {
     throw new Error("Manifest has no previous entry to rollback to");
   }
 
-  const current = Reflect.get(parsed, "current");
-  if (!isEntry(current)) {
-    throw new Error("Manifest current entry is invalid");
-  }
-
-  const rolledBackManifest = {
-    dataset: args.dataset,
-    publishedAt: new Date().toISOString(),
-    current: previous,
-    previous: current,
-  };
+  const rolledBackManifest = createPublishManifest(
+    args.dataset,
+    manifest.previous,
+    manifest.current
+  );
 
   writeFileSync(latestPath, `${JSON.stringify(rolledBackManifest, null, 2)}\n`, "utf8");
 
   console.log("[tiles] rollback complete");
   console.log(`dataset=${args.dataset}`);
-  console.log(`current=${previous.version}`);
-  console.log(`previous=${current.version}`);
+  console.log(`current=${manifest.previous.version}`);
+  console.log(`previous=${manifest.current.version}`);
 }
 
 main();

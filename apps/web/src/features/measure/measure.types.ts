@@ -10,6 +10,7 @@ export interface MeasureState {
   readonly distanceKm: number | null;
   readonly isSelectionComplete: boolean;
   readonly mode: MeasureMode;
+  readonly selectionRing: readonly LngLat[] | null;
   readonly vertexCount: number;
 }
 

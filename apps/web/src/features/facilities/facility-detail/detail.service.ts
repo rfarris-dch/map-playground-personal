@@ -1,4 +1,7 @@
-import type { FacilityDetailPayload, FacilityDetailResult } from "./detail.types";
+import type {
+  FacilityDetailPayload,
+  FacilityDetailResult,
+} from "@/features/facilities/facility-detail/detail.types";
 
 export function unwrapFacilityDetailResult(result: FacilityDetailResult): FacilityDetailPayload {
   if (!result.ok) {

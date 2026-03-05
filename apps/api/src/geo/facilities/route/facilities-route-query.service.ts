@@ -3,10 +3,12 @@ import type {
   FacilitiesFeatureCollection,
   FacilitiesTableResponse,
   FacilityPerspective,
-  FacilitySortBy,
-  SortDirection,
+  Warning,
 } from "@map-migration/contracts";
-import { mapFacilitiesRowsToFeatures, mapFacilityDetailRowToFeature } from "../facilities.mapper";
+import {
+  mapFacilitiesRowsToFeatures,
+  mapFacilityDetailRowToFeature,
+} from "@/geo/facilities/facilities.mapper";
 import {
   countFacilitiesTableRows,
   type FacilitiesBboxRow,
@@ -14,86 +16,61 @@ import {
   type FacilityTableRow,
   getFacilityById,
   listFacilitiesByBbox,
+  listFacilitiesByPolygon,
   listFacilitiesTableRows,
-} from "../facilities.repo";
-import { mapFacilitiesTableRows } from "../facilities-table.mapper";
+} from "@/geo/facilities/facilities.repo";
+import { mapFacilitiesTableRows } from "@/geo/facilities/facilities-table.mapper";
+import type {
+  QueryFacilitiesByBboxArgs,
+  QueryFacilitiesByBboxResult,
+  QueryFacilitiesByPolygonArgs,
+  QueryFacilitiesByPolygonResult,
+  QueryFacilitiesRowsResult,
+  QueryFacilitiesTableArgs,
+  QueryFacilitiesTableResult,
+  QueryFacilitiesTableRowsResult,
+  QueryFacilityDetailArgs,
+  QueryFacilityDetailResult,
+  QueryFacilityDetailRowResult,
+} from "./facilities-route-query.service.types";
 
-export interface QueryFacilitiesByBboxArgs {
-  readonly bbox: {
-    readonly east: number;
-    readonly north: number;
-    readonly south: number;
-    readonly west: number;
-  };
-  readonly limit: number;
-  readonly perspective: FacilityPerspective;
-}
-
-export type QueryFacilitiesByBboxResult =
-  | {
-      readonly ok: true;
-      readonly value: {
-        readonly features: FacilitiesFeatureCollection["features"];
-        readonly truncated: boolean;
-        readonly warnings: ReadonlyArray<{ code: string; message: string }>;
-      };
-    }
-  | {
-      readonly ok: false;
-      readonly value: {
-        readonly error: unknown;
-        readonly reason: "mapping_failed" | "query_failed";
-      };
-    };
-
-export interface QueryFacilitiesTableArgs {
-  readonly limit: number;
-  readonly offset: number;
-  readonly perspective: FacilityPerspective;
-  readonly sortBy: FacilitySortBy;
-  readonly sortOrder: SortDirection;
-}
-
-export type QueryFacilitiesTableResult =
-  | {
-      readonly ok: true;
-      readonly value: {
-        readonly rows: FacilitiesTableResponse["rows"];
-        readonly totalCount: number;
-      };
-    }
-  | {
-      readonly ok: false;
-      readonly value: {
-        readonly error: unknown;
-        readonly reason: "mapping_failed" | "query_failed";
-      };
-    };
-
-export interface QueryFacilityDetailArgs {
-  readonly facilityId: string;
-  readonly perspective: FacilityPerspective;
-}
-
-export type QueryFacilityDetailResult =
-  | { readonly ok: true; readonly value: { readonly feature: FacilitiesDetailResponse["feature"] } }
-  | {
-      readonly ok: false;
-      readonly value: {
-        readonly error?: unknown;
-        readonly reason: "mapping_failed" | "not_found" | "query_failed";
-      };
-    };
-
-type QueryFacilitiesRowsResult =
-  | { readonly ok: true; readonly value: readonly FacilitiesBboxRow[] }
-  | { readonly ok: false; readonly value: { readonly error: unknown } };
+export type {
+  QueryFacilitiesByBboxArgs,
+  QueryFacilitiesByBboxResult,
+  QueryFacilitiesByPolygonArgs,
+  QueryFacilitiesByPolygonResult,
+  QueryFacilitiesTableArgs,
+  QueryFacilitiesTableResult,
+  QueryFacilityDetailArgs,
+  QueryFacilityDetailResult,
+} from "./facilities-route-query.service.types";
 
 function queryFacilitiesBboxRows(
   args: QueryFacilitiesByBboxArgs
 ): Promise<QueryFacilitiesRowsResult> {
   return listFacilitiesByBbox({
     ...args.bbox,
+    limit: args.limit + 1,
+    perspective: args.perspective,
+  }).then(
+    (rows) => ({
+      ok: true,
+      value: rows,
+    }),
+    (error: unknown) => ({
+      ok: false,
+      value: {
+        error,
+      },
+    })
+  );
+}
+
+function queryFacilitiesPolygonRows(
+  args: QueryFacilitiesByPolygonArgs
+): Promise<QueryFacilitiesRowsResult> {
+  return listFacilitiesByPolygon({
+    geometryGeoJson: args.geometryGeoJson,
     limit: args.limit + 1,
     perspective: args.perspective,
   }).then(
@@ -120,7 +97,7 @@ function mapFacilitiesBboxRows(args: {
       readonly value: {
         readonly features: FacilitiesFeatureCollection["features"];
         readonly truncated: boolean;
-        readonly warnings: ReadonlyArray<{ code: string; message: string }>;
+        readonly warnings: readonly Warning[];
       };
     }
   | { readonly ok: false; readonly value: { readonly error: unknown } } {
@@ -153,13 +130,6 @@ function mapFacilitiesBboxRows(args: {
     };
   }
 }
-
-type QueryFacilitiesTableRowsResult =
-  | {
-      readonly ok: true;
-      readonly value: { readonly rows: readonly FacilityTableRow[]; readonly totalCount: number };
-    }
-  | { readonly ok: false; readonly value: { readonly error: unknown } };
 
 function queryFacilitiesTableRows(
   args: QueryFacilitiesTableArgs
@@ -211,10 +181,6 @@ function mapFacilitiesTableData(
   }
 }
 
-type QueryFacilityDetailRowResult =
-  | { readonly ok: true; readonly value: FacilityDetailRow | null }
-  | { readonly ok: false; readonly value: { readonly error: unknown } };
-
 function queryFacilityDetailRow(
   args: QueryFacilityDetailArgs
 ): Promise<QueryFacilityDetailRowResult> {
@@ -257,6 +223,41 @@ export async function queryFacilitiesByBbox(
   args: QueryFacilitiesByBboxArgs
 ): Promise<QueryFacilitiesByBboxResult> {
   const rowsResult = await queryFacilitiesBboxRows(args);
+  if (!rowsResult.ok) {
+    return {
+      ok: false,
+      value: {
+        reason: "query_failed",
+        error: rowsResult.value.error,
+      },
+    };
+  }
+
+  const mappedResult = mapFacilitiesBboxRows({
+    rows: rowsResult.value,
+    limit: args.limit,
+    perspective: args.perspective,
+  });
+  if (!mappedResult.ok) {
+    return {
+      ok: false,
+      value: {
+        reason: "mapping_failed",
+        error: mappedResult.value.error,
+      },
+    };
+  }
+
+  return {
+    ok: true,
+    value: mappedResult.value,
+  };
+}
+
+export async function queryFacilitiesByPolygon(
+  args: QueryFacilitiesByPolygonArgs
+): Promise<QueryFacilitiesByPolygonResult> {
+  const rowsResult = await queryFacilitiesPolygonRows(args);
   if (!rowsResult.ok) {
     return {
       ok: false,

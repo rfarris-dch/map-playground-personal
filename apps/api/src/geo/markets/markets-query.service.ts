@@ -1,35 +1,17 @@
-import type { MarketSortBy, MarketTableRow, SortDirection } from "@map-migration/contracts";
-import { mapMarketRowsToTableRows } from "./markets.mapper";
-import { countMarkets, listMarketsPage, type MarketListRow } from "./markets.repo";
+import type { MarketTableRow } from "@map-migration/contracts";
+import { mapMarketRowsToTableRows } from "@/geo/markets/markets.mapper";
+import { countMarkets, listMarketsPage, type MarketListRow } from "@/geo/markets/markets.repo";
+import type {
+  QueryMarketsRowsResult,
+  QueryMarketsTableArgs,
+  QueryMarketsTableResult,
+} from "./markets-query.service.types";
 
-export interface QueryMarketsTableArgs {
-  readonly limit: number;
-  readonly offset: number;
-  readonly sortBy: MarketSortBy;
-  readonly sortOrder: SortDirection;
-}
-
-export interface QueryMarketsTableSuccess {
-  readonly rows: readonly MarketTableRow[];
-  readonly totalCount: number;
-}
-
-export type QueryMarketsTableResult =
-  | { readonly ok: true; readonly value: QueryMarketsTableSuccess }
-  | {
-      readonly ok: false;
-      readonly value: {
-        readonly error: unknown;
-        readonly reason: "mapping_failed" | "query_failed";
-      };
-    };
-
-type QueryMarketsRowsResult =
-  | {
-      readonly ok: true;
-      readonly value: { readonly rows: readonly MarketListRow[]; readonly totalCount: number };
-    }
-  | { readonly ok: false; readonly value: { readonly error: unknown } };
+export type {
+  QueryMarketsTableArgs,
+  QueryMarketsTableResult,
+  QueryMarketsTableSuccess,
+} from "./markets-query.service.types";
 
 function mapMarketsRows(
   rows: readonly MarketListRow[]

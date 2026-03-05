@@ -1,13 +1,13 @@
 <script setup lang="ts">
   import { computed } from "vue";
-  import PipelineDashboardAlerts from "./pipeline-dashboard/pipeline-dashboard-alerts.vue";
-  import PipelineDashboardDetailsPanels from "./pipeline-dashboard/pipeline-dashboard-details-panels.vue";
-  import PipelineDashboardFetchErrorAlert from "./pipeline-dashboard/pipeline-dashboard-fetch-error-alert.vue";
-  import PipelineDashboardLogTail from "./pipeline-dashboard/pipeline-dashboard-log-tail.vue";
-  import PipelineDashboardOverview from "./pipeline-dashboard/pipeline-dashboard-overview.vue";
-  import PipelineDashboardProgressPanels from "./pipeline-dashboard/pipeline-dashboard-progress-panels.vue";
-  import PipelineDashboardStateEvents from "./pipeline-dashboard/pipeline-dashboard-state-events.vue";
-  import { usePipelineDashboard } from "./pipeline-dashboard/use-pipeline-dashboard";
+  import PipelineDashboardAlerts from "@/features/pipeline/components/pipeline-dashboard/pipeline-dashboard-alerts.vue";
+  import PipelineDashboardDetailsPanels from "@/features/pipeline/components/pipeline-dashboard/pipeline-dashboard-details-panels.vue";
+  import PipelineDashboardFetchErrorAlert from "@/features/pipeline/components/pipeline-dashboard/pipeline-dashboard-fetch-error-alert.vue";
+  import PipelineDashboardLogTail from "@/features/pipeline/components/pipeline-dashboard/pipeline-dashboard-log-tail.vue";
+  import PipelineDashboardOverview from "@/features/pipeline/components/pipeline-dashboard/pipeline-dashboard-overview.vue";
+  import PipelineDashboardProgressPanels from "@/features/pipeline/components/pipeline-dashboard/pipeline-dashboard-progress-panels.vue";
+  import PipelineDashboardStateEvents from "@/features/pipeline/components/pipeline-dashboard/pipeline-dashboard-state-events.vue";
+  import { usePipelineDashboard } from "@/features/pipeline/components/pipeline-dashboard/use-pipeline-dashboard";
 
   const {
     pipelineStatus,

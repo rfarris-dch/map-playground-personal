@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { getQuerySpec, QUERY_SPECS } from "../src/index";
+import { getQuerySpec, QUERY_SPECS } from "@/index";
 
 const ENDPOINT_CLASSES = new Set([
   "feature-collection",
@@ -28,6 +28,15 @@ describe("geo-sql query specs", () => {
   it("keeps facilities bbox row budgets aligned across perspectives", () => {
     const colocation = getQuerySpec("facilities_bbox_colocation");
     const hyperscale = getQuerySpec("facilities_bbox_hyperscale");
+
+    expect(colocation.endpointClass).toBe("feature-collection");
+    expect(hyperscale.endpointClass).toBe("feature-collection");
+    expect(colocation.maxRows).toBe(hyperscale.maxRows);
+  });
+
+  it("keeps facilities polygon row budgets aligned across perspectives", () => {
+    const colocation = getQuerySpec("facilities_polygon_colocation");
+    const hyperscale = getQuerySpec("facilities_polygon_hyperscale");
 
     expect(colocation.endpointClass).toBe("feature-collection");
     expect(hyperscale.endpointClass).toBe("feature-collection");

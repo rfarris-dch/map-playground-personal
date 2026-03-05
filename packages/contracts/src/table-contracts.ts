@@ -3,7 +3,20 @@ import {
   CommissionedSemanticSchema,
   FacilityPerspectiveSchema,
   LeaseOrOwnSchema,
-} from "./shared-contracts";
+} from "@/shared-contracts";
+
+export type {
+  FacilitiesTableResponse,
+  FacilitySortBy,
+  FacilityTableRow,
+  MarketSortBy,
+  MarketsTableResponse,
+  MarketTableRow,
+  ProviderSortBy,
+  ProvidersTableResponse,
+  ProviderTableRow,
+  SortDirection,
+} from "./table-contracts.types";
 
 export const PaginationSchema = z.object({
   page: z.number().int().nonnegative(),
@@ -13,7 +26,6 @@ export const PaginationSchema = z.object({
 });
 
 export const SortDirectionSchema = z.enum(["asc", "desc"]);
-export type SortDirection = z.infer<typeof SortDirectionSchema>;
 
 export const MarketSortBySchema = z.enum([
   "name",
@@ -24,7 +36,6 @@ export const MarketSortBySchema = z.enum([
   "vacancy",
   "updatedAt",
 ]);
-export type MarketSortBy = z.infer<typeof MarketSortBySchema>;
 
 export const MarketTableRowSchema = z.object({
   marketId: z.string(),
@@ -42,9 +53,6 @@ export const MarketsTableResponseSchema = z.object({
   pagination: PaginationSchema,
 });
 
-export type MarketTableRow = z.infer<typeof MarketTableRowSchema>;
-export type MarketsTableResponse = z.infer<typeof MarketsTableResponseSchema>;
-
 export const ProviderSortBySchema = z.enum([
   "name",
   "category",
@@ -53,7 +61,6 @@ export const ProviderSortBySchema = z.enum([
   "listingCount",
   "updatedAt",
 ]);
-export type ProviderSortBy = z.infer<typeof ProviderSortBySchema>;
 
 export const ProviderTableRowSchema = z.object({
   providerId: z.string(),
@@ -73,9 +80,6 @@ export const ProvidersTableResponseSchema = z.object({
   pagination: PaginationSchema,
 });
 
-export type ProviderTableRow = z.infer<typeof ProviderTableRowSchema>;
-export type ProvidersTableResponse = z.infer<typeof ProvidersTableResponseSchema>;
-
 export const FacilitySortBySchema = z.enum([
   "facilityName",
   "providerId",
@@ -88,7 +92,6 @@ export const FacilitySortBySchema = z.enum([
   "availablePowerMw",
   "updatedAt",
 ]);
-export type FacilitySortBy = z.infer<typeof FacilitySortBySchema>;
 
 export const FacilityTableRowSchema = z.object({
   perspective: FacilityPerspectiveSchema,
@@ -109,6 +112,3 @@ export const FacilitiesTableResponseSchema = z.object({
   rows: z.array(FacilityTableRowSchema),
   pagination: PaginationSchema,
 });
-
-export type FacilityTableRow = z.infer<typeof FacilityTableRowSchema>;
-export type FacilitiesTableResponse = z.infer<typeof FacilitiesTableResponseSchema>;

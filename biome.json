@@ -1,6 +1,6 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.4.4/schema.json",
-  "extends": ["ultracite/core", "ultracite/vue"],
+  "extends": ["ultracite/biome/core", "ultracite/biome/vue"],
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -57,6 +57,16 @@
         "rules": {
           "correctness": {
             "noUndeclaredVariables": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/contracts/src/index.ts"],
+      "linter": {
+        "rules": {
+          "performance": {
+            "noBarrelFile": "off"
           }
         }
       }

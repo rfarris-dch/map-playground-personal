@@ -1,6 +1,10 @@
-import type { MutableParcelsSyncRunStatus } from "./parcels-sync-runtime.types";
-import { ensureRunState, recomputeRunTotals } from "./run-status-mutations.service";
-import { parseNullableInteger } from "./value-parsing.service";
+import type { MutableParcelsSyncRunStatus } from "@/sync/parcels-sync/parcels-sync-runtime.types";
+import {
+  ensureRunState,
+  recomputeRunTotals,
+  setRunPhase,
+} from "@/sync/parcels-sync/run-status-mutations.service";
+import { parseNullableInteger } from "@/sync/parcels-sync/value-parsing.service";
 
 const RUN_ID_LINE_RE = /runId=([A-Za-z0-9._:-]+)/;
 const STATE_START_RE = /^\[sync\]\sstate=([A-Za-z0-9]+)\sstarting\s+expected=([0-9]+)/;
@@ -11,27 +15,27 @@ const STATE_COMPLETE_RE =
 
 function updateRunPhaseFromLine(run: MutableParcelsSyncRunStatus, line: string): void {
   if (line.includes("[parcels] extracting snapshot")) {
-    run.phase = "extracting";
+    setRunPhase(run, "extracting");
     return;
   }
 
   if (line.includes("[parcels] loading canonical table")) {
-    run.phase = "loading";
+    setRunPhase(run, "loading");
     return;
   }
 
   if (line.includes("[parcels] building parcels draw PMTiles")) {
-    run.phase = "building";
+    setRunPhase(run, "building");
     return;
   }
 
   if (line.includes("[parcels] publishing PMTiles manifest")) {
-    run.phase = "publishing";
+    setRunPhase(run, "publishing");
     return;
   }
 
   if (line.includes("[parcels] refresh complete")) {
-    run.phase = "completed";
+    setRunPhase(run, "completed");
   }
 }
 

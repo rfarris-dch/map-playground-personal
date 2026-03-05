@@ -1,4 +1,4 @@
-import { formatDurationMs } from "../../pipeline.service";
+import { formatDurationMs } from "@/features/pipeline/pipeline.service";
 
 export function formatRelativeDuration(valueMs: number | null): string {
   if (typeof valueMs !== "number" || !Number.isFinite(valueMs) || valueMs < 0) {

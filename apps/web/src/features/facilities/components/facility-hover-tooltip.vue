@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { FacilityHoverState } from "../hover.types";
+  import type { FacilityHoverState } from "@/features/facilities/hover.types";
 
   interface FacilityHoverTooltipProps {
     readonly hoverState: FacilityHoverState | null;
@@ -30,14 +30,12 @@
       <span class="text-[11px] font-semibold uppercase tracking-wide">
         {{ props.hoverState.perspective }}
       </span>
-      <span class="text-[11px] font-mono text-muted-foreground"
-        >{{ props.hoverState.facilityId }}</span
-      >
+      <span class="truncate text-[11px] font-medium">{{ props.hoverState.facilityName }}</span>
     </header>
 
     <dl class="m-0 grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-[11px] leading-tight">
       <dt class="text-muted-foreground">Provider</dt>
-      <dd class="m-0 break-words">{{ props.hoverState.providerId }}</dd>
+      <dd class="m-0 break-words">{{ props.hoverState.providerName }}</dd>
 
       <dt class="text-muted-foreground">Semantic</dt>
       <dd class="m-0">{{ props.hoverState.commissionedSemantic }}</dd>

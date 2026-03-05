@@ -1,12 +1,13 @@
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseBooleanFlag, parseIntervalSecondsAsMs } from "../config/env-parsing.service";
+import { parseBooleanFlag, parseIntervalSecondsAsMs } from "@/config/env-parsing.service";
 import type {
   HyperscaleSyncConfig,
   HyperscaleSyncController,
   HyperscaleSyncRunResult,
-} from "./hyperscale-sync.types";
+} from "@/sync/hyperscale-sync.types";
+import type { HyperscaleSyncRuntimeState } from "./hyperscale-sync.service.types";
 
 declare const Bun: {
   spawn(options: {
@@ -21,11 +22,6 @@ declare const Bun: {
     stdout: ReadableStream<Uint8Array> | null;
   };
 };
-
-interface HyperscaleSyncRuntimeState {
-  intervalHandle: ReturnType<typeof setInterval> | null;
-  isRunning: boolean;
-}
 
 function buildConfig(): HyperscaleSyncConfig {
   const serviceFilePath = fileURLToPath(import.meta.url);

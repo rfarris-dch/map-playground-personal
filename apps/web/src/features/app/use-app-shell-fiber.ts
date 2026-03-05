@@ -1,6 +1,25 @@
 import type { BBox } from "@map-migration/contracts";
 import type { IMap } from "@map-migration/map-engine";
-import { computed, type ShallowRef, shallowRef } from "vue";
+import { computed, shallowRef } from "vue";
+import { FIBER_MIN_ZOOM, fiberLayerId } from "@/features/app/app-shell.constants";
+import {
+  initialFiberSourceLayerOptionsState,
+  initialFiberSourceLayerSelectionState,
+  initialFiberVisibilityState,
+} from "@/features/app/app-shell.defaults";
+import {
+  areAllFiberSourceLayersSelected,
+  filterFiberSourceLayerOptionsByInView,
+  nextSelectedFiberLayerNamesForToggle,
+  normalizeSelectedFiberLayerNamesForOptions,
+  selectedFiberLayerNamesForLine,
+  selectedFiberSourceLayers,
+} from "@/features/app/app-shell.fiber.service";
+import type {
+  FiberSourceLayerOptionsState,
+  FiberSourceLayerSelectionState,
+  FiberVisibilityState,
+} from "@/features/app/app-shell.types";
 import {
   fetchFiberLocatorCatalog,
   fetchFiberLocatorLayersInView,
@@ -22,32 +41,7 @@ import type {
   FiberLocatorHoverController,
   FiberLocatorHoverState,
 } from "@/features/fiber-locator/hover.types";
-import type { LayerRuntimeController } from "@/features/layers/layer-runtime.types";
-import { FIBER_MIN_ZOOM, fiberLayerId } from "./app-shell.constants";
-import {
-  initialFiberSourceLayerOptionsState,
-  initialFiberSourceLayerSelectionState,
-  initialFiberVisibilityState,
-} from "./app-shell.defaults";
-import {
-  areAllFiberSourceLayersSelected,
-  filterFiberSourceLayerOptionsByInView,
-  nextSelectedFiberLayerNamesForToggle,
-  normalizeSelectedFiberLayerNamesForOptions,
-  selectedFiberLayerNamesForLine,
-  selectedFiberSourceLayers,
-} from "./app-shell.fiber.service";
-import type {
-  FiberSourceLayerOptionsState,
-  FiberSourceLayerSelectionState,
-  FiberVisibilityState,
-} from "./app-shell.types";
-
-interface UseAppShellFiberOptions {
-  readonly isInteractionEnabled: () => boolean;
-  readonly layerRuntime: ShallowRef<LayerRuntimeController | null>;
-  readonly map: ShallowRef<IMap | null>;
-}
+import type { UseAppShellFiberOptions } from "./use-app-shell-fiber.types";
 
 export function useAppShellFiber(options: UseAppShellFiberOptions) {
   const fiberControllers = shallowRef<readonly FiberLocatorLayerController[]>([]);

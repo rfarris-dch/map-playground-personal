@@ -1,22 +1,12 @@
 import type { IMap, MapPointerEvent } from "@map-migration/map-engine";
-import { powerLayerMetadata } from "./power.service";
+import { powerLayerMetadata } from "@/features/power/power.service";
 import type {
   PowerHoverController,
   PowerHoverLayerId,
   PowerHoverOptions,
   PowerHoverState,
-} from "./power-hover.types";
-
-interface HoverTarget {
-  readonly featureId: number | string;
-  readonly sourceId: string;
-  readonly sourceLayerName: string;
-}
-
-interface HoverCandidate {
-  readonly nextHover: PowerHoverState;
-  readonly nextTarget: HoverTarget | null;
-}
+} from "@/features/power/power-hover.types";
+import type { HoverCandidate, HoverTarget } from "./power-hover.types";
 
 const POWER_HOVER_QUERY_LAYER_IDS: readonly string[] = [
   "power.substations",

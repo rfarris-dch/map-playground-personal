@@ -1,30 +1,20 @@
 import type { ParcelAoi, ParcelGeometryMode } from "@map-migration/contracts";
 import type { Context } from "hono";
-import type { ParcelRow } from "../parcels.repo";
 import {
   enrichParcelsByBbox,
   enrichParcelsByCounty,
   enrichParcelsByPolygon,
-} from "../parcels.repo";
-import { rejectWithPolicyError } from "./parcels-route-errors.service";
+} from "@/geo/parcels/parcels.repo";
+import { rejectWithPolicyError } from "@/geo/parcels/route/parcels-route-errors.service";
 import {
   bboxExceedsLimits,
   PARCELS_MAX_POLYGON_JSON_CHARS,
   PARCELS_MAX_TILESET_TILES,
   resolveTileSetPolygonGeometry,
-} from "./parcels-route-policy.service";
+} from "@/geo/parcels/route/parcels-route-policy.service";
+import type { EnrichRowsResult } from "./parcels-route-aoi-query.service.types";
 
-interface EnrichRowsOk {
-  readonly ok: true;
-  readonly rows: ParcelRow[];
-}
-
-interface EnrichRowsError {
-  readonly ok: false;
-  readonly response: Response;
-}
-
-export type EnrichRowsResult = EnrichRowsOk | EnrichRowsError;
+export type { EnrichRowsResult } from "./parcels-route-aoi-query.service.types";
 
 export async function queryEnrichRowsByAoi(
   c: Context,

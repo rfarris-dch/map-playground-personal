@@ -1,6 +1,9 @@
 import { buildFacilitiesTableRoute, FacilitiesTableResponseSchema } from "@map-migration/contracts";
+import type {
+  FacilitiesTableRequest,
+  FacilitiesTableResult,
+} from "@/features/facilities/facilities-table.types";
 import { apiGetJson } from "@/lib/api-client";
-import type { FacilitiesTableRequest, FacilitiesTableResult } from "./facilities-table.types";
 
 export function fetchFacilitiesTable(
   request: FacilitiesTableRequest

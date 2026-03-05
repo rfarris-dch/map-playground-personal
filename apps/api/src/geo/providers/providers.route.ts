@@ -7,10 +7,10 @@ import {
   type SortDirection,
   SortDirectionSchema,
 } from "@map-migration/contracts";
-import type { Hono } from "hono";
-import { getOrCreateRequestId, jsonError, jsonOk, toDebugDetails } from "../../http/api-response";
-import { resolvePaginationParams, totalPages } from "../../http/pagination-params.service";
-import { queryProvidersTable } from "./providers-query.service";
+import type { Env, Hono } from "hono";
+import { queryProvidersTable } from "@/geo/providers/providers-query.service";
+import { getOrCreateRequestId, jsonError, jsonOk, toDebugDetails } from "@/http/api-response";
+import { resolvePaginationParams, totalPages } from "@/http/pagination-params.service";
 
 function resolveProviderSortBy(value: string | undefined): ProviderSortBy | null {
   if (typeof value === "undefined") {
@@ -38,7 +38,7 @@ function resolveSortDirection(value: string | undefined): SortDirection | null {
   return parsed.data;
 }
 
-export function registerProvidersRoute(app: Hono): void {
+export function registerProvidersRoute<E extends Env>(app: Hono<E>): void {
   app.get(ApiRoutes.providers, async (c) => {
     const requestId = getOrCreateRequestId(c, "api");
 

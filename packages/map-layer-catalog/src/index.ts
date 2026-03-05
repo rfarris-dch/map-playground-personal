@@ -1,15 +1,6 @@
-export type LayerId =
-  | "county"
-  | "state"
-  | "country"
-  | "facilities.colocation"
-  | "facilities.hyperscale"
-  | "power.transmission"
-  | "power.substations"
-  | "power.plants"
-  | "fiber-locator.longhaul"
-  | "fiber-locator.metro"
-  | "property.parcels";
+import type { LayerCatalog, LayerId } from "./index.types";
+
+export type { LayerCatalog, LayerDefinition, LayerGroup, LayerId } from "./index.types";
 
 export const LAYER_IDS: readonly LayerId[] = [
   "county",
@@ -24,29 +15,6 @@ export const LAYER_IDS: readonly LayerId[] = [
   "fiber-locator.longhaul",
   "property.parcels",
 ];
-
-export type LayerGroup =
-  | "basemap"
-  | "boundaries"
-  | "facilities"
-  | "infrastructure"
-  | "environmental"
-  | "parcels"
-  | "models";
-
-export interface LayerDefinition {
-  readonly budgetWeight: number;
-  readonly defaultVisible: boolean;
-  readonly dependencies: readonly LayerId[];
-  readonly group: LayerGroup;
-  readonly id: LayerId;
-  readonly sourceId: string;
-  readonly sourceType: "vector" | "raster" | "geojson" | "custom";
-  readonly zoomMax: number;
-  readonly zoomMin: number;
-}
-
-export type LayerCatalog = Readonly<Record<LayerId, LayerDefinition>>;
 
 export const DEFAULT_LAYER_CATALOG: LayerCatalog = {
   // Boundary layers are cataloged for governance, but feature layers are independently toggleable.
@@ -167,7 +135,7 @@ export const DEFAULT_LAYER_CATALOG: LayerCatalog = {
     sourceType: "vector",
     zoomMin: 0,
     zoomMax: 22,
-    defaultVisible: true,
+    defaultVisible: false,
     dependencies: [],
     budgetWeight: 5,
   },

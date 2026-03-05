@@ -11,15 +11,8 @@ import type {
   LayerRuntimeOptions,
   LayerRuntimeSnapshot,
   LayerVisibilityController,
-} from "./layer-runtime.types";
-
-interface LayerRuntimeState {
-  controllers: Map<LayerId, LayerVisibilityController>;
-  destroyed: boolean;
-  effectiveVisibility: Map<LayerId, boolean>;
-  stressBlocked: Map<LayerId, boolean>;
-  userVisibility: Map<LayerId, boolean>;
-}
+} from "@/features/layers/layer-runtime.types";
+import type { LayerRuntimeState } from "./layer-runtime.service.types";
 
 function cloneMapToRecord(map: ReadonlyMap<LayerId, boolean>): Partial<Record<LayerId, boolean>> {
   return Array.from(map.entries()).reduce<Partial<Record<LayerId, boolean>>>(

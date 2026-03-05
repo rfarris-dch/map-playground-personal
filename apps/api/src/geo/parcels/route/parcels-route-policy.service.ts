@@ -1,10 +1,6 @@
 import type { BBox, ParcelAoi } from "@map-migration/contracts";
-import { parsePositiveFloatFlag, parsePositiveIntFlag } from "../../../config/env-parsing.service";
-
-interface TileCoordinate {
-  readonly x: number;
-  readonly y: number;
-}
+import { parsePositiveFloatFlag, parsePositiveIntFlag } from "@/config/env-parsing.service";
+import type { TileCoordinate } from "./parcels-route-policy.service.types";
 
 export const PARCELS_MAX_TILESET_TILES = parsePositiveIntFlag(
   process.env.PARCELS_MAX_TILESET_TILES,

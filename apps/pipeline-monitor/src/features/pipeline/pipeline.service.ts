@@ -4,7 +4,10 @@ import {
   type ParcelSyncPhase,
   ParcelsSyncStatusResponseSchema,
 } from "@map-migration/contracts";
-import type { PipelineStatusFetchResult, PipelineStatusPayload } from "./pipeline.types";
+import type {
+  PipelineStatusFetchResult,
+  PipelineStatusPayload,
+} from "@/features/pipeline/pipeline.types";
 
 function createRequestId(): string {
   const timestamp = Date.now();

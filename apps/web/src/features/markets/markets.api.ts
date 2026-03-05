@@ -1,6 +1,6 @@
 import { buildMarketsRoute, MarketsTableResponseSchema } from "@map-migration/contracts";
+import type { MarketsTableRequest, MarketsTableResult } from "@/features/markets/markets.types";
 import { apiGetJson } from "@/lib/api-client";
-import type { MarketsTableRequest, MarketsTableResult } from "./markets.types";
 
 export function fetchMarketsTable(request: MarketsTableRequest): Promise<MarketsTableResult> {
   const requestInit: RequestInit = {};

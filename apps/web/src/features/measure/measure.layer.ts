@@ -3,14 +3,14 @@ import {
   buildMeasureSourceData,
   buildMeasureState,
   emptyMeasureSourceData,
-} from "./measure.service";
+} from "@/features/measure/measure.service";
 import type {
   MeasureAreaShape,
   MeasureLayerController,
   MeasureLayerOptions,
   MeasureMode,
   MeasureRuntimeState,
-} from "./measure.types";
+} from "@/features/measure/measure.types";
 
 const FREEFORM_CLOSE_HITBOX_PX = 10;
 
@@ -202,45 +202,29 @@ export function mountMeasureLayer(
     syncSource();
   };
 
-  const onClick = (event: MapClickEvent): void => {
-    if (!state.ready || state.mode === "off") {
+  const onDistanceClick = (clickedVertex: [number, number]): void => {
+    state.vertices.push(clickedVertex);
+    syncSource();
+  };
+
+  const onFreeformAreaClick = (event: MapClickEvent, clickedVertex: [number, number]): void => {
+    if (state.areaComplete) {
       return;
     }
 
-    const clickedVertex = eventVertex(event);
-
-    if (state.mode === "distance") {
-      state.vertices.push(clickedVertex);
+    if (shouldCloseFreeformSelection(map, vertexLayerId, event, state.vertices)) {
+      state.areaComplete = true;
+      state.cursorVertex = null;
       syncSource();
       return;
     }
 
-    if (state.areaShape === "freeform") {
-      if (state.areaComplete) {
-        state.vertices = [clickedVertex];
-        state.areaComplete = false;
-        state.cursorVertex = null;
-        syncSource();
-        return;
-      }
+    state.vertices.push(clickedVertex);
+    syncSource();
+  };
 
-      if (shouldCloseFreeformSelection(map, vertexLayerId, event, state.vertices)) {
-        state.areaComplete = true;
-        state.cursorVertex = null;
-        syncSource();
-        return;
-      }
-
-      state.vertices.push(clickedVertex);
-      syncSource();
-      return;
-    }
-
+  const onBoxAreaClick = (clickedVertex: [number, number]): void => {
     if (state.areaComplete || state.vertices.length >= 2) {
-      state.vertices = [clickedVertex];
-      state.areaComplete = false;
-      state.cursorVertex = clickedVertex;
-      syncSource();
       return;
     }
 
@@ -263,6 +247,26 @@ export function mountMeasureLayer(
     state.areaComplete = true;
     state.cursorVertex = null;
     syncSource();
+  };
+
+  const onClick = (event: MapClickEvent): void => {
+    if (!state.ready || state.mode === "off") {
+      return;
+    }
+
+    const clickedVertex = eventVertex(event);
+
+    if (state.mode === "distance") {
+      onDistanceClick(clickedVertex);
+      return;
+    }
+
+    if (state.areaShape === "freeform") {
+      onFreeformAreaClick(event, clickedVertex);
+      return;
+    }
+
+    onBoxAreaClick(clickedVertex);
   };
 
   const onPointerMove = (event: MapPointerEvent): void => {

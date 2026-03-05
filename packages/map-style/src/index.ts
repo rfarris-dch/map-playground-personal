@@ -1,22 +1,7 @@
-import { LAYER_ORDER_INVARIANTS } from "./manifests/layer-order";
+import { LAYER_ORDER_INVARIANTS } from "@/manifests/layer-order";
+import type { StyleDocument } from "./index.types";
 
-export interface StyleLayer {
-  id: string;
-  layout?: Record<string, unknown>;
-  maxzoom?: number;
-  minzoom?: number;
-  paint?: Record<string, unknown>;
-  source?: string;
-  "source-layer"?: string;
-  type: string;
-}
-
-export interface StyleDocument {
-  layers: StyleLayer[];
-  name: string;
-  sources: Record<string, object>;
-  version: 8;
-}
+export type { StyleDocument, StyleLayer } from "./index.types";
 
 export function createBaseStyle(name = "Map Platform Core"): StyleDocument {
   return {

@@ -7,7 +7,9 @@
     "dev": "vite --force",
     "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "vue-tsc --noEmit -p tsconfig.app.json"
+    "test": "echo 'pipeline-monitor tests not implemented yet'",
+    "typecheck": "vue-tsc --noEmit -p tsconfig.app.json",
+    "lint": "biome check ."
   },
   "dependencies": {
     "@map-migration/contracts": "workspace:*",

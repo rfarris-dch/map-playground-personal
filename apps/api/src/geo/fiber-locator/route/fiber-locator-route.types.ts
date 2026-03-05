@@ -1,4 +1,4 @@
-import type { FiberLocatorTileFormat } from "../fiber-locator.types";
+import type { FiberLocatorTileFormat } from "@/geo/fiber-locator/fiber-locator.types";
 
 export interface FiberLocatorTilePathRawParams {
   readonly layerNameRaw: string;

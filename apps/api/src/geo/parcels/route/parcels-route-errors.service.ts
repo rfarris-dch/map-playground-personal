@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { jsonError, toDebugDetails } from "../../../http/api-response";
+import { jsonError, toDebugDetails } from "@/http/api-response";
 
 export function rejectWithBadRequest(c: Context, requestId: string, error: string): Response {
   return jsonError(c, {

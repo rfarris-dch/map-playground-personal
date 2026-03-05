@@ -1,11 +1,11 @@
 import type {
+  FiberSourceLayerOptionsState,
+  FiberSourceLayerSelectionState,
+} from "@/features/app/app-shell.types";
+import type {
   FiberLocatorLineId,
   FiberLocatorSourceLayerOption,
 } from "@/features/fiber-locator/fiber-locator.types";
-import type {
-  FiberSourceLayerOptionsState,
-  FiberSourceLayerSelectionState,
-} from "./app-shell.types";
 
 function normalizedLayerNameSet(layerNames: readonly string[]): Set<string> {
   return new Set(layerNames.map((layerName) => layerName.trim().toLowerCase()));

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-  import { formatDurationMs, formatTimestamp } from "../../pipeline.service";
-  import type { PipelineDashboardDetailsProps } from "./pipeline-dashboard.types";
+  import type { PipelineDashboardDetailsProps } from "@/features/pipeline/components/pipeline-dashboard/pipeline-dashboard.types";
+  import { formatDurationMs, formatTimestamp } from "@/features/pipeline/pipeline.service";
 
   const props = defineProps<PipelineDashboardDetailsProps>();
 </script>

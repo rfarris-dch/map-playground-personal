@@ -3,7 +3,7 @@
   import { cn } from "@/lib/utils";
 
   const className = computed(() =>
-    cn("border-b transition-colors hover:bg-muted/40 data-[state=selected]:bg-muted")
+    cn("border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted")
   );
 </script>
 

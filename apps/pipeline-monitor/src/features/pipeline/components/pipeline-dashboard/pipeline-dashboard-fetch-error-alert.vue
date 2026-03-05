@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { PipelineDashboardFetchErrorAlertProps } from "./pipeline-dashboard.types";
+  import type { PipelineDashboardFetchErrorAlertProps } from "@/features/pipeline/components/pipeline-dashboard/pipeline-dashboard.types";
 
   const props = defineProps<PipelineDashboardFetchErrorAlertProps>();
 </script>

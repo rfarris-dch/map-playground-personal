@@ -1,10 +1,7 @@
-import type { PowerLayerId } from "./power.types";
+import type { PowerLayerId } from "@/features/power/power.types";
+import type { PowerLayerMetadata } from "./power.service.types";
 
-export interface PowerLayerMetadata {
-  readonly color: string;
-  readonly description: string;
-  readonly label: string;
-}
+export type { PowerLayerMetadata } from "./power.service.types";
 
 const POWER_LAYER_IDS: readonly PowerLayerId[] = ["transmission", "substations", "plants"];
 

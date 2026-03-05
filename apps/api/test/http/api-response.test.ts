@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { normalizeRequestIdHeader } from "../../src/http/api-response";
+import { normalizeRequestIdHeader } from "@/http/api-response";
 
 describe("request id normalization", () => {
   it("accepts safe request ids", () => {

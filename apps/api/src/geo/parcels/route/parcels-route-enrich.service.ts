@@ -1,16 +1,9 @@
-import type { ParcelsFeatureCollection } from "@map-migration/contracts";
-import { parsePositiveIntFlag } from "../../../config/env-parsing.service";
-
-interface PageSizeResolution {
-  readonly pageSize: number;
-  readonly warnings: Array<{ code: string; message: string }>;
-}
-
-interface PaginatedEnrichFeatures {
-  readonly features: ParcelsFeatureCollection["features"];
-  readonly hasMore: boolean;
-  readonly nextCursor: string | null;
-}
+import type { ParcelsFeatureCollection, Warning } from "@map-migration/contracts";
+import { parsePositiveIntFlag } from "@/config/env-parsing.service";
+import type {
+  PageSizeResolution,
+  PaginatedEnrichFeatures,
+} from "./parcels-route-enrich.service.types";
 
 const PARCELS_MAX_PAGE_SIZE = parsePositiveIntFlag(process.env.PARCELS_MAX_PAGE_SIZE, 20_000);
 
@@ -28,7 +21,7 @@ export function coerceCursor(value: string | null | undefined): string | null {
 }
 
 export function resolvePageSize(requestedPageSize: number): PageSizeResolution {
-  const warnings: Array<{ code: string; message: string }> = [];
+  const warnings: Warning[] = [];
   const pageSize = Math.min(requestedPageSize, PARCELS_MAX_PAGE_SIZE);
   if (pageSize < requestedPageSize) {
     warnings.push({
@@ -46,7 +39,7 @@ export function resolvePageSize(requestedPageSize: number): PageSizeResolution {
 export function paginateEnrichFeatures(
   mappedFeatures: ParcelsFeatureCollection["features"],
   pageSize: number,
-  warnings: Array<{ code: string; message: string }>
+  warnings: Warning[]
 ): PaginatedEnrichFeatures {
   const hasMore = mappedFeatures.length > pageSize;
   const features = hasMore ? mappedFeatures.slice(0, pageSize) : mappedFeatures;

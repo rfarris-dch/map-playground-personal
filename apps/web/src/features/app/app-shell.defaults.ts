@@ -1,8 +1,4 @@
 import type { FacilityPerspective } from "@map-migration/contracts";
-import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";
-import type { MeasureState } from "@/features/measure/measure.types";
-import type { ParcelsStatus } from "@/features/parcels/parcels.types";
-import type { PowerVisibilityState } from "@/features/power/power.types";
 import type {
   BoundaryFacetOptionsState,
   BoundaryFacetSelectionState,
@@ -12,7 +8,12 @@ import type {
   FiberVisibilityState,
   PerspectiveStatusState,
   PerspectiveVisibilityState,
-} from "./app-shell.types";
+} from "@/features/app/app-shell.types";
+import type { BasemapVisibilityState } from "@/features/basemap/basemap.types";
+import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";
+import type { MeasureState } from "@/features/measure/measure.types";
+import type { ParcelsStatus } from "@/features/parcels/parcels.types";
+import type { PowerVisibilityState } from "@/features/power/power.types";
 
 export function initialParcelsStatus(): ParcelsStatus {
   return {
@@ -29,6 +30,7 @@ export function initialMeasureState(): MeasureState {
     areaSqKm: null,
     canFinishSelection: false,
     isSelectionComplete: false,
+    selectionRing: null,
   };
 }
 
@@ -94,8 +96,19 @@ export function initialFiberSourceLayerSelectionState(): FiberSourceLayerSelecti
 export function initialPowerVisibilityState(): PowerVisibilityState {
   return {
     transmission: false,
-    substations: true,
-    plants: true,
+    substations: false,
+    plants: false,
+  };
+}
+
+export function initialBasemapVisibilityState(): BasemapVisibilityState {
+  return {
+    boundaries: false,
+    buildings3d: true,
+    labels: true,
+    landmarks: false,
+    roads: true,
+    satellite: false,
   };
 }
 

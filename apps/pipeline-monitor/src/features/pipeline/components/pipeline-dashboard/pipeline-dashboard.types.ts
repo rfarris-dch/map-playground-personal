@@ -4,10 +4,12 @@ import type {
   PipelineFetchFailure,
   PipelineLiveEvent,
   PipelineStatusController,
-} from "../../pipeline.types";
+} from "@/features/pipeline/pipeline.types";
 
-type EstimatePipelineRate = typeof import("../../pipeline-tracking.service").estimatePipelineRate;
-type EstimateTileBuildRate = typeof import("../../pipeline-tracking.service").estimateTileBuildRate;
+type EstimatePipelineRate =
+  typeof import("@/features/pipeline/pipeline-tracking/pipeline-tracking-rate.service").estimatePipelineRate;
+type EstimateTileBuildRate =
+  typeof import("@/features/pipeline/pipeline-tracking/pipeline-tracking-build-rate.service").estimateTileBuildRate;
 
 export type PipelineDashboardResponse = ParcelsSyncStatusResponse;
 export type PipelineDashboardRun = ParcelsSyncStatusResponse["run"];

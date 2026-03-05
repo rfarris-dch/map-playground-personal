@@ -5,7 +5,10 @@ import maplibregl, {
   type ControlPosition,
   type IControl,
   type MapGeoJSONFeature,
+  type FullscreenControlOptions as MapLibreFullscreenControlOptions,
   type Map as MapLibreMap,
+  type NavigationControlOptions as MapLibreNavigationControlOptions,
+  type ScaleControlOptions as MapLibreScaleControlOptions,
   type MapMouseEvent,
   type MapOptions,
   type PointLike,
@@ -17,80 +20,39 @@ import maplibregl, {
   type TerrainSpecification,
 } from "maplibre-gl";
 import { Protocol } from "pmtiles";
+import type {
+  FeatureStateTarget,
+  FullscreenControlOptions,
+  IMap,
+  LngLat,
+  LngLatBounds,
+  MapAdapter,
+  MapClickEvent,
+  MapControl,
+  MapCreateOptions,
+  MapPointerEvent,
+  NavigationControlOptions,
+  PmtilesProtocolRuntime,
+  ScaleControlOptions,
+  StyleInput,
+} from "./index.types";
 
-export type LngLat = [number, number];
-export type StyleInput = StyleSpecification | string;
-
-export interface LngLatBounds {
-  east: number;
-  north: number;
-  south: number;
-  west: number;
-}
-
-export interface MapCreateOptions {
-  center: LngLat;
-  hash?: boolean;
-  maxZoom?: number;
-  minZoom?: number;
-  style: StyleInput;
-  zoom: number;
-}
-
-export interface FeatureStateTarget {
-  id: string | number;
-  source: string;
-  sourceLayer?: string;
-}
-
-export interface MapClickEvent {
-  lngLat: {
-    lat: number;
-    lng: number;
-  };
-  point: [number, number];
-}
-
-export interface MapPointerEvent {
-  lngLat: {
-    lat: number;
-    lng: number;
-  };
-  point: [number, number];
-}
-
-export interface IMap {
-  addControl(control: IControl, position?: ControlPosition): void;
-  addLayer(layerSpec: AddLayerObject, beforeId?: string): void;
-  addSource(id: string, spec: SourceSpecification): void;
-  destroy(): void;
-  getBounds(): LngLatBounds;
-  getStyle(): StyleSpecification;
-  getZoom(): number;
-  hasLayer(layerId: string): boolean;
-  hasSource(sourceId: string): boolean;
-  off(event: "load" | "moveend", handler: () => void): void;
-  offClick(handler: (event: MapClickEvent) => void): void;
-  offPointerLeave(handler: () => void): void;
-  offPointerMove(handler: (event: MapPointerEvent) => void): void;
-  on(event: "load" | "moveend", handler: () => void): void;
-  onClick(handler: (event: MapClickEvent) => void): void;
-  onPointerLeave(handler: () => void): void;
-  onPointerMove(handler: (event: MapPointerEvent) => void): void;
-  queryRenderedFeatures(
-    target: PointLike | [PointLike, PointLike],
-    options?: QueryRenderedFeaturesOptions
-  ): MapGeoJSONFeature[];
-  removeControl(control: IControl): void;
-  removeLayer(layerId: string): void;
-  removeSource(sourceId: string): void;
-  setFeatureState(target: FeatureStateTarget, state: Record<string, unknown>): void;
-  setGeoJSONSourceData(sourceId: string, data: unknown): void;
-  setLayerVisibility(layerId: string, visible: boolean): void;
-  setProjection(projection: ProjectionSpecification): void;
-  setStyle(style: StyleInput): void;
-  setTerrain(terrain: TerrainSpecification | null): void;
-}
+export type {
+  FeatureStateTarget,
+  FullscreenControlOptions,
+  IMap,
+  LngLat,
+  LngLatBounds,
+  MapAdapter,
+  MapClickEvent,
+  MapControl,
+  MapCreateOptions,
+  MapExpression,
+  MapPointerEvent,
+  NavigationControlOptions,
+  ScaleControlOptions,
+  StyleInput,
+} from "./index.types";
 
 function isSourceWithSetData(source: unknown): source is { setData: (data: unknown) => void } {
   if (typeof source !== "object" || source === null) {
@@ -100,11 +62,21 @@ function isSourceWithSetData(source: unknown): source is { setData: (data: unkno
   return typeof Reflect.get(source, "setData") === "function";
 }
 
+function isStyleNotDoneLoadingError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return error.message.includes("Style is not done loading.");
+}
+
 class MapLibreEngine implements IMap {
   private readonly clickHandlers: Map<
     (event: MapClickEvent) => void,
     (event: MapMouseEvent) => void
   >;
+  private preferredProjection: ProjectionSpecification | null;
+  private projectionLoadHandler: (() => void) | null;
   private readonly pointerLeaveHandlers: Map<() => void, () => void>;
   private readonly pointerMoveHandlers: Map<
     (event: MapPointerEvent) => void,
@@ -117,6 +89,8 @@ class MapLibreEngine implements IMap {
     this.clickHandlers = new Map();
     this.pointerMoveHandlers = new Map();
     this.pointerLeaveHandlers = new Map();
+    this.preferredProjection = null;
+    this.projectionLoadHandler = null;
   }
 
   addControl(control: IControl, position?: ControlPosition): void {
@@ -170,6 +144,22 @@ class MapLibreEngine implements IMap {
     return this.map.queryRenderedFeatures(target, options);
   }
 
+  project(lngLat: LngLat): [number, number] {
+    const point = this.map.project({
+      lng: lngLat[0],
+      lat: lngLat[1],
+    });
+    return [point.x, point.y];
+  }
+
+  getCanvasSize(): { readonly height: number; readonly width: number } {
+    const container = this.map.getContainer();
+    return {
+      width: container.clientWidth,
+      height: container.clientHeight,
+    };
+  }
+
   getBounds(): LngLatBounds {
     const bounds = this.map.getBounds();
     return {
@@ -190,10 +180,12 @@ class MapLibreEngine implements IMap {
 
   setStyle(style: StyleInput): void {
     this.map.setStyle(style);
+    this.scheduleProjectionApplication();
   }
 
   setProjection(projection: ProjectionSpecification): void {
-    this.map.setProjection(projection);
+    this.preferredProjection = projection;
+    this.scheduleProjectionApplication();
   }
 
   setTerrain(terrain: TerrainSpecification | null): void {
@@ -310,20 +302,54 @@ class MapLibreEngine implements IMap {
   }
 
   destroy(): void {
+    this.stopProjectionListeners();
     this.clickHandlers.clear();
     this.pointerMoveHandlers.clear();
     this.pointerLeaveHandlers.clear();
     this.map.remove();
   }
-}
 
-export interface MapAdapter {
-  createMap(container: HTMLElement, options: MapCreateOptions): IMap;
-}
+  private stopProjectionListeners(): void {
+    if (this.projectionLoadHandler === null) {
+      return;
+    }
 
-interface PmtilesProtocolRuntime {
-  protocol: Protocol;
-  refCount: number;
+    this.map.off("load", this.projectionLoadHandler);
+    this.map.off("styledata", this.projectionLoadHandler);
+    this.projectionLoadHandler = null;
+  }
+
+  private scheduleProjectionApplication(): void {
+    if (this.preferredProjection === null) {
+      return;
+    }
+
+    const applyProjection = (): void => {
+      const projection = this.preferredProjection;
+      if (projection === null) {
+        this.stopProjectionListeners();
+        return;
+      }
+
+      try {
+        this.map.setProjection(projection);
+        this.stopProjectionListeners();
+      } catch (error: unknown) {
+        if (isStyleNotDoneLoadingError(error)) {
+          return;
+        }
+
+        this.stopProjectionListeners();
+        console.error("[map-engine] Failed to apply map projection.", error);
+      }
+    };
+
+    this.stopProjectionListeners();
+    this.projectionLoadHandler = applyProjection;
+    this.map.on("load", applyProjection);
+    this.map.on("styledata", applyProjection);
+    queueMicrotask(applyProjection);
+  }
 }
 
 let pmtilesProtocolRuntime: PmtilesProtocolRuntime | null = null;
@@ -377,7 +403,7 @@ export function createMap(
 export function createMapLibreAdapter(): MapAdapter {
   return {
     createMap(container: HTMLElement, options: MapCreateOptions): IMap {
-      const { center, zoom, minZoom, maxZoom, style, hash } = options;
+      const { center, zoom, minZoom, maxZoom, projection, style, hash, transformRequest } = options;
       const mapOptions: MapOptions = {
         container,
         center,
@@ -393,10 +419,17 @@ export function createMapLibreAdapter(): MapAdapter {
       if (typeof hash !== "undefined") {
         mapOptions.hash = hash;
       }
+      if (typeof transformRequest === "function") {
+        mapOptions.transformRequest = transformRequest;
+      }
 
       const map = new maplibregl.Map(mapOptions);
+      const engine = new MapLibreEngine(map);
+      if (typeof projection !== "undefined") {
+        engine.setProjection(projection);
+      }
 
-      return new MapLibreEngine(map);
+      return engine;
     },
   };
 }
@@ -409,4 +442,53 @@ export function isZoomInRange(zoom: number, min?: number, max?: number): boolean
     return false;
   }
   return true;
+}
+
+function toNavigationControlOptions(
+  options: NavigationControlOptions
+): MapLibreNavigationControlOptions {
+  const mapped: MapLibreNavigationControlOptions = {};
+  if (typeof options.showCompass === "boolean") {
+    mapped.showCompass = options.showCompass;
+  }
+  if (typeof options.showZoom === "boolean") {
+    mapped.showZoom = options.showZoom;
+  }
+  if (typeof options.visualizePitch === "boolean") {
+    mapped.visualizePitch = options.visualizePitch;
+  }
+  return mapped;
+}
+
+function toScaleControlOptions(options: ScaleControlOptions): MapLibreScaleControlOptions {
+  const mapped: MapLibreScaleControlOptions = {};
+  if (typeof options.maxWidth === "number" && Number.isFinite(options.maxWidth)) {
+    mapped.maxWidth = options.maxWidth;
+  }
+  if (typeof options.unit === "string") {
+    mapped.unit = options.unit;
+  }
+  return mapped;
+}
+
+function toFullscreenControlOptions(
+  options: FullscreenControlOptions
+): MapLibreFullscreenControlOptions {
+  const mapped: MapLibreFullscreenControlOptions = {};
+  if (options.container instanceof HTMLElement) {
+    mapped.container = options.container;
+  }
+  return mapped;
+}
+
+export function createNavigationControl(options: NavigationControlOptions = {}): MapControl {
+  return new maplibregl.NavigationControl(toNavigationControlOptions(options));
+}
+
+export function createScaleControl(options: ScaleControlOptions = {}): MapControl {
+  return new maplibregl.ScaleControl(toScaleControlOptions(options));
+}
+
+export function createFullscreenControl(options: FullscreenControlOptions = {}): MapControl {
+  return new maplibregl.FullscreenControl(toFullscreenControlOptions(options));
 }

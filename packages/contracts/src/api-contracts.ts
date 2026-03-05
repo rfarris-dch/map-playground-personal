@@ -1,53 +1,42 @@
 import { z } from "zod";
-import type { BoundaryPowerLevel } from "./boundaries-contracts";
-import {
-  type BBox,
-  type FacilityPerspective,
-  formatBboxParam,
-  type SourceMode,
-} from "./shared-contracts";
+import type { BoundaryPowerLevel } from "@/boundaries-contracts";
+import { type BBox, type FacilityPerspective, formatBboxParam } from "@/shared-contracts";
 import type {
   FacilitySortBy,
   MarketSortBy,
   ProviderSortBy,
   SortDirection,
-} from "./table-contracts";
+} from "@/table-contracts";
+import type {
+  ApiDefaultsTable,
+  ApiHeadersTable,
+  ApiQueryDefaultsTable,
+  ApiRoutesTable,
+  DataVersionResolveOptions,
+  FacilitiesBboxRouteArgs,
+  FacilityDetailRouteOptions,
+  PaginatedRouteArgs,
+  ParcelDetailRouteOptions,
+  SortedPaginatedRouteArgs,
+} from "./api-contracts.types";
+
+export type {
+  ApiDefaultsTable,
+  ApiHeadersTable,
+  ApiQueryDefaultsTable,
+  ApiRoutesTable,
+  DataVersionResolveOptions,
+  FacilitiesBboxRouteArgs,
+  FacilityDetailRouteOptions,
+  HealthResponse,
+  ParcelDetailRouteOptions,
+} from "./api-contracts.types";
 
 export const HealthSchema = z.object({
   status: z.literal("ok"),
   service: z.string(),
   now: z.string().datetime(),
 });
-
-export type HealthResponse = z.infer<typeof HealthSchema>;
-
-export interface ApiDefaultsTable {
-  readonly boundariesSourceMode: SourceMode;
-  readonly dataVersion: string;
-  readonly facilitiesSourceMode: SourceMode;
-  readonly fiberLocatorSourceMode: SourceMode;
-  readonly parcelsSourceMode: SourceMode;
-}
-
-export interface ApiHeadersTable {
-  readonly parcelIngestionRunId: string;
-  readonly requestId: string;
-}
-
-export interface ApiRoutesTable {
-  readonly boundariesPower: string;
-  readonly facilities: string;
-  readonly facilitiesTable: string;
-  readonly fiberLocatorLayers: string;
-  readonly fiberLocatorLayersInView: string;
-  readonly fiberLocatorTile: string;
-  readonly fiberLocatorVectorTile: string;
-  readonly health: string;
-  readonly markets: string;
-  readonly parcels: string;
-  readonly parcelsSyncStatus: string;
-  readonly providers: string;
-}
 
 export const ApiRoutes = Object.freeze<ApiRoutesTable>({
   health: "/api/health",
@@ -57,6 +46,7 @@ export const ApiRoutes = Object.freeze<ApiRoutesTable>({
   fiberLocatorTile: "/api/geo/fiber-locator/tile",
   fiberLocatorVectorTile: "/api/geo/fiber-locator/vector-tile",
   facilities: "/api/geo/facilities",
+  facilitiesSelection: "/api/geo/facilities/selection",
   facilitiesTable: "/api/geo/facilities/table",
   markets: "/api/geo/markets",
   providers: "/api/geo/providers",
@@ -64,8 +54,55 @@ export const ApiRoutes = Object.freeze<ApiRoutesTable>({
   parcelsSyncStatus: "/api/geo/parcels/sync/status",
 });
 
-export function buildFacilityDetailRoute(facilityId: string): string {
-  return `${ApiRoutes.facilities}/${encodeURIComponent(facilityId)}`;
+export const ApiQueryDefaults = Object.freeze<ApiQueryDefaultsTable>({
+  facilities: {
+    bboxLimit: 2000,
+    perspective: "colocation",
+  },
+  parcelDetail: {
+    includeGeometry: "full",
+    profile: "full_170",
+  },
+});
+
+function appendQueryToRoute(
+  baseRoute: string,
+  params: ReadonlyArray<readonly [string, string | undefined]>
+): string {
+  const query = new URLSearchParams();
+  for (const [key, value] of params) {
+    if (typeof value === "string") {
+      query.set(key, value);
+    }
+  }
+
+  const serializedQuery = query.toString();
+  if (serializedQuery.length === 0) {
+    return baseRoute;
+  }
+
+  return `${baseRoute}?${serializedQuery}`;
+}
+
+export function buildFacilityDetailRoute(
+  facilityId: string,
+  options: FacilityDetailRouteOptions = {}
+): string {
+  return appendQueryToRoute(`${ApiRoutes.facilities}/${encodeURIComponent(facilityId)}`, [
+    ["perspective", options.perspective ?? ApiQueryDefaults.facilities.perspective],
+  ]);
+}
+
+export function buildFacilitiesBboxRoute(args: FacilitiesBboxRouteArgs): string {
+  return appendQueryToRoute(ApiRoutes.facilities, [
+    ["bbox", formatBboxParam(args.bbox)],
+    ["perspective", args.perspective ?? ApiQueryDefaults.facilities.perspective],
+    ["limit", typeof args.limit === "number" ? String(args.limit) : undefined],
+  ]);
+}
+
+export function buildFacilitiesSelectionRoute(): string {
+  return ApiRoutes.facilitiesSelection;
 }
 
 export function buildBoundaryPowerRoute(level: BoundaryPowerLevel): string {
@@ -74,8 +111,14 @@ export function buildBoundaryPowerRoute(level: BoundaryPowerLevel): string {
   return `${ApiRoutes.boundariesPower}?${params.toString()}`;
 }
 
-export function buildParcelDetailRoute(parcelId: string): string {
-  return `${ApiRoutes.parcels}/${encodeURIComponent(parcelId)}`;
+export function buildParcelDetailRoute(
+  parcelId: string,
+  options: ParcelDetailRouteOptions = {}
+): string {
+  return appendQueryToRoute(`${ApiRoutes.parcels}/${encodeURIComponent(parcelId)}`, [
+    ["profile", options.profile ?? ApiQueryDefaults.parcelDetail.profile],
+    ["includeGeometry", options.includeGeometry ?? ApiQueryDefaults.parcelDetail.includeGeometry],
+  ]);
 }
 
 export function buildParcelLookupRoute(): string {
@@ -84,16 +127,6 @@ export function buildParcelLookupRoute(): string {
 
 export function buildParcelEnrichRoute(): string {
   return `${ApiRoutes.parcels}/enrich`;
-}
-
-interface PaginatedRouteArgs {
-  readonly page: number;
-  readonly pageSize: number;
-}
-
-interface SortedPaginatedRouteArgs<TSortBy extends string> extends PaginatedRouteArgs {
-  readonly sortBy: TSortBy;
-  readonly sortOrder: SortDirection;
 }
 
 function buildPaginatedRoute(
@@ -185,12 +218,6 @@ export const ApiDefaults = Object.freeze<ApiDefaultsTable>({
   fiberLocatorSourceMode: "external-xyz",
   parcelsSourceMode: "postgis",
 });
-
-export interface DataVersionResolveOptions {
-  readonly env?: Readonly<Record<string, string | undefined>>;
-  readonly fallback?: string;
-  readonly override?: string | undefined;
-}
 
 function toNonEmptyValue(value: string | undefined): string | undefined {
   if (typeof value !== "string") {

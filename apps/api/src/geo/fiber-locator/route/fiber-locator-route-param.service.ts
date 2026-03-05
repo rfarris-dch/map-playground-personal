@@ -1,9 +1,9 @@
-import type { FiberLocatorTileFormat } from "../fiber-locator.types";
+import type { FiberLocatorTileFormat } from "@/geo/fiber-locator/fiber-locator.types";
 import type {
   FiberLocatorTileCoordinates,
   FiberLocatorTilePathRawParams,
   FiberLocatorValidationResult,
-} from "./fiber-locator-route.types";
+} from "@/geo/fiber-locator/route/fiber-locator-route.types";
 
 const FIBER_LOCATOR_LAYER_NAME_RE = /^[a-z0-9._-]+$/i;
 

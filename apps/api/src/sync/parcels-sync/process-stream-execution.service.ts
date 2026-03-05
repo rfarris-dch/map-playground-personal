@@ -2,7 +2,11 @@ import type {
   ParcelsSyncConfig,
   ParcelsSyncRunReason,
   ParcelsSyncRunResult,
-} from "../parcels-sync.types";
+} from "@/sync/parcels-sync.types";
+import type {
+  OutputCaptureState,
+  ReadStreamOptions,
+} from "./process-stream-execution.service.types";
 
 declare const Bun: {
   spawn(options: {
@@ -35,16 +39,6 @@ function copyProcessEnvironment(runId: string): Record<string, string> {
   );
   env.RUN_ID = runId;
   return env;
-}
-
-interface ReadStreamOptions {
-  readonly onLine?: (line: string) => void;
-}
-
-interface OutputCaptureState {
-  capturedBytes: number;
-  output: string;
-  truncated: boolean;
 }
 
 function emitCompleteLines(pending: string, emitLine: (line: string) => void): string {

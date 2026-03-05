@@ -1,5 +1,8 @@
 import type { BBox, FacilitiesFeatureCollection } from "@map-migration/contracts";
-import type { FacilitiesSourceData, FacilitiesStatus, MapBoundsLike } from "./facilities.types";
+import type {
+  FacilitiesSourceData,
+  FacilitiesStatus,
+} from "@/features/facilities/facilities.types";
 
 export function emptyFacilitiesSourceData(): FacilitiesSourceData {
   return { type: "FeatureCollection", features: [] };
@@ -62,7 +65,7 @@ function quantizeOutwardRange(
   };
 }
 
-export function quantizeBbox(bounds: MapBoundsLike, decimals = 4): BBox {
+export function quantizeBbox(bounds: BBox, decimals = 4): BBox {
   const longitudeRange = quantizeOutwardRange(bounds.west, bounds.east, decimals);
   const latitudeRange = quantizeOutwardRange(bounds.south, bounds.north, decimals);
 

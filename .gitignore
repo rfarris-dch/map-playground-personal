@@ -10,6 +10,7 @@ build
 var
 apps/web/public/tiles
 coverage
+docs/
 
 # environment
 .env

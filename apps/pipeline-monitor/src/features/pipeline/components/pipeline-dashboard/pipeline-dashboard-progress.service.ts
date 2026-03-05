@@ -1,17 +1,10 @@
-import { formatPercent } from "../../pipeline.service";
 import type {
   PipelineDashboardRun,
   PipelineDashboardRunProgress,
   PipelineDashboardState,
-} from "./pipeline-dashboard.types";
-
-interface RunProgressAccumulator {
-  readonly expectedCount: number;
-  readonly hasExpectedGap: boolean;
-  readonly statesCompleted: number;
-  readonly statesTotal: number;
-  readonly writtenCount: number;
-}
+} from "@/features/pipeline/components/pipeline-dashboard/pipeline-dashboard.types";
+import { formatPercent } from "@/features/pipeline/pipeline.service";
+import type { RunProgressAccumulator } from "./pipeline-dashboard-progress.service.types";
 
 export function isStateCompleted(stateRow: unknown): boolean {
   if (typeof stateRow !== "object" || stateRow === null) {

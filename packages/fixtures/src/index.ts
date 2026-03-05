@@ -1,11 +1,6 @@
-export type DatasetTier = "A" | "B" | "C" | "D";
+import type { DatasetTier, TierSpec } from "./index.types";
 
-export interface TierSpec {
-  notes: string;
-  parcelCountMax: number;
-  parcelCountMin: number;
-  tier: DatasetTier;
-}
+export type { DatasetTier, TierSpec } from "./index.types";
 
 export const DATASET_TIERS: Record<DatasetTier, TierSpec> = {
   A: {

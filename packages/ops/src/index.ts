@@ -1,13 +1,6 @@
-export type DiagnosticSeverity = "info" | "warn" | "error";
+import type { DiagnosticEvent, DiagnosticSeverity } from "./index.types";
 
-export interface DiagnosticEvent {
-  code: string;
-  message: string;
-  requestId: string;
-  severity: DiagnosticSeverity;
-  sourceMode: "pmtiles" | "postgis" | "arcgis-proxy" | "external-xyz";
-  timestamp: string;
-}
+export type { DiagnosticEvent, DiagnosticSeverity } from "./index.types";
 
 export function createRequestId(prefix = "req"): string {
   const rand = Math.random().toString(36).slice(2, 10);

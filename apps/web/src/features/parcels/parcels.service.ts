@@ -1,108 +1,12 @@
+import { parseTilePublishManifest } from "@map-migration/geo-tiles";
 import type {
   EvaluateParcelsGuardrailsArgs,
   LoadParcelsManifestArgs,
   ParcelsGuardrailResult,
   ParcelsStatus,
-  TileDataset,
-  TileManifestEntry,
   TilePublishManifest,
-} from "./parcels.types";
-
-interface StressGovernorOptions {
-  readonly breachRatio?: number;
-  readonly frameBudgetMs?: number;
-  readonly onChange?: (blocked: boolean) => void;
-  readonly sampleSize?: number;
-}
-
-interface StressGovernorController {
-  destroy(): void;
-  isBlocked(): boolean;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function readRequiredString(record: Record<string, unknown>, key: string): string {
-  const value = Reflect.get(record, key);
-  if (typeof value !== "string" || value.trim().length === 0) {
-    throw new Error(`Missing required string field "${key}"`);
-  }
-
-  return value;
-}
-
-function readOptionalString(record: Record<string, unknown>, key: string): string | undefined {
-  const value = Reflect.get(record, key);
-  if (typeof value !== "string") {
-    return undefined;
-  }
-
-  const normalized = value.trim();
-  if (normalized.length === 0) {
-    return undefined;
-  }
-
-  return normalized;
-}
-
-function parseTileDataset(value: string): TileDataset {
-  if (
-    value === "parcels" ||
-    value === "parcels-draw-v1" ||
-    value === "parcels-analysis-v1" ||
-    value === "infrastructure" ||
-    value === "power" ||
-    value === "telecom"
-  ) {
-    return value;
-  }
-
-  throw new Error(`Unsupported tile dataset "${value}"`);
-}
-
-function parseManifestEntry(value: unknown): TileManifestEntry {
-  if (!isRecord(value)) {
-    throw new Error("Manifest entry is not an object");
-  }
-
-  const baseEntry: TileManifestEntry = {
-    dataset: parseTileDataset(readRequiredString(value, "dataset")),
-    version: readRequiredString(value, "version"),
-    checksum: readRequiredString(value, "checksum"),
-    url: readRequiredString(value, "url"),
-  };
-
-  const ingestionRunId = readOptionalString(value, "ingestionRunId");
-  if (typeof ingestionRunId === "string") {
-    return {
-      ...baseEntry,
-      ingestionRunId,
-    };
-  }
-
-  return baseEntry;
-}
-
-function parseManifest(value: unknown): TilePublishManifest {
-  if (!isRecord(value)) {
-    throw new Error("Manifest payload is not an object");
-  }
-
-  const previousValue = Reflect.get(value, "previous");
-  let previous: TileManifestEntry | null = null;
-  if (previousValue !== null && typeof previousValue !== "undefined") {
-    previous = parseManifestEntry(previousValue);
-  }
-
-  return {
-    dataset: parseTileDataset(readRequiredString(value, "dataset")),
-    publishedAt: readRequiredString(value, "publishedAt"),
-    current: parseManifestEntry(Reflect.get(value, "current")),
-    previous,
-  };
-}
+} from "@/features/parcels/parcels.types";
+import type { StressGovernorController, StressGovernorOptions } from "./parcels.service.types";
 
 function normalizeManifestPath(manifestPath: string): string {
   if (manifestPath.startsWith("http://") || manifestPath.startsWith("https://")) {
@@ -201,7 +105,7 @@ export async function loadParcelsManifest(
     throw new Error("Failed to parse parcels manifest JSON");
   }
 
-  return parseManifest(payload);
+  return parseTilePublishManifest(payload);
 }
 
 export function createPmtilesSourceUrl(manifest: TilePublishManifest): string {

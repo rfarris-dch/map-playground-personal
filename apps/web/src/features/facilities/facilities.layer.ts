@@ -1,6 +1,6 @@
 import type { FacilitiesFeatureCollection, FacilityPerspective } from "@map-migration/contracts";
 import type { IMap, MapClickEvent } from "@map-migration/map-engine";
-import { fetchFacilitiesByBbox } from "./api";
+import { fetchFacilitiesByBbox } from "@/features/facilities/api";
 import {
   emptyFacilitiesSourceData,
   facilitiesCollectionToSourceData,
@@ -8,13 +8,13 @@ import {
   isFeatureId,
   quantizeBbox,
   toFacilityId,
-} from "./facilities.service";
+} from "@/features/facilities/facilities.service";
 import type {
   FacilitiesLayerController,
   FacilitiesLayerOptions,
   FacilitiesLayerState,
   FacilitiesStatus,
-} from "./facilities.types";
+} from "@/features/facilities/facilities.types";
 
 function defaultPerspective(): FacilityPerspective {
   return "colocation";
@@ -52,6 +52,19 @@ export function mountFacilitiesLayer(
 
   const setStatus = (status: FacilitiesStatus): void => {
     options.onStatus?.(status);
+  };
+
+  const emitViewportUpdate = (
+    features: FacilitiesFeatureCollection["features"],
+    requestId: string,
+    truncated: boolean
+  ): void => {
+    options.onViewportUpdate?.({
+      perspective,
+      features,
+      requestId,
+      truncated,
+    });
   };
 
   const emitSelectedFacility = (featureId: number | string | null): void => {
@@ -205,6 +218,7 @@ export function mountFacilitiesLayer(
 
     if (!state.visible) {
       map.setGeoJSONSourceData(sourceId, emptyFacilitiesSourceData());
+      emitViewportUpdate([], "n/a", false);
       setStatus({ state: "idle" });
       return;
     }
@@ -250,6 +264,7 @@ export function mountFacilitiesLayer(
     state.debounceTimer = window.setTimeout(() => {
       refresh().catch(() => {
         map.setGeoJSONSourceData(sourceId, emptyFacilitiesSourceData());
+        emitViewportUpdate([], "n/a", false);
         setStatus({
           state: "error",
           perspective,
@@ -273,6 +288,7 @@ export function mountFacilitiesLayer(
       map.setGeoJSONSourceData(sourceId, emptyFacilitiesSourceData());
       clearSelection();
       state.lastFetchKey = null;
+      emitViewportUpdate([], "n/a", false);
       setStatus({
         state: "hidden",
         zoom,
@@ -318,6 +334,7 @@ export function mountFacilitiesLayer(
       map.setGeoJSONSourceData(sourceId, emptyFacilitiesSourceData());
       clearSelection();
       state.lastFetchKey = null;
+      emitViewportUpdate([], result.requestId, false);
       setStatus({
         state: "error",
         perspective,
@@ -329,6 +346,7 @@ export function mountFacilitiesLayer(
 
     map.setGeoJSONSourceData(sourceId, facilitiesCollectionToSourceData(result.data));
     syncSelectionForFeatures(result.data.features);
+    emitViewportUpdate(result.data.features, result.requestId, result.data.meta.truncated);
 
     setStatus({
       state: "ok",
@@ -366,6 +384,7 @@ export function mountFacilitiesLayer(
     if (!visible) {
       map.setGeoJSONSourceData(sourceId, emptyFacilitiesSourceData());
       clearSelection();
+      emitViewportUpdate([], "n/a", false);
       setStatus({ state: "idle" });
       return;
     }

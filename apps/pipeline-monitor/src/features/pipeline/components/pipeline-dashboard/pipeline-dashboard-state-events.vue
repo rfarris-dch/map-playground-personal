@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { formatCount, formatTimestamp } from "../../pipeline.service";
-  import type { PipelineDashboardStateEventsProps } from "./pipeline-dashboard.types";
-  import { formatRelativeDuration } from "./pipeline-dashboard-format.service";
+  import type { PipelineDashboardStateEventsProps } from "@/features/pipeline/components/pipeline-dashboard/pipeline-dashboard.types";
+  import { formatRelativeDuration } from "@/features/pipeline/components/pipeline-dashboard/pipeline-dashboard-format.service";
+  import { formatCount, formatTimestamp } from "@/features/pipeline/pipeline.service";
 
   const props = defineProps<PipelineDashboardStateEventsProps>();
 </script>

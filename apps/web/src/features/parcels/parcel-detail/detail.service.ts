@@ -1,9 +1,8 @@
-import type { ParcelDetailPayload, ParcelDetailResult } from "./detail.types";
-
-interface ParcelAttributeEntry {
-  readonly key: string;
-  readonly value: string;
-}
+import type {
+  ParcelDetailPayload,
+  ParcelDetailResult,
+} from "@/features/parcels/parcel-detail/detail.types";
+import type { ParcelAttributeEntry } from "./detail.service.types";
 
 function formatUnknownValue(value: unknown): string {
   if (value === null || typeof value === "undefined") {

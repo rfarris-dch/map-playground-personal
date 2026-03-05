@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { FiberLocatorHoverState } from "../hover.types";
+  import type { FiberLocatorHoverState } from "@/features/fiber-locator/hover.types";
 
   interface FiberLocatorHoverTooltipProps {
     readonly hoverState: FiberLocatorHoverState | null;

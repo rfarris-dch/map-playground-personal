@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { BoundaryHoverState, BoundaryLayerId } from "../boundaries.types";
+  import type { BoundaryHoverState, BoundaryLayerId } from "@/features/boundaries/boundaries.types";
 
   interface BoundaryHoverTooltipProps {
     readonly hoverState: BoundaryHoverState | null;

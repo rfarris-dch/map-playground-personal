@@ -4,14 +4,7 @@ import {
   type SourceMode,
   SourceModeSchema,
 } from "@map-migration/contracts";
-
-interface ApiRuntimeConfig {
-  readonly boundariesSourceMode: SourceMode;
-  readonly dataVersion: string;
-  readonly facilitiesSourceMode: SourceMode;
-  readonly fiberLocatorSourceMode: SourceMode;
-  readonly parcelsSourceMode: SourceMode;
-}
+import type { ApiRuntimeConfig } from "./runtime-config.types";
 
 function assertPostgisServingMode(envKey: string, mode: SourceMode): void {
   if (mode === "postgis") {

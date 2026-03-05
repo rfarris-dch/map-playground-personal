@@ -2,20 +2,14 @@ import {
   ApiHeaders,
   buildParcelDetailRoute,
   ParcelDetailResponseSchema,
-  type ParcelGeometryMode,
-  type ParcelProfile,
 } from "@map-migration/contracts";
+import type {
+  ParcelDetailRequest,
+  ParcelDetailResult,
+} from "@/features/parcels/parcel-detail/detail.types";
 import { apiGetJson } from "@/lib/api-client";
-import type { ParcelDetailRequest, ParcelDetailResult } from "./detail.types";
-
-const DEFAULT_PROFILE: ParcelProfile = "full_170";
-const DEFAULT_GEOMETRY_MODE: ParcelGeometryMode = "full";
 
 export function fetchParcelDetail(request: ParcelDetailRequest): Promise<ParcelDetailResult> {
-  const params = new URLSearchParams();
-  params.set("profile", request.profile ?? DEFAULT_PROFILE);
-  params.set("includeGeometry", request.includeGeometry ?? DEFAULT_GEOMETRY_MODE);
-
   const requestInit: RequestInit = {};
   if (
     typeof request.expectedIngestionRunId === "string" &&
@@ -30,6 +24,12 @@ export function fetchParcelDetail(request: ParcelDetailRequest): Promise<ParcelD
     requestInit.signal = request.signal;
   }
 
-  const url = `${buildParcelDetailRoute(request.parcelId)}?${params.toString()}`;
-  return apiGetJson(url, ParcelDetailResponseSchema, requestInit);
+  return apiGetJson(
+    buildParcelDetailRoute(request.parcelId, {
+      profile: request.profile,
+      includeGeometry: request.includeGeometry,
+    }),
+    ParcelDetailResponseSchema,
+    requestInit
+  );
 }

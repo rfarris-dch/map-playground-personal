@@ -1,4 +1,5 @@
 import {
+  ApiQueryDefaults,
   type FacilityPerspective,
   type FacilitySortBy,
   FacilitySortBySchema,
@@ -6,12 +7,9 @@ import {
   type SortDirection,
   SortDirectionSchema,
 } from "@map-migration/contracts";
+import type { PerspectiveResolution } from "./facilities-route-param.service.types";
 
-export interface PerspectiveResolution {
-  readonly error?: string;
-  readonly ok: boolean;
-  readonly perspective?: FacilityPerspective;
-}
+export type { PerspectiveResolution } from "./facilities-route-param.service.types";
 
 export function clampLimit(raw: string | undefined, max: number, defaultValue: number): number {
   if (!raw) {
@@ -27,7 +25,7 @@ export function clampLimit(raw: string | undefined, max: number, defaultValue: n
 }
 
 function defaultFacilityPerspective(): FacilityPerspective {
-  return "colocation";
+  return ApiQueryDefaults.facilities.perspective;
 }
 
 export function resolvePerspectiveParam(value: string | undefined): PerspectiveResolution {

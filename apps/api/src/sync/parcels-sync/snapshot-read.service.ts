@@ -1,21 +1,21 @@
 import type { Dirent } from "node:fs";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import type { ParcelsSyncPhase } from "../parcels-sync.types";
 import type {
   ActiveExternalRunCandidate,
   ActiveRunMarker,
   MutableParcelsSyncStateProgress,
   ParsedLatestPointer,
   ParsedRunSummary,
-} from "./parcels-sync-runtime.types";
+} from "@/sync/parcels-sync/parcels-sync-runtime.types";
 import {
   isRecord,
   parseNullableInteger,
   parseNullableIsoDatetime,
   parseNullableNonNegativeInteger,
   toIsoTimestampMs,
-} from "./value-parsing.service";
+} from "@/sync/parcels-sync/value-parsing.service";
+import type { ParcelsSyncPhase, ParcelsSyncRunProgress } from "@/sync/parcels-sync.types";
 
 const ACTIVE_EXTERNAL_RUN_STALE_MS = 20 * 60 * 1000;
 const CHECKPOINT_FILE_RE = /^state-([A-Za-z0-9]+)\.checkpoint\.json$/;
@@ -30,12 +30,148 @@ const RUN_PHASE_VALUES: readonly ParcelsSyncPhase[] = [
   "failed",
 ];
 
+const TILE_BUILD_STAGE_VALUES: readonly ("build" | "convert" | "ready")[] = [
+  "build",
+  "convert",
+  "ready",
+];
+
 function parseRunPhase(value: unknown, fallback: ParcelsSyncPhase): ParcelsSyncPhase {
   if (typeof value !== "string") {
     return fallback;
   }
 
   return RUN_PHASE_VALUES.find((phase) => phase === value) ?? fallback;
+}
+
+function parseNullablePercent(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return null;
+  }
+
+  if (value < 0 || value > 100) {
+    return null;
+  }
+
+  return value;
+}
+
+function parseNullableNonEmptyString(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim();
+  if (normalized.length === 0) {
+    return null;
+  }
+
+  return normalized;
+}
+
+function parseActiveWorkers(value: unknown): readonly string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.reduce<string[]>((workers, entry) => {
+    const normalized = parseNullableNonEmptyString(entry);
+    if (normalized === null) {
+      return workers;
+    }
+
+    workers.push(normalized);
+    return workers;
+  }, []);
+}
+
+function parseDbLoadProgress(value: unknown): ParcelsSyncRunProgress["dbLoad"] | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const stepKey = parseNullableNonEmptyString(Reflect.get(value, "stepKey"));
+  if (stepKey === null) {
+    return undefined;
+  }
+
+  const totalFilesRaw = parseNullableNonNegativeInteger(Reflect.get(value, "totalFiles"));
+  const totalFiles = totalFilesRaw !== null && totalFilesRaw > 0 ? totalFilesRaw : null;
+  return {
+    stepKey,
+    percent: parseNullablePercent(Reflect.get(value, "percent")),
+    loadedFiles: parseNullableNonNegativeInteger(Reflect.get(value, "loadedFiles")),
+    totalFiles,
+    currentFile: parseNullableNonEmptyString(Reflect.get(value, "currentFile")),
+    completedStates: parseNullableNonNegativeInteger(Reflect.get(value, "completedStates")),
+    totalStates: parseNullableNonNegativeInteger(Reflect.get(value, "totalStates")),
+    activeWorkers: parseActiveWorkers(Reflect.get(value, "activeWorkers")),
+  };
+}
+
+function parseTileBuildProgress(value: unknown): ParcelsSyncRunProgress["tileBuild"] | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const stageRaw = Reflect.get(value, "stage");
+  if (typeof stageRaw !== "string") {
+    return undefined;
+  }
+
+  const stage = TILE_BUILD_STAGE_VALUES.find((candidate) => candidate === stageRaw);
+  if (typeof stage === "undefined") {
+    return undefined;
+  }
+
+  const convertAttemptRaw = parseNullableNonNegativeInteger(Reflect.get(value, "convertAttempt"));
+  const convertAttempt =
+    convertAttemptRaw !== null && convertAttemptRaw > 0 ? convertAttemptRaw : null;
+  const convertAttemptTotalRaw = parseNullableNonNegativeInteger(
+    Reflect.get(value, "convertAttemptTotal")
+  );
+  const convertAttemptTotal =
+    convertAttemptTotalRaw !== null && convertAttemptTotalRaw > 0 ? convertAttemptTotalRaw : null;
+
+  return {
+    stage,
+    percent: parseNullablePercent(Reflect.get(value, "percent")),
+    logBytes: parseNullableNonNegativeInteger(Reflect.get(value, "logBytes")),
+    readFeatures: parseNullableNonNegativeInteger(Reflect.get(value, "readFeatures")),
+    totalFeatures: parseNullableNonNegativeInteger(Reflect.get(value, "totalFeatures")),
+    workDone: parseNullableNonNegativeInteger(Reflect.get(value, "workDone")),
+    workLeft: parseNullableNonNegativeInteger(Reflect.get(value, "workLeft")),
+    workTotal: parseNullableNonNegativeInteger(Reflect.get(value, "workTotal")),
+    convertPercent: parseNullablePercent(Reflect.get(value, "convertPercent")),
+    convertDone: parseNullableNonNegativeInteger(Reflect.get(value, "convertDone")),
+    convertTotal: parseNullableNonNegativeInteger(Reflect.get(value, "convertTotal")),
+    convertAttempt,
+    convertAttemptTotal,
+  };
+}
+
+function parseRunProgress(
+  value: unknown,
+  fallbackPhase: ParcelsSyncPhase
+): ParcelsSyncRunProgress | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const schemaVersion = Reflect.get(value, "schemaVersion");
+  if (schemaVersion !== 1) {
+    return null;
+  }
+
+  const phase = parseRunPhase(Reflect.get(value, "phase"), fallbackPhase);
+  const dbLoad = parseDbLoadProgress(Reflect.get(value, "dbLoad"));
+  const tileBuild = parseTileBuildProgress(Reflect.get(value, "tileBuild"));
+  return {
+    schemaVersion: 1,
+    phase,
+    ...(typeof dbLoad === "undefined" ? {} : { dbLoad }),
+    ...(typeof tileBuild === "undefined" ? {} : { tileBuild }),
+  };
 }
 
 function parseStateProgressRecord(
@@ -230,6 +366,7 @@ export function readActiveRunMarker(snapshotRoot: string): ActiveRunMarker | nul
   const summaryRaw = Reflect.get(markerRaw, "summary");
   const summary =
     typeof summaryRaw === "string" && summaryRaw.trim().length > 0 ? summaryRaw.trim() : null;
+  const progress = parseRunProgress(Reflect.get(markerRaw, "progress"), phase);
 
   return {
     runId,
@@ -237,6 +374,7 @@ export function readActiveRunMarker(snapshotRoot: string): ActiveRunMarker | nul
     isRunning,
     updatedAt,
     summary,
+    progress,
   };
 }
 

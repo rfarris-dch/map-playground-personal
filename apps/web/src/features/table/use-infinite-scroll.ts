@@ -1,12 +1,5 @@
-import { onBeforeUnmount, type Ref, watch } from "vue";
-
-interface UseInfiniteScrollArgs {
-  readonly canLoadMore: Ref<boolean>;
-  readonly containerRef: Ref<HTMLElement | null>;
-  readonly isLoadingMore: Ref<boolean>;
-  readonly loadMore: () => Promise<void> | void;
-  readonly sentinelRef: Ref<HTMLElement | null>;
-}
+import { onBeforeUnmount, watch } from "vue";
+import type { UseInfiniteScrollArgs } from "./use-infinite-scroll.types";
 
 export function useInfiniteScroll(args: UseInfiniteScrollArgs): void {
   let observer: IntersectionObserver | null = null;

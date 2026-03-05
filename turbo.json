@@ -1,12 +1,6 @@
 {
-  "$schema": "https://turborepo.dev/schema.json",
-  "globalDependencies": [
-    "tsconfig.base.json",
-    "tsconfig.json",
-    "bun.lock",
-    ".env",
-    ".env.*"
-  ],
+  "$schema": "./node_modules/turbo/schema.json",
+  "globalDependencies": ["tsconfig.base.json", "tsconfig.json", "bun.lock"],
   "tasks": {
     "dev": {
       "cache": false,

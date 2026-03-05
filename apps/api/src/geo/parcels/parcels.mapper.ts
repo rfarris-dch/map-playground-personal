@@ -1,10 +1,6 @@
 import type { ParcelFeature } from "@map-migration/contracts";
-import type { ParcelRow } from "./parcels.repo";
-
-interface GeometryLike {
-  readonly coordinates: unknown;
-  readonly type: string;
-}
+import type { ParcelRow } from "@/geo/parcels/parcels.repo";
+import type { GeometryLike } from "./parcels.mapper.types";
 
 function isObject(value: unknown): value is object {
   return typeof value === "object" && value !== null;

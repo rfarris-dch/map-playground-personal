@@ -4,7 +4,7 @@
 
   const className = computed(() =>
     cn(
-      "sticky top-0 z-10 h-10 bg-card px-4 text-left align-middle font-semibold text-muted-foreground text-xs uppercase tracking-wide"
+      "h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]"
     )
   );
 </script>

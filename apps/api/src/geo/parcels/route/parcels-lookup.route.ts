@@ -4,38 +4,45 @@ import {
   type ParcelsFeatureCollection,
   ParcelsFeatureCollectionSchema,
 } from "@map-migration/contracts";
-import type { Hono } from "hono";
-import { getOrCreateRequestId, jsonOk } from "../../../http/api-response";
-import { mapParcelRowsToFeatures } from "../parcels.mapper";
-import { lookupParcelsByIds, type ParcelRow } from "../parcels.repo";
+import type { Env, Hono } from "hono";
+import { mapParcelRowsToFeatures } from "@/geo/parcels/parcels.mapper";
+import { lookupParcelsByIds, type ParcelRow } from "@/geo/parcels/parcels.repo";
 import {
   parcelMappingFailed,
   postgisQueryFailed,
   rejectWithBadRequest,
-} from "./parcels-route-errors.service";
+  rejectWithPolicyError,
+} from "@/geo/parcels/route/parcels-route-errors.service";
 import {
   buildParcelMeta,
   conflictResponseIfNeeded,
   profileMetadataWarnings,
   readExpectedIngestionRunId,
   readIngestionRunId,
-} from "./parcels-route-meta.service";
+} from "@/geo/parcels/route/parcels-route-meta.service";
+import { getOrCreateRequestId, jsonOk } from "@/http/api-response";
+import { readJsonBody } from "@/http/json-request.service";
+import { isDatasetQueryAllowed } from "@/http/spatial-analysis-policy.service";
 
-export function registerParcelsLookupRoute(app: Hono): void {
+export function registerParcelsLookupRoute<E extends Env>(app: Hono<E>): void {
   app.post(`${ApiRoutes.parcels}/lookup`, async (c) => {
     const requestId = getOrCreateRequestId(c, "api");
     const expectedIngestionRunId = readExpectedIngestionRunId(c);
-
-    let body: unknown;
-    try {
-      body = await c.req.json();
-    } catch {
-      return rejectWithBadRequest(c, requestId, "invalid JSON body");
+    const bodyResult = await readJsonBody(c, {
+      requestId,
+      invalidJsonMessage: "invalid JSON body",
+    });
+    if (!bodyResult.ok) {
+      return bodyResult.response;
     }
 
-    const parsed = ParcelLookupRequestSchema.safeParse(body);
+    const parsed = ParcelLookupRequestSchema.safeParse(bodyResult.value);
     if (!parsed.success) {
       return rejectWithBadRequest(c, requestId, "invalid parcel lookup request payload");
+    }
+
+    if (!isDatasetQueryAllowed("parcels", "parcel")) {
+      return rejectWithPolicyError(c, requestId, 'query granularity "parcel" is not allowed');
     }
 
     let rows: ParcelRow[] = [];

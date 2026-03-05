@@ -1,35 +1,21 @@
-import type { ProviderSortBy, ProviderTableRow, SortDirection } from "@map-migration/contracts";
-import { mapProviderRowsToTableRows } from "./providers.mapper";
-import { countProviders, listProvidersPage, type ProviderListRow } from "./providers.repo";
+import type { ProviderTableRow } from "@map-migration/contracts";
+import { mapProviderRowsToTableRows } from "@/geo/providers/providers.mapper";
+import {
+  countProviders,
+  listProvidersPage,
+  type ProviderListRow,
+} from "@/geo/providers/providers.repo";
+import type {
+  QueryProviderRowsResult,
+  QueryProvidersTableArgs,
+  QueryProvidersTableResult,
+} from "./providers-query.service.types";
 
-export interface QueryProvidersTableArgs {
-  readonly limit: number;
-  readonly offset: number;
-  readonly sortBy: ProviderSortBy;
-  readonly sortOrder: SortDirection;
-}
-
-export interface QueryProvidersTableSuccess {
-  readonly rows: readonly ProviderTableRow[];
-  readonly totalCount: number;
-}
-
-export type QueryProvidersTableResult =
-  | { readonly ok: true; readonly value: QueryProvidersTableSuccess }
-  | {
-      readonly ok: false;
-      readonly value: {
-        readonly error: unknown;
-        readonly reason: "mapping_failed" | "query_failed";
-      };
-    };
-
-type QueryProviderRowsResult =
-  | {
-      readonly ok: true;
-      readonly value: { readonly rows: readonly ProviderListRow[]; readonly totalCount: number };
-    }
-  | { readonly ok: false; readonly value: { readonly error: unknown } };
+export type {
+  QueryProvidersTableArgs,
+  QueryProvidersTableResult,
+  QueryProvidersTableSuccess,
+} from "./providers-query.service.types";
 
 function mapProvidersRows(
   rows: readonly ProviderListRow[]

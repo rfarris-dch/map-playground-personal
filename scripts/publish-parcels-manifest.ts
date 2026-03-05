@@ -13,17 +13,12 @@ import {
   buildTileLatestManifestPath,
   createManifestEntry,
   createPublishManifest,
+  parseTileDataset,
+  parseTilePublishManifest,
   type TileDataset,
-  type TileManifestEntry,
   type TilePublishManifest,
-} from "../packages/geo-tiles/src/index";
-
-interface CliArgs {
-  readonly dataset: TileDataset;
-  readonly ingestionRunId: string | null;
-  readonly outputRoot: string;
-  readonly pmtilesPath: string;
-}
+} from "@/packages/geo-tiles/src/index";
+import type { CliArgs } from "./publish-parcels-manifest.types";
 
 const LEADING_SLASHES_RE = /^[/\\]+/;
 
@@ -39,15 +34,11 @@ function parseArg(name: string): string | null {
 }
 
 function parseDataset(raw: string | null): TileDataset {
-  if (
-    raw === "parcels" ||
-    raw === "parcels-draw-v1" ||
-    raw === "parcels-analysis-v1" ||
-    raw === "infrastructure" ||
-    raw === "power" ||
-    raw === "telecom"
-  ) {
-    return raw;
+  if (typeof raw === "string") {
+    const parsed = parseTileDataset(raw);
+    if (parsed !== null) {
+      return parsed;
+    }
   }
 
   throw new Error(
@@ -105,24 +96,6 @@ async function sha256Hex(filePath: string): Promise<string> {
   return hash.digest("hex");
 }
 
-function isEntry(value: unknown): value is TileManifestEntry {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-
-  const dataset = Reflect.get(value, "dataset");
-  const version = Reflect.get(value, "version");
-  const checksum = Reflect.get(value, "checksum");
-  const url = Reflect.get(value, "url");
-
-  return (
-    typeof dataset === "string" &&
-    typeof version === "string" &&
-    typeof checksum === "string" &&
-    typeof url === "string"
-  );
-}
-
 function readExistingManifest(path: string): TilePublishManifest | null {
   if (!existsSync(path)) {
     return null;
@@ -134,41 +107,7 @@ function readExistingManifest(path: string): TilePublishManifest | null {
   }
 
   const parsed = JSON.parse(raw);
-  if (typeof parsed !== "object" || parsed === null) {
-    throw new Error("Existing manifest is invalid JSON object");
-  }
-
-  const dataset = Reflect.get(parsed, "dataset");
-  if (
-    dataset !== "parcels" &&
-    dataset !== "parcels-draw-v1" &&
-    dataset !== "parcels-analysis-v1" &&
-    dataset !== "infrastructure" &&
-    dataset !== "power" &&
-    dataset !== "telecom"
-  ) {
-    throw new Error("Existing manifest dataset is invalid");
-  }
-
-  const publishedAt = Reflect.get(parsed, "publishedAt");
-  if (typeof publishedAt !== "string") {
-    throw new Error("Existing manifest missing publishedAt");
-  }
-
-  const current = Reflect.get(parsed, "current");
-  if (!isEntry(current)) {
-    throw new Error("Existing manifest missing current entry");
-  }
-
-  const previousRaw = Reflect.get(parsed, "previous");
-  const previous = isEntry(previousRaw) ? previousRaw : null;
-
-  return {
-    dataset,
-    publishedAt,
-    current,
-    previous,
-  };
+  return parseTilePublishManifest(parsed);
 }
 
 function writeManifest(path: string, manifest: TilePublishManifest): void {

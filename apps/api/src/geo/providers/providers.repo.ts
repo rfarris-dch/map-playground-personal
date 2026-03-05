@@ -1,29 +1,8 @@
-import type { ProviderSortBy, SortDirection } from "@map-migration/contracts";
-import { runQuery } from "../../db/postgres";
+import type { ProviderSortBy } from "@map-migration/contracts";
+import { runQuery } from "@/db/postgres";
+import type { ProviderCountRow, ProviderListRow, ProvidersPageQuery } from "./providers.repo.types";
 
-interface ProviderCountRow {
-  readonly total_count: number | string;
-}
-
-export interface ProviderListRow {
-  readonly category: string | null;
-  readonly country: string | null;
-  readonly listing_count: number | string | null;
-  readonly name: string | null;
-  readonly provider_id: number | string;
-  readonly state: string | null;
-  readonly supports_hyperscale: number | string | boolean | null;
-  readonly supports_retail: number | string | boolean | null;
-  readonly supports_wholesale: number | string | boolean | null;
-  readonly updated_at: Date | string | null;
-}
-
-interface ProvidersPageQuery {
-  readonly limit: number;
-  readonly offset: number;
-  readonly sortBy: ProviderSortBy;
-  readonly sortOrder: SortDirection;
-}
+export type { ProviderListRow } from "./providers.repo.types";
 
 function parseCount(value: number | string): number {
   const numeric = Number(value);

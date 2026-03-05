@@ -1,32 +1,7 @@
-export type TileDataset =
-  | "parcels"
-  | "parcels-draw-v1"
-  | "parcels-analysis-v1"
-  | "infrastructure"
-  | "power"
-  | "telecom";
+import type { BBox } from "@map-migration/contracts";
+import type { TileDataset, TilePublishManifest } from "@map-migration/geo-tiles";
 
-export interface TileManifestEntry {
-  readonly checksum: string;
-  readonly dataset: TileDataset;
-  readonly ingestionRunId?: string;
-  readonly url: string;
-  readonly version: string;
-}
-
-export interface TilePublishManifest {
-  readonly current: TileManifestEntry;
-  readonly dataset: TileDataset;
-  readonly previous: TileManifestEntry | null;
-  readonly publishedAt: string;
-}
-
-export interface MapBoundsLike {
-  readonly east: number;
-  readonly north: number;
-  readonly south: number;
-  readonly west: number;
-}
+export type { TileDataset, TileManifestEntry, TilePublishManifest } from "@map-migration/geo-tiles";
 
 export interface SelectedParcelRef {
   readonly expectedIngestionRunId?: string;
@@ -102,7 +77,7 @@ export interface LoadParcelsManifestArgs {
 }
 
 export interface EvaluateParcelsGuardrailsArgs {
-  readonly bounds: MapBoundsLike;
+  readonly bounds: BBox;
   readonly isStressBlocked: boolean;
   readonly maxPredictedTiles: number;
   readonly maxTilePredictionZoom: number;

@@ -1,10 +1,12 @@
-import type { ExpressionSpecification } from "maplibre-gl";
-import type { BoundaryFacetOption, BoundaryLayerId, BoundarySourceData } from "./boundaries.types";
+import type { MapExpression } from "@map-migration/map-engine";
+import type {
+  BoundaryFacetOption,
+  BoundaryLayerId,
+  BoundarySourceData,
+} from "@/features/boundaries/boundaries.types";
+import type { BoundaryHeatStop } from "./boundaries.service.types";
 
-export interface BoundaryHeatStop {
-  readonly color: string;
-  readonly value: number;
-}
+export type { BoundaryHeatStop } from "./boundaries.service.types";
 
 const BOUNDARY_HEAT_STOPS: readonly BoundaryHeatStop[] = [
   { value: 0, color: "#eef2ff" },
@@ -71,7 +73,7 @@ export function emptyBoundarySourceData(): BoundarySourceData {
   };
 }
 
-export function boundaryFillColorExpression(): ExpressionSpecification {
+export function boundaryFillColorExpression(): MapExpression {
   return [
     "interpolate",
     ["linear"],
@@ -80,7 +82,7 @@ export function boundaryFillColorExpression(): ExpressionSpecification {
   ];
 }
 
-export function boundaryOutlineColorExpression(): ExpressionSpecification {
+export function boundaryOutlineColorExpression(): MapExpression {
   return [
     "interpolate",
     ["linear"],

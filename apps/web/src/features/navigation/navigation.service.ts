@@ -1,4 +1,7 @@
-import type { AppNavigationItem, FacilityNavigationItem } from "./navigation.types";
+import type {
+  AppNavigationItem,
+  FacilityNavigationItem,
+} from "@/features/navigation/navigation.types";
 
 export const appNavigationItems: readonly AppNavigationItem[] = [
   {

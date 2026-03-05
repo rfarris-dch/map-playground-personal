@@ -1,33 +1,6 @@
 import type { LngLat } from "@map-migration/map-engine";
-import type { MeasureRuntimeState, MeasureState } from "./measure.types";
-
-type MeasureGeometry =
-  | {
-      type: "LineString";
-      coordinates: LngLat[];
-    }
-  | {
-      type: "Point";
-      coordinates: LngLat;
-    }
-  | {
-      type: "Polygon";
-      coordinates: LngLat[][];
-    };
-
-interface MeasureFeature {
-  geometry: MeasureGeometry;
-  properties: {
-    kind: "area" | "line" | "vertex";
-    vertexIndex?: number;
-  };
-  type: "Feature";
-}
-
-interface MeasureSourceData {
-  features: MeasureFeature[];
-  type: "FeatureCollection";
-}
+import type { MeasureRuntimeState, MeasureState } from "@/features/measure/measure.types";
+import type { MeasureFeature, MeasureSourceData } from "./measure.service.types";
 
 const EARTH_RADIUS_METERS = 6_371_008.8;
 const WEB_MERCATOR_RADIUS_METERS = 6_378_137;
@@ -309,6 +282,10 @@ export function buildMeasureState(runtime: MeasureRuntimeState): MeasureState {
     areaSqKm,
     canFinishSelection: canFinishAreaSelection(runtime),
     isSelectionComplete: runtime.mode === "area" && runtime.areaComplete,
+    selectionRing:
+      runtime.mode === "area" && runtime.areaComplete && areaRing.length >= 4
+        ? cloneVertices(areaRing)
+        : null,
   };
 }
 
@@ -361,7 +338,7 @@ export function buildMeasureSourceData(runtime: MeasureRuntimeState): MeasureSou
       type: "Feature",
       properties: {
         kind: "vertex",
-        vertexIndex: index + 1,
+        vertexIndex: index,
       },
       geometry: {
         type: "Point",

@@ -1,64 +1,21 @@
-import type { FacilityPerspective, FacilitySortBy, SortDirection } from "@map-migration/contracts";
+import type { FacilityPerspective, FacilitySortBy } from "@map-migration/contracts";
 import { getQuerySpec } from "@map-migration/geo-sql";
-import { runQuery } from "../../db/postgres";
+import { runQuery } from "@/db/postgres";
+import type {
+  FacilitiesBboxQuery,
+  FacilitiesBboxRow,
+  FacilitiesPolygonQuery,
+  FacilitiesTableQuery,
+  FacilityDetailRow,
+  FacilityTableCountRow,
+  FacilityTableRow,
+} from "./facilities.repo.types";
 
-interface FacilitiesBboxQuery {
-  readonly east: number;
-  readonly limit: number;
-  readonly north: number;
-  readonly perspective: FacilityPerspective;
-  readonly south: number;
-  readonly west: number;
-}
-
-interface FacilitiesTableQuery {
-  readonly limit: number;
-  readonly offset: number;
-  readonly perspective: FacilityPerspective;
-  readonly sortBy: FacilitySortBy;
-  readonly sortOrder: SortDirection;
-}
-
-interface FacilityTableCountRow {
-  readonly total_count: number | string;
-}
-
-export interface FacilitiesBboxRow {
-  readonly commissioned_power_mw: number | string | null | undefined;
-  readonly commissioned_semantic: string | null | undefined;
-  readonly county_fips: string;
-  readonly facility_id: string;
-  readonly geom_json: unknown;
-  readonly lease_or_own: string | null | undefined;
-  readonly provider_id: string | null | undefined;
-}
-
-export interface FacilityDetailRow {
-  readonly available_power_mw: number | string | null | undefined;
-  readonly commissioned_power_mw: number | string | null | undefined;
-  readonly commissioned_semantic: string | null | undefined;
-  readonly county_fips: string;
-  readonly facility_id: string;
-  readonly geom_json: unknown;
-  readonly lease_or_own: string | null | undefined;
-  readonly planned_power_mw: number | string | null | undefined;
-  readonly provider_id: string | null | undefined;
-  readonly under_construction_power_mw: number | string | null | undefined;
-}
-
-export interface FacilityTableRow {
-  readonly available_power_mw: number | string | null | undefined;
-  readonly commissioned_power_mw: number | string | null | undefined;
-  readonly commissioned_semantic: string | null | undefined;
-  readonly facility_id: string | number;
-  readonly facility_name: string | null | undefined;
-  readonly lease_or_own: string | null | undefined;
-  readonly planned_power_mw: number | string | null | undefined;
-  readonly provider_id: string | null | undefined;
-  readonly state_abbrev: string | null | undefined;
-  readonly under_construction_power_mw: number | string | null | undefined;
-  readonly updated_at: Date | string | null | undefined;
-}
+export type {
+  FacilitiesBboxRow,
+  FacilityDetailRow,
+  FacilityTableRow,
+} from "./facilities.repo.types";
 
 function parseCount(value: number | string): number {
   const numeric = Number(value);
@@ -79,8 +36,23 @@ function getFacilitiesBboxQueryName(
   return "facilities_bbox_colocation";
 }
 
+function getFacilitiesPolygonQueryName(
+  perspective: FacilityPerspective
+): "facilities_polygon_colocation" | "facilities_polygon_hyperscale" {
+  if (perspective === "hyperscale") {
+    return "facilities_polygon_hyperscale";
+  }
+
+  return "facilities_polygon_colocation";
+}
+
 export function getFacilitiesBboxMaxRows(perspective: FacilityPerspective): number {
   const spec = getQuerySpec(getFacilitiesBboxQueryName(perspective));
+  return spec.maxRows;
+}
+
+export function getFacilitiesPolygonMaxRows(perspective: FacilityPerspective): number {
+  const spec = getQuerySpec(getFacilitiesPolygonQueryName(perspective));
   return spec.maxRows;
 }
 
@@ -104,6 +76,13 @@ export function listFacilitiesByBbox(query: FacilitiesBboxQuery): Promise<Facili
     query.north,
     query.limit,
   ]);
+}
+
+export function listFacilitiesByPolygon(
+  query: FacilitiesPolygonQuery
+): Promise<FacilitiesBboxRow[]> {
+  const spec = getQuerySpec(getFacilitiesPolygonQueryName(query.perspective));
+  return runQuery<FacilitiesBboxRow>(spec.sql, [query.geometryGeoJson, query.limit]);
 }
 
 export async function getFacilityById(

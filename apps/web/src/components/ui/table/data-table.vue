@@ -1,6 +1,5 @@
 <script setup lang="ts" generic="TData extends RowData">
   import {
-    type Column,
     type ExpandedState,
     FlexRender,
     functionalUpdate,
@@ -17,9 +16,10 @@
     useVueTable,
     type VisibilityState,
   } from "@tanstack/vue-table";
-  import { ArrowDown, ArrowUp, ArrowUpDown, Filter } from "lucide-vue-next";
+  import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronRight } from "lucide-vue-next";
   import { computed, shallowRef, watch } from "vue";
   import { useRoute, useRouter } from "vue-router";
+  import Badge from "@/components/ui/badge/badge.vue";
   import Button from "@/components/ui/button/button.vue";
   import Checkbox from "@/components/ui/checkbox/checkbox.vue";
   import DropdownMenu from "@/components/ui/dropdown-menu/dropdown-menu.vue";
@@ -246,14 +246,22 @@
     get manualSorting() {
       return props.manualSorting;
     },
-    get state() {
-      return {
-        sorting: props.sorting,
-        grouping: grouping.value,
-        expanded: expanded.value,
-        rowSelection: rowSelection.value,
-        columnVisibility: columnVisibility.value,
-      };
+    state: {
+      get sorting() {
+        return props.sorting;
+      },
+      get grouping() {
+        return grouping.value;
+      },
+      get expanded() {
+        return expanded.value;
+      },
+      get rowSelection() {
+        return rowSelection.value;
+      },
+      get columnVisibility() {
+        return columnVisibility.value;
+      },
     },
     getRowId: (row, index) => {
       const customRowId = props.getRowId?.(row, index);
@@ -362,6 +370,18 @@
 
   const selectedRowCount = computed(() => table.getSelectedRowModel().rows.length);
 
+  const isTableFiltered = computed<boolean>(() => {
+    if (globalQuery.value.trim().length > 0) {
+      return true;
+    }
+
+    if (grouping.value.length > 0 || selectedRowCount.value > 0) {
+      return true;
+    }
+
+    return Object.values(activeFacets.value).some((tokens) => tokens.length > 0);
+  });
+
   function isColumnGrouped(columnId: string): boolean {
     return grouping.value.includes(columnId);
   }
@@ -396,22 +416,6 @@
     if (activeFacetColumnId.value === columnId) {
       activeFacetColumnId.value = null;
     }
-  }
-
-  function openFacetMenuForColumn(columnId: string): void {
-    if (facetableColumnForId(columnId) === null) {
-      return;
-    }
-
-    activeFacetColumnId.value = columnId;
-  }
-
-  function onHeaderClick(column: Column<TData, unknown>): void {
-    if (column.getCanSort()) {
-      column.toggleSorting();
-    }
-
-    openFacetMenuForColumn(column.id);
   }
 
   function facetValuesForColumn(columnId: string): readonly FacetValue[] {
@@ -498,6 +502,29 @@
     }
 
     return sortingState;
+  }
+
+  function sortingStatesEqual(
+    leftSortingState: readonly { readonly id: string; readonly desc: boolean }[],
+    rightSortingState: readonly { readonly id: string; readonly desc: boolean }[]
+  ): boolean {
+    if (leftSortingState.length !== rightSortingState.length) {
+      return false;
+    }
+
+    for (let index = 0; index < leftSortingState.length; index += 1) {
+      const leftEntry = leftSortingState[index];
+      const rightEntry = rightSortingState[index];
+      if (typeof leftEntry === "undefined" || typeof rightEntry === "undefined") {
+        return false;
+      }
+
+      if (leftEntry.id !== rightEntry.id || leftEntry.desc !== rightEntry.desc) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   function parseFacetState(value: unknown): Record<string, readonly string[]> {
@@ -645,7 +672,7 @@
       }
       rowSelection.value = selectionState;
 
-      if (parsedState.s) {
+      if (parsedState.s && !sortingStatesEqual(parsedState.s, props.sorting)) {
         emit("update:sorting", parsedState.s);
       }
 
@@ -693,77 +720,87 @@
 </script>
 
 <template>
-  <div class="grid gap-3">
-    <div
-      v-if="!props.hideToolbar"
-      class="grid gap-3 rounded-md border border-border/70 bg-muted/20 p-3"
-    >
+  <div class="space-y-2">
+    <div v-if="!props.hideToolbar" class="flex flex-col gap-2">
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex items-center space-x-2">
+          <Input
+            :model-value="globalQuery"
+            class="h-8 w-[150px] lg:w-[250px]"
+            :placeholder="props.globalFilterPlaceholder"
+            @update:model-value="setGlobalQuery"
+          />
+          <Button
+            v-if="isTableFiltered"
+            size="sm"
+            variant="ghost"
+            class="h-8 px-2 lg:px-3"
+            @click="clearAllFilters"
+          >
+            Reset
+          </Button>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="whitespace-nowrap text-sm text-muted-foreground">
+            {{ filteredRows.length.toLocaleString() }}
+            rows
+          </span>
+          <DropdownMenu v-if="groupableColumns.length > 0">
+            <DropdownMenuTrigger as-child>
+              <Button size="sm" variant="outline" class="h-8">
+                Group by
+                <span
+                  v-if="grouping.length > 0"
+                  class="ml-2 rounded-sm bg-muted px-1 font-normal text-[10px] leading-4 text-muted-foreground"
+                >
+                  {{ grouping.length }}
+                </span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" class="w-56 p-2">
+              <DropdownMenuLabel class="px-1 py-1.5">Grouping</DropdownMenuLabel>
+              <DropdownMenuSeparator class="my-1" />
+              <div class="space-y-1">
+                <label
+                  v-for="groupColumn in groupableColumns"
+                  :key="groupColumn.columnId"
+                  class="flex items-center justify-between gap-2 rounded px-1 py-1 text-xs hover:bg-muted/40"
+                >
+                  <span class="truncate">{{ groupColumn.columnLabel }}</span>
+                  <Checkbox
+                    :checked="isColumnGrouped(groupColumn.columnId)"
+                    @update:checked="toggleGrouping(groupColumn.columnId)"
+                  />
+                </label>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <DropdownMenu v-if="hideableColumns.length > 0">
+            <DropdownMenuTrigger as-child>
+              <Button size="sm" variant="outline" class="h-8">Columns</Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" class="w-56 p-2">
+              <DropdownMenuLabel class="px-1 py-1.5">Visible Columns</DropdownMenuLabel>
+              <DropdownMenuSeparator class="my-1" />
+              <div class="space-y-1">
+                <label
+                  v-for="column in hideableColumns"
+                  :key="column.id"
+                  class="flex items-center justify-between gap-2 rounded px-1 py-1 text-xs hover:bg-muted/40"
+                >
+                  <span class="truncate">{{ columnLabelById[column.id] ?? column.id }}</span>
+                  <Checkbox
+                    :checked="column.getIsVisible()"
+                    @update:checked="column.toggleVisibility(toCheckboxBoolean($event))"
+                  />
+                </label>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
       <div class="flex flex-wrap items-center gap-2">
-        <Input
-          :model-value="globalQuery"
-          class="h-8 w-full max-w-sm"
-          :placeholder="props.globalFilterPlaceholder"
-          @update:model-value="setGlobalQuery"
-        />
-        <DropdownMenu v-if="groupableColumns.length > 0">
-          <DropdownMenuTrigger as-child>
-            <Button size="sm" variant="outline" class="h-8">
-              Group
-              <span
-                v-if="grouping.length > 0"
-                class="rounded-sm bg-muted px-1 py-0 font-medium text-[10px] leading-4 text-muted-foreground"
-              >
-                {{ grouping.length }}
-              </span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" class="w-56 p-2">
-            <DropdownMenuLabel class="px-1 py-1.5">Grouping</DropdownMenuLabel>
-            <DropdownMenuSeparator class="my-1" />
-            <div class="space-y-1">
-              <label
-                v-for="groupColumn in groupableColumns"
-                :key="groupColumn.columnId"
-                class="flex items-center justify-between gap-2 rounded px-1 py-1 text-xs hover:bg-muted/40"
-              >
-                <span class="truncate">{{ groupColumn.columnLabel }}</span>
-                <Checkbox
-                  :checked="isColumnGrouped(groupColumn.columnId)"
-                  @update:checked="toggleGrouping(groupColumn.columnId)"
-                />
-              </label>
-            </div>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <DropdownMenu v-if="hideableColumns.length > 0">
-          <DropdownMenuTrigger as-child>
-            <Button size="sm" variant="outline" class="h-8">Columns</Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" class="w-56 p-2">
-            <DropdownMenuLabel class="px-1 py-1.5">Visible Columns</DropdownMenuLabel>
-            <DropdownMenuSeparator class="my-1" />
-            <div class="space-y-1">
-              <label
-                v-for="column in hideableColumns"
-                :key="column.id"
-                class="flex items-center justify-between gap-2 rounded px-1 py-1 text-xs hover:bg-muted/40"
-              >
-                <span class="truncate">{{ columnLabelById[column.id] ?? column.id }}</span>
-                <Checkbox
-                  :checked="column.getIsVisible()"
-                  @update:checked="column.toggleVisibility(toCheckboxBoolean($event))"
-                />
-              </label>
-            </div>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <Button size="sm" variant="outline" @click="clearAllFilters">Reset Table</Button>
-        <span class="text-xs text-muted-foreground">
-          {{ filteredRows.length.toLocaleString() }}
-          loaded rows
-        </span>
         <span v-if="selectedRowCount > 0" class="text-xs text-muted-foreground">
           {{ selectedRowCount.toLocaleString() }}
           selected
@@ -771,163 +808,157 @@
       </div>
     </div>
 
-    <Table>
-      <TableHeader>
-        <TableRow v-for="headerGroup in table.getHeaderGroups()" :key="headerGroup.id">
-          <TableHead v-if="props.enableRowSelection" class="w-9">
-            <Checkbox
-              :checked="allRowsSelectionCheckboxState"
-              @update:checked="toggleAllRowsSelection"
-            />
-          </TableHead>
-          <TableHead v-for="header in headerGroup.headers" :key="header.id">
-            <template v-if="!header.isPlaceholder">
-              <div class="flex min-w-0 items-center gap-1">
-                <button
-                  v-if="header.column.getCanSort()"
-                  type="button"
-                  class="inline-flex min-w-0 items-center gap-1.5 text-left transition-colors hover:text-foreground"
-                  @click="onHeaderClick(header.column)"
-                >
-                  <FlexRender
-                    :render="header.column.columnDef.header"
-                    :props="header.getContext()"
-                  />
-                  <ArrowUp v-if="header.column.getIsSorted() === 'asc'" class="h-3.5 w-3.5" />
-                  <ArrowDown
-                    v-else-if="header.column.getIsSorted() === 'desc'"
-                    class="h-3.5 w-3.5"
-                  />
-                  <ArrowUpDown v-else class="h-3.5 w-3.5 text-muted-foreground/70" />
-                </button>
-                <button
-                  v-else-if="facetableColumnForId(header.column.id) !== null"
-                  type="button"
-                  class="inline-flex min-w-0 items-center gap-1.5 text-left transition-colors hover:text-foreground"
-                  @click="openFacetMenuForColumn(header.column.id)"
-                >
-                  <FlexRender
-                    :render="header.column.columnDef.header"
-                    :props="header.getContext()"
-                  />
-                </button>
-                <FlexRender
-                  v-else
-                  :render="header.column.columnDef.header"
-                  :props="header.getContext()"
-                />
-                <DropdownMenu
-                  v-if="facetableColumnForId(header.column.id) !== null"
-                  :open="activeFacetColumnId === header.column.id"
-                  @update:open="setFacetMenuOpen(header.column.id, $event)"
-                >
-                  <DropdownMenuTrigger
-                    class="inline-flex h-6 items-center gap-1 rounded-md px-1.5 text-xs transition-colors hover:bg-accent hover:text-accent-foreground"
-                    :aria-label="`Filter ${facetableColumnForId(header.column.id)?.columnLabel ?? header.column.id}`"
+    <div class="rounded-md border">
+      <Table>
+        <TableHeader class="sticky top-0 z-10 bg-background">
+          <TableRow v-for="headerGroup in table.getHeaderGroups()" :key="headerGroup.id">
+            <TableHead v-if="props.enableRowSelection" class="w-9">
+              <Checkbox
+                :checked="allRowsSelectionCheckboxState"
+                @update:checked="toggleAllRowsSelection"
+              />
+            </TableHead>
+            <TableHead v-for="header in headerGroup.headers" :key="header.id">
+              <template v-if="!header.isPlaceholder">
+                <div class="flex min-w-0 select-none items-center gap-1">
+                  <DropdownMenu
+                    v-if="facetableColumnForId(header.column.id) !== null"
+                    :open="activeFacetColumnId === header.column.id"
+                    @update:open="setFacetMenuOpen(header.column.id, $event)"
                   >
-                    <Filter class="h-3.5 w-3.5" />
-                    <span
-                      v-if="selectedFacetCount(header.column.id) > 0"
-                      class="rounded-sm bg-muted px-1 py-0 font-medium text-[10px] leading-4 text-muted-foreground"
-                    >
-                      {{ selectedFacetCount(header.column.id) }}
-                    </span>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" class="w-64 p-0">
-                    <DropdownMenuLabel
-                      class="flex items-center justify-between gap-2 border-b border-border/70 px-2 py-1.5"
-                    >
-                      <span>{{ facetableColumnForId(header.column.id)?.columnLabel }}</span>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        class="h-6 px-2 text-[11px]"
-                        @click="clearFacetsForColumn(header.column.id)"
+                    <DropdownMenuTrigger as-child>
+                      <button
+                        type="button"
+                        class="truncate text-left transition-colors hover:text-foreground"
+                        :class="
+                          selectedFacetCount(header.column.id) > 0
+                            ? 'text-primary underline'
+                            : undefined
+                        "
+                        :aria-label="`Filter ${facetableColumnForId(header.column.id)?.columnLabel ?? header.column.id}`"
                       >
-                        Clear
-                      </Button>
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator class="my-0" />
-                    <div class="max-h-64 space-y-1 overflow-y-auto p-2">
-                      <label
-                        v-for="facetOption in facetValuesForColumn(header.column.id)"
-                        :key="`${header.column.id}:${facetOption.token}`"
-                        class="flex items-center justify-between gap-2 rounded px-1 py-0.5 text-xs hover:bg-muted/40"
+                        <FlexRender
+                          :render="header.column.columnDef.header"
+                          :props="header.getContext()"
+                        />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" class="w-64 p-0">
+                      <DropdownMenuLabel
+                        class="flex items-center justify-between gap-2 border-b border-border/70 px-2 py-1.5"
                       >
-                        <span class="inline-flex items-center gap-2">
-                          <Checkbox
-                            :checked="facetValueChecked(header.column.id, facetOption.token)"
-                            @update:checked="
+                        <span>{{ facetableColumnForId(header.column.id)?.columnLabel }}</span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          class="h-6 px-2 text-[11px]"
+                          @click="clearFacetsForColumn(header.column.id)"
+                        >
+                          Clear
+                        </Button>
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator class="my-0" />
+                      <div class="max-h-64 space-y-1 overflow-y-auto p-2">
+                        <label
+                          v-for="facetOption in facetValuesForColumn(header.column.id)"
+                          :key="`${header.column.id}:${facetOption.token}`"
+                          class="flex items-center justify-between gap-2 rounded px-1 py-0.5 text-xs hover:bg-muted/40"
+                        >
+                          <span class="inline-flex items-center gap-2">
+                            <Checkbox
+                              :checked="facetValueChecked(header.column.id, facetOption.token)"
+                              @update:checked="
                               setFacetValueChecked(
                                 header.column.id,
                                 facetOption.token,
                                 toCheckboxBoolean($event)
                               )
                             "
-                          />
-                          <span class="truncate">{{ facetOption.label }}</span>
-                        </span>
-                        <span class="text-[11px] text-muted-foreground"
-                          >{{ facetOption.count }}</span
-                        >
-                      </label>
-                    </div>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </template>
-          </TableHead>
-        </TableRow>
-      </TableHeader>
+                            />
+                            <span class="truncate">{{ facetOption.label }}</span>
+                          </span>
+                          <span class="text-[11px] text-muted-foreground"
+                            >{{ facetOption.count }}</span
+                          >
+                        </label>
+                      </div>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <FlexRender
+                    v-else
+                    :render="header.column.columnDef.header"
+                    :props="header.getContext()"
+                  />
+                  <button
+                    v-if="header.column.getCanSort()"
+                    type="button"
+                    class="ml-1 inline-flex cursor-pointer items-center"
+                    @click="header.column.toggleSorting()"
+                  >
+                    <ArrowUp v-if="header.column.getIsSorted() === 'asc'" class="h-4 w-4" />
+                    <ArrowDown v-else-if="header.column.getIsSorted() === 'desc'" class="h-4 w-4" />
+                    <ArrowUpDown v-else class="h-4 w-4 text-muted-foreground/50" />
+                  </button>
+                </div>
+              </template>
+            </TableHead>
+          </TableRow>
+        </TableHeader>
 
-      <TableBody>
-        <template v-if="table.getRowModel().rows.length > 0">
-          <TableRow
-            v-for="row in table.getRowModel().rows"
-            :key="row.id"
-            :data-state="row.getIsSelected() ? 'selected' : undefined"
-          >
-            <TableCell v-if="props.enableRowSelection" class="w-9">
-              <Checkbox
-                :checked="row.getIsSelected()"
-                :disabled="!row.getCanSelect()"
-                @update:checked="row.toggleSelected(toCheckboxBoolean($event))"
-              />
-            </TableCell>
-            <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
-              <template v-if="cell.getIsGrouped()">
-                <button
-                  type="button"
-                  class="inline-flex items-center gap-2 text-left"
-                  @click="row.toggleExpanded()"
-                >
-                  <span class="text-[11px] text-muted-foreground">
-                    {{ row.getIsExpanded() ? "▾" : "▸" }}
-                  </span>
-                  <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
-                  <span class="text-[11px] text-muted-foreground">({{ row.subRows.length }})</span>
-                </button>
-              </template>
-              <template v-else-if="cell.getIsAggregated()">
-                <FlexRender
-                  :render="cell.column.columnDef.aggregatedCell ?? cell.column.columnDef.cell"
-                  :props="cell.getContext()"
+        <TableBody>
+          <template v-if="table.getRowModel().rows.length > 0">
+            <TableRow
+              v-for="row in table.getRowModel().rows"
+              :key="row.id"
+              :data-state="row.getIsSelected() ? 'selected' : undefined"
+              :class="row.getIsGrouped() ? 'bg-muted/50 font-medium' : undefined"
+            >
+              <TableCell v-if="props.enableRowSelection" class="w-9">
+                <Checkbox
+                  :checked="row.getIsSelected()"
+                  :disabled="!row.getCanSelect()"
+                  @update:checked="row.toggleSelected(toCheckboxBoolean($event))"
                 />
-              </template>
-              <template v-else-if="cell.getIsPlaceholder()"></template>
-              <template v-else>
-                <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
-              </template>
+              </TableCell>
+              <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
+                <template v-if="cell.getIsGrouped()">
+                  <button
+                    type="button"
+                    class="flex items-center gap-1"
+                    :style="{ paddingLeft: `${row.depth * 1.5}rem` }"
+                    @click="row.toggleExpanded()"
+                  >
+                    <ChevronDown v-if="row.getIsExpanded()" class="h-4 w-4 shrink-0" />
+                    <ChevronRight v-else class="h-4 w-4 shrink-0" />
+                    <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
+                    <Badge variant="secondary" class="ml-1 text-xs">
+                      {{ row.subRows.length }}
+                    </Badge>
+                  </button>
+                </template>
+                <template v-else-if="cell.getIsAggregated()">
+                  <span class="text-sm text-muted-foreground">
+                    <FlexRender
+                      :render="cell.column.columnDef.aggregatedCell ?? cell.column.columnDef.cell"
+                      :props="cell.getContext()"
+                    />
+                  </span>
+                </template>
+                <template v-else-if="cell.getIsPlaceholder()"></template>
+                <template v-else>
+                  <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
+                </template>
+              </TableCell>
+            </TableRow>
+          </template>
+
+          <TableRow v-else>
+            <TableCell :colspan="visibleColumnCount" class="h-24 text-center text-muted-foreground">
+              {{ props.emptyStateLabel }}
             </TableCell>
           </TableRow>
-        </template>
-
-        <TableRow v-else>
-          <TableCell :colspan="visibleColumnCount" class="h-24 text-center text-muted-foreground">
-            {{ props.emptyStateLabel }}
-          </TableCell>
-        </TableRow>
-      </TableBody>
-    </Table>
+        </TableBody>
+      </Table>
+    </div>
   </div>
 </template>

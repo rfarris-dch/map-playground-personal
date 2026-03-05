@@ -6,7 +6,7 @@
 </script>
 
 <template>
-  <div class="relative w-full overflow-x-auto rounded-md border border-border/70">
+  <div class="relative w-full overflow-auto">
     <table :class="tableClassName">
       <slot />
     </table>

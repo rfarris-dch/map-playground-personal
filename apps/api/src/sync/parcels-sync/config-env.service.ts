@@ -1,6 +1,6 @@
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { ParcelsSyncConfig, ParcelsSyncMode } from "../parcels-sync.types";
+import type { ParcelsSyncConfig, ParcelsSyncMode } from "@/sync/parcels-sync.types";
 
 function parseBooleanFlag(value: string | undefined, defaultValue: boolean): boolean {
   if (!value) {

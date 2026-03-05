@@ -1,24 +1,22 @@
+import type { MutableParcelsSyncStatusSnapshot } from "@/sync/parcels-sync/parcels-sync-runtime.types";
+import { updateRunStateFromLine } from "@/sync/parcels-sync/run-progress-parsing.service";
+import {
+  appendRunLogLine,
+  createParcelsSyncStatusStore,
+  reconcileRunStatus,
+  refreshRunFromFilesystem,
+  setRunPhase,
+  snapshotStatus,
+  startRunStatus,
+  updateConfigStatus,
+} from "@/sync/parcels-sync/run-status-mutations.service";
 import type {
   ParcelsSyncConfig,
   ParcelsSyncRunReason,
   ParcelsSyncRunResult,
   ParcelsSyncStatusSnapshot,
-} from "../parcels-sync.types";
-import type { MutableParcelsSyncStatusSnapshot } from "./parcels-sync-runtime.types";
-import { updateRunStateFromLine } from "./run-progress-parsing.service";
-import {
-  appendRunLogLine,
-  createParcelsSyncStatusStore,
-  refreshRunFromFilesystem,
-  snapshotStatus,
-  startRunStatus,
-  updateConfigStatus,
-} from "./run-status-mutations.service";
-
-interface RunFinalization {
-  readonly endedAt: string;
-  readonly summary: string;
-}
+} from "@/sync/parcels-sync.types";
+import type { RunFinalization } from "./status-store.service.types";
 
 export class ParcelsSyncStatusStore {
   private readonly status: MutableParcelsSyncStatusSnapshot;
@@ -54,22 +52,24 @@ export class ParcelsSyncStatusStore {
     this.status.run.endedAt = finalization.endedAt;
     this.status.run.summary = finalization.summary;
     this.status.run.isRunning = false;
+    reconcileRunStatus(this.status.run);
   }
 
   markRunSucceeded(): void {
-    this.status.run.phase = "completed";
+    setRunPhase(this.status.run, "completed");
     this.status.latestRunId = this.status.run.runId;
     this.status.latestRunCompletedAt = this.status.run.endedAt;
   }
 
   markRunFailed(summary: string): void {
-    this.status.run.phase = "failed";
+    setRunPhase(this.status.run, "failed");
     this.status.run.summary = summary;
     this.status.run.endedAt = new Date().toISOString();
-    this.status.run.isRunning = false;
+    reconcileRunStatus(this.status.run);
   }
 
   markRunStopped(): void {
     this.status.run.isRunning = false;
+    reconcileRunStatus(this.status.run);
   }
 }

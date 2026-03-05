@@ -2,17 +2,16 @@ import { describe, expect, it } from "bun:test";
 import {
   mapFacilitiesRowsToFeatures,
   mapFacilityDetailRowToFeature,
-} from "../../../src/geo/facilities/facilities.mapper";
-import type {
-  FacilitiesBboxRow,
-  FacilityDetailRow,
-} from "../../../src/geo/facilities/facilities.repo";
+} from "@/geo/facilities/facilities.mapper";
+import type { FacilitiesBboxRow, FacilityDetailRow } from "@/geo/facilities/facilities.repo";
 
 function buildBboxRow(overrides: Partial<FacilitiesBboxRow> = {}): FacilitiesBboxRow {
   return {
     facility_id: "facility-1",
+    facility_name: "Austin Alpha",
     geom_json: { type: "Point", coordinates: [-97.7431, 30.2672] },
     provider_id: "provider-1",
+    provider_name: "Provider One",
     county_fips: "48453",
     commissioned_power_mw: "55.5",
     commissioned_semantic: "operational",
@@ -24,8 +23,10 @@ function buildBboxRow(overrides: Partial<FacilitiesBboxRow> = {}): FacilitiesBbo
 function buildDetailRow(overrides: Partial<FacilityDetailRow> = {}): FacilityDetailRow {
   return {
     facility_id: "facility-1",
+    facility_name: "Austin Alpha",
     geom_json: { type: "Point", coordinates: [-97.7431, 30.2672] },
     provider_id: "provider-1",
+    provider_name: "Provider One",
     county_fips: "48453",
     commissioned_semantic: "operational",
     lease_or_own: "own",
@@ -52,7 +53,9 @@ describe("facilities mapper", () => {
     expect(first.geometry.type).toBe("Point");
     expect(first.geometry.coordinates).toEqual([-97.7431, 30.2672]);
     expect(first.properties.perspective).toBe("colocation");
+    expect(first.properties.facilityName).toBe("Austin Alpha");
     expect(first.properties.providerId).toBe("provider-1");
+    expect(first.properties.providerName).toBe("Provider One");
     expect(first.properties.countyFips).toBe("48453");
     expect(first.properties.commissionedPowerMw).toBe(55.5);
     expect(first.properties.commissionedSemantic).toBe("operational");
@@ -69,6 +72,8 @@ describe("facilities mapper", () => {
     const feature = mapFacilityDetailRowToFeature(row, "hyperscale");
 
     expect(feature.properties.perspective).toBe("hyperscale");
+    expect(feature.properties.facilityName).toBe("Austin Alpha");
+    expect(feature.properties.providerName).toBe("Provider One");
     expect(feature.properties.commissionedSemantic).toBe("under_construction");
     expect(feature.properties.commissionedPowerMw).toBe(120.5);
     expect(feature.properties.underConstructionPowerMw).toBe(40);
@@ -85,6 +90,19 @@ describe("facilities mapper", () => {
 
     expect(() => mapFacilitiesRowsToFeatures(rows, "colocation")).toThrow(
       "Invalid geom_json: geometry type must be Point"
+    );
+  });
+
+  it("throws when required provider fields are missing", () => {
+    const rows: FacilitiesBboxRow[] = [
+      buildBboxRow({
+        provider_id: null,
+        provider_name: null,
+      }),
+    ];
+
+    expect(() => mapFacilitiesRowsToFeatures(rows, "colocation")).toThrow(
+      "Invalid facilities row: missing provider_id"
     );
   });
 });

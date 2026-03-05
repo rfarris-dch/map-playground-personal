@@ -1,8 +1,8 @@
-// biome-ignore lint/performance/noBarrelFile: package entrypoint intentionally re-exports the public contracts surface.
-export * from "./api-contracts";
-export * from "./boundaries-contracts";
-export * from "./facilities-contracts";
-export * from "./fiber-locator-contracts";
-export * from "./parcels-contracts";
-export * from "./shared-contracts";
-export * from "./table-contracts";
+export * from "@/analysis-contracts";
+export * from "@/api-contracts";
+export * from "@/boundaries-contracts";
+export * from "@/facilities-contracts";
+export * from "@/fiber-locator-contracts";
+export * from "@/parcels-contracts";
+export * from "@/shared-contracts";
+export * from "@/table-contracts";

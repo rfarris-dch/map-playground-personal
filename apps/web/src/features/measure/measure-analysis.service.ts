@@ -1,0 +1,380 @@
+import type {
+  FacilitiesFeatureCollection,
+  ParcelsFeatureCollection,
+} from "@map-migration/contracts";
+import type { LngLat } from "@map-migration/map-engine";
+import type {
+  MeasureParcelSelectionSummary,
+  MeasurePerspectiveSelectionSummary,
+  MeasureProviderSummary,
+  MeasureSelectedFacility,
+  MeasureSelectedParcel,
+  MeasureSelectionSummary,
+} from "@/features/measure/measure-analysis.types";
+import type { MeasureSelectionSummaryArgs } from "./measure-analysis.service.types";
+
+const POINT_ON_SEGMENT_EPSILON = 1e-9;
+
+function resolveDisplayName(name: string, fallback: string): string {
+  const normalizedName = name.trim();
+  if (normalizedName.length > 0) {
+    return normalizedName;
+  }
+
+  const normalizedFallback = fallback.trim();
+  if (normalizedFallback.length > 0) {
+    return normalizedFallback;
+  }
+
+  return "-";
+}
+
+function isFiniteCoordinate(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function readPointCoordinates(value: unknown): LngLat | null {
+  if (!Array.isArray(value) || value.length !== 2) {
+    return null;
+  }
+
+  const lng = value[0];
+  const lat = value[1];
+  if (!(isFiniteCoordinate(lng) && isFiniteCoordinate(lat))) {
+    return null;
+  }
+
+  return [lng, lat];
+}
+
+function pointOnSegment(point: LngLat, segmentStart: LngLat, segmentEnd: LngLat): boolean {
+  const [x, y] = point;
+  const [x1, y1] = segmentStart;
+  const [x2, y2] = segmentEnd;
+
+  const crossProduct = (x - x1) * (y2 - y1) - (y - y1) * (x2 - x1);
+  if (Math.abs(crossProduct) > POINT_ON_SEGMENT_EPSILON) {
+    return false;
+  }
+
+  const dotProduct = (x - x1) * (x2 - x1) + (y - y1) * (y2 - y1);
+  if (dotProduct < -POINT_ON_SEGMENT_EPSILON) {
+    return false;
+  }
+
+  const segmentLengthSquared = (x2 - x1) ** 2 + (y2 - y1) ** 2;
+  if (dotProduct - segmentLengthSquared > POINT_ON_SEGMENT_EPSILON) {
+    return false;
+  }
+
+  return true;
+}
+
+function isPointInPolygon(point: LngLat, ring: readonly LngLat[]): boolean {
+  if (ring.length < 4) {
+    return false;
+  }
+
+  for (let index = 1; index < ring.length; index += 1) {
+    const previousVertex = ring[index - 1];
+    const currentVertex = ring[index];
+    if (!(previousVertex && currentVertex)) {
+      continue;
+    }
+
+    if (pointOnSegment(point, previousVertex, currentVertex)) {
+      return true;
+    }
+  }
+
+  let inside = false;
+  const pointX = point[0];
+  const pointY = point[1];
+
+  for (
+    let index = 0, previousIndex = ring.length - 1;
+    index < ring.length;
+    previousIndex = index, index += 1
+  ) {
+    const current = ring[index];
+    const previous = ring[previousIndex];
+    if (!(current && previous)) {
+      continue;
+    }
+
+    const currentX = current[0];
+    const currentY = current[1];
+    const previousX = previous[0];
+    const previousY = previous[1];
+    const isCrossing = currentY > pointY !== previousY > pointY;
+    if (!isCrossing) {
+      continue;
+    }
+
+    const xAtIntersection =
+      ((previousX - currentX) * (pointY - currentY)) / (previousY - currentY) + currentX;
+    if (pointX <= xAtIntersection) {
+      inside = !inside;
+    }
+  }
+
+  return inside;
+}
+
+function toSelectedFacility(
+  feature: FacilitiesFeatureCollection["features"][number]
+): MeasureSelectedFacility | null {
+  const coordinates = readPointCoordinates(feature.geometry.coordinates);
+  if (coordinates === null) {
+    return null;
+  }
+
+  const properties = feature.properties;
+  const facilityId = properties.facilityId;
+  const providerId = properties.providerId;
+  return {
+    commissionedPowerMw: properties.commissionedPowerMw,
+    commissionedSemantic: properties.commissionedSemantic,
+    coordinates,
+    countyFips: properties.countyFips,
+    facilityId,
+    facilityName: resolveDisplayName(properties.facilityName, "Unknown facility"),
+    leaseOrOwn: properties.leaseOrOwn,
+    perspective: properties.perspective,
+    providerId,
+    providerName: resolveDisplayName(properties.providerName, "Unknown provider"),
+  };
+}
+
+function toSelectedParcel(
+  feature: ParcelsFeatureCollection["features"][number]
+): MeasureSelectedParcel {
+  let coordinates: LngLat | null = null;
+  if (feature.geometry?.type === "Point") {
+    coordinates = readPointCoordinates(feature.geometry.coordinates);
+  }
+
+  return {
+    attrs: feature.properties.attrs,
+    coordinates,
+    geoid: feature.properties.geoid,
+    parcelId: feature.properties.parcelId,
+    state2: feature.properties.state2,
+  };
+}
+
+function filterSelection(
+  features: FacilitiesFeatureCollection["features"],
+  ring: readonly LngLat[]
+): MeasureSelectedFacility[] {
+  return features.reduce<MeasureSelectedFacility[]>((selected, feature) => {
+    const nextFacility = toSelectedFacility(feature);
+    if (nextFacility === null) {
+      return selected;
+    }
+
+    if (!isPointInPolygon(nextFacility.coordinates, ring)) {
+      return selected;
+    }
+
+    selected.push(nextFacility);
+    return selected;
+  }, []);
+}
+
+function initialPerspectiveSummary(): MeasurePerspectiveSelectionSummary {
+  return {
+    commissionedPowerMw: 0,
+    count: 0,
+    leasedCount: 0,
+    operationalCount: 0,
+    plannedCount: 0,
+    underConstructionCount: 0,
+    unknownCount: 0,
+  };
+}
+
+function buildPerspectiveSummary(
+  facilities: readonly MeasureSelectedFacility[]
+): MeasurePerspectiveSelectionSummary {
+  return facilities.reduce<MeasurePerspectiveSelectionSummary>((summary, facility) => {
+    const commissionedPowerMw =
+      typeof facility.commissionedPowerMw === "number" ? facility.commissionedPowerMw : 0;
+
+    const nextSummary: MeasurePerspectiveSelectionSummary = {
+      commissionedPowerMw: summary.commissionedPowerMw + commissionedPowerMw,
+      count: summary.count + 1,
+      leasedCount: summary.leasedCount,
+      operationalCount: summary.operationalCount,
+      plannedCount: summary.plannedCount,
+      underConstructionCount: summary.underConstructionCount,
+      unknownCount: summary.unknownCount,
+    };
+
+    if (facility.commissionedSemantic === "leased") {
+      return {
+        ...nextSummary,
+        leasedCount: summary.leasedCount + 1,
+      };
+    }
+
+    if (facility.commissionedSemantic === "operational") {
+      return {
+        ...nextSummary,
+        operationalCount: summary.operationalCount + 1,
+      };
+    }
+
+    if (facility.commissionedSemantic === "planned") {
+      return {
+        ...nextSummary,
+        plannedCount: summary.plannedCount + 1,
+      };
+    }
+
+    if (facility.commissionedSemantic === "under_construction") {
+      return {
+        ...nextSummary,
+        underConstructionCount: summary.underConstructionCount + 1,
+      };
+    }
+
+    return {
+      ...nextSummary,
+      unknownCount: summary.unknownCount + 1,
+    };
+  }, initialPerspectiveSummary());
+}
+
+function buildTopProviders(
+  facilities: readonly MeasureSelectedFacility[]
+): readonly MeasureProviderSummary[] {
+  const providers = facilities.reduce<
+    Map<string, { commissionedPowerMw: number; count: number; providerName: string }>
+  >((lookup, facility) => {
+    const current = lookup.get(facility.providerId) ?? {
+      commissionedPowerMw: 0,
+      count: 0,
+      providerName: facility.providerName,
+    };
+
+    lookup.set(facility.providerId, {
+      commissionedPowerMw:
+        current.commissionedPowerMw +
+        (typeof facility.commissionedPowerMw === "number" ? facility.commissionedPowerMw : 0),
+      count: current.count + 1,
+      providerName: current.providerName,
+    });
+
+    return lookup;
+  }, new Map<string, { commissionedPowerMw: number; count: number; providerName: string }>());
+
+  return [...providers.entries()]
+    .map(([providerId, summary]) => ({
+      providerId,
+      providerName: summary.providerName,
+      count: summary.count,
+      commissionedPowerMw: summary.commissionedPowerMw,
+    }))
+    .sort((left, right) => {
+      if (right.commissionedPowerMw !== left.commissionedPowerMw) {
+        return right.commissionedPowerMw - left.commissionedPowerMw;
+      }
+
+      if (right.count !== left.count) {
+        return right.count - left.count;
+      }
+
+      if (left.providerName !== right.providerName) {
+        return left.providerName.localeCompare(right.providerName);
+      }
+
+      return left.providerId.localeCompare(right.providerId);
+    })
+    .slice(0, 5);
+}
+
+function csvCell(value: string | number | null): string {
+  if (value === null) {
+    return "";
+  }
+
+  const text = String(value);
+  if (!(text.includes(",") || text.includes('"') || text.includes("\n"))) {
+    return text;
+  }
+
+  return `"${text.replaceAll('"', '""')}"`;
+}
+
+export function formatMeasurePowerMw(powerMw: number): string {
+  if (!Number.isFinite(powerMw)) {
+    return "0 MW";
+  }
+
+  if (powerMw >= 1000) {
+    return `${(powerMw / 1000).toFixed(2)} GW`;
+  }
+
+  return `${powerMw.toFixed(1)} MW`;
+}
+
+export function buildMeasureSelectionSummary(
+  args: MeasureSelectionSummaryArgs
+): MeasureSelectionSummary {
+  const colocationFacilities = filterSelection(args.colocationFeatures, args.ring);
+  const hyperscaleFacilities = filterSelection(args.hyperscaleFeatures, args.ring);
+  const facilities = [...colocationFacilities, ...hyperscaleFacilities];
+  const selectedParcels = args.parcelFeatures.map((feature) => toSelectedParcel(feature));
+  selectedParcels.sort((left, right) => left.parcelId.localeCompare(right.parcelId));
+
+  const parcelSelection: MeasureParcelSelectionSummary = {
+    count: selectedParcels.length,
+    parcels: selectedParcels,
+    truncated: args.parcelTruncated,
+    nextCursor: args.parcelNextCursor,
+  };
+
+  return {
+    ring: args.ring.map((vertex) => [vertex[0], vertex[1]]),
+    totalCount: facilities.length,
+    facilities,
+    parcelSelection,
+    colocation: buildPerspectiveSummary(colocationFacilities),
+    hyperscale: buildPerspectiveSummary(hyperscaleFacilities),
+    topColocationProviders: buildTopProviders(colocationFacilities),
+    topHyperscaleProviders: buildTopProviders(hyperscaleFacilities),
+  };
+}
+
+export function buildMeasureSelectionCsv(summary: MeasureSelectionSummary): string {
+  const header = [
+    "Perspective",
+    "Facility ID",
+    "Facility Name",
+    "Provider ID",
+    "Provider Name",
+    "County FIPS",
+    "Commissioned Power (MW)",
+    "Commissioned Semantic",
+    "Lease Or Own",
+    "Longitude",
+    "Latitude",
+  ];
+
+  const rows = summary.facilities.map((facility) => [
+    facility.perspective,
+    facility.facilityId,
+    facility.facilityName,
+    facility.providerId,
+    facility.providerName,
+    facility.countyFips,
+    facility.commissionedPowerMw,
+    facility.commissionedSemantic,
+    facility.leaseOrOwn ?? "",
+    facility.coordinates[0],
+    facility.coordinates[1],
+  ]);
+
+  return [header, ...rows].map((row) => row.map((cell) => csvCell(cell)).join(",")).join("\n");
+}

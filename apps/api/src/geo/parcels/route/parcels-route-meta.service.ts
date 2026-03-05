@@ -7,11 +7,12 @@ import {
   ParcelProfileSchema,
   type ParcelResponseMeta,
   type ParcelsFeatureCollection,
+  type Warning,
 } from "@map-migration/contracts";
 import type { Context } from "hono";
-import { parseBooleanFlag } from "../../../config/env-parsing.service";
-import { getApiRuntimeConfig } from "../../../http/runtime-config";
-import { rejectWithConflict } from "./parcels-route-errors.service";
+import { parseBooleanFlag } from "@/config/env-parsing.service";
+import { rejectWithConflict } from "@/geo/parcels/route/parcels-route-errors.service";
+import { getApiRuntimeConfig } from "@/http/runtime-config";
 export const EXPOSE_SYNC_INTERNALS = parseBooleanFlag(process.env.EXPOSE_SYNC_INTERNALS, false);
 
 export function parseIncludeGeometryParam(
@@ -46,9 +47,7 @@ export function parseProfileParam(
   return parsed.data;
 }
 
-function sanitizeWarnings(
-  warnings: ReadonlyArray<{ code: string; message: string }>
-): Array<{ code: string; message: string }> {
+function sanitizeWarnings(warnings: readonly Warning[]): Warning[] {
   return warnings.map((warning) => ({
     code: warning.code,
     message: warning.message,
@@ -61,7 +60,7 @@ export function buildParcelMeta(args: {
   readonly includeGeometry: ParcelGeometryMode;
   readonly recordCount: number;
   readonly truncated: boolean;
-  readonly warnings: ReadonlyArray<{ code: string; message: string }>;
+  readonly warnings: readonly Warning[];
   readonly aoiType?: ParcelAoi["type"];
   readonly nextCursor?: string | null;
   readonly ingestionRunId: string | undefined;
@@ -94,9 +93,7 @@ export function buildParcelMeta(args: {
   return meta;
 }
 
-export function profileMetadataWarnings(
-  profile: ParcelProfile
-): Array<{ code: string; message: string }> {
+export function profileMetadataWarnings(profile: ParcelProfile): Warning[] {
   if (profile !== "full_170") {
     return [];
   }

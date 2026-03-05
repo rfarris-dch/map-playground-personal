@@ -1,9 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import {
-  mapParcelRowsToFeatures,
-  mapParcelRowToFeature,
-} from "../../../src/geo/parcels/parcels.mapper";
-import type { ParcelRow } from "../../../src/geo/parcels/parcels.repo";
+import { mapParcelRowsToFeatures, mapParcelRowToFeature } from "@/geo/parcels/parcels.mapper";
+import type { ParcelRow } from "@/geo/parcels/parcels.repo";
 
 function buildRow(overrides: Partial<ParcelRow> = {}): ParcelRow {
   return {

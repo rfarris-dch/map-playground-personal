@@ -1,26 +1,35 @@
 import { computed } from "vue";
-import { formatPercent } from "../../pipeline.service";
-import { usePipelineStatus } from "../../pipeline.view";
-import { estimatePipelineRate, estimateTileBuildRate } from "../../pipeline-tracking.service";
-import type { PipelineDashboardModel } from "./pipeline-dashboard.types";
+import type { PipelineDashboardModel } from "@/features/pipeline/components/pipeline-dashboard/pipeline-dashboard.types";
 import {
   parseBuildProgress,
   parseDbLoadProgress,
   parseIsoTimestamp,
   stringifyUnknown,
-} from "./pipeline-dashboard-parse.service";
+} from "@/features/pipeline/components/pipeline-dashboard/pipeline-dashboard-parse.service";
 import {
   computeStateCompletionPercent,
   deriveRunProgress,
   isStateCompleted,
   normalizeExpectedForDisplay,
-} from "./pipeline-dashboard-progress.service";
+} from "@/features/pipeline/components/pipeline-dashboard/pipeline-dashboard-progress.service";
+import { formatPercent } from "@/features/pipeline/pipeline.service";
+import { usePipelineStatus } from "@/features/pipeline/pipeline.view";
+import { estimateTileBuildRate } from "@/features/pipeline/pipeline-tracking/pipeline-tracking-build-rate.service";
+import { estimatePipelineRate } from "@/features/pipeline/pipeline-tracking/pipeline-tracking-rate.service";
 
 export function usePipelineDashboard(): PipelineDashboardModel {
   const pipelineStatus = usePipelineStatus();
 
   const response = computed(() => pipelineStatus.payload.value?.response ?? null);
   const run = computed(() => response.value?.run ?? null);
+  const runProgress = computed(() => {
+    const currentRun = run.value;
+    if (typeof currentRun !== "object" || currentRun === null) {
+      return null;
+    }
+
+    return Reflect.get(currentRun, "progress");
+  });
   const isRunning = computed(() => run.value?.isRunning === true);
 
   const rateEstimate = computed(() => estimatePipelineRate(pipelineStatus.history.value));
@@ -165,7 +174,9 @@ export function usePipelineDashboard(): PipelineDashboardModel {
     );
   });
 
-  const dbLoadProgress = computed(() => parseDbLoadProgress(run.value?.summary ?? null));
+  const dbLoadProgress = computed(() =>
+    parseDbLoadProgress(run.value?.summary ?? null, runProgress.value)
+  );
   const isMaterializeFinalizing = computed(() => {
     if (run.value?.phase !== "loading" || !isRunning.value) {
       return false;
@@ -205,7 +216,9 @@ export function usePipelineDashboard(): PipelineDashboardModel {
     return "Detail";
   });
 
-  const buildProgress = computed(() => parseBuildProgress(run.value?.summary ?? null));
+  const buildProgress = computed(() =>
+    parseBuildProgress(run.value?.summary ?? null, runProgress.value)
+  );
   const buildProgressPercent = computed(() => {
     const percent = buildProgress.value?.percent;
     if (typeof percent !== "number" || !Number.isFinite(percent)) {

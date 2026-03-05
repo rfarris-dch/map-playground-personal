@@ -1,17 +1,18 @@
 import {
+  ApiQueryDefaults,
   ApiRoutes,
   type ParcelDetailResponse,
   ParcelDetailResponseSchema,
 } from "@map-migration/contracts";
-import type { Hono } from "hono";
-import { getOrCreateRequestId, jsonError, jsonOk } from "../../../http/api-response";
-import { mapParcelRowToFeature } from "../parcels.mapper";
-import { getParcelById, type ParcelRow } from "../parcels.repo";
+import type { Env, Hono } from "hono";
+import { mapParcelRowToFeature } from "@/geo/parcels/parcels.mapper";
+import { getParcelById, type ParcelRow } from "@/geo/parcels/parcels.repo";
 import {
   parcelMappingFailed,
   postgisQueryFailed,
   rejectWithBadRequest,
-} from "./parcels-route-errors.service";
+  rejectWithPolicyError,
+} from "@/geo/parcels/route/parcels-route-errors.service";
 import {
   buildParcelMeta,
   conflictResponseIfNeeded,
@@ -19,19 +20,28 @@ import {
   parseProfileParam,
   profileMetadataWarnings,
   readExpectedIngestionRunId,
-} from "./parcels-route-meta.service";
+} from "@/geo/parcels/route/parcels-route-meta.service";
+import { getOrCreateRequestId, jsonError, jsonOk } from "@/http/api-response";
+import { isDatasetQueryAllowed } from "@/http/spatial-analysis-policy.service";
 
-export function registerParcelDetailRoute(app: Hono): void {
+export function registerParcelDetailRoute<E extends Env>(app: Hono<E>): void {
   app.get(`${ApiRoutes.parcels}/:parcel-id`, async (c) => {
     const requestId = getOrCreateRequestId(c, "api");
     const expectedIngestionRunId = readExpectedIngestionRunId(c);
+
+    if (!isDatasetQueryAllowed("parcels", "parcel")) {
+      return rejectWithPolicyError(c, requestId, 'query granularity "parcel" is not allowed');
+    }
 
     const parcelId = c.req.param("parcel-id").trim();
     if (parcelId.length === 0) {
       return rejectWithBadRequest(c, requestId, "parcel-id path param is required");
     }
 
-    const includeGeometry = parseIncludeGeometryParam(c.req.query("includeGeometry"), "full");
+    const includeGeometry = parseIncludeGeometryParam(
+      c.req.query("includeGeometry"),
+      ApiQueryDefaults.parcelDetail.includeGeometry
+    );
     if (includeGeometry === null) {
       return rejectWithBadRequest(
         c,
@@ -40,7 +50,10 @@ export function registerParcelDetailRoute(app: Hono): void {
       );
     }
 
-    const profile = parseProfileParam(c.req.query("profile"), "full_170");
+    const profile = parseProfileParam(
+      c.req.query("profile"),
+      ApiQueryDefaults.parcelDetail.profile
+    );
     if (profile === null) {
       return rejectWithBadRequest(
         c,

@@ -1,14 +1,6 @@
-export type EndpointBudgetClass =
-  | "interactive-query"
-  | "feature-collection"
-  | "administrative-aggregation"
-  | "proximity-enrichment"
-  | "tile-serving";
+import type { EndpointBudgetClass, LatencyBudget } from "./index.types";
 
-export interface LatencyBudget {
-  p95Ms: number;
-  p99Ms: number;
-}
+export type { EndpointBudgetClass, LatencyBudget } from "./index.types";
 
 export const DEFAULT_ENDPOINT_BUDGETS: Record<EndpointBudgetClass, LatencyBudget> = {
   "interactive-query": { p95Ms: 250, p99Ms: 600 },

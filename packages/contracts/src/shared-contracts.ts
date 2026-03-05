@@ -1,4 +1,24 @@
 import { z } from "zod";
+import type {
+  BBox,
+  CommissionedSemantic,
+  FacilityPerspective,
+  LeaseOrOwn,
+} from "./shared-contracts.types";
+
+export type {
+  ApiError,
+  ApiErrorResponse,
+  BBox,
+  CommissionedSemantic,
+  FacilityPerspective,
+  FeatureCollection,
+  LeaseOrOwn,
+  ResponseMeta,
+  SafeParseSchema,
+  SourceMode,
+  Warning,
+} from "./shared-contracts.types";
 
 export const SourceModeSchema = z.enum(["pmtiles", "postgis", "arcgis-proxy", "external-xyz"]);
 export const FacilityPerspectiveSchema = z.enum(["colocation", "hyperscale"]);
@@ -15,6 +35,9 @@ export const WarningSchema = z.object({
   code: z.string(),
   message: z.string(),
 });
+
+const LongitudeSchema = z.number().finite().min(-180).max(180);
+const LatitudeSchema = z.number().finite().min(-90).max(90);
 
 export const ResponseMetaSchema = z.object({
   requestId: z.string().min(1),
@@ -39,20 +62,30 @@ export const ApiErrorResponseSchema = z.object({
   error: ApiErrorSchema,
 });
 
-export type SourceMode = z.infer<typeof SourceModeSchema>;
-export type FacilityPerspective = z.infer<typeof FacilityPerspectiveSchema>;
-export type CommissionedSemantic = z.infer<typeof CommissionedSemanticSchema>;
-export type LeaseOrOwn = z.infer<typeof LeaseOrOwnSchema>;
-export type ResponseMeta = z.infer<typeof ResponseMetaSchema>;
-export type ApiError = z.infer<typeof ApiErrorSchema>;
-export type ApiErrorResponse = z.infer<typeof ApiErrorResponseSchema>;
+export const BBoxSchema = z
+  .object({
+    west: LongitudeSchema,
+    south: LatitudeSchema,
+    east: LongitudeSchema,
+    north: LatitudeSchema,
+  })
+  .superRefine((bbox, ctx) => {
+    if (bbox.west >= bbox.east) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "bbox requires west < east",
+        path: ["east"],
+      });
+    }
 
-export interface BBox {
-  readonly east: number;
-  readonly north: number;
-  readonly south: number;
-  readonly west: number;
-}
+    if (bbox.south >= bbox.north) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "bbox requires south < north",
+        path: ["north"],
+      });
+    }
+  });
 
 export function parseBboxParam(value: string): BBox | null {
   const rawParts = value.split(",").map((part) => part.trim());
@@ -87,15 +120,12 @@ export function parseBboxParam(value: string): BBox | null {
     return null;
   }
 
-  if (west >= east || south >= north) {
+  const parsed = BBoxSchema.safeParse({ east, north, south, west });
+  if (!parsed.success) {
     return null;
   }
 
-  if (west < -180 || east > 180 || south < -90 || north > 90) {
-    return null;
-  }
-
-  return { east, north, south, west };
+  return parsed.data;
 }
 
 export function formatBboxParam(bbox: BBox): string {
@@ -105,7 +135,11 @@ export function formatBboxParam(bbox: BBox): string {
 export function parseFacilityPerspectiveParam(
   value: string | undefined
 ): FacilityPerspective | null {
-  if (typeof value === "undefined") {
+  return parseFacilityPerspective(value);
+}
+
+export function parseFacilityPerspective(value: unknown): FacilityPerspective | null {
+  if (typeof value !== "string") {
     return null;
   }
 
@@ -117,10 +151,67 @@ export function parseFacilityPerspectiveParam(
   return parsed.data;
 }
 
+export function parseCommissionedSemantic(value: unknown): CommissionedSemantic | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const parsed = CommissionedSemanticSchema.safeParse(value);
+  if (!parsed.success) {
+    return null;
+  }
+
+  return parsed.data;
+}
+
+export function parseLeaseOrOwn(value: unknown): LeaseOrOwn | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const parsed = LeaseOrOwnSchema.safeParse(value);
+  if (!parsed.success) {
+    return null;
+  }
+
+  return parsed.data;
+}
+
 export const GeometrySchema = z.object({
   type: z.string(),
   coordinates: z.unknown(),
 });
+
+const PolygonCoordinateSchema = z.tuple([LongitudeSchema, LatitudeSchema]);
+const PolygonRingSchema = z.array(PolygonCoordinateSchema).min(4);
+
+export const PolygonGeometrySchema = z
+  .object({
+    type: z.literal("Polygon"),
+    coordinates: z.array(PolygonRingSchema).min(1),
+  })
+  .superRefine((geometry, ctx) => {
+    for (let ringIndex = 0; ringIndex < geometry.coordinates.length; ringIndex += 1) {
+      const ring = geometry.coordinates[ringIndex];
+      if (typeof ring === "undefined" || ring.length < 4) {
+        continue;
+      }
+
+      const firstVertex = ring[0];
+      const lastVertex = ring.at(-1);
+      if (!(firstVertex && lastVertex)) {
+        continue;
+      }
+
+      if (firstVertex[0] !== lastVertex[0] || firstVertex[1] !== lastVertex[1]) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "polygon rings must be closed (first vertex must equal last vertex)",
+          path: ["coordinates", ringIndex],
+        });
+      }
+    }
+  });
 
 export const FeatureSchema = z.object({
   type: z.literal("Feature"),
@@ -135,9 +226,7 @@ export const FeatureCollectionSchema = z.object({
   meta: ResponseMetaSchema,
 });
 
-export type FeatureCollection = z.infer<typeof FeatureCollectionSchema>;
-
 export const PointGeometrySchema = z.object({
   type: z.literal("Point"),
-  coordinates: z.tuple([z.number(), z.number()]),
+  coordinates: z.tuple([LongitudeSchema, LatitudeSchema]),
 });
