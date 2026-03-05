@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - "packages/contracts/**"
+      - "apps/api/**"
+      - "apps/web/**"
       - "docs/architecture/spatial-analysis-openapi.yaml"
       - "package.json"
       - "bun.lock"
@@ -11,6 +13,8 @@ on:
   push:
     paths:
       - "packages/contracts/**"
+      - "apps/api/**"
+      - "apps/web/**"
       - "docs/architecture/spatial-analysis-openapi.yaml"
       - "package.json"
       - "bun.lock"
