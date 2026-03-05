@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 import type { FacilitiesDetailFeature, FacilitiesFeature } from "@map-migration/contracts";
 
 const listFacilitiesByBboxMock =
@@ -154,5 +154,9 @@ describe("facilities route query service", () => {
       throw new Error("Expected not found detail result");
     }
     expect(result.value.reason).toBe("not_found");
+  });
+
+  afterAll(() => {
+    mock.restore();
   });
 });
