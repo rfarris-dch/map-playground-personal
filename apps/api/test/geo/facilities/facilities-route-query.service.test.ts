@@ -1,5 +1,5 @@
-import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
-import type { FacilitiesDetailFeature, FacilitiesFeature } from "@map-migration/contracts";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
+import type { FacilitiesBboxRow } from "@/geo/facilities/facilities.repo";
 
 const listFacilitiesByBboxMock =
   mock<
@@ -30,13 +30,6 @@ const listFacilitiesTableRowsMock =
 const getFacilityByIdMock =
   mock<(facilityId: string, perspective: string) => Promise<unknown | null>>();
 
-const mapFacilitiesRowsToFeaturesMock =
-  mock<(rows: readonly unknown[], perspective: string) => FacilitiesFeature[]>();
-const mapFacilityDetailRowToFeatureMock =
-  mock<(row: unknown, perspective: string) => FacilitiesDetailFeature>();
-const mapFacilitiesTableRowsMock =
-  mock<(rows: readonly unknown[], perspective: string) => unknown[]>();
-
 mock.module("../../../src/geo/facilities/facilities.repo", () => ({
   countFacilitiesTableRows: countFacilitiesTableRowsMock,
   getFacilityById: getFacilityByIdMock,
@@ -45,37 +38,23 @@ mock.module("../../../src/geo/facilities/facilities.repo", () => ({
   listFacilitiesTableRows: listFacilitiesTableRowsMock,
 }));
 
-mock.module("../../../src/geo/facilities/facilities.mapper", () => ({
-  mapFacilitiesRowsToFeatures: mapFacilitiesRowsToFeaturesMock,
-  mapFacilityDetailRowToFeature: mapFacilityDetailRowToFeatureMock,
-}));
-
-mock.module("../../../src/geo/facilities/facilities-table.mapper", () => ({
-  mapFacilitiesTableRows: mapFacilitiesTableRowsMock,
-}));
-
 const { queryFacilitiesByBbox, queryFacilityDetail } = await import(
   "@/geo/facilities/route/facilities-route-query.service"
 );
 
-function buildFeature(id: string): FacilitiesFeature {
+function buildBboxRow(id: string): FacilitiesBboxRow {
   return {
-    type: "Feature",
-    id,
-    geometry: {
+    facility_id: id,
+    facility_name: `Facility ${id}`,
+    provider_id: "provider-1",
+    provider_name: "Provider One",
+    county_fips: "48453",
+    commissioned_power_mw: "10",
+    commissioned_semantic: "operational",
+    lease_or_own: "own",
+    geom_json: {
       type: "Point",
       coordinates: [-97.7431, 30.2672],
-    },
-    properties: {
-      perspective: "colocation",
-      facilityId: id,
-      facilityName: `Facility ${id}`,
-      providerId: "provider-1",
-      providerName: "Provider One",
-      countyFips: "48453",
-      commissionedPowerMw: 10,
-      commissionedSemantic: "operational",
-      leaseOrOwn: "own",
     },
   };
 }
@@ -87,18 +66,14 @@ describe("facilities route query service", () => {
     countFacilitiesTableRowsMock.mockReset();
     listFacilitiesTableRowsMock.mockReset();
     getFacilityByIdMock.mockReset();
-    mapFacilitiesRowsToFeaturesMock.mockReset();
-    mapFacilityDetailRowToFeatureMock.mockReset();
-    mapFacilitiesTableRowsMock.mockReset();
   });
 
   it("returns truncated bbox result with warnings when row count exceeds limit", async () => {
     listFacilitiesByBboxMock.mockResolvedValue([
-      { facility_id: "1" },
-      { facility_id: "2" },
-      { facility_id: "3" },
+      buildBboxRow("1"),
+      buildBboxRow("2"),
+      buildBboxRow("3"),
     ]);
-    mapFacilitiesRowsToFeaturesMock.mockReturnValue([buildFeature("1"), buildFeature("2")]);
 
     const result = await queryFacilitiesByBbox({
       bbox: {
@@ -154,9 +129,5 @@ describe("facilities route query service", () => {
       throw new Error("Expected not found detail result");
     }
     expect(result.value.reason).toBe("not_found");
-  });
-
-  afterAll(() => {
-    mock.restore();
   });
 });
