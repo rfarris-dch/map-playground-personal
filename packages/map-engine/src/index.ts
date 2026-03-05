@@ -1,5 +1,7 @@
 import maplibregl, {
   type AddLayerObject,
+  type AddProtocolAction,
+  addProtocol,
   type ControlPosition,
   type IControl,
   type MapGeoJSONFeature,
@@ -9,10 +11,12 @@ import maplibregl, {
   type PointLike,
   type ProjectionSpecification,
   type QueryRenderedFeaturesOptions,
+  removeProtocol,
   type SourceSpecification,
   type StyleSpecification,
   type TerrainSpecification,
 } from "maplibre-gl";
+import { Protocol } from "pmtiles";
 
 export type LngLat = [number, number];
 export type StyleInput = StyleSpecification | string;
@@ -63,6 +67,8 @@ export interface IMap {
   getBounds(): LngLatBounds;
   getStyle(): StyleSpecification;
   getZoom(): number;
+  hasLayer(layerId: string): boolean;
+  hasSource(sourceId: string): boolean;
   off(event: "load" | "moveend", handler: () => void): void;
   offClick(handler: (event: MapClickEvent) => void): void;
   offPointerLeave(handler: () => void): void;
@@ -75,12 +81,15 @@ export interface IMap {
     target: PointLike | [PointLike, PointLike],
     options?: QueryRenderedFeaturesOptions
   ): MapGeoJSONFeature[];
+  removeControl(control: IControl): void;
+  removeLayer(layerId: string): void;
+  removeSource(sourceId: string): void;
   setFeatureState(target: FeatureStateTarget, state: Record<string, unknown>): void;
   setGeoJSONSourceData(sourceId: string, data: unknown): void;
+  setLayerVisibility(layerId: string, visible: boolean): void;
   setProjection(projection: ProjectionSpecification): void;
   setStyle(style: StyleInput): void;
   setTerrain(terrain: TerrainSpecification | null): void;
-  removeControl(control: IControl): void;
 }
 
 function isSourceWithSetData(source: unknown): source is { setData: (data: unknown) => void } {
@@ -122,8 +131,32 @@ class MapLibreEngine implements IMap {
     this.map.addLayer(layerSpec, beforeId);
   }
 
+  hasSource(sourceId: string): boolean {
+    return typeof this.map.getSource(sourceId) !== "undefined";
+  }
+
+  hasLayer(layerId: string): boolean {
+    return typeof this.map.getLayer(layerId) !== "undefined";
+  }
+
   removeControl(control: IControl): void {
     this.map.removeControl(control);
+  }
+
+  removeLayer(layerId: string): void {
+    if (!this.hasLayer(layerId)) {
+      return;
+    }
+
+    this.map.removeLayer(layerId);
+  }
+
+  removeSource(sourceId: string): void {
+    if (!this.hasSource(sourceId)) {
+      return;
+    }
+
+    this.map.removeSource(sourceId);
   }
 
   setFeatureState(target: FeatureStateTarget, state: Record<string, unknown>): void {
@@ -176,7 +209,20 @@ class MapLibreEngine implements IMap {
     source.setData(data);
   }
 
+  setLayerVisibility(layerId: string, visible: boolean): void {
+    if (!this.hasLayer(layerId)) {
+      return;
+    }
+
+    this.map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
+  }
+
   on(event: "load" | "moveend", handler: () => void): void {
+    if (event === "load" && this.map.isStyleLoaded()) {
+      queueMicrotask(handler);
+      return;
+    }
+
     this.map.on(event, handler);
   }
 
@@ -273,6 +319,51 @@ class MapLibreEngine implements IMap {
 
 export interface MapAdapter {
   createMap(container: HTMLElement, options: MapCreateOptions): IMap;
+}
+
+interface PmtilesProtocolRuntime {
+  protocol: Protocol;
+  refCount: number;
+}
+
+let pmtilesProtocolRuntime: PmtilesProtocolRuntime | null = null;
+
+function createPmtilesLoadAction(protocol: Protocol): AddProtocolAction {
+  return protocol.tile.bind(protocol);
+}
+
+export function registerPmtilesProtocol(): () => void {
+  if (pmtilesProtocolRuntime === null) {
+    const protocol = new Protocol();
+    addProtocol("pmtiles", createPmtilesLoadAction(protocol));
+    pmtilesProtocolRuntime = {
+      protocol,
+      refCount: 1,
+    };
+  } else {
+    pmtilesProtocolRuntime.refCount += 1;
+  }
+
+  let disposed = false;
+  return (): void => {
+    if (disposed) {
+      return;
+    }
+    disposed = true;
+
+    const runtime = pmtilesProtocolRuntime;
+    if (runtime === null) {
+      return;
+    }
+
+    runtime.refCount -= 1;
+    if (runtime.refCount > 0) {
+      return;
+    }
+
+    removeProtocol("pmtiles");
+    pmtilesProtocolRuntime = null;
+  };
 }
 
 export function createMap(

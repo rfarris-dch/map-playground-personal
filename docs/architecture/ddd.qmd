@@ -17,6 +17,7 @@ Keep the codebase structured from day one without introducing layers that do not
 3. Feature logic in web is feature-owned (`src/features/<feature>/...`), not global-hook buckets.
 4. Map runtime capabilities stay behind `packages/map-engine`.
 5. Request correlation (`x-request-id`) is preserved across web and API boundaries.
+6. Request-id generation (`createRequestId` in `packages/ops`) is shared-kernel operational infra and must stay consistent across contexts.
 
 ## Current API Shape (Right-Sized for Read Slices)
 
@@ -25,10 +26,39 @@ apps/api/src/geo/facilities/
   facilities.route.ts      # HTTP + query parsing + response build
   facilities.repo.ts       # Postgres read access
   facilities.mapper.ts     # row -> typed Feature mapping
+
+apps/api/src/geo/boundaries/
+  boundaries.route.ts      # HTTP + level parsing + response build
+  boundaries.repo.ts       # Postgres read access
+  boundaries.mapper.ts     # row -> typed Feature mapping
+
+apps/api/src/geo/markets/
+  markets.route.ts               # HTTP parsing + status/error policy
+  markets-query.service.ts       # table query orchestration
+  markets.repo.ts                # Postgres read access
+  markets.mapper.ts              # row -> typed table mapping
+
+apps/api/src/geo/providers/
+  providers.route.ts             # HTTP parsing + status/error policy
+  providers-query.service.ts     # table query orchestration
+  providers.repo.ts              # Postgres read access
+  providers.mapper.ts            # row -> typed table mapping
+
+apps/api/src/geo/fiber-locator/
+  fiber-locator.route.ts         # transport route orchestration
+  fiber-locator.service.ts       # upstream integration (timeout/retry/cache)
+  route/
+    fiber-locator-route-param.service.ts   # tile/bbox transport validation
+    fiber-locator-route-meta.service.ts    # response meta + passthrough headers
+    fiber-locator-route-proxy.service.ts   # tile proxy error/status policy
+    fiber-locator-route.types.ts           # route-level request/result contracts
 ```
 
-This keeps the route transport-focused while preserving a single Postgres-backed runtime path.
+This keeps routes transport-focused while preserving a single Postgres-backed runtime path.
 Current facilities endpoints include bbox collection fetch and by-id detail fetch.
+Current boundaries endpoint includes county/state/country power rollups.
+Current markets/providers endpoints use route-service-repo-mapper for paginated table queries.
+Current fiber-locator endpoints keep a thin route with route-scoped services for proxy policy and transport validation.
 
 ## When To Split Route Into More Layers
 
@@ -51,6 +81,9 @@ Promote to `route -> service -> repository -> mapper` only when one or more are 
 
 - **Facility**: a single site feature shown on the map.
 - **BBox Query**: viewport-bounded facilities fetch.
+- **County Boundary**: county outline with commissioned power rollup.
+- **State Boundary**: state outline with commissioned power rollup.
+- **Country Boundary**: country outline with commissioned power rollup.
 - **Feature Collection**: GeoJSON feature set plus response metadata.
 
 ## Rule Of Thumb

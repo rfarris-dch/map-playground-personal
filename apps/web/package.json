@@ -14,16 +14,21 @@
   "dependencies": {
     "@map-migration/contracts": "workspace:*",
     "@map-migration/map-engine": "workspace:*",
+    "@map-migration/map-layer-catalog": "workspace:*",
+    "@map-migration/map-style": "workspace:*",
     "@map-migration/ops": "workspace:*",
     "@tanstack/vue-query": "^5.92.9",
+    "@tanstack/vue-table": "^8.21.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "lucide-vue-next": "^0.577.0",
     "maplibre-gl": "5.19.0",
+    "reka-ui": "^2.9.0",
     "tailwind-merge": "^3.3.1",
-    "vue": "^3.5.22"
+    "vue": "^3.5.22",
+    "vue-router": "^4.4.5"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.4",
     "@tailwindcss/vite": "^4.1.12",
     "@vitejs/plugin-vue": "^5.2.4",
     "tailwindcss": "^4.1.12",

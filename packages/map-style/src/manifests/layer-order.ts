@@ -1,4 +1,4 @@
-export interface LayerOrderInvariants {
+interface LayerOrderInvariants {
   choroplethBelowColocation: readonly [string, string];
   choroplethBelowHyperscale: readonly [string, string];
   modelsBelowFacilityPoints: readonly [string, string];
@@ -11,5 +11,3 @@ export const LAYER_ORDER_INVARIANTS: LayerOrderInvariants = {
   parcelOutlinesAboveChoropleth: ["analytics.friction", "property.parcels"],
   modelsBelowFacilityPoints: ["models.facilities", "facilities.colocation.points"],
 };
-
-export type LayerOrderInvariantKey = keyof LayerOrderInvariants;

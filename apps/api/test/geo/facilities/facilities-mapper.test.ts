@@ -1,9 +1,12 @@
 import { describe, expect, it } from "bun:test";
-import type { FacilitiesBboxRow, FacilityDetailRow } from "../../../src/geo/facilities/facilities.repo";
 import {
   mapFacilitiesRowsToFeatures,
   mapFacilityDetailRowToFeature,
 } from "../../../src/geo/facilities/facilities.mapper";
+import type {
+  FacilitiesBboxRow,
+  FacilityDetailRow,
+} from "../../../src/geo/facilities/facilities.repo";
 
 function buildBboxRow(overrides: Partial<FacilitiesBboxRow> = {}): FacilitiesBboxRow {
   return {

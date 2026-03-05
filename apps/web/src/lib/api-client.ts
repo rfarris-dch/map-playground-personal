@@ -1,9 +1,11 @@
-import { ApiHeaders } from "@map-migration/contracts";
+import { ApiErrorResponseSchema, ApiHeaders } from "@map-migration/contracts";
 import { createRequestId } from "@map-migration/ops";
 
 export type ApiResult<T> =
   | { ok: true; requestId: string; data: T }
   | {
+      code?: string;
+      message?: string;
       ok: false;
       requestId: string;
       reason: "aborted" | "http" | "schema" | "network";
@@ -83,6 +85,27 @@ async function readHttpErrorDetails(response: Response): Promise<unknown> {
   return undefined;
 }
 
+interface ParsedApiError {
+  readonly code: string;
+  readonly details: unknown;
+  readonly message: string;
+  readonly requestId: string;
+}
+
+function parseApiError(details: unknown): ParsedApiError | null {
+  const parsed = ApiErrorResponseSchema.safeParse(details);
+  if (!parsed.success) {
+    return null;
+  }
+
+  return {
+    requestId: parsed.data.requestId,
+    code: parsed.data.error.code,
+    message: parsed.data.error.message,
+    details: parsed.data.error.details,
+  };
+}
+
 export async function apiGetJson<T>(
   url: string,
   schema: SafeParseSchema<T>,
@@ -118,6 +141,19 @@ export async function apiGetJson<T>(
 
   if (!response.ok) {
     const details = await readHttpErrorDetails(response);
+    const apiError = parseApiError(details);
+    if (apiError !== null) {
+      return {
+        ok: false,
+        requestId: apiError.requestId,
+        reason: "http",
+        status: response.status,
+        code: apiError.code,
+        message: apiError.message,
+        details: apiError.details,
+      };
+    }
+
     return { ok: false, requestId, reason: "http", status: response.status, details };
   }
 

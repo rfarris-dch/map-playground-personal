@@ -1,0 +1,90 @@
+import {
+  ApiDefaults,
+  resolveDataVersion,
+  type SourceMode,
+  SourceModeSchema,
+} from "@map-migration/contracts";
+
+interface ApiRuntimeConfig {
+  readonly boundariesSourceMode: SourceMode;
+  readonly dataVersion: string;
+  readonly facilitiesSourceMode: SourceMode;
+  readonly fiberLocatorSourceMode: SourceMode;
+  readonly parcelsSourceMode: SourceMode;
+}
+
+function assertPostgisServingMode(envKey: string, mode: SourceMode): void {
+  if (mode === "postgis") {
+    return;
+  }
+
+  throw new Error(`[api] ${envKey} must be "postgis" for this API build (received "${mode}")`);
+}
+
+function readSourceMode(
+  env: Readonly<Record<string, string | undefined>>,
+  envKey: string,
+  fallback: SourceMode
+): SourceMode {
+  const raw = env[envKey];
+  if (typeof raw !== "string") {
+    return fallback;
+  }
+
+  const normalized = raw.trim();
+  if (normalized.length === 0) {
+    return fallback;
+  }
+
+  const parsed = SourceModeSchema.safeParse(normalized);
+  if (!parsed.success) {
+    throw new Error(`Invalid ${envKey} value: ${normalized}`);
+  }
+
+  return parsed.data;
+}
+
+function createApiRuntimeConfig(
+  env: Readonly<Record<string, string | undefined>>
+): ApiRuntimeConfig {
+  const boundariesSourceMode = readSourceMode(
+    env,
+    "BOUNDARIES_SOURCE_MODE",
+    ApiDefaults.boundariesSourceMode
+  );
+  const facilitiesSourceMode = readSourceMode(
+    env,
+    "FACILITIES_SOURCE_MODE",
+    ApiDefaults.facilitiesSourceMode
+  );
+  const parcelsSourceMode = readSourceMode(
+    env,
+    "PARCELS_SOURCE_MODE",
+    ApiDefaults.parcelsSourceMode
+  );
+
+  assertPostgisServingMode("BOUNDARIES_SOURCE_MODE", boundariesSourceMode);
+  assertPostgisServingMode("FACILITIES_SOURCE_MODE", facilitiesSourceMode);
+  assertPostgisServingMode("PARCELS_SOURCE_MODE", parcelsSourceMode);
+
+  return Object.freeze<ApiRuntimeConfig>({
+    boundariesSourceMode,
+    dataVersion: resolveDataVersion({
+      env,
+      fallback: ApiDefaults.dataVersion,
+    }),
+    facilitiesSourceMode,
+    fiberLocatorSourceMode: readSourceMode(
+      env,
+      "FIBER_LOCATOR_SOURCE_MODE",
+      ApiDefaults.fiberLocatorSourceMode
+    ),
+    parcelsSourceMode,
+  });
+}
+
+const runtimeConfig = createApiRuntimeConfig(process.env);
+
+export function getApiRuntimeConfig(): ApiRuntimeConfig {
+  return runtimeConfig;
+}

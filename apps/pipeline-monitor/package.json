@@ -1,0 +1,23 @@
+{
+  "name": "@map-migration/pipeline-monitor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --force",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "vue-tsc --noEmit -p tsconfig.app.json"
+  },
+  "dependencies": {
+    "@map-migration/contracts": "workspace:*",
+    "vue": "^3.5.22"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.12",
+    "@vitejs/plugin-vue": "^5.2.4",
+    "tailwindcss": "^4.1.12",
+    "vite": "^5.4.19",
+    "vue-tsc": "^2.2.12"
+  }
+}

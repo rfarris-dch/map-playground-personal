@@ -3,6 +3,13 @@ import tailwindcss from "@tailwindcss/vite";
 import vue from "@vitejs/plugin-vue";
 import { defineConfig } from "vite";
 
+const defaultApiProxyTarget = "http://localhost:3001";
+const apiProxyTarget =
+  process.env.MAP_WEB_API_PROXY_TARGET ??
+  process.env.VITE_API_PROXY_TARGET ??
+  defaultApiProxyTarget;
+const mapWebPort = Number(process.env.MAP_WEB_PORT ?? "5143");
+
 export default defineConfig({
   plugins: [vue(), tailwindcss()],
   optimizeDeps: {
@@ -20,8 +27,14 @@ export default defineConfig({
     },
   },
   server: {
+    host: "0.0.0.0",
+    port: Number.isFinite(mapWebPort) ? mapWebPort : 5143,
+    strictPort: true,
     proxy: {
-      "/api": "http://localhost:3001",
+      "/api": {
+        target: apiProxyTarget,
+        changeOrigin: true,
+      },
     },
   },
 });

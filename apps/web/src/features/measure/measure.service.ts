@@ -1,5 +1,5 @@
 import type { LngLat } from "@map-migration/map-engine";
-import type { MeasureMode, MeasureRuntimeState, MeasureState } from "./measure.types";
+import type { MeasureRuntimeState, MeasureState } from "./measure.types";
 
 type MeasureGeometry =
   | {
@@ -24,17 +24,26 @@ interface MeasureFeature {
   type: "Feature";
 }
 
-export interface MeasureSourceData {
+interface MeasureSourceData {
   features: MeasureFeature[];
   type: "FeatureCollection";
 }
 
-const EARTH_RADIUS_METERS = 6371008.8;
-const WEB_MERCATOR_RADIUS_METERS = 6378137;
-const MAX_WEB_MERCATOR_LAT = 85.05112878;
+const EARTH_RADIUS_METERS = 6_371_008.8;
+const WEB_MERCATOR_RADIUS_METERS = 6_378_137;
+const MAX_WEB_MERCATOR_LAT = 85.051_128_78;
+const CIRCLE_SEGMENTS = 64;
 
 function toRadians(value: number): number {
   return (value * Math.PI) / 180;
+}
+
+function toDegrees(value: number): number {
+  return (value * 180) / Math.PI;
+}
+
+function normalizeLongitude(lng: number): number {
+  return ((lng + 540) % 360) - 180;
 }
 
 function createLngLat(lng: number, lat: number): LngLat {
@@ -52,33 +61,28 @@ function projectToWebMercator(vertex: LngLat): { readonly x: number; readonly y:
   };
 }
 
-function buildPathVertices(
-  mode: MeasureMode,
-  vertices: readonly LngLat[],
-  cursorVertex: LngLat | null
-): LngLat[] {
-  if (mode === "off") {
-    return [];
+function cloneVertices(vertices: readonly LngLat[]): LngLat[] {
+  return vertices.map((vertex) => createLngLat(vertex[0], vertex[1]));
+}
+
+function buildPathVertices(vertices: readonly LngLat[], cursorVertex: LngLat | null): LngLat[] {
+  const pathVertices = cloneVertices(vertices);
+  if (cursorVertex !== null) {
+    pathVertices.push(createLngLat(cursorVertex[0], cursorVertex[1]));
   }
 
-  const pathVertices = vertices.map((vertex) => createLngLat(vertex[0], vertex[1]));
-  if (cursorVertex === null) {
-    return pathVertices;
-  }
-
-  pathVertices.push(createLngLat(cursorVertex[0], cursorVertex[1]));
   return pathVertices;
 }
 
 function closeRing(vertices: readonly LngLat[]): LngLat[] {
-  const ring = vertices.map((vertex) => createLngLat(vertex[0], vertex[1]));
+  const ring = cloneVertices(vertices);
   if (ring.length === 0) {
     return ring;
   }
 
   const first = ring[0];
-  const last = ring[ring.length - 1];
-  if (!first || !last) {
+  const last = ring.at(-1);
+  if (!(first && last)) {
     return ring;
   }
 
@@ -90,8 +94,8 @@ function closeRing(vertices: readonly LngLat[]): LngLat[] {
   return ring;
 }
 
-function buildAreaRing(vertices: readonly LngLat[], cursorVertex: LngLat | null): LngLat[] {
-  const polygonVertices = vertices.map((vertex) => createLngLat(vertex[0], vertex[1]));
+function buildFreeformAreaRing(vertices: readonly LngLat[], cursorVertex: LngLat | null): LngLat[] {
+  const polygonVertices = cloneVertices(vertices);
   if (cursorVertex !== null) {
     polygonVertices.push(createLngLat(cursorVertex[0], cursorVertex[1]));
   }
@@ -103,6 +107,114 @@ function buildAreaRing(vertices: readonly LngLat[], cursorVertex: LngLat | null)
   return closeRing(polygonVertices);
 }
 
+function buildRectangleAreaRing(anchor: LngLat, opposite: LngLat): LngLat[] {
+  return closeRing([
+    createLngLat(anchor[0], anchor[1]),
+    createLngLat(opposite[0], anchor[1]),
+    createLngLat(opposite[0], opposite[1]),
+    createLngLat(anchor[0], opposite[1]),
+  ]);
+}
+
+function destinationPoint(center: LngLat, bearingRadians: number, distanceMeters: number): LngLat {
+  const angularDistance = distanceMeters / EARTH_RADIUS_METERS;
+  const lat1 = toRadians(center[1]);
+  const lng1 = toRadians(center[0]);
+  const sinLat1 = Math.sin(lat1);
+  const cosLat1 = Math.cos(lat1);
+  const sinAngularDistance = Math.sin(angularDistance);
+  const cosAngularDistance = Math.cos(angularDistance);
+  const sinBearing = Math.sin(bearingRadians);
+  const cosBearing = Math.cos(bearingRadians);
+
+  const sinLat2 = sinLat1 * cosAngularDistance + cosLat1 * sinAngularDistance * cosBearing;
+  const lat2 = Math.asin(Math.max(-1, Math.min(1, sinLat2)));
+  const lng2 =
+    lng1 +
+    Math.atan2(
+      sinBearing * sinAngularDistance * cosLat1,
+      cosAngularDistance - sinLat1 * Math.sin(lat2)
+    );
+
+  return createLngLat(
+    normalizeLongitude(toDegrees(lng2)),
+    Math.max(-MAX_WEB_MERCATOR_LAT, Math.min(MAX_WEB_MERCATOR_LAT, toDegrees(lat2)))
+  );
+}
+
+function buildCircleAreaRing(center: LngLat, edge: LngLat): LngLat[] {
+  const radiusMeters = haversineDistanceMeters(center, edge);
+  if (radiusMeters <= 0) {
+    return [];
+  }
+
+  const vertices: LngLat[] = [];
+  for (let index = 0; index < CIRCLE_SEGMENTS; index += 1) {
+    const bearingRadians = (index / CIRCLE_SEGMENTS) * Math.PI * 2;
+    vertices.push(destinationPoint(center, bearingRadians, radiusMeters));
+  }
+
+  return closeRing(vertices);
+}
+
+function areaCursorVertex(runtime: MeasureRuntimeState): LngLat | null {
+  if (runtime.areaComplete) {
+    return null;
+  }
+
+  return runtime.cursorVertex;
+}
+
+function areaEdgeVertex(runtime: MeasureRuntimeState): LngLat | null {
+  const committedEdge = runtime.vertices[1];
+  if (committedEdge) {
+    return committedEdge;
+  }
+
+  return areaCursorVertex(runtime);
+}
+
+function buildAreaRing(runtime: MeasureRuntimeState): LngLat[] {
+  if (runtime.mode !== "area") {
+    return [];
+  }
+
+  if (runtime.areaShape === "freeform") {
+    return buildFreeformAreaRing(runtime.vertices, areaCursorVertex(runtime));
+  }
+
+  const anchor = runtime.vertices[0];
+  if (!anchor) {
+    return [];
+  }
+
+  const edge = areaEdgeVertex(runtime);
+  if (!edge) {
+    return [];
+  }
+
+  if (runtime.areaShape === "rectangle") {
+    return buildRectangleAreaRing(anchor, edge);
+  }
+
+  return buildCircleAreaRing(anchor, edge);
+}
+
+function buildAreaLineVertices(
+  runtime: MeasureRuntimeState,
+  areaRing: readonly LngLat[]
+): LngLat[] {
+  if (areaRing.length >= 2) {
+    return cloneVertices(areaRing);
+  }
+
+  if (runtime.areaShape === "freeform") {
+    return buildPathVertices(runtime.vertices, areaCursorVertex(runtime));
+  }
+
+  return [];
+}
+
 function haversineDistanceMeters(from: LngLat, to: LngLat): number {
   const fromLat = toRadians(from[1]);
   const toLat = toRadians(to[1]);
@@ -112,8 +224,7 @@ function haversineDistanceMeters(from: LngLat, to: LngLat): number {
   const sinDeltaLat = Math.sin(deltaLat / 2);
   const sinDeltaLng = Math.sin(deltaLng / 2);
   const a =
-    sinDeltaLat * sinDeltaLat +
-    Math.cos(fromLat) * Math.cos(toLat) * sinDeltaLng * sinDeltaLng;
+    sinDeltaLat * sinDeltaLat + Math.cos(fromLat) * Math.cos(toLat) * sinDeltaLng * sinDeltaLng;
 
   return 2 * EARTH_RADIUS_METERS * Math.asin(Math.min(1, Math.sqrt(a)));
 }
@@ -127,7 +238,7 @@ function polylineDistanceKm(vertices: readonly LngLat[]): number | null {
   for (let index = 1; index < vertices.length; index += 1) {
     const previous = vertices[index - 1];
     const current = vertices[index];
-    if (!previous || !current) {
+    if (!(previous && current)) {
       continue;
     }
     totalMeters += haversineDistanceMeters(previous, current);
@@ -145,7 +256,7 @@ function polygonAreaSqKm(ring: readonly LngLat[]): number | null {
   for (let index = 1; index < ring.length; index += 1) {
     const previousVertex = ring[index - 1];
     const currentVertex = ring[index];
-    if (!previousVertex || !currentVertex) {
+    if (!(previousVertex && currentVertex)) {
       continue;
     }
 
@@ -157,6 +268,18 @@ function polygonAreaSqKm(ring: readonly LngLat[]): number | null {
   return Math.abs(twiceAreaMeters) / 2 / 1_000_000;
 }
 
+function canFinishAreaSelection(runtime: MeasureRuntimeState): boolean {
+  if (runtime.mode !== "area" || runtime.areaComplete) {
+    return false;
+  }
+
+  if (runtime.areaShape === "freeform") {
+    return runtime.vertices.length >= 3;
+  }
+
+  return buildAreaRing(runtime).length >= 4;
+}
+
 export function emptyMeasureSourceData(): MeasureSourceData {
   return {
     type: "FeatureCollection",
@@ -165,20 +288,27 @@ export function emptyMeasureSourceData(): MeasureSourceData {
 }
 
 export function buildMeasureState(runtime: MeasureRuntimeState): MeasureState {
-  const pathVertices = buildPathVertices(runtime.mode, runtime.vertices, runtime.cursorVertex);
-  const distanceKm = polylineDistanceKm(pathVertices);
+  const areaRing = buildAreaRing(runtime);
+  const distanceVertices =
+    runtime.mode === "area"
+      ? buildAreaLineVertices(runtime, areaRing)
+      : buildPathVertices(runtime.vertices, runtime.cursorVertex);
+
+  const distanceKm = polylineDistanceKm(distanceVertices);
 
   let areaSqKm: number | null = null;
   if (runtime.mode === "area") {
-    const areaRing = buildAreaRing(runtime.vertices, runtime.cursorVertex);
     areaSqKm = polygonAreaSqKm(areaRing);
   }
 
   return {
+    areaShape: runtime.areaShape,
     mode: runtime.mode,
     vertexCount: runtime.vertices.length,
     distanceKm,
     areaSqKm,
+    canFinishSelection: canFinishAreaSelection(runtime),
+    isSelectionComplete: runtime.mode === "area" && runtime.areaComplete,
   };
 }
 
@@ -188,25 +318,27 @@ export function buildMeasureSourceData(runtime: MeasureRuntimeState): MeasureSou
   }
 
   const features: MeasureFeature[] = [];
+  const areaRing = buildAreaRing(runtime);
 
-  if (runtime.mode === "area") {
-    const areaRing = buildAreaRing(runtime.vertices, runtime.cursorVertex);
-    if (areaRing.length >= 4) {
-      features.push({
-        type: "Feature",
-        properties: {
-          kind: "area",
-        },
-        geometry: {
-          type: "Polygon",
-          coordinates: [areaRing],
-        },
-      });
-    }
+  if (runtime.mode === "area" && areaRing.length >= 4) {
+    features.push({
+      type: "Feature",
+      properties: {
+        kind: "area",
+      },
+      geometry: {
+        type: "Polygon",
+        coordinates: [areaRing],
+      },
+    });
   }
 
-  const pathVertices = buildPathVertices(runtime.mode, runtime.vertices, runtime.cursorVertex);
-  if (pathVertices.length >= 2) {
+  const lineVertices =
+    runtime.mode === "area"
+      ? buildAreaLineVertices(runtime, areaRing)
+      : buildPathVertices(runtime.vertices, runtime.cursorVertex);
+
+  if (lineVertices.length >= 2) {
     features.push({
       type: "Feature",
       properties: {
@@ -214,7 +346,7 @@ export function buildMeasureSourceData(runtime: MeasureRuntimeState): MeasureSou
       },
       geometry: {
         type: "LineString",
-        coordinates: pathVertices,
+        coordinates: lineVertices,
       },
     });
   }

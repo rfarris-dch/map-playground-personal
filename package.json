@@ -7,7 +7,10 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "turbo run dev --parallel",
+    "dev": "turbo run dev --parallel --filter=@map-migration/api --filter=@map-migration/web",
+    "dev:all": "turbo run dev --parallel",
+    "dev:api": "bun run --cwd apps/api dev",
+    "dev:web": "bun run --cwd apps/web dev",
     "build": "turbo run build",
     "test": "turbo run test",
     "lint": "biome lint .",
@@ -18,7 +21,16 @@
     "format": "biome check --write .",
     "format:check": "biome check .",
     "check": "biome check .",
-    "sync:hyperscale": "bash ./scripts/refresh-hyperscale.sh"
+    "sync:hyperscale": "bash ./scripts/refresh-hyperscale.sh",
+    "init:parcels-schema": "bash ./scripts/init-parcels-schema.sh",
+    "load:parcels-canonical": "bash ./scripts/load-parcels-canonical.sh",
+    "tiles:build:parcels": "bash ./scripts/build-parcels-draw-pmtiles.sh",
+    "sync:parcels": "bash ./scripts/refresh-parcels.sh",
+    "tiles:publish:parcels": "bun run ./scripts/publish-parcels-manifest.ts --dataset=parcels-draw-v1",
+    "tiles:rollback:parcels": "bun run ./scripts/rollback-parcels-manifest.ts --dataset=parcels-draw-v1",
+    "dev:pipeline-monitor": "bun run --cwd apps/pipeline-monitor dev",
+    "build:pipeline-monitor": "bun run --cwd apps/pipeline-monitor build",
+    "typecheck:pipeline-monitor": "bun run --cwd apps/pipeline-monitor typecheck"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",

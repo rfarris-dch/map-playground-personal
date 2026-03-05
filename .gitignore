@@ -6,6 +6,9 @@ dist
 build
 .output
 .turbo
+.cache
+var
+apps/web/public/tiles
 coverage
 
 # environment

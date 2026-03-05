@@ -13,9 +13,9 @@ Use it with `the-research.md` (full plan) to see what is done vs what is next.
 
 ## Snapshot (Current)
 
-- Date: 2026-03-01
+- Date: 2026-03-02
 - Workspace status: Bun monorepo with Turbo task graph and passing checks.
-- Quality gates: `bun run typecheck`, `bun run sync:hyperscale`, and `apps/api bun run test` pass.
+- Quality gates: `bun run typecheck` and `bun run test` pass.
 
 ## Milestones Completed (Mapped To Plan)
 
@@ -61,6 +61,31 @@ Use it with `the-research.md` (full plan) to see what is done vs what is next.
 - Completed: map controls (navigation, scale, fullscreen) are mounted through `IMap.addControl/removeControl`.
 - Completed: facilities overlays now support visibility toggles with per-perspective status HUD and legend.
 - Completed: a feature-owned measure module (`features/measure`) now supports distance and area modes with map overlay + toolbar.
+- Completed: parcel contracts added for detail, lookup, and AOI enrichment (`bbox|polygon|county|tileSet`) with profile + geometry mode controls.
+- Completed: parcel API slice implemented with DDD split (`parcels.route.ts`, `parcels.repo.ts`, `parcels.mapper.ts`).
+- Completed: parcel endpoints added: detail (`GET /api/geo/parcels/:parcel-id`), lookup (`POST /api/geo/parcels/lookup`), enrich (`POST /api/geo/parcels/enrich`).
+- Completed: parcel API guardrails enforce AOI caps, tile-set limits, page-size clamping, cursor paging, and request-id propagation.
+- Completed: parcel mapper tests added and passing in `apps/api/test/geo/parcels/parcels-mapper.test.ts`.
+- Completed: parcel sync loop wiring added to API runtime (`AUTO_PARCELS_SYNC*` controls) with startup-fail option.
+- Completed: parcel sync script added (`scripts/refresh-parcels.ts` + `scripts/refresh-parcels.sh`) with Regrid provider assertion, CoreLogic host blocking, and state-partition extraction.
+- Completed: PMTiles publish/rollback utilities added (`scripts/publish-parcels-manifest.ts`, `scripts/rollback-parcels-manifest.ts`) with immutable version paths and latest-pointer manifests.
+- Completed: canonical parcel schema DDL added (`scripts/sql/parcels-canonical-schema.sql`) with non-partitioned `parcel_current.parcels` and metadata/checkpoint tables.
+- Completed: schema bootstrap script added (`bun run init:parcels-schema`).
+- Completed: catalog-governed web layer runtime module added (`features/layers/layer-runtime.*`) and facilities toggles now flow through runtime gating.
+- Completed: map-engine now supports PMTiles protocol registration lifecycle (`registerPmtilesProtocol`) and exposes layer/source visibility helpers needed by vector parcel layers.
+- Completed: parcel web feature slice added (`features/parcels`) with PMTiles source mounting, feature-state hover/select, guardrail gating, and status formatting.
+- Completed: parcel controls + parcel detail drawer are wired in `app.vue` with TanStack Query detail fetch and full attributes table rendering.
+- Completed: parcel layer is registered under catalog runtime as `property.parcels` with runtime visibility + stress-governor signaling.
+- Completed: production load/swap job added (`scripts/load-parcels-canonical.sh`) to stage NDJSON, run QA gates, and atomically promote a fresh canonical table into `parcel_current.parcels`.
+- Completed: nationwide draw-tile build job added (`scripts/build-parcels-draw-pmtiles.sh`) to stream canonical geometry into Tippecanoe and convert MBTiles -> PMTiles.
+- Completed: parcels refresh orchestration now runs end-to-end (`scripts/refresh-parcels.sh`): extract -> canonical load/swap -> PMTiles build -> manifest publish.
+- Completed: tile publish/rollback now normalizes URL paths before filesystem joins, preventing accidental writes to `/tiles` at filesystem root.
+- Completed: PMTiles publish hashing is now stream-based (no full-file `readFileSync` memory spike on large nationwide artifacts).
+- Completed: tile builder schema metadata path now follows the active snapshot root (`PARCEL_SYNC_OUTPUT_DIR`) and is explicitly passed through orchestrator.
+- Completed: tile manifest now records `ingestionRunId`, and parcel detail API enforces optional ingestion-run consistency via `x-parcel-ingestion-run-id`.
+- Completed: `tileSet` AOI enrich now uses exact tile-footprint multipolygon intersection (not bbox superset).
+- Completed: parcel metadata tables now use text run IDs and are populated on load (`parcel_meta.ingestion_runs`, `parcel_meta.ingestion_checkpoints`).
+- Completed: default draw tile profile is now `thin` (full attributes continue through API detail/enrich).
 
 ## Current APIs
 
@@ -68,8 +93,11 @@ Use it with `the-research.md` (full plan) to see what is done vs what is next.
 - `GET /api/health`
 - `GET /api/geo/facilities?bbox=west,south,east,north&perspective=colocation|hyperscale&limit=number`
 - `GET /api/geo/facilities/:facility-id?perspective=colocation|hyperscale`
+- `GET /api/geo/parcels/:parcel-id?includeGeometry=none|centroid|simplified|full&profile=analysis_v1|full_170`
+- `POST /api/geo/parcels/lookup`
+- `POST /api/geo/parcels/enrich`
 
-## Data Pipeline Status (2026-03-01)
+## Data Pipeline Status (2026-03-02)
 
 - Mirror definition: `mirror.*` is a raw MySQL-to-Postgres replica schema (source-aligned tables used as staging input for spatial/serve layers).
 - Hyperscale parity status:
@@ -84,6 +112,26 @@ Use it with `the-research.md` (full plan) to see what is done vs what is next.
 - `AUTO_HYPERSCALE_SYNC_STARTUP_REQUIRED=1` fails API startup if first sync fails.
 - Last verified run: `bun run sync:hyperscale` exited `0` on 2026-03-01 with mirror parity preserved and `serve.hyperscale_site=1535`.
 - Semantic model alignment: hyperscale now emits `leased|operational|under_construction|planned|unknown`.
+- Parcels sync runtime controls:
+- `AUTO_PARCELS_SYNC=1` enables startup + interval parcel refresh loop.
+- `AUTO_PARCELS_SYNC_MODE=external|in-process` controls whether API runs sync internally (default: `external` in production, `in-process` in non-production).
+- `AUTO_PARCELS_SYNC_INTERVAL_SECONDS` controls cadence (default weekly interval).
+- `AUTO_PARCELS_SYNC_STARTUP_REQUIRED=1` blocks API startup when first parcels sync fails.
+- Parcels extraction tooling:
+- `bun run sync:parcels` runs state-partition ArcGIS extraction into `PARCEL_SYNC_OUTPUT_DIR` (default `var/parcels-sync`).
+- Sync hard-fails if provider metadata does not identify Regrid.
+- End-to-end orchestration:
+- `bun run sync:parcels` now runs the full pipeline (extract + load/swap + build + publish) in one command.
+- Extraction supports deterministic run IDs (`--run-id=<value>`) and output-dir alias (`--out-dir=`) in `scripts/refresh-parcels.ts`.
+- Loader conversion path for ArcGIS rings is now PostGIS-compatible (`ST_BuildArea` over parsed rings); no dependency on `ST_GeomFromESRIJSON`.
+- Last verified end-to-end smoke run: `RUN_ID=smoke-20260302T021412Z bun run sync:parcels -- --states=DC --max-pages-per-state=1` completed successfully.
+- Smoke publish artifacts verified:
+- `apps/web/public/tiles/parcels-draw-v1/latest.json`
+- `apps/web/public/tiles/parcels-draw-v1/20260302.fcdcad2e.pmtiles`
+- Smoke canonical verification: `parcel_current.parcels` row count `2000`, null-geometry count `0`, invalid-geometry count `0`.
+- PMTiles publish tooling:
+- `bun run tiles:publish:parcels -- --pmtiles-path=<file>` writes immutable version and updates `latest.json`.
+- `bun run tiles:rollback:parcels` re-points `latest.json` to the previous published version.
 
 ### Facilities Endpoint Behavior
 
@@ -112,6 +160,10 @@ Use it with `the-research.md` (full plan) to see what is done vs what is next.
 - Facilities interactions are mode-gated so measurement mode suppresses facility hover/click selection.
 - Layer visibility toggles can halt fetch/render for each perspective via `setVisible()`.
 - Distance/area measurement overlay is available with clear + live metric readouts.
+- Parcel PMTiles draw layer is mounted with `pid` promoteId, hover/select feature-state, and click-to-detail flow.
+- Parcel toggle UI is available and routed through layer runtime visibility controls.
+- Parcel guardrails enforce viewport-width and predicted-tile caps before rendering.
+- Parcel detail drawer renders lineage/meta plus full attribute payload key/value list from `full_170` detail responses.
 
 ## Architecture And Conventions Applied
 
@@ -124,13 +176,14 @@ Use it with `the-research.md` (full plan) to see what is done vs what is next.
 
 ## Known Gaps Relative To Full Plan
 
-- Not implemented yet: broader endpoint classes beyond current facilities/health slice.
+- Not implemented yet: enrichment bundle caching layer (Redis/object-store backed) for AOI analysis prefetch.
+- Not implemented yet: dedicated parcel overlay/stats analysis endpoints beyond detail/lookup/enrich.
+- Not implemented yet: scheduler deployment wiring for unattended nightly/weekly execution in the target runtime environment.
 
 ## Recommended Next Slice
 
-- Add county boundary + metrics slice for area-level analysis.
-- Add parcel/PMTiles overlay using the same visibility + interaction gating used for facilities.
-- Add layer-catalog/style invariant wiring in CI for deterministic ordering.
+- Deploy scheduler wiring (cron/job runner) that invokes `bun run sync:parcels` on your desired cadence.
+- Add AOI enrichment bundle cache and analysis overlay/stats endpoints for spatial tools.
 
 ## Key Files To Read First
 
@@ -138,10 +191,20 @@ Use it with `the-research.md` (full plan) to see what is done vs what is next.
 - `/Users/robertfarris/map/apps/api/src/geo/facilities/facilities.repo.ts`
 - `/Users/robertfarris/map/apps/api/src/geo/facilities/facilities.mapper.ts`
 - `/Users/robertfarris/map/apps/web/src/features/facilities/facilities.layer.ts`
+- `/Users/robertfarris/map/apps/web/src/features/layers/layer-runtime.service.ts`
+- `/Users/robertfarris/map/apps/web/src/features/parcels/parcels.layer.ts`
+- `/Users/robertfarris/map/apps/web/src/features/parcels/parcels.service.ts`
+- `/Users/robertfarris/map/apps/web/src/features/parcels/components/parcels-controls.vue`
+- `/Users/robertfarris/map/apps/web/src/features/parcels/parcel-detail/detail.ts`
+- `/Users/robertfarris/map/apps/web/src/features/parcels/parcel-detail/components/parcel-detail-drawer.vue`
 - `/Users/robertfarris/map/apps/web/src/features/facilities/facility-detail/detail.ts`
 - `/Users/robertfarris/map/apps/web/src/features/facilities/facility-detail/components/facility-detail-drawer.vue`
 - `/Users/robertfarris/map/apps/web/src/lib/api-client.ts`
+- `/Users/robertfarris/map/apps/api/src/geo/parcels/parcels.route.ts`
+- `/Users/robertfarris/map/apps/api/src/geo/parcels/parcels.repo.ts`
+- `/Users/robertfarris/map/apps/api/src/geo/parcels/parcels.mapper.ts`
 - `/Users/robertfarris/map/packages/contracts/src/index.ts`
+- `/Users/robertfarris/map/scripts/refresh-parcels.ts`
 - `/Users/robertfarris/map/docs/architecture/ddd.qmd`
 
 ## Quick Verification Commands
@@ -150,5 +213,10 @@ Use it with `the-research.md` (full plan) to see what is done vs what is next.
 - `bun run typecheck`
 - `bun run build`
 - `bun run sync:hyperscale`
+- `bun run sync:parcels -- --states=TX --max-pages-per-state=2`
+- `bun run load:parcels-canonical -- ./var/parcels-sync/<run-id>`
+- `bun run tiles:build:parcels -- <run-id>`
+- `bun run tiles:publish:parcels -- --pmtiles-path=/abs/path/parcels.pmtiles`
 - `bun --filter @map-migration/api dev`
 - `curl -i "http://localhost:3001/api/geo/facilities?bbox=-125,24,-66,50&limit=10"`
+- `curl -i "http://localhost:3001/api/geo/parcels/<parcel-id>?includeGeometry=centroid&profile=full_170"`

@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseBooleanFlag, parseIntervalSecondsAsMs } from "../config/env-parsing.service";
 import type {
   HyperscaleSyncConfig,
   HyperscaleSyncController,
@@ -26,36 +27,6 @@ interface HyperscaleSyncRuntimeState {
   isRunning: boolean;
 }
 
-function parseBooleanFlag(value: string | undefined, defaultValue: boolean): boolean {
-  if (!value) {
-    return defaultValue;
-  }
-
-  const normalized = value.trim().toLowerCase();
-  if (normalized === "0" || normalized === "false" || normalized === "off" || normalized === "no") {
-    return false;
-  }
-
-  if (normalized === "1" || normalized === "true" || normalized === "on" || normalized === "yes") {
-    return true;
-  }
-
-  return defaultValue;
-}
-
-function parseIntervalMilliseconds(value: string | undefined, defaultSeconds: number): number {
-  if (!value) {
-    return defaultSeconds * 1000;
-  }
-
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return defaultSeconds * 1000;
-  }
-
-  return Math.floor(parsed * 1000);
-}
-
 function buildConfig(): HyperscaleSyncConfig {
   const serviceFilePath = fileURLToPath(import.meta.url);
   const serviceDirectory = dirname(serviceFilePath);
@@ -64,10 +35,10 @@ function buildConfig(): HyperscaleSyncConfig {
 
   return {
     enabled: parseBooleanFlag(process.env.AUTO_HYPERSCALE_SYNC, true),
-    intervalMs: parseIntervalMilliseconds(process.env.AUTO_HYPERSCALE_SYNC_INTERVAL_SECONDS, 300),
+    intervalMs: parseIntervalSecondsAsMs(process.env.AUTO_HYPERSCALE_SYNC_INTERVAL_SECONDS, 300),
     requireStartupSuccess: parseBooleanFlag(
       process.env.AUTO_HYPERSCALE_SYNC_STARTUP_REQUIRED,
-      true
+      false
     ),
     projectRoot,
     syncScriptPath,
@@ -141,7 +112,17 @@ export async function startHyperscaleSyncLoop(): Promise<HyperscaleSyncControlle
   }
 
   if (!existsSync(config.syncScriptPath)) {
-    throw new Error(`[api] hyperscale sync script not found: ${config.syncScriptPath}`);
+    const message = `[api] hyperscale sync script not found: ${config.syncScriptPath}`;
+    if (config.requireStartupSuccess) {
+      throw new Error(message);
+    }
+
+    console.warn(`${message}; startup continues because startupRequired=false`);
+    return {
+      stop(): void {
+        return;
+      },
+    };
   }
 
   const runtimeState: HyperscaleSyncRuntimeState = {
@@ -182,7 +163,13 @@ export async function startHyperscaleSyncLoop(): Promise<HyperscaleSyncControlle
     }
   };
 
-  await runCycle("startup", config.requireStartupSuccess);
+  if (config.requireStartupSuccess) {
+    await runCycle("startup", true);
+  } else {
+    runCycle("startup", false).catch((error) => {
+      console.error("[api] hyperscale auto-sync startup failure", error);
+    });
+  }
 
   runtimeState.intervalHandle = setInterval(() => {
     runCycle("interval", false).catch((error) => {

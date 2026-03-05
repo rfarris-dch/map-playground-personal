@@ -46,6 +46,56 @@ function findFirstLabelLayerId(map: IMap): string | undefined {
   return undefined;
 }
 
+function readLayerId(layer: unknown): string | null {
+  if (typeof layer !== "object" || layer === null) {
+    return null;
+  }
+
+  const layerId = Reflect.get(layer, "id");
+  if (typeof layerId !== "string" || layerId.trim().length === 0) {
+    return null;
+  }
+
+  return layerId;
+}
+
+function readSourceLayerId(layer: unknown): string | null {
+  if (typeof layer !== "object" || layer === null) {
+    return null;
+  }
+
+  const sourceLayerId = Reflect.get(layer, "source-layer");
+  if (typeof sourceLayerId !== "string" || sourceLayerId.trim().length === 0) {
+    return null;
+  }
+
+  return sourceLayerId;
+}
+
+function hideBasemapBoundaryLines(map: IMap): void {
+  const style = map.getStyle();
+  const styleLayers = style.layers ?? [];
+
+  for (const styleLayer of styleLayers) {
+    const layerType = Reflect.get(styleLayer, "type");
+    if (layerType !== "line") {
+      continue;
+    }
+
+    const sourceLayerId = readSourceLayerId(styleLayer);
+    if (sourceLayerId === null || !sourceLayerId.toLowerCase().includes("boundar")) {
+      continue;
+    }
+
+    const layerId = readLayerId(styleLayer);
+    if (layerId === null) {
+      continue;
+    }
+
+    map.setLayerVisibility(layerId, false);
+  }
+}
+
 function add3DBuildings(map: IMap, profile: BasemapProfile): void {
   const sourceId = findBuildingSourceId(map, profile);
   const firstLabelLayerId = findFirstLabelLayerId(map);
@@ -78,6 +128,7 @@ export function mountBasemap3DBuildings(
 ): () => void {
   const onLoad = (): void => {
     map.off("load", onLoad);
+    hideBasemapBoundaryLines(map);
     add3DBuildings(map, profile);
   };
 

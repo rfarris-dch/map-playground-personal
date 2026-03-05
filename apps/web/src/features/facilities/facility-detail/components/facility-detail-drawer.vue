@@ -1,8 +1,8 @@
 <script setup lang="ts">
   import Button from "@/components/ui/button/button.vue";
+  import type { SelectedFacilityRef } from "../../facilities.types";
   import { formatNullableMw } from "../detail.service";
   import type { FacilityDetailPayload } from "../detail.types";
-  import type { SelectedFacilityRef } from "../../facilities.types";
 
   interface FacilityDetailDrawerProps {
     readonly detail: FacilityDetailPayload | null;

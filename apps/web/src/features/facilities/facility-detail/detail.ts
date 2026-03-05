@@ -1,9 +1,9 @@
 import type { FacilityPerspective } from "@map-migration/contracts";
 import { useQuery } from "@tanstack/vue-query";
 import { computed, type Ref } from "vue";
+import type { SelectedFacilityRef } from "../facilities.types";
 import { fetchFacilityDetail } from "./detail.api";
 import { unwrapFacilityDetailResult } from "./detail.service";
-import type { SelectedFacilityRef } from "../facilities.types";
 
 type FacilityDetailQueryKey = readonly [
   "facility-detail",

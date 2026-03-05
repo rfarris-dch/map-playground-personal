@@ -213,7 +213,7 @@ export function mountFacilitiesLayer(
   };
 
   const onMoveEnd = (): void => {
-    if (!state.ready || !state.visible) {
+    if (!(state.ready && state.visible)) {
       return;
     }
 
@@ -221,7 +221,7 @@ export function mountFacilitiesLayer(
   };
 
   const onClick = (event: MapClickEvent): void => {
-    if (!state.ready || !state.visible || !isInteractionEnabled()) {
+    if (!(state.ready && state.visible && isInteractionEnabled())) {
       return;
     }
 

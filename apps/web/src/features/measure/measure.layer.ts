@@ -5,11 +5,14 @@ import {
   emptyMeasureSourceData,
 } from "./measure.service";
 import type {
+  MeasureAreaShape,
   MeasureLayerController,
   MeasureLayerOptions,
   MeasureMode,
   MeasureRuntimeState,
 } from "./measure.types";
+
+const FREEFORM_CLOSE_HITBOX_PX = 10;
 
 function initialRuntimeState(): MeasureRuntimeState {
   return {
@@ -17,7 +20,58 @@ function initialRuntimeState(): MeasureRuntimeState {
     mode: "off",
     vertices: [],
     cursorVertex: null,
+    areaShape: "freeform",
+    areaComplete: false,
   };
+}
+
+function eventVertex(event: MapClickEvent | MapPointerEvent): [number, number] {
+  return [event.lngLat.lng, event.lngLat.lat];
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function featureVertexIndex(feature: unknown): number | null {
+  if (!isRecord(feature)) {
+    return null;
+  }
+
+  const properties = Reflect.get(feature, "properties");
+  if (!isRecord(properties)) {
+    return null;
+  }
+
+  const vertexIndex = Reflect.get(properties, "vertexIndex");
+  if (typeof vertexIndex !== "number" || !Number.isFinite(vertexIndex)) {
+    return null;
+  }
+
+  return Math.floor(vertexIndex);
+}
+
+function shouldCloseFreeformSelection(
+  map: IMap,
+  vertexLayerId: string,
+  event: MapClickEvent,
+  vertices: readonly [number, number][]
+): boolean {
+  if (vertices.length < 3) {
+    return false;
+  }
+
+  const [x, y] = event.point;
+  const paddedTarget: [[number, number], [number, number]] = [
+    [x - FREEFORM_CLOSE_HITBOX_PX, y - FREEFORM_CLOSE_HITBOX_PX],
+    [x + FREEFORM_CLOSE_HITBOX_PX, y + FREEFORM_CLOSE_HITBOX_PX],
+  ];
+
+  return map
+    .queryRenderedFeatures(paddedTarget, {
+      layers: [vertexLayerId],
+    })
+    .some((feature) => featureVertexIndex(feature) === 0);
 }
 
 export function mountMeasureLayer(
@@ -47,6 +101,7 @@ export function mountMeasureLayer(
   const clear = (): void => {
     state.vertices = [];
     state.cursorVertex = null;
+    state.areaComplete = false;
     syncSource();
   };
 
@@ -57,6 +112,47 @@ export function mountMeasureLayer(
 
     state.mode = mode;
     clear();
+  };
+
+  const setAreaShape = (shape: MeasureAreaShape): void => {
+    if (state.areaShape === shape) {
+      return;
+    }
+
+    state.areaShape = shape;
+    clear();
+  };
+
+  const finishSelection = (): void => {
+    if (!state.ready || state.mode !== "area" || state.areaComplete) {
+      return;
+    }
+
+    if (state.areaShape === "freeform") {
+      if (state.vertices.length < 3) {
+        return;
+      }
+
+      state.areaComplete = true;
+      state.cursorVertex = null;
+      syncSource();
+      return;
+    }
+
+    if (state.vertices.length === 1 && state.cursorVertex !== null) {
+      const anchor = state.vertices[0];
+      if (anchor) {
+        state.vertices = [anchor, [state.cursorVertex[0], state.cursorVertex[1]]];
+      }
+    }
+
+    if (state.vertices.length < 2) {
+      return;
+    }
+
+    state.areaComplete = true;
+    state.cursorVertex = null;
+    syncSource();
   };
 
   const onLoad = (): void => {
@@ -111,7 +207,61 @@ export function mountMeasureLayer(
       return;
     }
 
-    state.vertices.push([event.lngLat.lng, event.lngLat.lat]);
+    const clickedVertex = eventVertex(event);
+
+    if (state.mode === "distance") {
+      state.vertices.push(clickedVertex);
+      syncSource();
+      return;
+    }
+
+    if (state.areaShape === "freeform") {
+      if (state.areaComplete) {
+        state.vertices = [clickedVertex];
+        state.areaComplete = false;
+        state.cursorVertex = null;
+        syncSource();
+        return;
+      }
+
+      if (shouldCloseFreeformSelection(map, vertexLayerId, event, state.vertices)) {
+        state.areaComplete = true;
+        state.cursorVertex = null;
+        syncSource();
+        return;
+      }
+
+      state.vertices.push(clickedVertex);
+      syncSource();
+      return;
+    }
+
+    if (state.areaComplete || state.vertices.length >= 2) {
+      state.vertices = [clickedVertex];
+      state.areaComplete = false;
+      state.cursorVertex = clickedVertex;
+      syncSource();
+      return;
+    }
+
+    if (state.vertices.length === 0) {
+      state.vertices.push(clickedVertex);
+      state.cursorVertex = clickedVertex;
+      syncSource();
+      return;
+    }
+
+    const anchor = state.vertices[0];
+    if (!anchor) {
+      state.vertices = [clickedVertex];
+      state.cursorVertex = clickedVertex;
+      syncSource();
+      return;
+    }
+
+    state.vertices = [anchor, clickedVertex];
+    state.areaComplete = true;
+    state.cursorVertex = null;
     syncSource();
   };
 
@@ -120,12 +270,24 @@ export function mountMeasureLayer(
       return;
     }
 
-    state.cursorVertex = [event.lngLat.lng, event.lngLat.lat];
+    if (state.mode === "area" && state.areaComplete) {
+      return;
+    }
+
+    state.cursorVertex = eventVertex(event);
     syncSource();
   };
 
   const onPointerLeave = (): void => {
-    if (!state.ready || state.mode === "off" || state.cursorVertex === null) {
+    if (!state.ready || state.mode === "off") {
+      return;
+    }
+
+    if (state.mode === "area" && state.areaComplete) {
+      return;
+    }
+
+    if (state.cursorVertex === null) {
       return;
     }
 
@@ -142,6 +304,8 @@ export function mountMeasureLayer(
 
   return {
     clear,
+    finishSelection,
+    setAreaShape,
     setMode,
     destroy(): void {
       clear();

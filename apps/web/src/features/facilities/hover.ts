@@ -128,6 +128,10 @@ export function mountFacilitiesHover(
   });
   let hoverTarget: HoverTarget | null = null;
 
+  const queryablePointLayerIds = (): string[] => {
+    return pointLayerIds.filter((layerId) => map.hasLayer(layerId));
+  };
+
   const clear = (): void => {
     if (hoverTarget !== null) {
       map.setFeatureState(
@@ -153,8 +157,14 @@ export function mountFacilitiesHover(
       return;
     }
 
+    const layers = queryablePointLayerIds();
+    if (layers.length === 0) {
+      clear();
+      return;
+    }
+
     const features = map.queryRenderedFeatures(event.point, {
-      layers: pointLayerIds,
+      layers,
     });
 
     const screenPoint: readonly [number, number] = [event.point[0], event.point[1]];
