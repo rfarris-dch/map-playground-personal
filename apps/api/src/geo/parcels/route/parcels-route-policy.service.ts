@@ -1,5 +1,6 @@
 import type { BBox, ParcelAoi } from "@map-migration/contracts";
 import { parsePositiveFloatFlag, parsePositiveIntFlag } from "@/config/env-parsing.service";
+import { resolvePolygonBbox } from "@/http/polygon-bbox.service";
 import type { TileCoordinate } from "./parcels-route-policy.service.types";
 
 export const PARCELS_MAX_TILESET_TILES = parsePositiveIntFlag(
@@ -102,5 +103,15 @@ export function resolveTileSetPolygonGeometry(aoi: Extract<ParcelAoi, { type: "t
   return {
     bbox: mergeBboxes(bboxes),
     geometryText: JSON.stringify(geometry),
+  };
+}
+
+export function resolvePolygonGeometry(aoi: Extract<ParcelAoi, { type: "polygon" }>): {
+  readonly bbox: BBox;
+  readonly geometryText: string;
+} {
+  return {
+    bbox: resolvePolygonBbox(aoi.geometry),
+    geometryText: JSON.stringify(aoi.geometry),
   };
 }

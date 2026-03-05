@@ -39,6 +39,7 @@ export function registerFacilitiesTableRoute<E extends Env>(app: Hono<E>): void 
       {
         defaultPageSize: 100,
         maxPageSize: 500,
+        maxOffset: 1_000_000,
       }
     );
 

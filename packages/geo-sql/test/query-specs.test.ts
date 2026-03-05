@@ -42,4 +42,21 @@ describe("geo-sql query specs", () => {
     expect(hyperscale.endpointClass).toBe("feature-collection");
     expect(colocation.maxRows).toBe(hyperscale.maxRows);
   });
+
+  it("filters facilities queries to rows with provider ids and safe provider names", () => {
+    const names: Parameters<typeof getQuerySpec>[0][] = [
+      "facilities_bbox_colocation",
+      "facilities_bbox_hyperscale",
+      "facilities_polygon_colocation",
+      "facilities_polygon_hyperscale",
+      "facility_detail_colocation",
+      "facility_detail_hyperscale",
+    ];
+
+    for (const name of names) {
+      const spec = getQuerySpec(name);
+      expect(spec.sql).toContain("provider_id IS NOT NULL");
+      expect(spec.sql).toContain("COALESCE(NULLIF(BTRIM(");
+    }
+  });
 });

@@ -75,7 +75,7 @@ export function createApiApp(options: CreateApiAppOptions = {}): Hono {
   app.use(
     "*",
     requestId({
-      headerName: "",
+      headerName: ApiHeaders.requestId,
       limitLength: REQUEST_ID_MAX_LENGTH,
       generator: resolveInboundRequestId,
     })

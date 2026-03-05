@@ -48,7 +48,25 @@ export function resolvePaginationParams(
   }
 
   const pageSize = Math.min(requestedPageSize, options.maxPageSize);
+  if (pageValue > Math.floor(Number.MAX_SAFE_INTEGER / pageSize)) {
+    return {
+      ok: false,
+      message: "page query param is too large",
+    };
+  }
+
   const offset = pageValue * pageSize;
+  if (
+    typeof options.maxOffset === "number" &&
+    Number.isFinite(options.maxOffset) &&
+    options.maxOffset >= 0 &&
+    offset > Math.floor(options.maxOffset)
+  ) {
+    return {
+      ok: false,
+      message: `pagination offset exceeds maximum of ${String(Math.floor(options.maxOffset))}`,
+    };
+  }
 
   return {
     ok: true,

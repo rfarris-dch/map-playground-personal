@@ -29,7 +29,7 @@ SELECT
   s.facility_id,
   s.facility_name,
   s.provider_id,
-  p."NAME" AS provider_name,
+  COALESCE(NULLIF(BTRIM(p."NAME"), ''), s.provider_id::text) AS provider_name,
   s.county_fips,
   s.commissioned_power_mw,
   s.commissioned_semantic,
@@ -41,6 +41,7 @@ LEFT JOIN mirror."HAWK_PROVIDER_PROFILE" AS p
 , bounds
 WHERE s.geom_3857 && bounds.bbox_3857
   AND ST_Intersects(s.geom_3857, bounds.bbox_3857)
+  AND s.provider_id IS NOT NULL
 LIMIT $5;`,
   },
   facilities_bbox_hyperscale: {
@@ -55,7 +56,7 @@ SELECT
   s.hyperscale_id AS facility_id,
   s.facility_name,
   s.provider_id,
-  p."NAME" AS provider_name,
+  COALESCE(NULLIF(BTRIM(p."NAME"), ''), s.provider_id::text) AS provider_name,
   s.county_fips,
   s.commissioned_power_mw,
   s.commissioned_semantic,
@@ -67,6 +68,7 @@ LEFT JOIN mirror."HAWK_PROVIDER_PROFILE" AS p
 , bounds
 WHERE s.geom_3857 && bounds.bbox_3857
   AND ST_Intersects(s.geom_3857, bounds.bbox_3857)
+  AND s.provider_id IS NOT NULL
 LIMIT $5;`,
   },
   facilities_polygon_colocation: {
@@ -81,7 +83,7 @@ SELECT
   f.facility_id,
   f.facility_name,
   f.provider_id,
-  p."NAME" AS provider_name,
+  COALESCE(NULLIF(BTRIM(p."NAME"), ''), f.provider_id::text) AS provider_name,
   f.county_fips,
   f.commissioned_power_mw,
   f.commissioned_semantic,
@@ -93,6 +95,7 @@ LEFT JOIN mirror."HAWK_PROVIDER_PROFILE" AS p
 , aoi
 WHERE f.geom_3857 && aoi.geom_3857
   AND ST_Intersects(f.geom_3857, aoi.geom_3857)
+  AND f.provider_id IS NOT NULL
 LIMIT $2;`,
   },
   facilities_polygon_hyperscale: {
@@ -107,7 +110,7 @@ SELECT
   h.hyperscale_id AS facility_id,
   h.facility_name,
   h.provider_id,
-  p."NAME" AS provider_name,
+  COALESCE(NULLIF(BTRIM(p."NAME"), ''), h.provider_id::text) AS provider_name,
   h.county_fips,
   h.commissioned_power_mw,
   h.commissioned_semantic,
@@ -119,6 +122,7 @@ LEFT JOIN mirror."HAWK_PROVIDER_PROFILE" AS p
 , aoi
 WHERE h.geom_3857 && aoi.geom_3857
   AND ST_Intersects(h.geom_3857, aoi.geom_3857)
+  AND h.provider_id IS NOT NULL
 LIMIT $2;`,
   },
   facility_detail_colocation: {
@@ -130,7 +134,7 @@ SELECT
   s.facility_id,
   s.facility_name,
   s.provider_id,
-  p."NAME" AS provider_name,
+  COALESCE(NULLIF(BTRIM(p."NAME"), ''), s.provider_id::text) AS provider_name,
   s.county_fips,
   s.commissioned_power_mw,
   s.planned_power_mw,
@@ -143,6 +147,7 @@ FROM serve.facility_site AS s
 LEFT JOIN mirror."HAWK_PROVIDER_PROFILE" AS p
   ON p."PROVIDER_PROFILE_ID"::text = s.provider_id::text
 WHERE s.facility_id = $1
+  AND s.provider_id IS NOT NULL
 LIMIT 1;`,
   },
   facility_detail_hyperscale: {
@@ -154,7 +159,7 @@ SELECT
   s.hyperscale_id AS facility_id,
   s.facility_name,
   s.provider_id,
-  p."NAME" AS provider_name,
+  COALESCE(NULLIF(BTRIM(p."NAME"), ''), s.provider_id::text) AS provider_name,
   s.county_fips,
   s.commissioned_power_mw,
   s.planned_power_mw,
@@ -167,6 +172,7 @@ FROM serve.hyperscale_site AS s
 LEFT JOIN mirror."HAWK_PROVIDER_PROFILE" AS p
   ON p."PROVIDER_PROFILE_ID"::text = s.provider_id::text
 WHERE s.hyperscale_id = $1
+  AND s.provider_id IS NOT NULL
 LIMIT 1;`,
   },
   county_metrics: {

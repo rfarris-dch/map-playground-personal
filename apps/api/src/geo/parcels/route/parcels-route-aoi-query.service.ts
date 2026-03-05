@@ -10,6 +10,7 @@ import {
   bboxExceedsLimits,
   PARCELS_MAX_POLYGON_JSON_CHARS,
   PARCELS_MAX_TILESET_TILES,
+  resolvePolygonGeometry,
   resolveTileSetPolygonGeometry,
 } from "@/geo/parcels/route/parcels-route-policy.service";
 import type { EnrichRowsResult } from "./parcels-route-aoi-query.service.types";
@@ -77,8 +78,16 @@ export async function queryEnrichRowsByAoi(
   }
 
   if (aoi.type === "polygon") {
-    const geometryText = JSON.stringify(aoi.geometry);
-    if (geometryText.length > PARCELS_MAX_POLYGON_JSON_CHARS) {
+    const polygonGeometry = resolvePolygonGeometry(aoi);
+
+    if (bboxExceedsLimits(polygonGeometry.bbox)) {
+      return {
+        ok: false,
+        response: rejectWithPolicyError(c, requestId, "polygon AOI exceeds configured bbox limits"),
+      };
+    }
+
+    if (polygonGeometry.geometryText.length > PARCELS_MAX_POLYGON_JSON_CHARS) {
       return {
         ok: false,
         response: rejectWithPolicyError(c, requestId, "polygon AOI payload is too large"),
@@ -87,7 +96,7 @@ export async function queryEnrichRowsByAoi(
 
     return {
       ok: true,
-      rows: await enrichParcelsByPolygon(geometryText, {
+      rows: await enrichParcelsByPolygon(polygonGeometry.geometryText, {
         includeGeometry,
         limit: queryLimit,
         cursor,

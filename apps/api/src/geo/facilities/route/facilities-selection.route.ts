@@ -14,6 +14,11 @@ import {
   facilitiesPostgisQueryError,
 } from "@/geo/facilities/route/facilities-route-errors.service";
 import { buildFacilitiesRouteMeta } from "@/geo/facilities/route/facilities-route-meta.service";
+import {
+  FACILITIES_SELECTION_MAX_POLYGON_JSON_CHARS,
+  facilitiesSelectionBboxExceedsLimits,
+  resolveFacilitiesSelectionGeometry,
+} from "@/geo/facilities/route/facilities-route-policy.service";
 import { queryFacilitiesByPolygon } from "@/geo/facilities/route/facilities-route-query.service";
 import { getOrCreateRequestId, jsonError, jsonOk, toDebugDetails } from "@/http/api-response";
 import { readJsonBody } from "@/http/json-request.service";
@@ -50,7 +55,25 @@ export function registerFacilitiesSelectionRoute<E extends Env>(app: Hono<E>): v
       });
     }
 
-    const geometryText = JSON.stringify(parsedRequest.data.geometry);
+    const geometry = resolveFacilitiesSelectionGeometry(parsedRequest.data.geometry);
+    if (geometry.geometryText.length > FACILITIES_SELECTION_MAX_POLYGON_JSON_CHARS) {
+      return jsonError(c, {
+        requestId,
+        httpStatus: 422,
+        code: "POLICY_REJECTED",
+        message: "selection polygon AOI payload is too large",
+      });
+    }
+
+    if (facilitiesSelectionBboxExceedsLimits(geometry.bbox)) {
+      return jsonError(c, {
+        requestId,
+        httpStatus: 422,
+        code: "POLICY_REJECTED",
+        message: "selection polygon AOI exceeds configured bbox limits",
+      });
+    }
+
     const perspectives = dedupePerspectives(parsedRequest.data.perspectives);
     const countsByPerspective: Record<FacilityPerspective, number> = {
       colocation: 0,
@@ -67,7 +90,7 @@ export function registerFacilitiesSelectionRoute<E extends Env>(app: Hono<E>): v
       const maxRows = getFacilitiesPolygonMaxRows(perspective);
       const limit = Math.min(parsedRequest.data.limitPerPerspective, maxRows);
       const queryResult = await queryFacilitiesByPolygon({
-        geometryGeoJson: geometryText,
+        geometryGeoJson: geometry.geometryText,
         limit,
         perspective,
       });

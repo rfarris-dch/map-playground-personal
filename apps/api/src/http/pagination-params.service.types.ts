@@ -10,6 +10,7 @@ export type ResolvePaginationResult =
 
 export interface ResolvePaginationOptions {
   readonly defaultPageSize: number;
+  readonly maxOffset?: number;
   readonly maxPageSize: number;
 }
 
