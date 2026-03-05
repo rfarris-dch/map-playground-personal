@@ -48,7 +48,7 @@ function arrayAtPath(root: unknown, path: readonly string[]): readonly unknown[]
 
 async function loadOpenApiDocument(): Promise<unknown> {
   const openApiFile = Bun.file(
-    new URL("../../../docs/architecture/spatial-analysis-openapi.yaml", import.meta.url)
+    new URL("./fixtures/spatial-analysis-openapi.yaml", import.meta.url)
   );
   const openApiText = await openApiFile.text();
   return Bun.YAML.parse(openApiText);

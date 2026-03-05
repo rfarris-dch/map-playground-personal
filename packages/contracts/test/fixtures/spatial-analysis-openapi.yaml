@@ -1,0 +1,867 @@
+openapi: 3.1.0
+info:
+  title: datacenterHawk Spatial Analysis API
+  version: 1.0.0
+  description: >
+    Executable contract subset for the runtime health, parcels, and facilities
+    endpoints currently mounted by the API application.
+
+servers:
+  - url: /
+
+tags:
+  - name: Health
+  - name: Parcels
+  - name: Facilities
+
+components:
+  parameters:
+    RequestIdHeader:
+      name: x-request-id
+      in: header
+      required: false
+      schema:
+        type: string
+        minLength: 1
+      description: Optional request correlation id echoed back by the API.
+
+    ParcelIngestionRunIdHeader:
+      name: x-parcel-ingestion-run-id
+      in: header
+      required: false
+      schema:
+        type: string
+        minLength: 1
+      description: Expected parcel ingestion run id for optimistic consistency checks.
+
+  headers:
+    RequestIdHeader:
+      description: Request correlation id emitted on every response.
+      schema:
+        type: string
+        minLength: 1
+
+  schemas:
+    SourceMode:
+      type: string
+      enum: [pmtiles, postgis, arcgis-proxy, external-xyz]
+
+    Warning:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+
+    ApiError:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details: {}
+
+    ApiErrorResponse:
+      type: object
+      required: [status, requestId, error]
+      properties:
+        status:
+          const: error
+        requestId:
+          type: string
+          minLength: 1
+        error:
+          $ref: "#/components/schemas/ApiError"
+
+    ResponseMeta:
+      type: object
+      required: [requestId, sourceMode, dataVersion, generatedAt, recordCount, truncated, warnings]
+      properties:
+        requestId:
+          type: string
+          minLength: 1
+        sourceMode:
+          $ref: "#/components/schemas/SourceMode"
+        dataVersion:
+          type: string
+          minLength: 1
+        generatedAt:
+          type: string
+          format: date-time
+        recordCount:
+          type: integer
+          minimum: 0
+        truncated:
+          type: boolean
+        warnings:
+          type: array
+          items:
+            $ref: "#/components/schemas/Warning"
+        ingestionRunId:
+          type: string
+
+    BBox:
+      type: object
+      required: [west, south, east, north]
+      properties:
+        west:
+          type: number
+          minimum: -180
+          maximum: 180
+        south:
+          type: number
+          minimum: -90
+          maximum: 90
+        east:
+          type: number
+          minimum: -180
+          maximum: 180
+        north:
+          type: number
+          minimum: -90
+          maximum: 90
+
+    Geometry:
+      type: object
+      required: [type, coordinates]
+      properties:
+        type:
+          type: string
+        coordinates: {}
+
+    PolygonGeometry:
+      type: object
+      required: [type, coordinates]
+      properties:
+        type:
+          const: Polygon
+        coordinates:
+          type: array
+          minItems: 1
+          items:
+            type: array
+            minItems: 4
+            items:
+              type: array
+              minItems: 2
+              maxItems: 2
+              items:
+                type: number
+
+    ParcelGeometryMode:
+      type: string
+      enum: [none, centroid, simplified, full]
+
+    ParcelProfile:
+      type: string
+      enum: [analysis_v1, full_170]
+
+    ParcelAoi:
+      oneOf:
+        - $ref: "#/components/schemas/ParcelAoiBbox"
+        - $ref: "#/components/schemas/ParcelAoiPolygon"
+        - $ref: "#/components/schemas/ParcelAoiCounty"
+        - $ref: "#/components/schemas/ParcelAoiTileSet"
+
+    ParcelAoiBbox:
+      type: object
+      required: [type, bbox]
+      properties:
+        type:
+          const: bbox
+        bbox:
+          $ref: "#/components/schemas/BBox"
+
+    ParcelAoiPolygon:
+      type: object
+      required: [type, geometry]
+      properties:
+        type:
+          const: polygon
+        geometry:
+          $ref: "#/components/schemas/PolygonGeometry"
+
+    ParcelAoiCounty:
+      type: object
+      required: [type, geoid]
+      properties:
+        type:
+          const: county
+        geoid:
+          type: string
+          minLength: 1
+
+    ParcelAoiTileSet:
+      type: object
+      required: [type, z, tiles]
+      properties:
+        type:
+          const: tileSet
+        z:
+          type: integer
+          minimum: 0
+          maximum: 22
+        tiles:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [x, y]
+            properties:
+              x:
+                type: integer
+                minimum: 0
+              y:
+                type: integer
+                minimum: 0
+
+    ParcelLineage:
+      type: object
+      required: [source, sourceOid, ingestionRunId, sourceUpdatedAt]
+      properties:
+        source:
+          type: string
+        sourceOid:
+          type: integer
+          nullable: true
+        ingestionRunId:
+          type: string
+          nullable: true
+        sourceUpdatedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    ParcelFeatureProperties:
+      type: object
+      required: [parcelId, state2, geoid, attrs]
+      properties:
+        parcelId:
+          type: string
+        state2:
+          type: string
+          nullable: true
+          minLength: 2
+          maxLength: 2
+        geoid:
+          type: string
+          nullable: true
+        attrs:
+          type: object
+          additionalProperties: true
+
+    ParcelFeature:
+      type: object
+      required: [type, id, geometry, properties, lineage]
+      properties:
+        type:
+          const: Feature
+        id:
+          type: string
+        geometry:
+          nullable: true
+          oneOf:
+            - $ref: "#/components/schemas/Geometry"
+            - type: "null"
+        properties:
+          $ref: "#/components/schemas/ParcelFeatureProperties"
+        lineage:
+          $ref: "#/components/schemas/ParcelLineage"
+
+    ParcelResponseMeta:
+      allOf:
+        - $ref: "#/components/schemas/ResponseMeta"
+        - type: object
+          required: [profile, includeGeometry]
+          properties:
+            profile:
+              $ref: "#/components/schemas/ParcelProfile"
+            includeGeometry:
+              $ref: "#/components/schemas/ParcelGeometryMode"
+            aoiType:
+              type: string
+            nextCursor:
+              type: string
+              nullable: true
+
+    ParcelDetailResponse:
+      type: object
+      required: [feature, meta]
+      properties:
+        feature:
+          $ref: "#/components/schemas/ParcelFeature"
+        meta:
+          $ref: "#/components/schemas/ParcelResponseMeta"
+
+    ParcelsFeatureCollection:
+      type: object
+      required: [type, features, meta]
+      properties:
+        type:
+          const: FeatureCollection
+        features:
+          type: array
+          items:
+            $ref: "#/components/schemas/ParcelFeature"
+        meta:
+          $ref: "#/components/schemas/ParcelResponseMeta"
+
+    ParcelLookupRequest:
+      type: object
+      required: [parcelIds]
+      properties:
+        parcelIds:
+          type: array
+          minItems: 1
+          maxItems: 10000
+          items:
+            type: string
+            minLength: 1
+        profile:
+          $ref: "#/components/schemas/ParcelProfile"
+          default: analysis_v1
+        includeGeometry:
+          $ref: "#/components/schemas/ParcelGeometryMode"
+          default: none
+
+    ParcelEnrichRequest:
+      type: object
+      required: [aoi]
+      properties:
+        aoi:
+          $ref: "#/components/schemas/ParcelAoi"
+        profile:
+          $ref: "#/components/schemas/ParcelProfile"
+          default: analysis_v1
+        includeGeometry:
+          $ref: "#/components/schemas/ParcelGeometryMode"
+          default: centroid
+        pageSize:
+          type: integer
+          maximum: 100000
+          default: 20000
+        cursor:
+          type: string
+          nullable: true
+        format:
+          type: string
+          enum: [json]
+          default: json
+
+    FacilityPerspective:
+      type: string
+      enum: [colocation, hyperscale]
+
+    PointGeometry:
+      type: object
+      required: [type, coordinates]
+      properties:
+        type:
+          const: Point
+        coordinates:
+          type: array
+          minItems: 2
+          maxItems: 2
+          items:
+            type: number
+
+    FacilitiesFeatureProperties:
+      type: object
+      required:
+        - perspective
+        - facilityId
+        - facilityName
+        - providerId
+        - providerName
+        - countyFips
+        - commissionedPowerMw
+        - commissionedSemantic
+        - leaseOrOwn
+      properties:
+        perspective:
+          $ref: "#/components/schemas/FacilityPerspective"
+        facilityId:
+          type: string
+        facilityName:
+          type: string
+        providerId:
+          type: string
+        providerName:
+          type: string
+        countyFips:
+          type: string
+        commissionedPowerMw:
+          type: number
+          nullable: true
+        commissionedSemantic:
+          type: string
+          enum: [leased, operational, under_construction, planned, unknown]
+        leaseOrOwn:
+          type: string
+          enum: [lease, own, unknown]
+          nullable: true
+
+    FacilitiesFeature:
+      type: object
+      required: [type, id, geometry, properties]
+      properties:
+        type:
+          const: Feature
+        id:
+          oneOf:
+            - type: string
+            - type: number
+        geometry:
+          $ref: "#/components/schemas/PointGeometry"
+        properties:
+          $ref: "#/components/schemas/FacilitiesFeatureProperties"
+
+    FacilitiesFeatureCollection:
+      type: object
+      required: [type, features, meta]
+      properties:
+        type:
+          const: FeatureCollection
+        features:
+          type: array
+          items:
+            $ref: "#/components/schemas/FacilitiesFeature"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+
+    FacilitiesDetailProperties:
+      type: object
+      required:
+        - perspective
+        - facilityId
+        - facilityName
+        - providerId
+        - providerName
+        - countyFips
+        - commissionedSemantic
+        - leaseOrOwn
+        - commissionedPowerMw
+        - plannedPowerMw
+        - underConstructionPowerMw
+        - availablePowerMw
+      properties:
+        perspective:
+          $ref: "#/components/schemas/FacilityPerspective"
+        facilityId:
+          type: string
+        facilityName:
+          type: string
+        providerId:
+          type: string
+        providerName:
+          type: string
+        countyFips:
+          type: string
+        commissionedSemantic:
+          type: string
+          enum: [leased, operational, under_construction, planned, unknown]
+        leaseOrOwn:
+          type: string
+          enum: [lease, own, unknown]
+          nullable: true
+        commissionedPowerMw:
+          type: number
+          nullable: true
+        plannedPowerMw:
+          type: number
+          nullable: true
+        underConstructionPowerMw:
+          type: number
+          nullable: true
+        availablePowerMw:
+          type: number
+          nullable: true
+
+    FacilitiesDetailFeature:
+      type: object
+      required: [type, id, geometry, properties]
+      properties:
+        type:
+          const: Feature
+        id:
+          oneOf:
+            - type: string
+            - type: number
+        geometry:
+          $ref: "#/components/schemas/PointGeometry"
+        properties:
+          $ref: "#/components/schemas/FacilitiesDetailProperties"
+
+    FacilitiesDetailResponse:
+      type: object
+      required: [feature, meta]
+      properties:
+        feature:
+          $ref: "#/components/schemas/FacilitiesDetailFeature"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+
+    ParcelScoreRequest:
+      type: object
+      required: [aoi, modelId, modelVersion]
+      properties:
+        aoi:
+          $ref: "#/components/schemas/ParcelAoi"
+        modelId:
+          type: string
+        modelVersion:
+          type: integer
+        overrides:
+          type: object
+          additionalProperties: true
+
+    ParcelScoreConstraint:
+      type: object
+      required: [key, passed]
+      properties:
+        key:
+          type: string
+        passed:
+          type: boolean
+        reason:
+          type: string
+
+    ParcelScoreComponent:
+      type: object
+      required: [key, weight, rawValue, normalizedValue, contribution, confidence]
+      properties:
+        key:
+          type: string
+        weight:
+          type: number
+        rawValue: {}
+        normalizedValue:
+          type: number
+        contribution:
+          type: number
+        confidence:
+          type: number
+
+    ScoredParcel:
+      type: object
+      required: [parcel, scoreTotal, confidenceScore, constraints, components, provenance]
+      properties:
+        parcel:
+          $ref: "#/components/schemas/ParcelFeature"
+        scoreTotal:
+          type: number
+        confidenceScore:
+          type: number
+        constraints:
+          type: array
+          items:
+            $ref: "#/components/schemas/ParcelScoreConstraint"
+        components:
+          type: array
+          items:
+            $ref: "#/components/schemas/ParcelScoreComponent"
+        provenance:
+          type: object
+          required: [modelId, modelVersion, ingestionRunId]
+          properties:
+            modelId:
+              type: string
+            modelVersion:
+              type: integer
+            ingestionRunId:
+              type: string
+            boundarySetId:
+              type: string
+            boundarySetVersion:
+              type: integer
+
+    ParcelScoreResponse:
+      type: object
+      required: [status, results, meta]
+      properties:
+        status:
+          const: ok
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScoredParcel"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+
+    ProximityTarget:
+      oneOf:
+        - type: object
+          required: [type, parcelId]
+          properties:
+            type:
+              const: parcel
+            parcelId:
+              type: string
+        - type: object
+          required: [type, facilityId, perspective]
+          properties:
+            type:
+              const: facility
+            facilityId:
+              type: string
+            perspective:
+              $ref: "#/components/schemas/FacilityPerspective"
+        - type: object
+          required: [type, geometry]
+          properties:
+            type:
+              const: geometry
+            geometry:
+              $ref: "#/components/schemas/Geometry"
+
+    ProximityRequest:
+      type: object
+      required: [target, neighborTypes]
+      properties:
+        target:
+          $ref: "#/components/schemas/ProximityTarget"
+        neighborTypes:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            enum:
+              - power_substation
+              - fiber_metro
+              - fiber_longhaul
+              - facility_colocation
+              - facility_hyperscale
+        limit:
+          type: integer
+          default: 5
+          maximum: 50
+
+    ProximityNeighbor:
+      type: object
+      required: [neighborType, id, distanceMeters, bearingDegrees]
+      properties:
+        neighborType:
+          type: string
+        id:
+          type: string
+        name:
+          type: string
+        distanceMeters:
+          type: number
+        bearingDegrees:
+          type: number
+        confidence:
+          type: number
+
+    ProximityResponse:
+      type: object
+      required: [status, neighbors, meta]
+      properties:
+        status:
+          const: ok
+        neighbors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProximityNeighbor"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+
+paths:
+  /api/health:
+    get:
+      tags: [Health]
+      summary: Health check
+      responses:
+        "200":
+          description: ok
+          headers:
+            x-request-id:
+              $ref: "#/components/headers/RequestIdHeader"
+
+  /api/geo/parcels/{parcelId}:
+    get:
+      tags: [Parcels]
+      summary: Parcel detail
+      parameters:
+        - $ref: "#/components/parameters/RequestIdHeader"
+        - $ref: "#/components/parameters/ParcelIngestionRunIdHeader"
+        - name: parcelId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: includeGeometry
+          in: query
+          schema:
+            $ref: "#/components/schemas/ParcelGeometryMode"
+            default: full
+        - name: profile
+          in: query
+          schema:
+            $ref: "#/components/schemas/ParcelProfile"
+            default: full_170
+      responses:
+        "200":
+          description: Parcel detail
+          headers:
+            x-request-id:
+              $ref: "#/components/headers/RequestIdHeader"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParcelDetailResponse"
+        "404":
+          description: Parcel not found
+          headers:
+            x-request-id:
+              $ref: "#/components/headers/RequestIdHeader"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+        "409":
+          description: Ingestion run mismatch
+          headers:
+            x-request-id:
+              $ref: "#/components/headers/RequestIdHeader"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+        "503":
+          description: PostGIS query failed
+          headers:
+            x-request-id:
+              $ref: "#/components/headers/RequestIdHeader"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+
+  /api/geo/parcels/lookup:
+    post:
+      tags: [Parcels]
+      summary: Parcel lookup by IDs
+      parameters:
+        - $ref: "#/components/parameters/RequestIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ParcelLookupRequest"
+      responses:
+        "200":
+          description: FeatureCollection of parcels
+          headers:
+            x-request-id:
+              $ref: "#/components/headers/RequestIdHeader"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParcelsFeatureCollection"
+
+  /api/geo/parcels/enrich:
+    post:
+      tags: [Parcels]
+      summary: Parcel enrich by AOI
+      parameters:
+        - $ref: "#/components/parameters/RequestIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ParcelEnrichRequest"
+      responses:
+        "200":
+          description: FeatureCollection of parcels
+          headers:
+            x-request-id:
+              $ref: "#/components/headers/RequestIdHeader"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParcelsFeatureCollection"
+        "422":
+          description: Policy rejected
+          headers:
+            x-request-id:
+              $ref: "#/components/headers/RequestIdHeader"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+
+  /api/geo/facilities:
+    get:
+      tags: [Facilities]
+      summary: Facilities by bbox
+      parameters:
+        - $ref: "#/components/parameters/RequestIdHeader"
+        - name: bbox
+          in: query
+          required: true
+          schema:
+            type: string
+          description: west,south,east,north
+        - name: perspective
+          in: query
+          schema:
+            $ref: "#/components/schemas/FacilityPerspective"
+            default: colocation
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 2000
+      responses:
+        "200":
+          description: FeatureCollection of facilities
+          headers:
+            x-request-id:
+              $ref: "#/components/headers/RequestIdHeader"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FacilitiesFeatureCollection"
+
+  /api/geo/facilities/{facilityId}:
+    get:
+      tags: [Facilities]
+      summary: Facility detail
+      parameters:
+        - $ref: "#/components/parameters/RequestIdHeader"
+        - name: facilityId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: perspective
+          in: query
+          schema:
+            $ref: "#/components/schemas/FacilityPerspective"
+            default: colocation
+      responses:
+        "200":
+          description: Facility detail
+          headers:
+            x-request-id:
+              $ref: "#/components/headers/RequestIdHeader"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FacilitiesDetailResponse"
+        "404":
+          description: Facility not found
+          headers:
+            x-request-id:
+              $ref: "#/components/headers/RequestIdHeader"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
