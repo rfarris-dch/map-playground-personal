@@ -9,6 +9,7 @@ after each iteration and included in agent prompts for context.
 - Tailwind Plus Syntax parity in the Vue docs app depends on document-level setup, not copied CSS alone: define the font variables in `apps/docs/src/styles/tailwind.css` and set the initial `light`/`dark` class from `apps/docs/index.html` before Vue mounts to avoid first-paint drift.
 - Tailwind Plus Syntax-style docs search works best when the Markdown pipeline emits section-level search entries alongside rendered HTML: index the page title plus each `h2` section with anchor-aware slugs so the modal can deep-link into content instead of only returning whole pages.
 - The docs app stays isolated by keeping its runtime entirely inside `apps/docs` and wiring root workspace commands through filtered package scripts like `dev:docs`, `build:docs`, and `typecheck:docs` rather than sharing entrypoints with product apps.
+- Onboarding docs are strongest when `Start Here` gives a fixed contributor path, `Workspace And Commands` maps root scripts to the actual workflows they start, and `Repository Architecture` points directly to preserved `docs/architecture` artifacts for older design context.
 - Application foundation pages work best when they document process entrypoints, shared runtime helpers, and cross-cutting config in one place, while pushing route- or slice-specific behavior into companion pages such as `api-geo-slices.md`.
 - Web-application foundation pages read more clearly when they separate the composition-root route (`/map`) from narrower reporting routes first, then document shell orchestration, shared UI plumbing, and package/API seams without duplicating the feature-domain inventory.
 - Package documentation reads more clearly when the `Packages` section keeps an overview page for orientation but gives each core runtime package its own page for exports, consumers, and build/test reality; application pages can then deep-link to the exact package seam instead of a catch-all summary.
@@ -263,4 +264,26 @@ ultracite fix apps/docs docs .ralph-tui/progress.md`, and `bun x ultracite check
   - Page-level `sources` metadata becomes much more valuable once the shared page shell renders it consistently; that keeps reference pages and runtime pages aligned without inventing a second manual link inventory.
   - The clean distinction for this docs app is between the page source file and the authoritative runtime sources it references; imported legacy artifact pages are the special case where the rendered page source is itself authoritative.
   - Browser verification remains blocked in this sandbox because `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser open http://127.0.0.1:4173` fails with `Daemon failed to start`.
+---
+## ✓ Iteration 11 - docs-1.27: US-017: Add API, contract, and source-reference documentation patterns
+*2026-03-06T03:41:37.067Z (418s)*
+
+**Status:** Completed
+
+**Notes:**
+`bun --cwd apps/docs lint`, `bun --cwd apps/docs typecheck`, `bun --cwd apps/docs build`, `bun x ultracite fix apps/docs docs .ralph-tui/progress.md`, and `bun x ultracite check apps/docs docs .ralph-tui/progress.md`. Browser verification is still blocked in this sandbox: `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser open http://127.0.0.1:4173` fails with `Daemon failed to start`, so I could not capture the required screenshots here.\n\n
+
+---
+## 2026-03-06 - docs-1.17
+- Expanded the onboarding docs so the getting-started surface now maps the real root workspace scripts from `package.json`, documents the major repo constraints from `AGENTS.md`, and gives new contributors a concrete path from workspace orientation into the correct runtime, package, and artifact pages.
+- Added explicit source references to the onboarding and repository architecture pages, and extended the architecture page with a guide to the preserved `docs/architecture` artifacts so older design material remains part of the recommended reading flow instead of an isolated appendix.
+- Files changed:
+  - `apps/docs/src/content/getting-started/start-here.md`
+  - `apps/docs/src/content/getting-started/workspace-and-commands.md`
+  - `apps/docs/src/content/repository/architecture.md`
+  - `.ralph-tui/progress.md`
+- **Learnings:**
+  - The acceptance bar for onboarding is not just a workspace table; the page needs the actual root command inventory plus intent-level guidance so new contributors know which entrypoint to run for each surface.
+  - `AGENTS.md` conventions are more useful in docs when grouped into editing constraints, naming/type-safety rules, and production-path rules instead of being copied as a flat list.
+  - The architecture docs are easier to trust when the authored `Repository Architecture` page explicitly tells readers which preserved artifact to open next for bounded-context framing, sequencing, or OpenAPI detail.
 ---

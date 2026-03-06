@@ -1,6 +1,17 @@
 ---
 title: Repository Architecture
 description: The current runtime boundaries, package seams, and information architecture used by this monorepo.
+sources:
+  - docs/architecture/ddd.qmd
+  - docs/architecture/spatial-analysis-overhaul.qmd
+  - docs/architecture/spatial-analysis-blocking-definitions.qmd
+  - docs/architecture/spatial-analysis-kickoff-checklist.md
+  - docs/architecture/spatial-analysis-openapi.yaml
+  - apps/web
+  - apps/api
+  - apps/pipeline-monitor
+  - packages/contracts
+  - scripts
 ---
 
 This repository currently enforces a small set of explicit boundaries instead of a deep layer stack. The clearest statement of that direction lives in `docs/architecture/ddd.qmd`, and the implementation matches it closely.
@@ -49,6 +60,20 @@ The parcel production path is explicit:
 4. Publish or rollback manifests with `scripts/publish-parcels-manifest.ts` and `scripts/rollback-parcels-manifest.ts`.
 
 The runbook `docs/runbooks/spatial-analysis-ops.md` documents the operational failure modes that hang off that path.
+
+## Existing architecture artifacts to read next
+
+The authored docs in this app explain the current repo shape. The older architecture files under `docs/architecture` still matter because they capture the design intent behind that shape.
+
+| Artifact | When to read it |
+| --- | --- |
+| [DDD Baseline](/docs/artifacts/ddd) | Read first when you need the original bounded-context framing for the repo. |
+| [Spatial Analysis Overhaul](/docs/artifacts/spatial-analysis-overhaul) | Read when you need the broader system direction behind the current geo-serving and map-runtime seams. |
+| [Spatial Analysis Blocking Definitions](/docs/artifacts/spatial-analysis-blocking-definitions) | Read when sequencing work across dependent implementation tracks. |
+| [Spatial Analysis Kickoff Checklist](/docs/artifacts/spatial-analysis-kickoff-checklist) | Read when you need the early delivery checklist and scope framing. |
+| [Spatial Analysis OpenAPI Artifact](/docs/artifacts/spatial-analysis-openapi) | Read when you need the preserved HTTP reference artifact rather than the higher-level contracts page. |
+
+Use those artifact routes as preserved source material. Use the authored pages in this docs app for the current navigation path through the repo.
 
 ## Docs information architecture
 

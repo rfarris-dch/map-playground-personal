@@ -1,6 +1,10 @@
 ---
 title: Start Here
 description: A short path through the monorepo, the docs app, and the runtime surfaces that matter first.
+sources:
+  - README.md
+  - package.json
+  - apps/docs/src/features/docs/docs-navigation.service.ts
 ---
 
 This docs app is the repository-facing entrypoint for `map-platform`. It is meant to replace repo spelunking with a stable map of the runtime, package, and operational surfaces that actually exist today.
@@ -18,6 +22,16 @@ This docs app is the repository-facing entrypoint for `map-platform`. It is mean
 2. Read [Repository Architecture](/docs/repository/architecture) for the current bounded contexts and production-path rules.
 3. Read the application foundations pages before drilling into package or operations details.
 4. Use the search modal for exact route, package, or script names when you already know the term you need.
+
+## New contributor path
+
+If you are starting cold, use this exact sequence:
+
+1. [Workspace And Commands](/docs/getting-started/workspace-and-commands)
+2. [Repository Architecture](/docs/repository/architecture)
+3. The runtime page for the app you are changing
+4. The package page for any shared dependency you touch
+5. [Architecture Artifacts](/docs/artifacts/architecture-artifacts) if the task mentions prior architecture, research, review, or runbook material
 
 ## Fast orientation
 
