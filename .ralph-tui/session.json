@@ -3,10 +3,10 @@
   "sessionId": "bb6d6650-9cf8-442a-b52f-191243c475bf",
   "status": "running",
   "startedAt": "2026-03-06T01:32:18.832Z",
-  "updatedAt": "2026-03-06T02:54:01.552Z",
-  "currentIteration": 3,
+  "updatedAt": "2026-03-06T02:55:53.291Z",
+  "currentIteration": 4,
   "maxIterations": 100,
-  "tasksCompleted": 3,
+  "tasksCompleted": 4,
   "isPaused": false,
   "agentPlugin": "codex",
   "trackerState": {
@@ -53,8 +53,8 @@
       {
         "id": "docs-1.1",
         "title": "US-001: Bootstrap the docs application workspace",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "docs-1.28",
@@ -160,6 +160,16 @@
       "durationMs": 414811,
       "startedAt": "2026-03-06T02:47:06.248Z",
       "endedAt": "2026-03-06T02:54:01.059Z"
+    },
+    {
+      "iteration": 4,
+      "status": "completed",
+      "taskId": "docs-1.1",
+      "taskTitle": "US-001: Bootstrap the docs application workspace",
+      "taskCompleted": true,
+      "durationMs": 109647,
+      "startedAt": "2026-03-06T02:54:03.170Z",
+      "endedAt": "2026-03-06T02:55:52.817Z"
     }
   ],
   "skippedTaskIds": [],

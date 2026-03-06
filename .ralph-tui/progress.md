@@ -9,6 +9,7 @@ after each iteration and included in agent prompts for context.
 - Tailwind Plus Syntax parity in the Vue docs app depends on document-level setup, not copied CSS alone: define the font variables in `apps/docs/src/styles/tailwind.css` and set the initial `light`/`dark` class from `apps/docs/index.html` before Vue mounts to avoid first-paint drift.
 - Tailwind Plus Syntax-style docs search works best when the Markdown pipeline emits section-level search entries alongside rendered HTML: index the page title plus each `h2` section with anchor-aware slugs so the modal can deep-link into content instead of only returning whole pages.
 - The docs app stays isolated by keeping its runtime entirely inside `apps/docs` and wiring root workspace commands through filtered package scripts like `dev:docs`, `build:docs`, and `typecheck:docs` rather than sharing entrypoints with product apps.
+- Application foundation pages work best when they document process entrypoints, shared runtime helpers, and cross-cutting config in one place, while pushing route- or slice-specific behavior into companion pages such as `api-geo-slices.md`.
 
 ---
 
@@ -96,4 +97,24 @@ tes passed: `bun --cwd apps/docs lint`, `bun --cwd apps/docs typecheck`, `bun --
 **Notes:**
 ralph-tui/progress.md) and closed bead `docs-1.3`.\n\nValidation passed: `bun --cwd apps/docs lint`, `bun --cwd apps/docs typecheck`, `bun --cwd apps/docs build`, `bun x ultracite fix apps/docs docs`, and `bun x ultracite check apps/docs docs`. Browser verification is still blocked in this sandbox: `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser` fails with `Daemon failed to start`, so I could not capture the required screenshots here.\n\n
 
+---
+## ✓ Iteration 4 - docs-1.1: US-001: Bootstrap the docs application workspace
+*2026-03-06T02:55:53.290Z (110s)*
+
+**Status:** Completed
+
+**Notes:**
+build`, `bun x ultracite fix apps/docs docs`, and `bun x ultracite check apps/docs docs`. I appended the required progress entry in [.ralph-tui/progress.md](/Users/robertfarris/map/.ralph-tui/progress.md) and closed the bead with `bd close docs-1.1`.\n\nBrowser verification is still the only blocked gate in this environment: local preview binding fails with `listen EPERM`, and `agent-browser` cannot start here, so I could not capture the required desktop/mobile screenshots from this sandbox.\n\n
+
+---
+## 2026-03-06 - docs-1.20
+- Expanded `API Runtime Foundations` into a full application-level foundation page covering the two process entrypoints, Hono app composition, shared HTTP hardening, runtime config, Bun SQL wiring, and the shared transport/policy helper surface.
+- Folded the foundation-relevant notes from `apps/api/README.md` into the page while keeping per-slice endpoint detail delegated to the existing `API Geo Slices` page.
+- Files changed:
+  - `apps/docs/src/content/applications/api-runtime.md`
+  - `.ralph-tui/progress.md`
+- **Learnings:**
+  - The cleanest split for `apps/api` docs is `api-runtime.md` for process entrypoints and transport foundations, then `api-geo-slices.md` for route/repo/mapper and per-domain behavior.
+  - `apps/api/src/http/runtime-config.ts` is not just env parsing; it is the shared metadata/config boundary that lets slice routes stamp source-mode and data-version information without duplicating env access.
+  - Browser verification remains blocked in this sandbox because `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser` fails with `Daemon failed to start`.
 ---
