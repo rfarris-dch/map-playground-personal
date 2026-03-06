@@ -64,6 +64,11 @@ export const docsNavigationDefinitions: readonly DocsNavigationDefinition[] = [
       "map-layer-catalog": 4,
       "map-style": 5,
       "data-and-operations": 6,
+      "geo-sql": 7,
+      "geo-tiles": 8,
+      ops: 9,
+      bench: 10,
+      fixtures: 11,
     },
   },
   {

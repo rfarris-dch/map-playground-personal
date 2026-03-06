@@ -3,38 +3,35 @@ title: Data And Operations Packages
 description: Shared SQL, tile, ops, benchmark, and fixture packages used across serving and operational workflows.
 ---
 
-The remaining shared packages are less visible in the UI, but they define critical operational and data-facing behavior.
+The remaining shared packages sit closer to data access, publish artifacts, runtime observability, and performance framing than to end-user UI. They are still part of the monorepo's runtime story because the API, the parcel tile flow, and the operator surfaces depend on their contracts staying stable.
 
 ## Package map
 
-| Package | Purpose | Concrete surfaces |
+| Package | Purpose | Current consumers |
 | --- | --- | --- |
-| `packages/geo-sql` | SQL query specs for geospatial reads. | Facilities bbox/polygon/detail queries, county metrics query, parcel query helpers. |
-| `packages/geo-tiles` | Tile dataset and publish manifest helpers. | Dataset parsing, manifest validation, version creation, PMTiles path builders. |
-| `packages/ops` | Shared operational helpers. | `createRequestId`, `createDiagnosticEvent`, shared diagnostic types. |
-| `packages/bench` | Runtime budget definitions. | `DEFAULT_ENDPOINT_BUDGETS`, budget classes, latency checks. |
-| `packages/fixtures` | Dataset scale framing. | Fixture tiers `A` through `D` with parcel count ranges and scale notes. |
+| `packages/geo-sql` | Shared query-spec and SQL-builder package for facilities and parcel reads. | `apps/api/src/geo/facilities/facilities.repo.ts`, `apps/api/src/geo/parcels/parcels.repo.ts`. |
+| `packages/geo-tiles` | Tile dataset parsing and manifest invariants for parcel PMTiles publication and frontend tile lineage. | `apps/web/src/features/parcels/parcels.service.ts`, `apps/web/src/features/parcels/parcels.layer.ts`, `scripts/publish-parcels-manifest.ts`, `scripts/rollback-parcels-manifest.ts`. |
+| `packages/ops` | Shared request-ID and diagnostic-event helpers that keep operational metadata consistent. | `apps/api/src/app.ts`, `apps/api/src/http/api-response.ts`, `apps/web/src/lib/api-client.ts`, `apps/pipeline-monitor/src/features/pipeline/pipeline.service.ts`. |
+| `packages/bench` | Shared latency-budget definitions for endpoint classes. | No direct `apps/*` or `scripts/*` imports found today; it currently serves as a benchmark contract package. |
+| `packages/fixtures` | Shared dataset-tier definitions for scale and stress framing. | No direct `apps/*` or `scripts/*` imports found today; it currently serves as a support/reference package. |
 
-## `geo-sql`
+## Runtime shape across this package group
 
-`packages/geo-sql/src/index.ts` contains named query specs instead of generic repo abstractions. That makes the endpoint class, row cap, and SQL intent visible in one place.
+- `geo-sql` and `geo-tiles` are the two packages in this section with active production-path usage today. They are directly on the parcel and facilities serving path.
+- `ops` is smaller, but it crosses all three app runtimes because request IDs and operational event metadata must stay aligned.
+- `bench` and `fixtures` are still concrete packages, not placeholders. They codify latency targets and dataset tiers even though this repo does not yet wire them into a live benchmark harness.
 
-## `geo-tiles`
+## Package detail pages
 
-`packages/geo-tiles/src/index.ts` defines the canonical tile dataset names and validates publish manifests. The parcel PMTiles publish flow depends on these helpers for version and manifest correctness.
+- Use [Geo SQL](/docs/packages/geo-sql) for the facilities and parcel SQL builders that the API repo layer executes.
+- Use [Geo Tiles](/docs/packages/geo-tiles) for manifest parsing, version creation, and tile publish invariants.
+- Use [Ops](/docs/packages/ops) for request IDs and shared diagnostic-event shapes.
+- Use [Bench](/docs/packages/bench) for endpoint budget classes and latency-threshold helpers.
+- Use [Fixtures](/docs/packages/fixtures) for dataset tier definitions used to talk about parcel scale.
 
-## `ops`
+## Related docs
 
-`packages/ops/src/index.ts` is small but important because request IDs and diagnostic event shapes need to stay consistent across apps.
-
-## `bench` and `fixtures`
-
-These support packages are not product runtimes by themselves, but they capture two important repo concerns:
-
-- endpoint budget targets
-- dataset scale tiers used to reason about parcel performance and stress
-
-## Cross-links
-
-- Use [Parcel And Tile Workflows](/docs/operations/parcel-and-tile-workflows) for the scripts that operate on the tile and parcel packages.
-- Use [Contracts And API Surfaces](/docs/references/contracts-and-api-surfaces) when a package change affects transport shapes.
+- Use [API Runtime Foundations](/docs/applications/api-runtime) and [API Geo Slices](/docs/applications/api-geo-slices) for the application code that executes `geo-sql`.
+- Use [Web Runtime Foundations](/docs/applications/web-runtime) for the parcel runtime and request helpers that consume `geo-tiles` and `ops`.
+- Use [Pipeline Monitor](/docs/applications/pipeline-monitor) for the operator client that also uses `ops`.
+- Use [Parcel And Tile Workflows](/docs/operations/parcel-and-tile-workflows) for the scripts that exercise the tile package in production.
