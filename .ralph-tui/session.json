@@ -3,10 +3,10 @@
   "sessionId": "bb6d6650-9cf8-442a-b52f-191243c475bf",
   "status": "running",
   "startedAt": "2026-03-06T01:32:18.832Z",
-  "updatedAt": "2026-03-06T02:55:53.291Z",
-  "currentIteration": 4,
+  "updatedAt": "2026-03-06T03:00:06.902Z",
+  "currentIteration": 5,
   "maxIterations": 100,
-  "tasksCompleted": 4,
+  "tasksCompleted": 5,
   "isPaused": false,
   "agentPlugin": "codex",
   "trackerState": {
@@ -107,8 +107,8 @@
       {
         "id": "docs-1.20",
         "title": "US-010: Document the API runtime foundations",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "docs-1.19",
@@ -170,6 +170,16 @@
       "durationMs": 109647,
       "startedAt": "2026-03-06T02:54:03.170Z",
       "endedAt": "2026-03-06T02:55:52.817Z"
+    },
+    {
+      "iteration": 5,
+      "status": "completed",
+      "taskId": "docs-1.20",
+      "taskTitle": "US-010: Document the API runtime foundations",
+      "taskCompleted": true,
+      "durationMs": 251509,
+      "startedAt": "2026-03-06T02:55:54.901Z",
+      "endedAt": "2026-03-06T03:00:06.410Z"
     }
   ],
   "skippedTaskIds": [],

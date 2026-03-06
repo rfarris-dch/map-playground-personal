@@ -10,6 +10,7 @@ after each iteration and included in agent prompts for context.
 - Tailwind Plus Syntax-style docs search works best when the Markdown pipeline emits section-level search entries alongside rendered HTML: index the page title plus each `h2` section with anchor-aware slugs so the modal can deep-link into content instead of only returning whole pages.
 - The docs app stays isolated by keeping its runtime entirely inside `apps/docs` and wiring root workspace commands through filtered package scripts like `dev:docs`, `build:docs`, and `typecheck:docs` rather than sharing entrypoints with product apps.
 - Application foundation pages work best when they document process entrypoints, shared runtime helpers, and cross-cutting config in one place, while pushing route- or slice-specific behavior into companion pages such as `api-geo-slices.md`.
+- Web-application foundation pages read more clearly when they separate the composition-root route (`/map`) from narrower reporting routes first, then document shell orchestration, shared UI plumbing, and package/API seams without duplicating the feature-domain inventory.
 
 ---
 
@@ -117,4 +118,25 @@ build`, `bun x ultracite fix apps/docs docs`, and `bun x ultracite check apps/do
   - The cleanest split for `apps/api` docs is `api-runtime.md` for process entrypoints and transport foundations, then `api-geo-slices.md` for route/repo/mapper and per-domain behavior.
   - `apps/api/src/http/runtime-config.ts` is not just env parsing; it is the shared metadata/config boundary that lets slice routes stamp source-mode and data-version information without duplicating env access.
   - Browser verification remains blocked in this sandbox because `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser` fails with `Daemon failed to start`.
+---
+## 2026-03-06 - docs-1.18
+- Expanded `Web Runtime Foundations` into a full application-level page that now documents the boot flow, route surfaces, page split between the `/map` composition root and the reporting/table routes, the shell composables that coordinate map behavior, and the shared package/API seams the frontend depends on.
+- Folded the `apps/web/README.md` note into the page and cross-linked the runtime foundation page back to the feature-domain, package, and contract reference docs so the docs app has a cleaner reading path from shell-level context into deeper module detail.
+- Files changed:
+  - `apps/docs/src/content/applications/web-runtime.md`
+  - `.ralph-tui/progress.md`
+- **Learnings:**
+  - `apps/web` is easiest to document as two runtime shapes: a map composition root under `map-page.vue` and narrower query-driven reporting routes for markets, providers, and facilities.
+  - The app-shell seam is not just `use-app-shell.ts`; the real coordination layer is the set of shell composables around it (`state`, `selection`, `visibility`, `overlays`, `measure`, and `map-lifecycle`), so docs should name that composition explicitly.
+  - The clean frontend API boundary is `apps/web/src/lib/api-client.ts` plus feature API modules that consume route builders and schemas from `@map-migration/contracts`, with parcel tile lineage handled separately through `@map-migration/geo-tiles`.
+  - Browser verification remains blocked in this sandbox because `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser` fails with `Daemon failed to start`.
+---
+## ✓ Iteration 5 - docs-1.20: US-010: Document the API runtime foundations
+*2026-03-06T03:00:06.901Z (252s)*
+
+**Status:** Completed
+
+**Notes:**
+s.md), then closed bead `docs-1.20`.\n\nQuality gates passed: `bun --cwd apps/docs lint`, `bun --cwd apps/docs typecheck`, `bun --cwd apps/docs build`, `bun x ultracite fix apps/docs docs`, and `bun x ultracite check apps/docs docs`. Required browser verification is still blocked in this sandbox: `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser` fails with `Daemon failed to start`, so I could not capture desktop/mobile screenshots here.\n\n
+
 ---
