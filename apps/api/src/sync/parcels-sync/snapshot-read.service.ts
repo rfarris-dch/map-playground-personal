@@ -15,7 +15,11 @@ import {
   parseNullableNonNegativeInteger,
   toIsoTimestampMs,
 } from "@/sync/parcels-sync/value-parsing.service";
-import type { ParcelsSyncPhase, ParcelsSyncRunProgress } from "@/sync/parcels-sync.types";
+import type {
+  ParcelsSyncPhase,
+  ParcelsSyncRunProgress,
+  ParcelsSyncRunReason,
+} from "@/sync/parcels-sync.types";
 
 const ACTIVE_EXTERNAL_RUN_STALE_MS = 20 * 60 * 1000;
 const CHECKPOINT_FILE_RE = /^state-([A-Za-z0-9]+)\.checkpoint\.json$/;
@@ -28,6 +32,12 @@ const RUN_PHASE_VALUES: readonly ParcelsSyncPhase[] = [
   "publishing",
   "completed",
   "failed",
+];
+const RUN_REASON_VALUES: readonly ParcelsSyncRunReason[] = [
+  "startup",
+  "interval",
+  "manual",
+  "unknown",
 ];
 
 const TILE_BUILD_STAGE_VALUES: readonly ("build" | "convert" | "ready")[] = [
@@ -42,6 +52,19 @@ function parseRunPhase(value: unknown, fallback: ParcelsSyncPhase): ParcelsSyncP
   }
 
   return RUN_PHASE_VALUES.find((phase) => phase === value) ?? fallback;
+}
+
+function parseRunReason(value: unknown): ParcelsSyncRunReason | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim();
+  if (normalized.length === 0) {
+    return null;
+  }
+
+  return RUN_REASON_VALUES.find((reason) => reason === normalized) ?? null;
 }
 
 function parseNullablePercent(value: unknown): number | null {
@@ -367,12 +390,14 @@ export function readActiveRunMarker(snapshotRoot: string): ActiveRunMarker | nul
   const summary =
     typeof summaryRaw === "string" && summaryRaw.trim().length > 0 ? summaryRaw.trim() : null;
   const progress = parseRunProgress(Reflect.get(markerRaw, "progress"), phase);
+  const reason = parseRunReason(Reflect.get(markerRaw, "reason"));
 
   return {
     runId,
     phase,
     isRunning,
     updatedAt,
+    reason,
     summary,
     progress,
   };

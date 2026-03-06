@@ -46,8 +46,16 @@ export interface MutableParcelsSyncStatusSnapshot {
 }
 
 export interface ParcelsSyncRuntimeState {
+  activeChild: ManagedSyncChildProcess | null;
+  activeRunPromise: Promise<void> | null;
   intervalHandle: ReturnType<typeof setInterval> | null;
   isRunning: boolean;
+  isStopping: boolean;
+}
+
+export interface ManagedSyncChildProcess {
+  readonly exited: Promise<number>;
+  kill(signal?: number | string): void;
 }
 
 export interface ParsedRunSummary {
@@ -71,6 +79,7 @@ export interface ActiveRunMarker {
   readonly isRunning: boolean;
   readonly phase: ParcelsSyncPhase;
   readonly progress: ParcelsSyncRunProgress | null;
+  readonly reason: ParcelsSyncRunReason | null;
   readonly runId: string;
   readonly summary: string | null;
   readonly updatedAt: string | null;

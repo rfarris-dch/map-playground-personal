@@ -19,6 +19,45 @@ fi
 DCH_OS_REPO="${DCH_OS_REPO:-${HOME}/dev/dch-os}"
 MIRROR_LOAD_SCRIPT="${DCH_OS_REPO}/apps/api/src/scripts/mirror-load.ts"
 SPATIAL_BUILD_SQL="${DCH_OS_REPO}/scripts/postgis-build-spatial-schema.sql"
+LOCK_ROOT="${HYPERSCALE_SYNC_LOCK_ROOT:-${ROOT_DIR}/var/sync-locks}"
+SYNC_LOCK_DIR="${LOCK_ROOT}/hyperscale.lock"
+SYNC_LOCK_PID_FILE="${SYNC_LOCK_DIR}/pid"
+
+acquire_sync_lock() {
+  mkdir -p "${LOCK_ROOT}"
+
+  if mkdir "${SYNC_LOCK_DIR}" 2>/dev/null; then
+    printf '%s\n' "$$" > "${SYNC_LOCK_PID_FILE}"
+    return
+  fi
+
+  local lock_pid
+  lock_pid="$(cat "${SYNC_LOCK_PID_FILE}" 2>/dev/null || true)"
+  if [[ -n "${lock_pid}" ]] && ! kill -0 "${lock_pid}" 2>/dev/null; then
+    rm -rf "${SYNC_LOCK_DIR}"
+    if mkdir "${SYNC_LOCK_DIR}" 2>/dev/null; then
+      printf '%s\n' "$$" > "${SYNC_LOCK_PID_FILE}"
+      return
+    fi
+  fi
+
+  echo "[sync] hyperscale-sync lock already held (${SYNC_LOCK_DIR})" >&2
+  exit 16
+}
+
+release_sync_lock() {
+  if [[ -d "${SYNC_LOCK_DIR}" ]]; then
+    rm -rf "${SYNC_LOCK_DIR}" || true
+  fi
+}
+
+on_exit() {
+  release_sync_lock
+}
+
+trap on_exit EXIT
+
+acquire_sync_lock
 
 if [[ ! -f "${MIRROR_LOAD_SCRIPT}" ]]; then
   echo "error: mirror loader not found at ${MIRROR_LOAD_SCRIPT}" >&2

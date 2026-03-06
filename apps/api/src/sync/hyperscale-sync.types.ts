@@ -1,5 +1,5 @@
 export interface HyperscaleSyncController {
-  stop(): void;
+  stop(): Promise<void>;
 }
 
 export interface HyperscaleSyncConfig {

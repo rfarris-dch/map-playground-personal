@@ -103,6 +103,22 @@ function isRunningPhase(phase: MutableParcelsSyncRunStatus["phase"]): boolean {
   return RUNNING_PHASES.includes(phase);
 }
 
+function resolveRunReason(args: {
+  readonly markerReason: ParcelsSyncRunReason | null | undefined;
+  readonly nextDefault: ParcelsSyncRunReason;
+  readonly run: MutableParcelsSyncRunStatus;
+}): ParcelsSyncRunReason {
+  if (args.run.reason !== null) {
+    return args.run.reason;
+  }
+
+  if (args.markerReason !== null && typeof args.markerReason !== "undefined") {
+    return args.markerReason;
+  }
+
+  return args.nextDefault;
+}
+
 export function reconcileRunStatus(run: MutableParcelsSyncRunStatus): void {
   if (!isRunningPhase(run.phase)) {
     run.isRunning = false;
@@ -277,7 +293,11 @@ function applyFailedMarkerIfAny(args: {
     return false;
   }
 
-  status.run.reason = "manual";
+  status.run.reason = resolveRunReason({
+    markerReason: activeRunMarker.reason,
+    nextDefault: "manual",
+    run: status.run,
+  });
   status.run.isRunning = false;
   status.run.phase = "failed";
   status.run.endedAt = activeRunMarker.updatedAt ?? status.run.endedAt ?? new Date().toISOString();
@@ -307,7 +327,11 @@ function applyCompletedMarkerIfAny(args: {
     return false;
   }
 
-  status.run.reason = "manual";
+  status.run.reason = resolveRunReason({
+    markerReason: activeRunMarker.reason,
+    nextDefault: "manual",
+    run: status.run,
+  });
   status.run.isRunning = false;
   status.run.phase = "completed";
   status.run.endedAt = activeRunMarker.updatedAt ?? status.run.endedAt;
@@ -352,7 +376,11 @@ function applyRunningMarkerIfAny(args: {
     return false;
   }
 
-  status.run.reason = "manual";
+  status.run.reason = resolveRunReason({
+    markerReason: activeRunMarker.reason,
+    nextDefault: "manual",
+    run: status.run,
+  });
   status.run.isRunning = true;
   status.run.phase = activeRunMarker.phase;
   status.run.endedAt = null;
@@ -388,7 +416,11 @@ function applyActiveExternalRunIfAny(args: {
     return false;
   }
 
-  status.run.reason = "manual";
+  status.run.reason = resolveRunReason({
+    markerReason: null,
+    nextDefault: "unknown",
+    run: status.run,
+  });
   status.run.isRunning = true;
   status.run.endedAt = null;
   status.run.durationMs = null;
@@ -562,16 +594,6 @@ export function refreshRunFromFilesystem(status: MutableParcelsSyncStatusSnapsho
   ensureRunId(status, runId);
 
   if (
-    applyStaleActiveMarkerIfAny({
-      status,
-      runId,
-      activeRunMarker,
-    })
-  ) {
-    return;
-  }
-
-  if (
     applyFailedMarkerIfAny({
       status,
       runId,
@@ -607,6 +629,16 @@ export function refreshRunFromFilesystem(status: MutableParcelsSyncStatusSnapsho
       status,
       runId,
       activeExternalRun,
+    })
+  ) {
+    return;
+  }
+
+  if (
+    applyStaleActiveMarkerIfAny({
+      status,
+      runId,
+      activeRunMarker,
     })
   ) {
     return;

@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import type {
   ParcelsSyncConfig,
   ParcelsSyncRunReason,
@@ -6,6 +7,7 @@ import type {
 import type {
   OutputCaptureState,
   ReadStreamOptions,
+  RunSyncScriptHooks,
 } from "./process-stream-execution.service.types";
 
 declare const Bun: {
@@ -17,6 +19,7 @@ declare const Bun: {
     stdout?: "inherit" | "pipe";
   }): {
     exited: Promise<number>;
+    kill(signal?: number | string): void;
     stderr: ReadableStream<Uint8Array> | null;
     stdout: ReadableStream<Uint8Array> | null;
   };
@@ -27,7 +30,10 @@ const TRAILING_CR_RE = /\r$/;
 const ISO_REMOVE_PUNCTUATION_RE = /[-:]/g;
 const ISO_MILLIS_SUFFIX_RE = /\.\d{3}Z$/;
 
-function copyProcessEnvironment(runId: string): Record<string, string> {
+function copyProcessEnvironment(
+  runId: string,
+  runReason: ParcelsSyncRunReason
+): Record<string, string> {
   const env = Object.entries(process.env).reduce<Record<string, string>>(
     (nextEnv, [key, value]) => {
       if (typeof value === "string") {
@@ -38,6 +44,7 @@ function copyProcessEnvironment(runId: string): Record<string, string> {
     {}
   );
   env.RUN_ID = runId;
+  env.RUN_REASON = runReason;
   return env;
 }
 
@@ -155,29 +162,36 @@ async function readStream(
 export async function runSyncScript(
   config: ParcelsSyncConfig,
   runId: string,
-  onLine: (line: string) => void
+  runReason: ParcelsSyncRunReason,
+  onLine: (line: string) => void,
+  hooks: RunSyncScriptHooks = {}
 ): Promise<ParcelsSyncRunResult> {
   const startedAt = Date.now();
   const child = Bun.spawn({
     cmd: ["bash", config.syncScriptPath],
     cwd: config.projectRoot,
-    env: copyProcessEnvironment(runId),
+    env: copyProcessEnvironment(runId, runReason),
     stderr: "pipe",
     stdout: "pipe",
   });
+  hooks.onProcessStart?.(child);
 
-  const [exitCode, stdout, stderr] = await Promise.all([
-    child.exited,
-    readStream(child.stdout, { onLine }),
-    readStream(child.stderr, { onLine }),
-  ]);
+  try {
+    const [exitCode, stdout, stderr] = await Promise.all([
+      child.exited,
+      readStream(child.stdout, { onLine }),
+      readStream(child.stderr, { onLine }),
+    ]);
 
-  return {
-    durationMs: Date.now() - startedAt,
-    exitCode,
-    stderr,
-    stdout,
-  };
+    return {
+      durationMs: Date.now() - startedAt,
+      exitCode,
+      stderr,
+      stdout,
+    };
+  } finally {
+    hooks.onProcessExit?.();
+  }
 }
 
 export function summarizeOutput(result: ParcelsSyncRunResult): string {
@@ -202,5 +216,6 @@ export function summarizeOutput(result: ParcelsSyncRunResult): string {
 export function createManagedRunId(reason: ParcelsSyncRunReason): string {
   const iso = new Date().toISOString();
   const normalized = iso.replace(ISO_REMOVE_PUNCTUATION_RE, "").replace(ISO_MILLIS_SUFFIX_RE, "Z");
-  return `auto-${reason}-${normalized}`;
+  const suffix = randomBytes(3).toString("hex");
+  return `auto-${reason}-${normalized}-${suffix}`;
 }

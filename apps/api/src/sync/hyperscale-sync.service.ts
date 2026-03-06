@@ -18,10 +18,13 @@ declare const Bun: {
     stdout?: "inherit" | "pipe";
   }): {
     exited: Promise<number>;
+    kill(signal?: number | string): void;
     stderr: ReadableStream<Uint8Array> | null;
     stdout: ReadableStream<Uint8Array> | null;
   };
 };
+
+const SYNC_STOP_WAIT_TIMEOUT_MS = 15_000;
 
 function buildConfig(): HyperscaleSyncConfig {
   const serviceFilePath = fileURLToPath(import.meta.url);
@@ -49,29 +52,6 @@ function readStream(stream: ReadableStream<Uint8Array> | null): Promise<string> 
   return new Response(stream).text();
 }
 
-async function runSyncScript(config: HyperscaleSyncConfig): Promise<HyperscaleSyncRunResult> {
-  const startedAt = Date.now();
-  const child = Bun.spawn({
-    cmd: ["bash", config.syncScriptPath],
-    cwd: config.projectRoot,
-    stderr: "pipe",
-    stdout: "pipe",
-  });
-
-  const [exitCode, stdout, stderr] = await Promise.all([
-    child.exited,
-    readStream(child.stdout),
-    readStream(child.stderr),
-  ]);
-
-  return {
-    durationMs: Date.now() - startedAt,
-    exitCode,
-    stderr,
-    stdout,
-  };
-}
-
 function summarizeOutput(result: HyperscaleSyncRunResult): string {
   const stderr = result.stderr.trim();
   if (stderr.length > 0) {
@@ -93,7 +73,45 @@ function summarizeOutput(result: HyperscaleSyncRunResult): string {
 
 function isMirrorLockContention(result: HyperscaleSyncRunResult): boolean {
   const output = `${result.stdout}\n${result.stderr}`.toLowerCase();
-  return output.includes("mirror-load: another mirror load is already running");
+  return (
+    output.includes("mirror-load: another mirror load is already running") ||
+    output.includes("hyperscale-sync lock already held")
+  );
+}
+
+function waitForDelay(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, milliseconds);
+  });
+}
+
+async function terminateActiveProcess(runtimeState: HyperscaleSyncRuntimeState): Promise<void> {
+  const activeChild = runtimeState.activeChild;
+  if (activeChild === null) {
+    return;
+  }
+
+  try {
+    activeChild.kill("SIGTERM");
+  } catch {
+    // Ignore termination errors and continue waiting for process exit.
+  }
+
+  const exitedAfterTerminate = await Promise.race([
+    activeChild.exited.then(() => true),
+    waitForDelay(SYNC_STOP_WAIT_TIMEOUT_MS).then(() => false),
+  ]);
+  if (exitedAfterTerminate) {
+    return;
+  }
+
+  try {
+    activeChild.kill("SIGKILL");
+  } catch {
+    // Ignore forced termination errors and continue waiting for process exit.
+  }
+
+  await Promise.race([activeChild.exited, waitForDelay(SYNC_STOP_WAIT_TIMEOUT_MS)]);
 }
 
 export async function startHyperscaleSyncLoop(): Promise<HyperscaleSyncController> {
@@ -101,8 +119,8 @@ export async function startHyperscaleSyncLoop(): Promise<HyperscaleSyncControlle
   if (!config.enabled) {
     console.log("[api] hyperscale auto-sync disabled");
     return {
-      stop(): void {
-        return;
+      stop(): Promise<void> {
+        return Promise.resolve();
       },
     };
   }
@@ -115,18 +133,25 @@ export async function startHyperscaleSyncLoop(): Promise<HyperscaleSyncControlle
 
     console.warn(`${message}; startup continues because startupRequired=false`);
     return {
-      stop(): void {
-        return;
+      stop(): Promise<void> {
+        return Promise.resolve();
       },
     };
   }
 
   const runtimeState: HyperscaleSyncRuntimeState = {
+    activeChild: null,
+    activeRunPromise: null,
     intervalHandle: null,
     isRunning: false,
+    isStopping: false,
   };
 
   const runCycle = async (reason: "interval" | "startup", failOnError: boolean): Promise<void> => {
+    if (runtimeState.isStopping) {
+      return;
+    }
+
     if (runtimeState.isRunning) {
       console.log(`[api] hyperscale auto-sync skipped (${reason}): previous cycle still running`);
       return;
@@ -134,7 +159,26 @@ export async function startHyperscaleSyncLoop(): Promise<HyperscaleSyncControlle
 
     runtimeState.isRunning = true;
     try {
-      const result = await runSyncScript(config);
+      const startedAt = Date.now();
+      const child = Bun.spawn({
+        cmd: ["bash", config.syncScriptPath],
+        cwd: config.projectRoot,
+        stderr: "pipe",
+        stdout: "pipe",
+      });
+      runtimeState.activeChild = child;
+
+      const [exitCode, stdout, stderr] = await Promise.all([
+        child.exited,
+        readStream(child.stdout),
+        readStream(child.stderr),
+      ]);
+      const result: HyperscaleSyncRunResult = {
+        durationMs: Date.now() - startedAt,
+        exitCode,
+        stderr,
+        stdout,
+      };
       const durationSeconds = (result.durationMs / 1000).toFixed(1);
       if (result.exitCode === 0) {
         console.log(`[api] hyperscale auto-sync success (${reason}) in ${durationSeconds}s`);
@@ -155,20 +199,34 @@ export async function startHyperscaleSyncLoop(): Promise<HyperscaleSyncControlle
       }
       console.error(message);
     } finally {
+      runtimeState.activeChild = null;
       runtimeState.isRunning = false;
     }
   };
 
+  const scheduleRunCycle = (
+    reason: "interval" | "startup",
+    failOnError: boolean
+  ): Promise<void> => {
+    const promise = runCycle(reason, failOnError).finally(() => {
+      if (runtimeState.activeRunPromise === promise) {
+        runtimeState.activeRunPromise = null;
+      }
+    });
+    runtimeState.activeRunPromise = promise;
+    return promise;
+  };
+
   if (config.requireStartupSuccess) {
-    await runCycle("startup", true);
+    await scheduleRunCycle("startup", true);
   } else {
-    runCycle("startup", false).catch((error) => {
+    scheduleRunCycle("startup", false).catch((error) => {
       console.error("[api] hyperscale auto-sync startup failure", error);
     });
   }
 
   runtimeState.intervalHandle = setInterval(() => {
-    runCycle("interval", false).catch((error) => {
+    scheduleRunCycle("interval", false).catch((error) => {
       console.error("[api] hyperscale auto-sync interval failure", error);
     });
   }, config.intervalMs);
@@ -180,10 +238,23 @@ export async function startHyperscaleSyncLoop(): Promise<HyperscaleSyncControlle
   );
 
   return {
-    stop(): void {
+    async stop(): Promise<void> {
+      if (runtimeState.isStopping) {
+        return;
+      }
+
+      runtimeState.isStopping = true;
       if (runtimeState.intervalHandle) {
         clearInterval(runtimeState.intervalHandle);
         runtimeState.intervalHandle = null;
+      }
+
+      await terminateActiveProcess(runtimeState);
+      if (runtimeState.activeRunPromise !== null) {
+        await Promise.race([
+          runtimeState.activeRunPromise,
+          waitForDelay(SYNC_STOP_WAIT_TIMEOUT_MS),
+        ]);
       }
     },
   };

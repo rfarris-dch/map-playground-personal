@@ -9,32 +9,36 @@ if [[ -f "${ROOT_DIR}/apps/api/.env" ]]; then
   set +a
 fi
 
-: "${ARCGIS_PARCEL_CLIENT_ID:?ARCGIS_PARCEL_CLIENT_ID must be set}"
-: "${ARCGIS_PARCEL_CLIENT_SECRET:?ARCGIS_PARCEL_CLIENT_SECRET must be set}"
-
 RUN_ID="${RUN_ID:-}"
+RUN_REASON="${RUN_REASON:-manual}"
 RUN_ID_EXPLICIT=0
 if [[ -n "${RUN_ID}" ]]; then
   RUN_ID_EXPLICIT=1
+fi
+if [[ -z "${RUN_ID}" ]]; then
+  RUN_ID="$(date -u +%Y%m%dT%H%M%SZ)"
 fi
 SNAPSHOT_ROOT="${PARCEL_SYNC_OUTPUT_DIR:-${ROOT_DIR}/var/parcels-sync}"
 PUBLISH_ROOT="${PARCELS_PUBLISH_ROOT:-${ROOT_DIR}/apps/web/public}"
 ACTIVE_STATUS_PATH="${SNAPSHOT_ROOT}/active-run.json"
 STATUS_HEARTBEAT_PID=""
+SYNC_LOCK_DIR="${SNAPSHOT_ROOT}/sync.lock"
+SYNC_LOCK_PID_FILE="${SYNC_LOCK_DIR}/pid"
 
 write_active_status() {
   local phase="$1"
   local is_running="$2"
   local summary="${3:-__none__}"
   local progress_json="${4:-__none__}"
-  python3 - "${ACTIVE_STATUS_PATH}" "${RUN_ID}" "${phase}" "${is_running}" "${summary}" "${progress_json}" <<'PY'
+  python3 - "${ACTIVE_STATUS_PATH}" "${RUN_ID}" "${RUN_REASON}" "${phase}" "${is_running}" "${summary}" "${progress_json}" <<'PY'
 import json
 import sys
 from datetime import datetime, timezone
 
-path, run_id, phase, is_running, summary, progress_raw = sys.argv[1:7]
+path, run_id, run_reason, phase, is_running, summary, progress_raw = sys.argv[1:8]
 payload = {
     "runId": run_id,
+    "reason": run_reason,
     "phase": phase,
     "isRunning": is_running == "1",
     "updatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
@@ -86,15 +90,49 @@ stop_status_heartbeat() {
   fi
 }
 
+acquire_sync_lock() {
+  mkdir -p "${SNAPSHOT_ROOT}"
+
+  if mkdir "${SYNC_LOCK_DIR}" 2>/dev/null; then
+    printf '%s\n' "$$" > "${SYNC_LOCK_PID_FILE}"
+    return
+  fi
+
+  local lock_pid
+  lock_pid="$(cat "${SYNC_LOCK_PID_FILE}" 2>/dev/null || true)"
+  if [[ -n "${lock_pid}" ]] && ! kill -0 "${lock_pid}" 2>/dev/null; then
+    rm -rf "${SYNC_LOCK_DIR}"
+    if mkdir "${SYNC_LOCK_DIR}" 2>/dev/null; then
+      printf '%s\n' "$$" > "${SYNC_LOCK_PID_FILE}"
+      return
+    fi
+  fi
+
+  echo "[parcels] ERROR: parcels-sync lock already held (${SYNC_LOCK_DIR})" >&2
+  exit 16
+}
+
+release_sync_lock() {
+  if [[ -d "${SYNC_LOCK_DIR}" ]]; then
+    rm -rf "${SYNC_LOCK_DIR}" || true
+  fi
+}
+
 on_exit() {
   local code=$?
   stop_status_heartbeat "${STATUS_HEARTBEAT_PID}"
   if [[ ${code} -ne 0 ]]; then
     write_active_status "failed" "0" "exit_code=${code}" '{"schemaVersion":1,"phase":"failed"}'
   fi
+  release_sync_lock
 }
 
 trap on_exit EXIT
+
+acquire_sync_lock
+
+: "${ARCGIS_PARCEL_CLIENT_ID:?ARCGIS_PARCEL_CLIENT_ID must be set}"
+: "${ARCGIS_PARCEL_CLIENT_SECRET:?ARCGIS_PARCEL_CLIENT_SECRET must be set}"
 
 find_resumable_run_id() {
   local root="$1"
@@ -142,8 +180,6 @@ for ARG in "$@"; do
   esac
 done
 
-mkdir -p "${SNAPSHOT_ROOT}"
-
 if [[ "${PARCEL_SYNC_RESUME:-1}" == "1" && ${RUN_ID_EXPLICIT} -eq 0 ]]; then
   RESUMABLE_RUN_ID="$(find_resumable_run_id "${SNAPSHOT_ROOT}" || true)"
   if [[ -n "${RESUMABLE_RUN_ID}" ]]; then
@@ -188,6 +224,7 @@ fi
 echo "[parcels] loading canonical table and swapping current snapshot"
 write_active_status "loading" "1" "__none__" '{"schemaVersion":1,"phase":"loading"}'
 ACTIVE_STATUS_PATH="${ACTIVE_STATUS_PATH}" \
+  RUN_REASON="${RUN_REASON}" \
   bash "${ROOT_DIR}/scripts/load-parcels-canonical.sh" "${RUN_DIR}" "${RUN_ID}"
 
 echo "[parcels] building parcels draw PMTiles"

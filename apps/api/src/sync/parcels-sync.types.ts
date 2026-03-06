@@ -1,5 +1,5 @@
 export interface ParcelsSyncController {
-  stop(): void;
+  stop(): Promise<void>;
 }
 
 export type ParcelsSyncMode = "external" | "in-process";

@@ -33,6 +33,7 @@ if [[ -z "${INPUT}" ]]; then
 fi
 
 RUN_ID="${2:-$(date -u +%Y%m%dT%H%M%SZ)}"
+RUN_REASON="${RUN_REASON:-manual}"
 BACKUP_SUFFIX="$(date -u +%Y%m%d%H%M%S)"
 DATA_VERSION="$(date -u +%Y-%m-%d)"
 if [[ "${RUN_ID}" =~ ^([0-9]{4})([0-9]{2})([0-9]{2}) ]]; then
@@ -73,13 +74,13 @@ update_active_status() {
     return
   fi
 
-  python3 - "${ACTIVE_STATUS_PATH}" "${RUN_ID}" "${summary}" <<'PY'
+  python3 - "${ACTIVE_STATUS_PATH}" "${RUN_ID}" "${RUN_REASON}" "${summary}" <<'PY'
 import json
 import re
 import sys
 from datetime import datetime, timezone
 
-path, run_id, summary = sys.argv[1:4]
+path, run_id, run_reason, summary = sys.argv[1:5]
 
 def parse_db_load_progress(summary_text: str):
     normalized = summary_text.strip()
@@ -159,6 +160,7 @@ def parse_db_load_progress(summary_text: str):
 
 payload = {
     "runId": run_id,
+    "reason": run_reason,
     "phase": "loading",
     "isRunning": True,
     "updatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),

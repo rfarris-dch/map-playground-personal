@@ -52,6 +52,9 @@ export class ParcelsSyncStatusStore {
     this.status.run.endedAt = finalization.endedAt;
     this.status.run.summary = finalization.summary;
     this.status.run.isRunning = false;
+    if (result.exitCode !== 0) {
+      setRunPhase(this.status.run, "failed");
+    }
     reconcileRunStatus(this.status.run);
   }
 
@@ -64,7 +67,9 @@ export class ParcelsSyncStatusStore {
   markRunFailed(summary: string): void {
     setRunPhase(this.status.run, "failed");
     this.status.run.summary = summary;
-    this.status.run.endedAt = new Date().toISOString();
+    if (this.status.run.endedAt === null) {
+      this.status.run.endedAt = new Date().toISOString();
+    }
     reconcileRunStatus(this.status.run);
   }
 
