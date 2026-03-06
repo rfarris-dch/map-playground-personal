@@ -14,14 +14,15 @@ This docs app is the repository-facing entrypoint for `map-platform`. It is mean
 - The three runnable applications in `apps/web`, `apps/api`, and `apps/pipeline-monitor`.
 - The shared runtime and contract packages in `packages/*`.
 - The parcel sync, tile publish, and rollback workflows in `scripts/*`.
-- The existing architecture, research, review, and runbook artifacts already stored in `docs/*`.
+- The current repository architecture, operations guides, and contributor workflows needed to work productively in this repo.
 
 ## Suggested reading order
 
 1. Read [Workspace And Commands](/docs/getting-started/workspace-and-commands) for the monorepo layout and root commands.
 2. Read [Repository Architecture](/docs/repository/architecture) for the current bounded contexts and production-path rules.
-3. Read the application foundations pages before drilling into package or operations details.
-4. Use the search modal for exact route, package, or script names when you already know the term you need.
+3. Read [Design Principles](/docs/repository/design-principles) for the reasoning behind the repo shape.
+4. Read the application foundations pages before drilling into package or operations details.
+5. Use the search modal for exact route, package, or script names when you already know the term you need.
 
 ## New contributor path
 
@@ -29,9 +30,9 @@ If you are starting cold, use this exact sequence:
 
 1. [Workspace And Commands](/docs/getting-started/workspace-and-commands)
 2. [Repository Architecture](/docs/repository/architecture)
-3. The runtime page for the app you are changing
-4. The package page for any shared dependency you touch
-5. [Architecture Artifacts](/docs/artifacts/architecture-artifacts) if the task mentions prior architecture, research, review, or runbook material
+3. [Design Principles](/docs/repository/design-principles)
+4. The runtime page for the app you are changing
+5. The package page for any shared dependency you touch
 
 ## Fast orientation
 
@@ -47,9 +48,9 @@ The API is a Hono service started by `apps/api/src/index.ts`, with HTTP middlewa
 
 The monitor is a separate Vue app in `apps/pipeline-monitor` that visualizes parcel pipeline state without sharing the web app runtime.
 
-## How to use the source references
+## How to use the docs links
 
-Every page in this app points back to authoritative file paths. The docs explain behavior. The source files remain the source of truth for exact runtime semantics.
+Use the route structure and related-doc links to move across the repo surface. The docs explain behavior; the runtime files remain the source of truth for exact implementation details.
 
 :::note Docs Scope
 This docs app is intentionally isolated to docs surfaces and minimal workspace wiring. It does not pull runtime code from the product apps into the docs bundle.

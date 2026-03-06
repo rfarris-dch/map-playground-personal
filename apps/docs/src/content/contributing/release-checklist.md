@@ -30,8 +30,9 @@ Verify these routes with `agent-browser` at desktop (`1440x900`) and mobile (`39
 | --- | --- | --- |
 | Homepage | `/` | Hero parity, shell layout, desktop navigation, light/dark theme toggle |
 | Deep docs page | `/docs/applications/api-geo-slices` | Long-form prose, TOC tracking, prev/next links, code fences |
-| Operations page | `/docs/operations/parcel-and-tile-workflows` | Large-page readability, callouts, tables, source references |
-| Artifact page | `/docs/artifacts/main-intitial-research` | Imported legacy content renders cleanly inside the same shell |
+| Operations page | `/docs/operations/parcel-and-tile-workflows` | Large-page readability, callouts, tables, and command structure |
+| Mermaid page | `/docs/data-and-sync/sync-architecture` | Mermaid charts render as diagrams in light and dark mode instead of raw fenced code |
+| Data and sync detail page | `/docs/data-and-sync/parcels-sync-status-and-files` | File-based status guidance, tables, and related links render cleanly inside the shell |
 
 Capture final screenshots for:
 
@@ -48,24 +49,25 @@ Run these checks during the browser pass:
 - Query `workspace commands` returns `Workspace And Commands`.
 - Query `pipeline monitor` returns `Pipeline Monitor`.
 - Query `parcel tile workflows` returns `Parcel And Tile Workflows`.
-- Query `openapi artifact` returns `Spatial Analysis OpenAPI Artifact`.
+- Query `contracts and api surfaces` returns `Contracts And API Surfaces`.
 - Deep links from search preserve hash fragments when a section-level match is selected.
 - Table of contents highlights the active section on long pages.
 - Previous and next links follow `docs-navigation.service.ts` order.
+- Mermaid pages render SVG output rather than literal ```mermaid blocks.
 
 ## Content integrity
 
 - Onboarding pages cover workspace layout, shared commands, and contributor starting points.
 - Application pages cover `apps/web`, `apps/api`, and `apps/pipeline-monitor`.
 - Package pages cover the current shared packages.
-- Operations pages cover scripts, runbooks, and troubleshooting paths.
-- Migrated artifact pages cover the existing docs corpus in `docs/architecture`, `docs/research`, `docs/review`, and `docs/runbooks`.
+- Operations pages cover scripts, troubleshooting paths, and recovery guidance.
+- Contributing pages explain how authored docs are added, ordered, and verified.
 
 ## Scope and safety checks
 
 - Docs work is limited to docs surfaces plus minimal workspace wiring.
 - No business behavior changed in `apps/web`, `apps/api`, `apps/pipeline-monitor`, `packages/*`, or production scripts.
-- Source references still point to real files and real operational artifacts.
+- Source references still point to real files and real operational paths.
 
 Use `git diff --name-only` before release review. The changed paths should stay inside `apps/docs/**`, `docs/**`, and any intentionally minimal workspace wiring such as root `package.json`, `turbo.json`, or `biome.json`.
 

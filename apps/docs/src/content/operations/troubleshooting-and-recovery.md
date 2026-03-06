@@ -1,17 +1,15 @@
 ---
-title: Runbooks And Troubleshooting
+title: Troubleshooting And Recovery
 description: Operational recovery entry points for parcel sync, tile publish, coherency, and drift issues.
 searchTerms:
-  - runbook
   - troubleshooting
+  - recovery
   - stalled extraction
   - canonical load
   - tile build
   - ingestion mismatch
   - cdc drift
 sources:
-  - docs/runbooks/spatial-analysis-ops.md
-  - docs/architecture/spatial-analysis-kickoff-checklist.md
   - scripts/refresh-parcels.sh
   - scripts/load-parcels-canonical.sh
   - scripts/build-parcels-draw-pmtiles.sh
@@ -25,10 +23,10 @@ sources:
   - apps/pipeline-monitor/src/features/pipeline/pipeline.service.ts
 ---
 
-The preserved source-of-truth artifact for this topic is `docs/runbooks/spatial-analysis-ops.md`, now available in the docs app as [Spatial Analysis Ops Runbook](/docs/artifacts/spatial-analysis-ops). This page is the operator-facing version of that guidance: it keeps the same failure modes, but updates the routing to the current repo surfaces and makes the checks, actions, and exit criteria easier to scan during an incident.
+This page is the operator-facing recovery guide for parcel sync, tile publish, coherency, and drift issues. It keeps the checks, actions, and exit criteria close to the repo surfaces that matter during an incident.
 
 :::note
-The imported runbook artifact intentionally preserves older wording such as `GET /api/parcels/sync/status`. The current shared contract and API route are `GET /api/geo/parcels/sync/status`, so use the route shown on this page when working a live incident.
+Some older repo notes still use `GET /api/parcels/sync/status`. The current shared contract and API route are `GET /api/geo/parcels/sync/status`, so use the route shown on this page when working a live incident.
 :::
 
 ## Required triage inputs
@@ -49,8 +47,7 @@ The current operator surfaces line up like this:
 | `scripts/refresh-parcels.sh` | Authoritative top-level runner for extract, load, build, publish, and failure marker updates. |
 | `GET /api/geo/parcels/sync/status` | Sanitized API read model of the same filesystem-backed sync state. |
 | `apps/pipeline-monitor` | Operator UI that polls the sync-status route and summarizes the run phases, warnings, and live rates. |
-| `apps/web/public/tiles/parcels-draw-v1/latest.json` | Live manifest pointer that determines which parcel PMTiles artifact the frontend loads. |
-| [Spatial Analysis Ops Runbook](/docs/artifacts/spatial-analysis-ops) | Preserved legacy artifact and source material for the incident patterns documented here. |
+| `apps/web/public/tiles/parcels-draw-v1/latest.json` | Live manifest pointer that determines which parcel PMTiles file the frontend loads. |
 
 ## Incident routing guide
 
@@ -58,7 +55,7 @@ The current operator surfaces line up like this:
 | --- | --- | --- |
 | Stalled extraction | `active-run.json` stops updating during `extracting` | Resume the same run with `scripts/refresh-parcels.sh` and confirm the API snapshot advances. |
 | Failed canonical load | `loading` phase stalls or `db-load:*` summaries fail | Re-run `scripts/load-parcels-canonical.sh` for the same extracted run. |
-| Failed tile build | `building` transitions to `failed` or no PMTiles artifact is written | Fix dependencies or stale build locks, then rebuild the same run. |
+| Failed tile build | `building` transitions to `failed` or no PMTiles file is written | Fix dependencies or stale build locks, then rebuild the same run. |
 | Coherency mismatch | Parcel detail returns `INGESTION_RUN_MISMATCH` | Compare manifest lineage to API lineage, then publish or roll back the manifest. |
 | Drift-related operational issue | mirrored data no longer matches the write-of-record | Treat this as CDC/backfill work: compare counts and timestamps, inspect lag, then repair the affected window. |
 
@@ -181,7 +178,7 @@ bun run tiles:publish:parcels -- --dataset=parcels-draw-v1 --run-id="$RUN_ID"
 
 ### Exit criteria
 
-- the `.pmtiles` artifact exists under `.cache/tiles/parcels-draw-v1/`
+- the `.pmtiles` file exists under `.cache/tiles/parcels-draw-v1/`
 - `tile-build-complete.json` exists for the run
 - `latest.json` now points at the expected version after publish
 
@@ -210,7 +207,7 @@ Treat this as a coherency incident when:
 ### Actions
 
 1. Compare the manifest lineage and API lineage directly.
-2. If the PMTiles artifact is correct but the manifest pointer is wrong, republish it:
+2. If the PMTiles file is correct but the manifest pointer is wrong, republish it:
 
 ```bash
 RUN_ID=<run-id>
@@ -236,7 +233,7 @@ bun run tiles:rollback:parcels -- --dataset=parcels-draw-v1
 
 ### Scope
 
-The repo still treats drift as a CDC and mirrored-data problem, not as a dedicated parcel script. The preserved runbook and the kickoff checklist call out `saved_views`, entitlements, and other mirrored model rows as the main write-of-record surfaces that can drift between stores.
+The repo still treats drift as a CDC and mirrored-data problem, not as a dedicated parcel script. Existing architecture notes and the kickoff checklist call out `saved_views`, entitlements, and other mirrored model rows as the main write-of-record surfaces that can drift between stores.
 
 ### Required inputs
 
@@ -258,25 +255,8 @@ The repo still treats drift as a CDC and mirrored-data problem, not as a dedicat
 2. Backfill the affected primary-key or time window once the consumer is healthy again.
 3. Add or restore drift alerting if the incident exposed that the repo is missing an alarm for this failure mode.
 
-:::warning
-There is no first-class repo script here that performs a complete CDC drift repair in one command. Keep the docs honest: this is currently investigation plus targeted backfill work, not a single scripted rollback path like manifest rollback.
-:::
+## Related reading
 
-### Exit criteria
-
-- mirrored row counts converge with the write-of-record
-- lag returns below the agreed threshold
-- the missing alert or dead-letter visibility gap is corrected if that caused the incident
-
-## Exit-criteria discipline
-
-Every incident path in this repo should end with an explicit stop condition instead of “watch it and see.” Use the API snapshot, the pipeline monitor, the marker files under `var/parcels-sync/<RUN_ID>/`, and the live manifest as the four confirmation surfaces before closing the incident.
-
-## Related pages
-
-- [Spatial Analysis Ops Runbook](/docs/artifacts/spatial-analysis-ops): the preserved legacy artifact this page expands and updates.
-- [Parcel And Tile Workflows](/docs/operations/parcel-and-tile-workflows): command inventory, artifact paths, publish rules, and rollback behavior.
-- [API Runtime Foundations](/docs/applications/api-runtime): worker lifecycle, route registration, runtime config, and HTTP boundary details.
-- [API Parcels And Sync](/docs/applications/api-parcels-and-sync): the parcel slice that exposes the sync status route and parcel detail lineage.
-- [Pipeline Monitor](/docs/applications/pipeline-monitor): the operator UI over the same sync-status snapshot.
-- [Sync Architecture](/docs/data-and-sync/sync-architecture): cross-app map of scripts, worker loops, API reads, and monitor behavior.
+- [Monitoring And Rollback](/docs/operations/monitoring-and-rollback)
+- [Parcel And Tile Workflows](/docs/operations/parcel-and-tile-workflows)
+- [Parcels Sync Status And Files](/docs/data-and-sync/parcels-sync-status-and-files)

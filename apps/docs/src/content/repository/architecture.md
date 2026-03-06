@@ -16,11 +16,37 @@ sources:
 
 This repository currently enforces a small set of explicit boundaries instead of a deep layer stack. The clearest statement of that direction lives in `docs/architecture/ddd.qmd`, and the implementation matches it closely.
 
+Read [Design Principles](/docs/repository/design-principles) when you want the rationale behind those boundaries rather than only the boundary map itself.
+
 ## Current bounded contexts
 
 - `geo-serving`: API endpoints and supporting services that return map-facing geospatial data.
 - `map-web`: viewport-driven rendering, layer policy, and interaction behavior in `apps/web`.
 - `shared-contracts`: transport schemas, headers, route helpers, and shared response conventions in `packages/contracts`.
+
+```mermaid
+flowchart LR
+  subgraph Apps
+    WEB[apps/web<br/>map-web]
+    API[apps/api<br/>geo-serving]
+    MON[apps/pipeline-monitor<br/>operator UI]
+  end
+
+  subgraph Shared
+    CONTRACTS[packages/contracts<br/>shared-contracts]
+    MAPENGINE[packages/map-engine]
+    CATALOG[packages/map-layer-catalog]
+    STYLE[packages/map-style]
+  end
+
+  WEB --> CONTRACTS
+  WEB --> MAPENGINE
+  WEB --> CATALOG
+  WEB --> STYLE
+  API --> CONTRACTS
+  MON --> CONTRACTS
+  API --> MON
+```
 
 ## Application boundaries
 
@@ -59,21 +85,11 @@ The parcel production path is explicit:
 3. Build PMTiles with `scripts/build-parcels-draw-pmtiles.sh`.
 4. Publish or rollback manifests with `scripts/publish-parcels-manifest.ts` and `scripts/rollback-parcels-manifest.ts`.
 
-The runbook `docs/runbooks/spatial-analysis-ops.md` documents the operational failure modes that hang off that path.
+The operations guidance in this docs app documents the operational failure modes that hang off that path.
 
-## Existing architecture artifacts to read next
+## Design context
 
-The authored docs in this app explain the current repo shape. The older architecture files under `docs/architecture` still matter because they capture the design intent behind that shape.
-
-| Artifact | When to read it |
-| --- | --- |
-| [DDD Baseline](/docs/artifacts/ddd) | Read first when you need the original bounded-context framing for the repo. |
-| [Spatial Analysis Overhaul](/docs/artifacts/spatial-analysis-overhaul) | Read when you need the broader system direction behind the current geo-serving and map-runtime seams. |
-| [Spatial Analysis Blocking Definitions](/docs/artifacts/spatial-analysis-blocking-definitions) | Read when sequencing work across dependent implementation tracks. |
-| [Spatial Analysis Kickoff Checklist](/docs/artifacts/spatial-analysis-kickoff-checklist) | Read when you need the early delivery checklist and scope framing. |
-| [Spatial Analysis OpenAPI Artifact](/docs/artifacts/spatial-analysis-openapi) | Read when you need the preserved HTTP reference artifact rather than the higher-level contracts page. |
-
-Use those artifact routes as preserved source material. Use the authored pages in this docs app for the current navigation path through the repo.
+The authored docs in this app explain the current repo shape directly. When you need the reasoning behind those boundaries, use [Design Principles](/docs/repository/design-principles) and the package or application pages that own the current runtime surface.
 
 ## Docs information architecture
 
@@ -87,10 +103,9 @@ The docs route structure mirrors those boundaries:
 - Operations
 - References
 - Contribution guidance
-- Migrated source artifacts
 
 Read [Information Architecture](/docs/repository/information-architecture) for the concrete route prefixes, section ownership, and the source-area mapping that keeps the docs tree stable enough for prev/next navigation, search indexing, and direct linking.
 
 :::warning Authoritative Sources
-When a docs page and a runtime file disagree, the runtime file wins. Docs are explanatory. Source files and operational artifacts remain authoritative.
+When a docs page and a runtime file disagree, the runtime file wins. Docs are explanatory. Source files and operational files remain authoritative.
 :::

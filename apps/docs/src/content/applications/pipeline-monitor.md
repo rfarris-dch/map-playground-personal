@@ -25,6 +25,16 @@ sources:
 
 `apps/pipeline-monitor` is a dedicated Vue 3 + Vite operator surface for parcel pipeline monitoring. It is intentionally separate from `apps/web` so ingestion visibility does not depend on the map runtime, and it stays narrower than `apps/api` because it only reads the sync-status contract.
 
+```mermaid
+flowchart LR
+  API[apps/api sync status route] --> SERVICE[pipeline.service.ts]
+  SERVICE --> VIEW[pipeline.view.ts]
+  VIEW --> DASH[use-pipeline-dashboard.ts]
+  DASH --> UI[PipelineDashboard components]
+  VIEW --> EVENTS[pipeline-tracking services]
+  EVENTS --> UI
+```
+
 ## Entrypoints and runtime shape
 
 ### Boot and package scripts
@@ -148,12 +158,12 @@ That means monitor regressions usually point to one of three places:
 - it does not own the live tile manifest
 - it exists to make the sync state legible without reading `active-run.json`, `postextract-<RUN_ID>.log`, or database metadata by hand
 
-This is why it belongs beside the sync and runbook docs instead of being buried inside the web runtime pages.
+This is why it belongs beside the sync and recovery docs instead of being buried inside the web runtime pages.
 
 ## Related docs
 
 - Use [Sync Architecture](/docs/data-and-sync/sync-architecture) for the cross-app view that connects scripts, the sync worker, the API status route, and this UI.
-- Use [Parcel And Tile Workflows](/docs/operations/parcel-and-tile-workflows) for the command-level production path and the on-disk artifacts this monitor is summarizing.
-- Use [Runbooks And Troubleshooting](/docs/operations/runbooks-and-troubleshooting) when a stalled or failed phase needs an explicit recovery procedure.
+- Use [Parcel And Tile Workflows](/docs/operations/parcel-and-tile-workflows) for the command-level production path and the on-disk files this monitor is summarizing.
+- Use [Troubleshooting And Recovery](/docs/operations/troubleshooting-and-recovery) when a stalled or failed phase needs an explicit recovery procedure.
 - Use [API Runtime Foundations](/docs/applications/api-runtime) for the HTTP/runtime boundary that serves the status feed.
 - Use [Contracts](/docs/packages/contracts) when changing the shared status schema or route builders that this app depends on.

@@ -198,7 +198,7 @@ These commands and checks must pass for every user story:
 - [ ] Cross-link runbooks to the related scripts, API runtime docs, and pipeline-monitor docs.
 - [ ] Keep the runbook content searchable and discoverable from the docs navigation.
 
-### US-017: Add API, contract, and source-reference documentation patterns
+### US-017: Add API, contract, and documentation reference patterns
 **Description:** As a maintainer, I want consistent reference patterns so that docs pages can point back to real code, contracts, and existing architecture artifacts without duplication drift.
 
 **Acceptance Criteria:**
@@ -278,6 +278,6 @@ These commands and checks must pass for every user story:
 
 - Which content format should be the long-term authoring standard for the Vue docs app: Markdown-only, MDX-equivalent, or a custom markdown-plus-frontmatter pipeline?
 - Should search be implemented with a static build-time index, a client-side local index, or another approach that preserves the Tailwind Plus Syntax interaction model in Vue?
-- Should the docs app expose generated API/package metadata automatically where practical, or should all content remain hand-authored with source references?
+- Should the docs app expose generated API/package metadata automatically where practical, or should all content remain hand-authored with explicit file-path references?
 - Is there a preferred deployment target for the future docs app, or should the initial effort focus only on local/buildable monorepo integration?
 [/PRD]

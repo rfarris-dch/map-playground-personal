@@ -5,6 +5,26 @@ description: Contracts, map engine, layer catalog, and style packages that defin
 
 These packages define the shared runtime contracts that the apps depend on most directly. Treat this page as the overview and use the package-specific pages for the authoritative breakdown of exports, consumers, and test/build behavior.
 
+```mermaid
+flowchart LR
+  CONTRACTS[packages/contracts]
+  MAPENGINE[packages/map-engine]
+  CATALOG[packages/map-layer-catalog]
+  STYLE[packages/map-style]
+  WEB[apps/web]
+  API[apps/api]
+  MON[apps/pipeline-monitor]
+
+  WEB --> CONTRACTS
+  WEB --> MAPENGINE
+  WEB --> CATALOG
+  WEB --> STYLE
+  API --> CONTRACTS
+  MON --> CONTRACTS
+  STYLE --> MAPENGINE
+  STYLE --> CATALOG
+```
+
 ## Package map
 
 | Package | Purpose | Concrete surfaces |

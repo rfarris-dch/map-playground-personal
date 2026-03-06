@@ -136,4 +136,4 @@ Selected-object detail queries and hover translators should stay outside the lay
 
 - Use [Web Map Shell Domains](/docs/applications/web-map-shell-domains) for the shell code that mounts these controllers.
 - Use [Web Reporting And Analysis Domains](/docs/applications/web-reporting-and-analysis-domains) for the table routes and analysis helpers that consume data from these domains.
-- Use [Parcel And Tile Workflows](/docs/operations/parcel-and-tile-workflows) and [Runbooks And Troubleshooting](/docs/operations/runbooks-and-troubleshooting) for the operational parcel flows behind the parcels feature.
+- Use [Parcel And Tile Workflows](/docs/operations/parcel-and-tile-workflows) and [Troubleshooting And Recovery](/docs/operations/troubleshooting-and-recovery) for the operational parcel flows behind the parcels feature.

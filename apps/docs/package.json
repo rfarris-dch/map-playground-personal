@@ -16,6 +16,7 @@
     "gray-matter": "^4.0.3",
     "markdown-it": "^14.1.0",
     "markdown-it-anchor": "^9.2.0",
+    "mermaid": "^11.12.3",
     "prismjs": "^1.30.0",
     "vue": "^3.5.22",
     "vue-router": "^4.4.5"

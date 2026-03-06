@@ -28,72 +28,12 @@ interface ParsedFrontmatter {
 }
 
 interface RawContentDocument {
-  readonly metadata?: RawPageData;
   readonly raw: string;
   readonly sourceFile: string;
 }
 
 const integerPattern = /^-?\d+$/;
 const frontmatterArrayItemPattern = /^\s*-\s+(.*)$/;
-const legacyDocsSourcePathPattern = /(docs\/(?:architecture|research|review|runbooks)\/.*)$/u;
-
-const legacyArtifactMetadataBySourcePath: Readonly<Record<string, RawPageData>> = {
-  "docs/architecture/ddd.qmd": {
-    title: "DDD Baseline",
-    description:
-      "Early-stage bounded contexts, transport boundaries, and right-sized layering guidance from the legacy architecture corpus.",
-    searchTerms: ["bounded contexts", "geo-serving", "map-web", "shared contracts"],
-    sources: ["docs/architecture/ddd.qmd"],
-  },
-  "docs/architecture/spatial-analysis-overhaul.qmd": {
-    title: "Spatial Analysis Overhaul",
-    description:
-      "Architecture-direction artifact covering the target serving stack, canonical schemas, and next-step rollout for spatial analysis.",
-    searchTerms: ["spatial analysis", "overhaul", "postgis", "pmtiles", "cdc"],
-    sources: ["docs/architecture/spatial-analysis-overhaul.qmd"],
-  },
-  "docs/architecture/spatial-analysis-blocking-definitions.qmd": {
-    description:
-      "Blocking definitions artifact covering canonical market-metric formulas, licensing policy, and enforcement targets.",
-    searchTerms: ["blocking definitions", "market metrics", "licensing", "policy"],
-    sources: ["docs/architecture/spatial-analysis-blocking-definitions.qmd"],
-  },
-  "docs/architecture/spatial-analysis-kickoff-checklist.md": {
-    title: "Spatial Analysis Kickoff Checklist",
-    description:
-      "Program-track checklist for the staged spatial-analysis rollout, including owners, gates, and stage-level acceptance criteria.",
-    searchTerms: ["kickoff checklist", "30/60/90", "program tracks", "stage acceptance"],
-    sources: ["docs/architecture/spatial-analysis-kickoff-checklist.md"],
-  },
-  "docs/architecture/spatial-analysis-openapi.yaml": {
-    title: "Spatial Analysis OpenAPI Artifact",
-    description:
-      "Vendored OpenAPI reference for the current spatial-analysis runtime health, parcels, and facilities endpoints.",
-    searchTerms: ["openapi", "parcels", "facilities", "response envelope"],
-    sources: ["docs/architecture/spatial-analysis-openapi.yaml"],
-  },
-  "docs/research/main-intitial-research.md": {
-    title: "Main Initial Research",
-    description:
-      "Long-form research dossier covering map runtime choices, data-serving strategy, parcel scale constraints, and architecture recommendations.",
-    searchTerms: ["research", "maplibre", "pmtiles", "parcels", "architecture"],
-    sources: ["docs/research/main-intitial-research.md"],
-  },
-  "docs/review/repoprompt-context-builder-review-playbook.md": {
-    title: "RepoPrompt Context Builder Review Playbook",
-    description:
-      "Staged review playbook for building RepoPrompt context packets for external GPT-5 Pro code-review passes.",
-    searchTerms: ["repoprompt", "context builder", "review playbook", "gpt-5 pro"],
-    sources: ["docs/review/repoprompt-context-builder-review-playbook.md"],
-  },
-  "docs/runbooks/spatial-analysis-ops.md": {
-    title: "Spatial Analysis Ops Runbook",
-    description:
-      "Operational runbook for parcel ingestion, tile publish, API coherency, CDC drift, and rollback triage.",
-    searchTerms: ["runbook", "parcels", "tile publish", "cdc drift", "rollback"],
-    sources: ["docs/runbooks/spatial-analysis-ops.md"],
-  },
-};
 
 function normalizeArray(value: unknown): readonly string[] {
   if (!Array.isArray(value)) {
@@ -208,17 +148,6 @@ function parseFrontmatter(raw: string): ParsedFrontmatter {
   };
 }
 
-function normalizeLegacySourcePath(sourceFile: string): string {
-  const match = sourceFile.match(legacyDocsSourcePathPattern);
-  const normalizedPath = match?.[1];
-
-  if (typeof normalizedPath !== "string") {
-    throw new Error(`Unable to normalize legacy docs source path for ${sourceFile}`);
-  }
-
-  return normalizedPath;
-}
-
 function loadDocsAppContentFiles(): readonly RawContentDocument[] {
   const modules = import.meta.glob("../../content/**/*.{md,qmd}", {
     eager: true,
@@ -242,69 +171,13 @@ function loadDocsAppContentFiles(): readonly RawContentDocument[] {
   return documents;
 }
 
-function loadLegacyArtifactFiles(): readonly RawContentDocument[] {
-  const modules = import.meta.glob(
-    "../../../../../docs/{architecture,research,review,runbooks}/**/*.{md,qmd,yaml}",
-    {
-      eager: true,
-      import: "default",
-      query: "?raw",
-    }
-  );
-
-  const documents: RawContentDocument[] = [];
-
-  for (const [sourceFile, rawValue] of Object.entries(modules)) {
-    if (typeof rawValue !== "string") {
-      throw new Error(`Expected raw string content for ${sourceFile}`);
-    }
-
-    const normalizedSourcePath = normalizeLegacySourcePath(sourceFile);
-    const metadata = legacyArtifactMetadataBySourcePath[normalizedSourcePath];
-
-    if (typeof metadata === "undefined") {
-      continue;
-    }
-
-    documents.push({
-      sourceFile,
-      raw: rawValue,
-      metadata,
-    });
-  }
-
-  return documents;
-}
-
-function createRenderableContent(document: RawContentDocument, content: string): string {
-  if (!document.sourceFile.endsWith(".yaml")) {
-    return content;
-  }
-
-  const normalizedSourcePath = normalizeLegacySourcePath(document.sourceFile);
-
-  return [
-    "## Source artifact",
-    "",
-    `This page renders \`${normalizedSourcePath}\` inside the docs app so the reference contract stays searchable alongside the authored docs pages.`,
-    "",
-    "```yaml",
-    content.trimEnd(),
-    "```",
-  ].join("\n");
-}
-
 function createDocsPage(document: RawContentDocument): DocsPage {
   const parsed = parseFrontmatter(document.raw);
   const sourceFile = document.sourceFile;
-  const data = {
-    ...parsed.data,
-    ...document.metadata,
-  } satisfies RawPageData;
+  const data = parsed.data satisfies RawPageData;
   const derivedMeta = derivePageMeta(sourceFile);
   const title = requireString(data.title, "title", sourceFile);
-  const renderableContent = createRenderableContent(document, parsed.content);
-  const rendered = renderMarkdown(renderableContent, {
+  const rendered = renderMarkdown(parsed.content, {
     pageTitle: title,
   });
   const slug =
@@ -346,11 +219,7 @@ function createDocsPage(document: RawContentDocument): DocsPage {
   };
 }
 
-const pages = sortDocsPages(
-  [...loadDocsAppContentFiles(), ...loadLegacyArtifactFiles()].map((document) =>
-    createDocsPage(document)
-  )
-);
+const pages = sortDocsPages(loadDocsAppContentFiles().map((document) => createDocsPage(document)));
 
 export const docsCollection: DocsCollection = {
   pages,

@@ -1,13 +1,15 @@
 <script setup lang="ts">
-  import { computed, onMounted, onUnmounted, shallowRef } from "vue";
+  import { computed, defineAsyncComponent, onMounted, onUnmounted, shallowRef } from "vue";
   import HeroSection from "@/features/docs/components/hero-section.vue";
   import LogoMark from "@/features/docs/components/logo-mark.vue";
   import MobileNavigation from "@/features/docs/components/mobile-navigation.vue";
   import NavigationTree from "@/features/docs/components/navigation-tree.vue";
-  import SearchDialog from "@/features/docs/components/search-dialog.vue";
   import ThemeSelector from "@/features/docs/components/theme-selector.vue";
   import { useDocsContent } from "@/features/docs/composables/use-docs-content";
 
+  const SearchDialog = defineAsyncComponent(
+    () => import("@/features/docs/components/search-dialog.vue")
+  );
   const { currentPage, currentSlug, groups } = useDocsContent();
   const isScrolled = shallowRef(false);
 
@@ -45,9 +47,9 @@
       <div class="relative flex basis-0 justify-end gap-6 sm:gap-8 md:grow">
         <ThemeSelector class="relative z-10" />
         <a
-          href="https://github.com"
+          href="https://github.com/datacenterHawk/playground.git"
           class="group"
-          aria-label="GitHub"
+          aria-label="Repository"
           target="_blank"
           rel="noreferrer"
         >

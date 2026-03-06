@@ -1,6 +1,6 @@
 ---
 title: Contracts And API Surfaces
-description: Shared transport schemas, response-envelope patterns, and the OpenAPI artifact that anchor the repo’s API documentation.
+description: Shared transport schemas, response-envelope patterns, and the repo sources that anchor the API documentation.
 sources:
   - packages/contracts/src/index.ts
   - packages/contracts/src/api-contracts.ts
@@ -34,7 +34,7 @@ This repo keeps its API and transport contract definitions centralized. The impo
 | `packages/contracts/src/shared-contracts.ts` | Owns the shared envelope, geometry, bbox, enum, and parse-helper surface reused across domain modules. |
 | `apps/api/src/app.ts` | Registers the public HTTP routes that are currently live in the API runtime. |
 | `packages/contracts/test/openapi-envelope-contracts.test.ts` | Enforces that the vendored OpenAPI fixture still matches runtime routes, headers, defaults, and shared envelope structure. |
-| `docs/architecture/spatial-analysis-openapi.yaml` | Preserved reference artifact for the currently documented health, parcels, and facilities endpoints. |
+| `docs/architecture/spatial-analysis-openapi.yaml` | Reference YAML for the currently documented health, parcels, and facilities endpoints. |
 
 ## Current API surface patterns
 
@@ -65,9 +65,9 @@ The transport package is split by runtime concern rather than by app:
 | `parcels-contracts` | Parcel detail, AOI, enrich, lookup, and sync-status request and response schemas. |
 | `table-contracts` | Table-query pagination, sorting, and tabular result shapes for facilities, markets, and providers. |
 
-## OpenAPI artifact
+## OpenAPI reference
 
-The current in-repo OpenAPI artifact is `docs/architecture/spatial-analysis-openapi.yaml`. Treat it as a design/reference artifact that should stay aligned with the shared contracts and route behavior as the spatial-analysis surface evolves.
+The current in-repo OpenAPI YAML is `docs/architecture/spatial-analysis-openapi.yaml`. Treat it as a reference file that should stay aligned with the shared contracts and route behavior as the spatial-analysis surface evolves.
 
 The strongest alignment point in the repo today is `packages/contracts/test/openapi-envelope-contracts.test.ts`. That test verifies several concrete seams against the vendored fixture:
 
@@ -80,10 +80,8 @@ The strongest alignment point in the repo today is `packages/contracts/test/open
 ## How to use this page
 
 - Start here when a change affects request or response shapes.
-- Use the `Source References` panel on this route to jump to the relevant package, runtime, and artifact companion pages.
-- Use the artifact pages when you need historic or planning context.
 - Use the app and slice docs when you need runtime ownership and implementation context.
 
 :::note Reference Pattern
-The authoritative source for exact runtime behavior is still the code in `packages/contracts` and `apps/api`. The OpenAPI YAML is a useful reference artifact, not a substitute for the live contract package.
+The authoritative source for exact runtime behavior is still the code in `packages/contracts` and `apps/api`. The OpenAPI YAML is a useful reference file, not a substitute for the live contract package.
 :::

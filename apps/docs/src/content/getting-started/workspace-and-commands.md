@@ -9,6 +9,22 @@ sources:
 
 The root workspace uses Bun workspaces plus Turbo orchestration. The root `package.json` is the authoritative inventory for workspace-level commands, while `README.md` and `AGENTS.md` explain how contributors are expected to move through the repo.
 
+```mermaid
+flowchart TD
+  ROOT[map-platform root]
+  ROOT --> APPS[apps/*]
+  ROOT --> PACKAGES[packages/*]
+  ROOT --> SCRIPTS[scripts/*]
+  ROOT --> DOCS[docs/* source material]
+  APPS --> WEB[apps/web]
+  APPS --> API[apps/api]
+  APPS --> MON[apps/pipeline-monitor]
+  APPS --> DOCSAPP[apps/docs]
+  PACKAGES --> CONTRACTS[contracts]
+  PACKAGES --> MAP[map-engine + catalog + style]
+  PACKAGES --> DATA[geo-sql + geo-tiles + ops]
+```
+
 ## Workspace layout
 
 | Path | Role |
@@ -90,12 +106,12 @@ bun x ultracite check apps/docs docs
 | `bun run sync:hyperscale` | Refresh the hyperscale dataset inputs used by the parcel workflow. |
 | `bun run init:parcels-schema` | Create or repair the parcel schema before canonical loads. |
 | `bun run load:parcels-canonical` | Load canonical parcel data into the serving schema. |
-| `bun run tiles:build:parcels` | Build the parcels PMTiles artifact. |
+| `bun run tiles:build:parcels` | Build the parcels PMTiles file set. |
 | `bun run sync:parcels` | Run the full parcel refresh and publish preparation workflow. |
 | `bun run tiles:publish:parcels` | Publish the current parcel manifest. |
 | `bun run tiles:rollback:parcels` | Roll back the parcel manifest pointer. |
 
-Operational scripts are documented in [Parcel And Tile Workflows](/docs/operations/parcel-and-tile-workflows). Use that page for phase order, artifacts, and rollback expectations rather than treating the command list above as sufficient operational guidance.
+Operational scripts are documented in [Parcel And Tile Workflows](/docs/operations/parcel-and-tile-workflows). Use that page for phase order, generated files, and rollback expectations rather than treating the command list above as sufficient operational guidance.
 
 ## Repository conventions from `AGENTS.md`
 
@@ -103,7 +119,6 @@ Operational scripts are documented in [Parcel And Tile Workflows](/docs/operatio
 
 - Keep Biome aligned with the Ultracite presets and run `bun x ultracite fix` before final review.
 - Prefer docs and code changes that stay inside the requested surface area instead of drifting into unrelated cleanup.
-- Follow the Beads workflow for issue state, closure, and sync expectations when the task is tracked.
 
 ### Vue and feature-structure rules
 
@@ -131,4 +146,4 @@ Operational scripts are documented in [Parcel And Tile Workflows](/docs/operatio
 2. Read `AGENTS.md` for repo constraints before editing anything.
 3. Read [Repository Architecture](/docs/repository/architecture) for the current runtime and package boundaries.
 4. Read the app or package page that matches the surface you are changing.
-5. Jump to [Architecture Artifacts](/docs/artifacts/architecture-artifacts) when the task references prior design work, review notes, or runbooks that already exist in `docs/*`.
+5. Read the relevant operations or repository page when the task references prior design work, review notes, or operator guidance already present in the repo.

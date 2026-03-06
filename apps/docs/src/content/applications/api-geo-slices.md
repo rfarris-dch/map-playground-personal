@@ -78,11 +78,11 @@ That keeps the entry route files small even though each slice serves several end
 
 ## Operational seam
 
-Only the parcel slice exposes the sync worker directly to HTTP readers through `GET /api/geo/parcels/sync/status`. That makes parcels the place where geo serving, sync lifecycle, pipeline monitoring, and runbooks intersect most tightly.
+Only the parcel slice exposes the sync worker directly to HTTP readers through `GET /api/geo/parcels/sync/status`. That makes parcels the place where geo serving, sync lifecycle, pipeline monitoring, and operator recovery intersect most tightly.
 
 Use these pages together with:
 
 - [API Runtime Foundations](/docs/applications/api-runtime)
 - [Sync Architecture](/docs/data-and-sync/sync-architecture)
 - [Parcel And Tile Workflows](/docs/operations/parcel-and-tile-workflows)
-- [Runbooks And Troubleshooting](/docs/operations/runbooks-and-troubleshooting)
+- [Troubleshooting And Recovery](/docs/operations/troubleshooting-and-recovery)

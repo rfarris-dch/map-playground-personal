@@ -5,6 +5,18 @@ description: HTTP entrypoints, runtime config, shared transport helpers, databas
 
 `apps/api` is a Bun + Hono service with two separate runtime entrypoints. The HTTP server handles request and response work. A second process runs long-lived sync loops. That split is the main foundation boundary to understand before looking at slice-specific route code.
 
+```mermaid
+flowchart LR
+  HTTP[index.ts<br/>HTTP runtime] --> APP[app.ts]
+  APP --> ROUTES[geo route registration]
+  APP --> HTTPHELPERS[http/* helpers]
+  APP --> DB[db/postgres.ts]
+  WORKER[sync-worker.ts<br/>worker runtime] --> HYPER[hyperscale sync]
+  WORKER --> PARCELS[parcels sync]
+  PARCELS --> STATUS[status snapshot services]
+  STATUS --> ROUTES
+```
+
 ## Entrypoints and process model
 
 ### HTTP server entrypoint
@@ -177,11 +189,11 @@ The two runtimes meet at a few explicit seams:
 
 - parcel sync status is exposed to HTTP consumers through route-level status endpoints
 - both processes rely on the same Bun SQL shutdown behavior
-- operational scripts and runbooks depend on the worker lifecycle, not the HTTP server lifecycle
+- operational scripts and recovery guides depend on the worker lifecycle, not the HTTP server lifecycle
 
 Use this page together with:
 
 - [API Geo Slices](/docs/applications/api-geo-slices)
 - [Sync Architecture](/docs/data-and-sync/sync-architecture)
 - [Parcel And Tile Workflows](/docs/operations/parcel-and-tile-workflows)
-- [Runbooks And Troubleshooting](/docs/operations/runbooks-and-troubleshooting)
+- [Troubleshooting And Recovery](/docs/operations/troubleshooting-and-recovery)

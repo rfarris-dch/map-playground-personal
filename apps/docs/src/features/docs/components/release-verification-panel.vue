@@ -21,7 +21,7 @@
     >
       <p class="text-sm font-semibold">Live coverage audit</p>
       <p class="mt-2 text-sm leading-6">
-        {{ hasFailures ? "One or more expected docs surfaces are missing from navigation or search." : "Representative onboarding, application, package, operations, reference, and artifact pages are all present in navigation and discoverable through the docs search index." }}
+        {{ hasFailures ? "One or more expected docs surfaces are missing from navigation or search." : "Representative onboarding, application, package, operations, reference, and contributor pages are all present in navigation and discoverable through the docs search index." }}
       </p>
     </div>
 

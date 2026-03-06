@@ -20,7 +20,6 @@ interface DocsNavigationDefinition {
 
 const sourceExtensionPattern = /\.(md|qmd|ya?ml)$/u;
 const contentRootPattern = /^.*?\/content\//u;
-const legacyDocsPattern = /\/docs\/(?:architecture|research|review|runbooks)\//u;
 
 export const docsNavigationDefinitions: readonly DocsNavigationDefinition[] = [
   {
@@ -30,6 +29,7 @@ export const docsNavigationDefinitions: readonly DocsNavigationDefinition[] = [
     pageOrderByStem: {
       "start-here": 1,
       "workspace-and-commands": 2,
+      "conventions-and-guardrails": 3,
     },
   },
   {
@@ -38,7 +38,8 @@ export const docsNavigationDefinitions: readonly DocsNavigationDefinition[] = [
     title: "Repository",
     pageOrderByStem: {
       architecture: 1,
-      "information-architecture": 2,
+      "design-principles": 2,
+      "information-architecture": 3,
     },
   },
   {
@@ -57,6 +58,8 @@ export const docsNavigationDefinitions: readonly DocsNavigationDefinition[] = [
       "api-fiber-markets-and-providers": 9,
       "api-parcels-and-sync": 10,
       "pipeline-monitor": 11,
+      "api-sync-runtime": 12,
+      "docs-runtime": 13,
     },
   },
   {
@@ -83,6 +86,7 @@ export const docsNavigationDefinitions: readonly DocsNavigationDefinition[] = [
     title: "Data And Sync",
     pageOrderByStem: {
       "sync-architecture": 1,
+      "parcels-sync-status-and-files": 2,
     },
   },
   {
@@ -91,7 +95,9 @@ export const docsNavigationDefinitions: readonly DocsNavigationDefinition[] = [
     title: "Operations",
     pageOrderByStem: {
       "parcel-and-tile-workflows": 1,
-      "runbooks-and-troubleshooting": 2,
+      "scripts-and-entrypoints": 2,
+      "troubleshooting-and-recovery": 3,
+      "monitoring-and-rollback": 4,
     },
   },
   {
@@ -100,7 +106,7 @@ export const docsNavigationDefinitions: readonly DocsNavigationDefinition[] = [
     title: "References",
     pageOrderByStem: {
       "contracts-and-api-surfaces": 1,
-      "source-reference-patterns": 2,
+      "workspace-source-map": 2,
     },
   },
   {
@@ -110,22 +116,6 @@ export const docsNavigationDefinitions: readonly DocsNavigationDefinition[] = [
     pageOrderByStem: {
       "docs-authoring": 1,
       "release-checklist": 2,
-    },
-  },
-  {
-    folder: "artifacts",
-    order: 9,
-    title: "Artifacts",
-    pageOrderByStem: {
-      "architecture-artifacts": 1,
-      ddd: 2,
-      "spatial-analysis-overhaul": 3,
-      "spatial-analysis-blocking-definitions": 4,
-      "spatial-analysis-kickoff-checklist": 5,
-      "spatial-analysis-openapi": 6,
-      "main-intitial-research": 7,
-      "repoprompt-context-builder-review-playbook": 8,
-      "spatial-analysis-ops": 9,
     },
   },
 ];
@@ -151,10 +141,7 @@ function sortPages(pages: readonly DocsPage[]): readonly DocsPage[] {
 
 export function derivePageMeta(sourceFile: string): DerivedPageMeta {
   const stem = getSourceStem(sourceFile);
-  const isLegacyArtifact = legacyDocsPattern.test(sourceFile);
-  const folder = isLegacyArtifact
-    ? "artifacts"
-    : sourceFile.replace(contentRootPattern, "").split("/")[0];
+  const folder = sourceFile.replace(contentRootPattern, "").split("/")[0];
 
   if (!folder) {
     throw new Error(`Unable to derive docs section for ${sourceFile}`);

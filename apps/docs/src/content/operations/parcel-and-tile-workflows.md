@@ -1,6 +1,6 @@
 ---
 title: Parcel And Tile Workflows
-description: The repo-level operational commands, artifacts, and production-path flow for parcel ingestion, canonical load, PMTiles build, publish, and rollback.
+description: The repo-level operational commands, generated files, and production-path flow for parcel ingestion, canonical load, PMTiles build, publish, and rollback.
 sources:
   - package.json
   - scripts/refresh-hyperscale.sh
@@ -27,9 +27,9 @@ The root `package.json` scripts are the preferred operator-facing entrypoints be
 | `bun run sync:hyperscale` | operational | `scripts/refresh-hyperscale.sh` | Refreshes mirrored hyperscale inputs and rebuilds the derived spatial serving tables. |
 | `bun run sync:parcels` | operational | `scripts/refresh-parcels.sh` | Primary parcel run wrapper: extract, canonical load, PMTiles build, and manifest publish. |
 | `bun run load:parcels-canonical` | operational | `scripts/load-parcels-canonical.sh` | Re-runs only the database load and swap phase from an extracted snapshot. |
-| `bun run tiles:build:parcels` | operational | `scripts/build-parcels-draw-pmtiles.sh` | Rebuilds the `parcels-draw-v1` PMTiles artifact from `parcel_current.parcels`. |
-| `bun run tiles:publish:parcels` | operational | `scripts/publish-parcels-manifest.ts` | Copies the PMTiles artifact into the web publish root and advances `latest.json`. |
-| `bun run tiles:rollback:parcels` | operational | `scripts/rollback-parcels-manifest.ts` | Swaps `latest.json` back to the previous published PMTiles artifact. |
+| `bun run tiles:build:parcels` | operational | `scripts/build-parcels-draw-pmtiles.sh` | Rebuilds the `parcels-draw-v1` PMTiles file from `parcel_current.parcels`. |
+| `bun run tiles:publish:parcels` | operational | `scripts/publish-parcels-manifest.ts` | Copies the PMTiles file into the web publish root and advances `latest.json`. |
+| `bun run tiles:rollback:parcels` | operational | `scripts/rollback-parcels-manifest.ts` | Swaps `latest.json` back to the previous published PMTiles file. |
 | `bash scripts/run-parcels-sync-launchd.sh` | operational scheduler wrapper | `scripts/run-parcels-sync-launchd.sh` | Launchd-oriented wrapper that prevents duplicate parcel sync starts and then executes `bun run sync:parcels`. |
 
 ## Operational vs development-only surfaces
@@ -57,11 +57,11 @@ These commands are useful for local iteration and operator UI work, but they are
 
 `dev:api:sync-worker` runs the same bounded-context sync services inside a watched Bun process, but the actual production path described in this page is the repo’s explicit scripts and scheduler wrapper, not a dev server.
 
-## Run artifacts operators should watch
+## Runtime files operators should watch
 
-The parcel workflow is easiest to follow by watching the on-disk artifacts that the scripts write while they advance the run.
+The parcel workflow is easiest to follow by watching the on-disk files that the scripts write while they advance the run.
 
-| Artifact | Writer | Why it matters |
+| File | Writer | Why it matters |
 | --- | --- | --- |
 | `var/parcels-sync/active-run.json` | `scripts/refresh-parcels.sh` and `scripts/load-parcels-canonical.sh` | Current phase heartbeat for extraction, loading, building, publishing, completion, or failure. |
 | `var/parcels-sync/latest.json` | `scripts/refresh-parcels.ts` | Latest extracted run pointer, including the summary, metadata, and run-config paths for the newest completed extraction. |
@@ -71,10 +71,10 @@ The parcel workflow is easiest to follow by watching the on-disk artifacts that 
 | `var/parcels-sync/<RUN_ID>/layer-metadata.json` | `scripts/refresh-parcels.ts` | Source layer metadata that the tile build can reuse for schema-aware PMTiles output. |
 | `var/parcels-sync/<RUN_ID>/db-stage-complete.json` | `scripts/load-parcels-canonical.sh` | Marker proving the raw stage table was loaded for this run and can be reused safely. |
 | `var/parcels-sync/<RUN_ID>/load-complete.json` | `scripts/refresh-parcels.sh` | Marker that canonical load and table swap finished. |
-| `var/parcels-sync/<RUN_ID>/tile-build-complete.json` | `scripts/refresh-parcels.sh` | Marker that PMTiles build finished, including the dataset and artifact path. |
+| `var/parcels-sync/<RUN_ID>/tile-build-complete.json` | `scripts/refresh-parcels.sh` | Marker that PMTiles build finished, including the dataset and output path. |
 | `var/parcels-sync/<RUN_ID>/publish-complete.json` | `scripts/refresh-parcels.sh` | Marker that manifest publish completed. |
-| `var/parcels-sync/postextract-<RUN_ID>.log` | `scripts/refresh-parcels.sh` | Tile-build log used by the API status parser and runbook triage. |
-| `.cache/tiles/parcels-draw-v1/parcels-draw-v1_<RUN_ID>.pmtiles` | `scripts/build-parcels-draw-pmtiles.sh` | The built PMTiles artifact before publish. |
+| `var/parcels-sync/postextract-<RUN_ID>.log` | `scripts/refresh-parcels.sh` | Tile-build log used by the API status parser and troubleshooting flow. |
+| `.cache/tiles/parcels-draw-v1/parcels-draw-v1_<RUN_ID>.pmtiles` | `scripts/build-parcels-draw-pmtiles.sh` | The built PMTiles file before publish. |
 | `apps/web/public/tiles/parcels-draw-v1/latest.json` | `scripts/publish-parcels-manifest.ts` or `scripts/rollback-parcels-manifest.ts` | The live publish pointer the web app uses to load the current parcel tileset. |
 
 ## Current production flow
@@ -161,13 +161,13 @@ RUN_ID=<run-id>
 bash scripts/build-parcels-draw-pmtiles.sh "$RUN_ID"
 ```
 
-This script reads directly from `parcel_current.parcels` and writes build artifacts under `.cache/tiles/parcels-draw-v1/`.
+This script reads directly from `parcel_current.parcels` and writes build output under `.cache/tiles/parcels-draw-v1/`.
 
 The current build path:
 
 - enforces `psql`, `tippecanoe`, `pmtiles`, and `jq`
 - creates a per-run build lock so the same run ID cannot build twice concurrently
-- writes a tile schema snapshot JSON alongside the artifacts
+- writes a tile schema snapshot JSON alongside the generated files
 - exports GeoJSONL from Postgres, then builds MBTiles with retry logic
 - converts MBTiles to PMTiles with retry logic
 - reuses `layer-metadata.json` from the extraction run when the selected profile needs schema awareness
@@ -176,17 +176,17 @@ The wrapper captures the build log in `var/parcels-sync/postextract-<RUN_ID>.log
 
 ### 5. Manifest publish
 
-If the PMTiles artifact exists, the wrapper publishes it:
+If the PMTiles file exists, the wrapper publishes it:
 
 ```bash
 bun run tiles:publish:parcels
 ```
 
-`scripts/publish-parcels-manifest.ts` resolves the PMTiles input from either explicit CLI flags or the latest parcel run, computes a SHA-256 checksum, copies the PMTiles artifact into `apps/web/public/tiles/parcels-draw-v1/<version>.pmtiles`, and writes `apps/web/public/tiles/parcels-draw-v1/latest.json`.
+`scripts/publish-parcels-manifest.ts` resolves the PMTiles input from either explicit CLI flags or the latest parcel run, computes a SHA-256 checksum, copies the PMTiles file into `apps/web/public/tiles/parcels-draw-v1/<version>.pmtiles`, and writes `apps/web/public/tiles/parcels-draw-v1/latest.json`.
 
 The live manifest format comes from `packages/geo-tiles/src/index.ts`:
 
-- `current` points at the active artifact
+- `current` points at the active file
 - `previous` retains the prior published entry when one exists
 - `publishedAt`, checksum, dataset, version, and optional `ingestionRunId` are validated before use
 
@@ -204,11 +204,11 @@ bun run tiles:rollback:parcels
 
 - loads the current `latest.json`
 - refuses to proceed if `previous` is missing
-- refuses to proceed if the previous PMTiles artifact is not present on disk
+- refuses to proceed if the previous PMTiles file is not present on disk
 - swaps the manifest so `previous` becomes `current`
 - preserves the rolled-back entry as the new `previous`
 
-Use rollback when the tile artifact was published successfully but should no longer be the live parcel dataset. Do not use it to repair extraction or canonical-load failures.
+Use rollback when the tile file was published successfully but should no longer be the live parcel dataset. Do not use it to repair extraction or canonical-load failures.
 
 There is a scripted publish rollback, but there is not a matching scripted database rollback command in this workflow. The database-side safety net is the archived `parcel_history.parcels_prev_<timestamp>` table created during the canonical swap.
 
@@ -236,7 +236,7 @@ bun run load:parcels-canonical "var/parcels-sync/$RUN_ID" "$RUN_ID"
 
 ### Rebuild tiles without extracting again
 
-Use this when `parcel_current.parcels` is already correct and only the tile artifact needs to be rebuilt:
+Use this when `parcel_current.parcels` is already correct and only the tile file needs to be rebuilt:
 
 ```bash
 RUN_ID=<run-id>
@@ -253,7 +253,7 @@ bun run tiles:publish:parcels -- --run-id="$RUN_ID"
 - [API Runtime Foundations](/docs/applications/api-runtime): the API worker owns the long-running sync loops, and the parcel routes expose sync status plus coherency-sensitive parcel serving.
 - [Pipeline Monitor](/docs/applications/pipeline-monitor): the monitor reads the same phase model the scripts write, including publish-state cues like `latest.json`.
 - [Sync Architecture](/docs/data-and-sync/sync-architecture): use that page for the cross-app view of scripts, worker lifecycle, serving routes, and monitor surfaces.
-- [Runbooks And Troubleshooting](/docs/operations/runbooks-and-troubleshooting): use that page for incident response once a phase has stalled or failed.
+- [Troubleshooting And Recovery](/docs/operations/troubleshooting-and-recovery): use that page for incident response once a phase has stalled or failed.
 
 ## Production-path rules
 

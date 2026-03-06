@@ -55,7 +55,7 @@ That is the repo's shared shape for lightweight operational events when a caller
 | `apps/web/src/lib/api-client.ts` | Stamps outbound browser requests with `x-request-id` values before calling the API. |
 | `apps/pipeline-monitor/src/features/pipeline/pipeline.service.ts` | Tags status-poll requests so the operator client participates in the same request-ID flow. |
 
-The package currently has no package-local consumer for `createDiagnosticEvent()`, which makes it a ready shared helper for future runbook-oriented or sync diagnostics without forcing each app to define its own event envelope first.
+The package currently has no package-local consumer for `createDiagnosticEvent()`, which makes it a ready shared helper for future operator-facing or sync diagnostics without forcing each app to define its own event envelope first.
 
 ## Operational-helper role in this repo
 

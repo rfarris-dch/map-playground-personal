@@ -8,6 +8,7 @@ build
 .turbo
 .cache
 var
+/docs/
 apps/web/public/tiles
 coverage
 

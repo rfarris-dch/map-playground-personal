@@ -113,6 +113,18 @@ function escapeHtml(value: string): string {
   return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 }
 
+function createMermaidBlockMarkup(code: string): string {
+  const encodedDefinition = encodeURIComponent(code.trim());
+
+  return [
+    '<div class="docs-mermaid-shell not-prose">',
+    `<div class="docs-mermaid" data-mermaid-definition="${encodedDefinition}">`,
+    '<div class="docs-mermaid-loading">Rendering diagram...</div>',
+    "</div>",
+    "</div>",
+  ].join("");
+}
+
 function defaultCalloutTitle(kind: CalloutKind): string {
   switch (kind) {
     case "note":
@@ -400,6 +412,10 @@ export function renderMarkdown(
     html: true,
     linkify: true,
     highlight(code: string, languageHint: string) {
+      if (languageHint.trim().toLowerCase() === "mermaid") {
+        return createMermaidBlockMarkup(code);
+      }
+
       const language = resolveLanguage(languageHint);
       const grammar = Prism.languages[language];
 

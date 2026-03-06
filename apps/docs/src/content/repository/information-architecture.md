@@ -4,13 +4,22 @@ description: The final docs navigation tree, route prefixes, and source-area own
 sources:
   - apps/docs/src/features/docs/docs-navigation.service.ts
   - apps/docs/src/content
-  - docs/architecture
-  - docs/research
-  - docs/review
-  - docs/runbooks
 ---
 
-This page records the stable route structure for the docs app before larger content migration continues. The goal is simple: every meaningful runtime, package, script, and artifact in the repo should have one obvious home in navigation.
+This page records the stable route structure for the docs app. The goal is simple: every meaningful runtime, package, script, and workflow in the repo should have one obvious home in navigation.
+
+```mermaid
+flowchart LR
+  HOME[Docs Home]
+  HOME --> START[Getting Started]
+  START --> REPO[Repository]
+  REPO --> APPS[Applications]
+  APPS --> PKG[Packages]
+  PKG --> DATA[Data And Sync]
+  DATA --> OPS[Operations]
+  OPS --> REF[References]
+  REF --> CONTRIB[Contributing]
+```
 
 ## Final navigation tree
 
@@ -21,10 +30,9 @@ This page records the stable route structure for the docs app before larger cont
 | Applications | `/docs/applications/*` | Runtime foundations and feature-domain coverage for `apps/web`, `apps/api`, and `apps/pipeline-monitor`. |
 | Packages | `/docs/packages/*` | Shared runtime, contract, SQL, tile, ops, bench, and fixture packages under `packages/*`. |
 | Data And Sync | `/docs/data-and-sync/*` | Cross-surface data movement, sync lifecycles, and workflow seams shared by scripts, the API worker, and the pipeline monitor. |
-| Operations | `/docs/operations/*` | Operational commands, runbooks, troubleshooting paths, publish, rollback, and incident response guidance. |
-| References | `/docs/references/*` | Contracts, API surfaces, source-reference patterns, and authoritative-vs-explanatory documentation rules. |
+| Operations | `/docs/operations/*` | Operational commands, troubleshooting paths, publish, rollback, and incident response guidance. |
+| References | `/docs/references/*` | Contracts, API surfaces, workspace maps, and documentation rules that point readers toward the right runtime surfaces. |
 | Contributing | `/docs/contributing/*` | Docs authoring standards, parity requirements, and release verification. |
-| Artifacts | `/docs/artifacts/*` | Migrated architecture, research, review, and runbook materials imported from the existing `docs/*` corpus. |
 
 ## Section ownership
 
@@ -35,10 +43,9 @@ This page records the stable route structure for the docs app before larger cont
 | Applications | `apps/web/**`, `apps/api/**`, `apps/pipeline-monitor/**`. |
 | Packages | `packages/contracts/**`, `packages/map-engine/**`, `packages/map-layer-catalog/**`, `packages/map-style/**`, `packages/geo-sql/**`, `packages/geo-tiles/**`, `packages/ops/**`, `packages/bench/**`, `packages/fixtures/**`. |
 | Data And Sync | `apps/api/src/sync-worker.ts`, parcel sync services, pipeline monitor tracking features, `scripts/refresh-*.sh`, `scripts/load-parcels-canonical.sh`, tile publish and rollback scripts. |
-| Operations | `scripts/**`, `docs/runbooks/**`, API sync status surfaces, and operator-facing recovery procedures. |
-| References | `packages/contracts/**`, `apps/api/src/app.ts`, `docs/architecture/spatial-analysis-openapi.yaml`, and docs-to-source linking rules. |
+| Operations | `scripts/**`, API sync status surfaces, and operator-facing recovery procedures. |
+| References | `packages/contracts/**`, `apps/api/src/app.ts`, and docs-to-source linking rules. |
 | Contributing | `apps/docs/src/content/**`, docs navigation metadata, verification steps, and Tailwind Plus Syntax parity rules. |
-| Artifacts | `docs/architecture/**`, `docs/research/**`, `docs/review/**`, `docs/runbooks/**`. |
 
 ## Stable routing rules
 
@@ -46,17 +53,6 @@ This page records the stable route structure for the docs app before larger cont
 - Add new pages under the nearest existing section instead of inventing a new top-level group.
 - Keep slugs deterministic from the content folder and file stem unless there is a strong reason to override them.
 - Preserve the ordered navigation tree in `docs-navigation.service.ts` so search indexing, previous/next links, and browser deep links stay stable.
-
-## Existing docs corpus coverage
-
-The migrated artifact surface explicitly covers the repository materials that existed before this app:
-
-- `docs/architecture/*`
-- `docs/research/*`
-- `docs/review/*`
-- `docs/runbooks/*`
-
-Those documents stay visible in the docs app because they contain real planning, review, and operational context. They are not replaced by summaries; they are organized into the route tree and cross-linked from the runtime docs.
 
 ## Why `Data And Sync` is separate from `Operations`
 

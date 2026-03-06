@@ -142,5 +142,5 @@ That makes hyperscale sync part of the geo-serving story even without a dedicate
 
 - Start with [API Runtime Foundations](/docs/applications/api-runtime) if the issue might live in shared envelopes, middleware, or runtime config.
 - Use [Sync Architecture](/docs/data-and-sync/sync-architecture) when the concern crosses scripts, worker loops, parcel routes, and the pipeline monitor.
-- Use [Parcel And Tile Workflows](/docs/operations/parcel-and-tile-workflows) for command-level execution and artifact paths.
-- Use [Runbooks And Troubleshooting](/docs/operations/runbooks-and-troubleshooting) when a parcel route symptom points to a stalled or failed sync run.
+- Use [Parcel And Tile Workflows](/docs/operations/parcel-and-tile-workflows) for command-level execution and output paths.
+- Use [Troubleshooting And Recovery](/docs/operations/troubleshooting-and-recovery) when a parcel route symptom points to a stalled or failed sync run.

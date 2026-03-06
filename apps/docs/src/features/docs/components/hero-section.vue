@@ -20,7 +20,7 @@
   api: "/docs/applications/api-runtime",
   monitor: "/docs/applications/pipeline-monitor",
   packages: "/docs/packages/core-runtime",
-  operations: "/docs/operations/runbooks-and-troubleshooting",
+  operations: "/docs/operations/troubleshooting-and-recovery",
 };`;
   const heroCodeLines = computed(() => heroCode.split("\n"));
 </script>

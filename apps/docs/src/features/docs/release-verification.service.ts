@@ -21,6 +21,11 @@ const releaseVerificationDefinitions: readonly ReleaseVerificationGroupDefinitio
         slug: "/docs/getting-started/workspace-and-commands",
         searchQuery: "workspace and commands",
       },
+      {
+        label: "Conventions And Guardrails",
+        slug: "/docs/getting-started/conventions-and-guardrails",
+        searchQuery: "conventions and guardrails",
+      },
     ],
   },
   {
@@ -52,6 +57,16 @@ const releaseVerificationDefinitions: readonly ReleaseVerificationGroupDefinitio
         label: "Pipeline Monitor",
         slug: "/docs/applications/pipeline-monitor",
         searchQuery: "pipeline monitor",
+      },
+      {
+        label: "API Sync Runtime",
+        slug: "/docs/applications/api-sync-runtime",
+        searchQuery: "api sync runtime",
+      },
+      {
+        label: "Docs Runtime",
+        slug: "/docs/applications/docs-runtime",
+        searchQuery: "docs runtime",
       },
     ],
   },
@@ -95,7 +110,7 @@ const releaseVerificationDefinitions: readonly ReleaseVerificationGroupDefinitio
   {
     title: "Operations And References",
     description:
-      "Operational guidance and source-reference patterns must be easy to find during incidents and code reviews.",
+      "Operational guidance and reference pages must be easy to find during incidents and code reviews.",
     items: [
       {
         label: "Parcel And Tile Workflows",
@@ -103,9 +118,14 @@ const releaseVerificationDefinitions: readonly ReleaseVerificationGroupDefinitio
         searchQuery: "parcel and tile workflows",
       },
       {
-        label: "Runbooks And Troubleshooting",
-        slug: "/docs/operations/runbooks-and-troubleshooting",
-        searchQuery: "runbooks and troubleshooting",
+        label: "Troubleshooting And Recovery",
+        slug: "/docs/operations/troubleshooting-and-recovery",
+        searchQuery: "troubleshooting and recovery",
+      },
+      {
+        label: "Scripts And Entrypoints",
+        slug: "/docs/operations/scripts-and-entrypoints",
+        searchQuery: "scripts and entrypoints",
       },
       {
         label: "Contracts And API Surfaces",
@@ -113,36 +133,26 @@ const releaseVerificationDefinitions: readonly ReleaseVerificationGroupDefinitio
         searchQuery: "contracts and api surfaces",
       },
       {
-        label: "Source Reference Patterns",
-        slug: "/docs/references/source-reference-patterns",
-        searchQuery: "source reference patterns",
+        label: "Workspace Source Map",
+        slug: "/docs/references/workspace-source-map",
+        searchQuery: "workspace source map",
       },
     ],
   },
   {
-    title: "Artifacts",
+    title: "Data And Sync",
     description:
-      "Imported architecture, research, review, and runbook artifacts must remain in the same navigation and search graph as authored docs.",
+      "Sync-state pages must stay discoverable for operators following parcel extraction, load, build, and publish state across surfaces.",
     items: [
       {
-        label: "Architecture Artifacts",
-        slug: "/docs/artifacts/architecture-artifacts",
-        searchQuery: "architecture artifacts",
+        label: "Sync Architecture",
+        slug: "/docs/data-and-sync/sync-architecture",
+        searchQuery: "sync architecture",
       },
       {
-        label: "Main Initial Research",
-        slug: "/docs/artifacts/main-intitial-research",
-        searchQuery: "main initial research",
-      },
-      {
-        label: "Spatial Analysis OpenAPI Artifact",
-        slug: "/docs/artifacts/spatial-analysis-openapi",
-        searchQuery: "openapi artifact",
-      },
-      {
-        label: "Spatial Analysis Ops Runbook",
-        slug: "/docs/artifacts/spatial-analysis-ops",
-        searchQuery: "ops runbook",
+        label: "Parcels Sync Status And Files",
+        slug: "/docs/data-and-sync/parcels-sync-status-and-files",
+        searchQuery: "parcels sync status and files",
       },
     ],
   },
