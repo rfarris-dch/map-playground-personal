@@ -3,10 +3,10 @@
   "sessionId": "bb6d6650-9cf8-442a-b52f-191243c475bf",
   "status": "running",
   "startedAt": "2026-03-06T01:32:18.832Z",
-  "updatedAt": "2026-03-06T03:41:37.071Z",
-  "currentIteration": 11,
+  "updatedAt": "2026-03-06T03:45:28.403Z",
+  "currentIteration": 12,
   "maxIterations": 100,
-  "tasksCompleted": 11,
+  "tasksCompleted": 12,
   "isPaused": false,
   "agentPlugin": "codex",
   "trackerState": {
@@ -125,8 +125,8 @@
       {
         "id": "docs-1.17",
         "title": "US-007: Document workspace onboarding and repository architecture",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       }
     ]
   },
@@ -240,6 +240,16 @@
       "durationMs": 418059,
       "startedAt": "2026-03-06T03:34:38.515Z",
       "endedAt": "2026-03-06T03:41:36.574Z"
+    },
+    {
+      "iteration": 12,
+      "status": "completed",
+      "taskId": "docs-1.17",
+      "taskTitle": "US-007: Document workspace onboarding and repository architecture",
+      "taskCompleted": true,
+      "durationMs": 229202,
+      "startedAt": "2026-03-06T03:41:38.714Z",
+      "endedAt": "2026-03-06T03:45:27.916Z"
     }
   ],
   "skippedTaskIds": [],

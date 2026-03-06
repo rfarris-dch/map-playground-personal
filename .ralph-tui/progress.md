@@ -15,10 +15,10 @@ after each iteration and included in agent prompts for context.
 - Package documentation reads more clearly when the `Packages` section keeps an overview page for orientation but gives each core runtime package its own page for exports, consumers, and build/test reality; application pages can then deep-link to the exact package seam instead of a catch-all summary.
 - Legacy docs-corpus migration works best when the docs app treats `docs/architecture`, `docs/research`, `docs/review`, and `docs/runbooks` as first-class content sources with explicit metadata and nav ordering, instead of copying those files into shadow duplicates under `apps/docs`.
 - Operational workflow pages are clearest when they start with the root script aliases from `package.json`, then map those aliases to the wrapper scripts, phase markers, and on-disk artifacts that the API and pipeline monitor consume; that keeps the docs aligned with the commands operators actually run.
+- Pipeline monitor docs are strongest when they treat the app as a single-screen operator client over `/api/geo/parcels/sync/status`: document the thin shell, polling controller, derivation services, and script/runbook links together so each UI warning can be traced back to the sync artifacts and API snapshot that produced it.
 - Final release-verification pages stay honest when they derive representative route and search checks from `docsCollection` and `searchDocsPages` instead of hand-maintained status prose; that way navigation or search drift shows up directly in the docs UI.
 - Reference-oriented docs are more usable when page-level `sources` frontmatter is rendered by the shared page shell: readers can see the authored-doc source separately from the authoritative runtime files or imported artifacts, and companion docs links can be derived from those same paths.
 
----
 ## 2026-03-06 - docs-1.25
 - Replaced the stub `Parcel And Tile Workflows` page with concrete repo-level script documentation covering schema setup, hyperscale sync inventory, the full parcel production path, rerun commands, build and publish artifacts, manifest rollback behavior, and the explicit split between operational and development-only commands.
 - Added command-level guidance around `sync:parcels` as the authoritative happy path, documented the phase markers and status files written under `var/parcels-sync`, and cross-linked the workflow page to the API runtime, pipeline monitor, sync architecture, and runbook surfaces that consume those artifacts.
@@ -29,7 +29,6 @@ after each iteration and included in agent prompts for context.
   - The parcel production path is best documented from `scripts/refresh-parcels.sh` outward because that wrapper owns the real phase order, resume logic, status heartbeat, and completion markers; the individual subcommands make sense mainly as targeted recovery surfaces.
   - The clean rollback story in this repo is manifest-level only: `scripts/rollback-parcels-manifest.ts` safely flips `latest.json`, while database-side recovery depends on the archived `parcel_history.parcels_prev_<timestamp>` table rather than a matching one-command DB rollback script.
   - Browser verification remains blocked in this sandbox because `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser open http://127.0.0.1:4173` fails with `Daemon failed to start`.
----
 ---
 ## 2026-03-06 - docs-1.23
 - Split the package-runtime docs into a real overview page plus four concrete package pages for `contracts`, `map-engine`, `map-layer-catalog`, and `map-style`, each covering exported responsibilities, current consumers, build/test behavior, and links back to the app/runtime docs that depend on them.
@@ -286,4 +285,24 @@ ultracite fix apps/docs docs .ralph-tui/progress.md`, and `bun x ultracite check
   - The acceptance bar for onboarding is not just a workspace table; the page needs the actual root command inventory plus intent-level guidance so new contributors know which entrypoint to run for each surface.
   - `AGENTS.md` conventions are more useful in docs when grouped into editing constraints, naming/type-safety rules, and production-path rules instead of being copied as a flat list.
   - The architecture docs are easier to trust when the authored `Repository Architecture` page explicitly tells readers which preserved artifact to open next for bounded-context framing, sequencing, or OpenAPI detail.
+---
+## ✓ Iteration 12 - docs-1.17: US-007: Document workspace onboarding and repository architecture
+*2026-03-06T03:45:28.402Z (229s)*
+
+**Status:** Completed
+
+**Notes:**
+s.md) and closed bead `docs-1.17`.\n\nValidation passed with `bun --cwd apps/docs lint`, `bun --cwd apps/docs typecheck`, `bun --cwd apps/docs build`, `bun x ultracite fix apps/docs docs .ralph-tui/progress.md`, and `bun x ultracite check apps/docs docs .ralph-tui/progress.md`. Browser verification is still blocked in this sandbox: `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, so I could not run `agent-browser` or capture the required screenshots here.\n\n
+
+---
+## 2026-03-06 - docs-1.22
+- Replaced the stub `Pipeline Monitor` application page with a concrete runtime doc that now covers the app boot path, single-screen shell, dashboard composition boundary, polling controller, contract fetch layer, tracking services, and the exact operator panels rendered from the sync-status payload.
+- Documented the `/api/geo/parcels/sync/status` contract as the monitor's authoritative input, explained how the app derives stall, rate, ETA, event-feed, and progress-bar signals from successive snapshots, and cross-linked the page to the sync architecture, parcel workflow, runbook, API runtime, and contracts docs.
+- Files changed:
+  - `apps/docs/src/content/applications/pipeline-monitor.md`
+  - `.ralph-tui/progress.md`
+- **Learnings:**
+  - The monitor is easiest to explain as a read model over the parcel sync status contract, not as a generic dashboard; the useful split is shell, polling controller, API contract seam, and derivation services.
+  - `pipeline.view.ts` is the operational heart of the app even though it is not a Vue route component: it owns polling cadence, abort/retry behavior, bounded live history, and request-failure recovery events.
+  - Browser verification remains blocked in this sandbox because `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser open http://127.0.0.1:4173` fails with `Daemon failed to start`.
 ---
