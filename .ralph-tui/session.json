@@ -3,10 +3,10 @@
   "sessionId": "bb6d6650-9cf8-442a-b52f-191243c475bf",
   "status": "running",
   "startedAt": "2026-03-06T01:32:18.832Z",
-  "updatedAt": "2026-03-06T02:28:44.777Z",
-  "currentIteration": 0,
+  "updatedAt": "2026-03-06T02:36:08.406Z",
+  "currentIteration": 1,
   "maxIterations": 100,
-  "tasksCompleted": 0,
+  "tasksCompleted": 1,
   "isPaused": false,
   "agentPlugin": "codex",
   "trackerState": {
@@ -35,8 +35,8 @@
       {
         "id": "docs-1.4",
         "title": "US-004: Define the repository documentation information architecture",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "docs-1.3",
@@ -130,7 +130,18 @@
       }
     ]
   },
-  "iterations": [],
+  "iterations": [
+    {
+      "iteration": 1,
+      "status": "completed",
+      "taskId": "docs-1.4",
+      "taskTitle": "US-004: Define the repository documentation information architecture",
+      "taskCompleted": true,
+      "durationMs": 441057,
+      "startedAt": "2026-03-06T02:28:46.336Z",
+      "endedAt": "2026-03-06T02:36:07.393Z"
+    }
+  ],
   "skippedTaskIds": [],
   "cwd": "/Users/robertfarris/map",
   "activeTaskIds": [],

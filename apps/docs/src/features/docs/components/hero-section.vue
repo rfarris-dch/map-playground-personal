@@ -52,13 +52,13 @@
             <div class="mt-8 flex gap-4 md:justify-center lg:justify-start">
               <RouterLink
                 to="/docs/getting-started/workspace-and-commands"
-                class="inline-flex items-center justify-center rounded-full bg-sky-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-sky-500/30 transition hover:bg-sky-400"
+                class="rounded-full bg-sky-300 px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-sky-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300/50 active:bg-sky-500"
               >
                 Workspace guide
               </RouterLink>
               <RouterLink
                 to="/docs/applications/web-runtime"
-                class="inline-flex items-center justify-center rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-slate-100 ring-1 ring-white/20 transition hover:bg-white/15"
+                class="rounded-full bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/50 active:text-slate-400"
               >
                 Open web runtime docs
               </RouterLink>

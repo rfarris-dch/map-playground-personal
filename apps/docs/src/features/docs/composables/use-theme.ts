@@ -3,8 +3,35 @@ import { computed, onMounted, shallowRef, watch } from "vue";
 type ThemeValue = "light" | "dark" | "system";
 
 const themeStorageKey = "map-docs-theme";
-const currentTheme = shallowRef<ThemeValue>("system");
-const systemTheme = shallowRef<"light" | "dark">("dark");
+
+function readStoredTheme(): ThemeValue {
+  if (typeof window === "undefined") {
+    return "system";
+  }
+
+  const rootPreference = document.documentElement.dataset.themePreference;
+  if (rootPreference === "light" || rootPreference === "dark" || rootPreference === "system") {
+    return rootPreference;
+  }
+
+  const storedTheme = window.localStorage.getItem(themeStorageKey);
+  if (storedTheme === "light" || storedTheme === "dark" || storedTheme === "system") {
+    return storedTheme;
+  }
+
+  return "system";
+}
+
+function readSystemTheme(): "light" | "dark" {
+  if (typeof window === "undefined") {
+    return "dark";
+  }
+
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+const currentTheme = shallowRef<ThemeValue>(readStoredTheme());
+const systemTheme = shallowRef<"light" | "dark">(readSystemTheme());
 const hasMounted = shallowRef(false);
 
 function applyThemeClass(): void {
@@ -15,10 +42,7 @@ function applyThemeClass(): void {
 }
 
 function initializeTheme(): void {
-  const storedTheme = window.localStorage.getItem(themeStorageKey);
-  if (storedTheme === "light" || storedTheme === "dark" || storedTheme === "system") {
-    currentTheme.value = storedTheme;
-  }
+  currentTheme.value = readStoredTheme();
 
   const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
   systemTheme.value = mediaQuery.matches ? "dark" : "light";
@@ -35,6 +59,7 @@ watch([currentTheme, systemTheme], () => {
   }
 
   window.localStorage.setItem(themeStorageKey, currentTheme.value);
+  document.documentElement.dataset.themePreference = currentTheme.value;
   applyThemeClass();
 });
 

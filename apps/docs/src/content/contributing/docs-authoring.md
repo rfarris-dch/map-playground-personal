@@ -42,6 +42,16 @@ Legacy materials in `docs/architecture`, `docs/research`, `docs/review`, and `do
 - Reuse the same fonts, spacing, gradients, prose treatment, and shell patterns.
 - Treat visual drift as a bug, not as an opportunity to redesign the docs UI.
 
+## Vue port notes
+
+The reference implementation uses Next.js font loaders in
+`docs/tailwind-plus-syntax/syntax-ts/src/app/layout.tsx`.
+The Vue app keeps the rendered result equivalent by defining the same `--font-inter` and
+`--font-lexend` variables in `apps/docs/src/styles/tailwind.css`, with Lexend vendored locally in
+the docs app.
+The only intentional visual substitution is repo branding: the docs shell uses the datacenterHawk
+logo asset instead of the sample CacheAdvance wordmark from the Tailwind Plus demo.
+
 ## Verification expectation
 
 The PRD expects browser verification with `agent-browser` for touched docs routes at desktop and mobile breakpoints. When the tool is available, use it to validate:
