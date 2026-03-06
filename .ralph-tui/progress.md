@@ -12,6 +12,7 @@ after each iteration and included in agent prompts for context.
 - Application foundation pages work best when they document process entrypoints, shared runtime helpers, and cross-cutting config in one place, while pushing route- or slice-specific behavior into companion pages such as `api-geo-slices.md`.
 - Web-application foundation pages read more clearly when they separate the composition-root route (`/map`) from narrower reporting routes first, then document shell orchestration, shared UI plumbing, and package/API seams without duplicating the feature-domain inventory.
 - Package documentation reads more clearly when the `Packages` section keeps an overview page for orientation but gives each core runtime package its own page for exports, consumers, and build/test reality; application pages can then deep-link to the exact package seam instead of a catch-all summary.
+- Legacy docs-corpus migration works best when the docs app treats `docs/architecture`, `docs/research`, `docs/review`, and `docs/runbooks` as first-class content sources with explicit metadata and nav ordering, instead of copying those files into shadow duplicates under `apps/docs`.
 
 ---
 ## 2026-03-06 - docs-1.23
@@ -29,7 +30,21 @@ after each iteration and included in agent prompts for context.
   - `packages/contracts` is the strongest package-doc candidate for source/reference split: the package page should explain the runtime contract boundary, while the reference page should stay focused on transport-source-of-truth and OpenAPI alignment.
   - The clean line between `map-layer-catalog` and `map-style` is policy versus style identity: catalog owns layer IDs/default visibility/dependencies, while style owns layer-ID expansion and stacking rules.
   - `map-engine` and `map-style` currently rely on typecheck/build plus web integration rather than package-local tests, so package docs should call out that gap explicitly instead of implying equivalent coverage across all four packages.
-  - Browser verification remains blocked in this sandbox because `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser` fails with `Daemon failed to start`.
+- Browser verification remains blocked in this sandbox because `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser` fails with `Daemon failed to start`.
+---
+
+## 2026-03-05 - docs-1.16
+- Migrated the legacy docs corpus into the docs app as first-class artifact pages by extending the docs content pipeline to load the existing files from `docs/architecture`, `docs/research`, `docs/review`, and `docs/runbooks`, add artifact metadata, and place them in navigation and search without copying the source documents into `apps/docs`.
+- Expanded the `Artifacts` section so it now links to the individual architecture, research, review, and runbook documents, while keeping the overview page as the orientation layer for those preserved source artifacts.
+- Files changed:
+  - `apps/docs/src/features/docs/docs-content.service.ts`
+  - `apps/docs/src/features/docs/docs-navigation.service.ts`
+  - `apps/docs/src/content/artifacts/architecture-artifacts.md`
+  - `.ralph-tui/progress.md`
+- **Learnings:**
+  - The cleanest migration path for legacy docs in this repo is content-source registration plus metadata overlays, not duplicating the files into `apps/docs/src/content`; that keeps the original docs authoritative while still making them searchable and navigable in the app.
+  - YAML reference artifacts can participate in the same docs pipeline if they are wrapped into a fenced code block during rendering, which avoids special viewer components while preserving search coverage and source visibility.
+  - Browser verification remains blocked in this sandbox because `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser open http://127.0.0.1:4173` fails with `Daemon failed to start`.
 ---
 
 ## 2026-03-06 - docs-1.3
@@ -165,5 +180,14 @@ s.md), then closed bead `docs-1.20`.\n\nQuality gates passed: `bun --cwd apps/do
 
 **Notes:**
 ress.md), then closed bead `docs-1.18`.\n\nChecks passed: `bun --cwd apps/docs lint`, `bun --cwd apps/docs typecheck`, `bun --cwd apps/docs build`, `bun x ultracite fix apps/docs docs`, and `bun x ultracite check apps/docs docs`. Browser verification is still blocked in this sandbox: `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser` fails with `Daemon failed to start`, so I could not capture the required desktop/mobile screenshots here.\n\n
+
+---
+## ✓ Iteration 7 - docs-1.23: US-013: Document the shared package runtime surfaces
+*2026-03-06T03:12:09.669Z (393s)*
+
+**Status:** Completed
+
+**Notes:**
+ld`, `bun x ultracite fix apps/docs docs`, and `bun x ultracite check apps/docs docs`. I also appended the required entry to [.ralph-tui/progress.md](/Users/robertfarris/map/.ralph-tui/progress.md) and closed bead `docs-1.23`.\n\nBrowser verification is still blocked in this sandbox. `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser` fails with `Daemon failed to start`, so I could not capture the required desktop/mobile screenshots here.\n\n
 
 ---

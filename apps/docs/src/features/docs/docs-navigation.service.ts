@@ -18,8 +18,9 @@ interface DocsNavigationDefinition {
   readonly title: string;
 }
 
-const sourceExtensionPattern = /\.(md|qmd)$/u;
+const sourceExtensionPattern = /\.(md|qmd|ya?ml)$/u;
 const contentRootPattern = /^.*?\/content\//u;
+const legacyDocsPattern = /\/docs\/(?:architecture|research|review|runbooks)\//u;
 
 export const docsNavigationDefinitions: readonly DocsNavigationDefinition[] = [
   {
@@ -106,6 +107,14 @@ export const docsNavigationDefinitions: readonly DocsNavigationDefinition[] = [
     title: "Artifacts",
     pageOrderByStem: {
       "architecture-artifacts": 1,
+      ddd: 2,
+      "spatial-analysis-overhaul": 3,
+      "spatial-analysis-blocking-definitions": 4,
+      "spatial-analysis-kickoff-checklist": 5,
+      "spatial-analysis-openapi": 6,
+      "main-intitial-research": 7,
+      "repoprompt-context-builder-review-playbook": 8,
+      "spatial-analysis-ops": 9,
     },
   },
 ];
@@ -130,10 +139,11 @@ function sortPages(pages: readonly DocsPage[]): readonly DocsPage[] {
 }
 
 export function derivePageMeta(sourceFile: string): DerivedPageMeta {
-  const normalizedSourceFile = sourceFile.replace(contentRootPattern, "");
-  const segments = normalizedSourceFile.split("/");
-  const folder = segments[0];
   const stem = getSourceStem(sourceFile);
+  const isLegacyArtifact = legacyDocsPattern.test(sourceFile);
+  const folder = isLegacyArtifact
+    ? "artifacts"
+    : sourceFile.replace(contentRootPattern, "").split("/")[0];
 
   if (!folder) {
     throw new Error(`Unable to derive docs section for ${sourceFile}`);
