@@ -48,9 +48,12 @@ export const docsNavigationDefinitions: readonly DocsNavigationDefinition[] = [
     pageOrderByStem: {
       "web-runtime": 1,
       "web-feature-domains": 2,
-      "api-runtime": 3,
-      "api-geo-slices": 4,
-      "pipeline-monitor": 5,
+      "web-map-shell-domains": 3,
+      "web-map-data-domains": 4,
+      "web-reporting-and-analysis-domains": 5,
+      "api-runtime": 6,
+      "api-geo-slices": 7,
+      "pipeline-monitor": 8,
     },
   },
   {

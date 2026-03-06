@@ -16,6 +16,7 @@ after each iteration and included in agent prompts for context.
 - Legacy docs-corpus migration works best when the docs app treats `docs/architecture`, `docs/research`, `docs/review`, and `docs/runbooks` as first-class content sources with explicit metadata and nav ordering, instead of copying those files into shadow duplicates under `apps/docs`.
 - Operational workflow pages are clearest when they start with the root script aliases from `package.json`, then map those aliases to the wrapper scripts, phase markers, and on-disk artifacts that the API and pipeline monitor consume; that keeps the docs aligned with the commands operators actually run.
 - Pipeline monitor docs are strongest when they treat the app as a single-screen operator client over `/api/geo/parcels/sync/status`: document the thin shell, polling controller, derivation services, and script/runbook links together so each UI warning can be traced back to the sync artifacts and API snapshot that produced it.
+- Large `apps/web/src/features` coverage is easier to keep trustworthy when the docs split the inventory into shell/control domains, map-data domains, and reporting/analysis domains; that mirrors the real runtime boundaries between composables, layer controllers, and route-level table surfaces.
 - Final release-verification pages stay honest when they derive representative route and search checks from `docsCollection` and `searchDocsPages` instead of hand-maintained status prose; that way navigation or search drift shows up directly in the docs UI.
 - Reference-oriented docs are more usable when page-level `sources` frontmatter is rendered by the shared page shell: readers can see the authored-doc source separately from the authoritative runtime files or imported artifacts, and companion docs links can be derived from those same paths.
 - Support-package docs are stronger when they explicitly state that a package currently has no direct `apps/*` or `scripts/*` consumers; for packages like `bench` and `fixtures`, that absence is concrete repo information and keeps the page honest about present-day runtime impact.
@@ -357,4 +358,29 @@ s.md) and closed bead `docs-1.17`.\n\nValidation passed with `bun --cwd apps/doc
 **Notes:**
 lph-tui/progress.md`. I closed the bead with `bd close docs-1.24 --db /Users/robertfarris/map/.beads/beads.db --reason \"Documented the shared data and operations package surfaces in the docs app\"`.\n\nBrowser verification is still blocked in this sandbox. `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser open http://127.0.0.1:4173` fails with `Daemon failed to start`, so I could not capture the required desktop/mobile screenshots here.\n\n
 
+---
+## ✓ Iteration 15 - docs-1.28: US-018: Document the docs-authoring workflow and contribution standards
+*2026-03-06T04:10:18.685Z (645s)*
+
+**Status:** Completed
+
+**Notes:**
+`bun --cwd apps/docs lint`, `bun --cwd apps/docs typecheck`, `bun --cwd apps/docs build`, `bun x ultracite fix apps/docs docs .ralph-tui/progress.md`, and `bun x ultracite check apps/docs docs .ralph-tui/progress.md`. Browser verification is still blocked in this sandbox: `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser open http://127.0.0.1:4173` fails with `Daemon failed to start`, so I could not capture the required screenshots here.\n\n
+
+---
+## 2026-03-06 - docs-1.19
+- Replaced the thin single-page `Web Feature Domains` inventory with a real hub page plus three focused application docs for shell/control domains, map-data domains, and reporting/analysis domains, so the major `apps/web/src/features/*` areas now have concrete ownership docs instead of a flat checklist.
+- Documented the feature boundaries for basemap, boundaries, facilities, fiber locator, layers, markets, measure, navigation, parcels, power, providers, quick view, scanner, spatial analysis, and table utilities, including where services, layer controllers, composables, and route-level integrations should live.
+- Expanded the `Applications` navigation so the new feature-domain pages are first-class routes that participate in navigation, search, and prev/next flow alongside the existing web runtime foundations page.
+- Files changed:
+  - `apps/docs/src/content/applications/web-feature-domains.md`
+  - `apps/docs/src/content/applications/web-map-shell-domains.md`
+  - `apps/docs/src/content/applications/web-map-data-domains.md`
+  - `apps/docs/src/content/applications/web-reporting-and-analysis-domains.md`
+  - `apps/docs/src/features/docs/docs-navigation.service.ts`
+  - `.ralph-tui/progress.md`
+- **Learnings:**
+  - The cleanest split for `apps/web/src/features` docs is route-facing shell orchestration first, then map-data runtimes, then reporting/analysis helpers; trying to cover all of that on one page hides the real ownership boundaries.
+  - `features/facilities` is intentionally dual-purpose in this repo: the same domain owns both map-layer behavior and facilities-table transport, so the docs need to call out that split instead of forcing facilities into only one bucket.
+  - Browser verification remains blocked in this sandbox because `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser open http://127.0.0.1:4173` fails with `Daemon failed to start`.
 ---
