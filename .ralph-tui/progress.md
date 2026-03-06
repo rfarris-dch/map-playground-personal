@@ -11,7 +11,25 @@ after each iteration and included in agent prompts for context.
 - The docs app stays isolated by keeping its runtime entirely inside `apps/docs` and wiring root workspace commands through filtered package scripts like `dev:docs`, `build:docs`, and `typecheck:docs` rather than sharing entrypoints with product apps.
 - Application foundation pages work best when they document process entrypoints, shared runtime helpers, and cross-cutting config in one place, while pushing route- or slice-specific behavior into companion pages such as `api-geo-slices.md`.
 - Web-application foundation pages read more clearly when they separate the composition-root route (`/map`) from narrower reporting routes first, then document shell orchestration, shared UI plumbing, and package/API seams without duplicating the feature-domain inventory.
+- Package documentation reads more clearly when the `Packages` section keeps an overview page for orientation but gives each core runtime package its own page for exports, consumers, and build/test reality; application pages can then deep-link to the exact package seam instead of a catch-all summary.
 
+---
+## 2026-03-06 - docs-1.23
+- Split the package-runtime docs into a real overview page plus four concrete package pages for `contracts`, `map-engine`, `map-layer-catalog`, and `map-style`, each covering exported responsibilities, current consumers, build/test behavior, and links back to the app/runtime docs that depend on them.
+- Expanded the `Core Runtime Packages` page into a navigation hub so the package section now reads as overview first, package detail second, instead of collapsing all four packages into one thin summary.
+- Files changed:
+  - `apps/docs/src/content/packages/core-runtime.md`
+  - `apps/docs/src/content/packages/contracts.md`
+  - `apps/docs/src/content/packages/map-engine.md`
+  - `apps/docs/src/content/packages/map-layer-catalog.md`
+  - `apps/docs/src/content/packages/map-style.md`
+  - `apps/docs/src/features/docs/docs-navigation.service.ts`
+  - `.ralph-tui/progress.md`
+- **Learnings:**
+  - `packages/contracts` is the strongest package-doc candidate for source/reference split: the package page should explain the runtime contract boundary, while the reference page should stay focused on transport-source-of-truth and OpenAPI alignment.
+  - The clean line between `map-layer-catalog` and `map-style` is policy versus style identity: catalog owns layer IDs/default visibility/dependencies, while style owns layer-ID expansion and stacking rules.
+  - `map-engine` and `map-style` currently rely on typecheck/build plus web integration rather than package-local tests, so package docs should call out that gap explicitly instead of implying equivalent coverage across all four packages.
+  - Browser verification remains blocked in this sandbox because `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser` fails with `Daemon failed to start`.
 ---
 
 ## 2026-03-06 - docs-1.3
@@ -138,5 +156,14 @@ build`, `bun x ultracite fix apps/docs docs`, and `bun x ultracite check apps/do
 
 **Notes:**
 s.md), then closed bead `docs-1.20`.\n\nQuality gates passed: `bun --cwd apps/docs lint`, `bun --cwd apps/docs typecheck`, `bun --cwd apps/docs build`, `bun x ultracite fix apps/docs docs`, and `bun x ultracite check apps/docs docs`. Required browser verification is still blocked in this sandbox: `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser` fails with `Daemon failed to start`, so I could not capture desktop/mobile screenshots here.\n\n
+
+---
+## ✓ Iteration 6 - docs-1.18: US-008: Document the web app entrypoints and runtime foundations
+*2026-03-06T03:05:34.331Z (325s)*
+
+**Status:** Completed
+
+**Notes:**
+ress.md), then closed bead `docs-1.18`.\n\nChecks passed: `bun --cwd apps/docs lint`, `bun --cwd apps/docs typecheck`, `bun --cwd apps/docs build`, `bun x ultracite fix apps/docs docs`, and `bun x ultracite check apps/docs docs`. Browser verification is still blocked in this sandbox: `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser` fails with `Daemon failed to start`, so I could not capture the required desktop/mobile screenshots here.\n\n
 
 ---

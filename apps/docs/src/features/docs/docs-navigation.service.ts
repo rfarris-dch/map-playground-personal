@@ -58,7 +58,11 @@ export const docsNavigationDefinitions: readonly DocsNavigationDefinition[] = [
     title: "Packages",
     pageOrderByStem: {
       "core-runtime": 1,
-      "data-and-operations": 2,
+      contracts: 2,
+      "map-engine": 3,
+      "map-layer-catalog": 4,
+      "map-style": 5,
+      "data-and-operations": 6,
     },
   },
   {
