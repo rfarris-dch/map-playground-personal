@@ -3,10 +3,10 @@
   "sessionId": "bb6d6650-9cf8-442a-b52f-191243c475bf",
   "status": "running",
   "startedAt": "2026-03-06T01:32:18.832Z",
-  "updatedAt": "2026-03-06T03:12:09.676Z",
-  "currentIteration": 7,
+  "updatedAt": "2026-03-06T03:18:00.167Z",
+  "currentIteration": 8,
   "maxIterations": 100,
-  "tasksCompleted": 7,
+  "tasksCompleted": 8,
   "isPaused": false,
   "agentPlugin": "codex",
   "trackerState": {
@@ -23,8 +23,8 @@
       {
         "id": "docs-1.16",
         "title": "US-006: Migrate the existing docs corpus into the new app",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "docs-1.15",
@@ -200,6 +200,16 @@
       "durationMs": 393180,
       "startedAt": "2026-03-06T03:05:35.958Z",
       "endedAt": "2026-03-06T03:12:09.138Z"
+    },
+    {
+      "iteration": 8,
+      "status": "completed",
+      "taskId": "docs-1.16",
+      "taskTitle": "US-006: Migrate the existing docs corpus into the new app",
+      "taskCompleted": true,
+      "durationMs": 348333,
+      "startedAt": "2026-03-06T03:12:11.322Z",
+      "endedAt": "2026-03-06T03:17:59.655Z"
     }
   ],
   "skippedTaskIds": [],

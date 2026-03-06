@@ -13,7 +13,20 @@ after each iteration and included in agent prompts for context.
 - Web-application foundation pages read more clearly when they separate the composition-root route (`/map`) from narrower reporting routes first, then document shell orchestration, shared UI plumbing, and package/API seams without duplicating the feature-domain inventory.
 - Package documentation reads more clearly when the `Packages` section keeps an overview page for orientation but gives each core runtime package its own page for exports, consumers, and build/test reality; application pages can then deep-link to the exact package seam instead of a catch-all summary.
 - Legacy docs-corpus migration works best when the docs app treats `docs/architecture`, `docs/research`, `docs/review`, and `docs/runbooks` as first-class content sources with explicit metadata and nav ordering, instead of copying those files into shadow duplicates under `apps/docs`.
+- Operational workflow pages are clearest when they start with the root script aliases from `package.json`, then map those aliases to the wrapper scripts, phase markers, and on-disk artifacts that the API and pipeline monitor consume; that keeps the docs aligned with the commands operators actually run.
 
+---
+## 2026-03-06 - docs-1.25
+- Replaced the stub `Parcel And Tile Workflows` page with concrete repo-level script documentation covering schema setup, hyperscale sync inventory, the full parcel production path, rerun commands, build and publish artifacts, manifest rollback behavior, and the explicit split between operational and development-only commands.
+- Added command-level guidance around `sync:parcels` as the authoritative happy path, documented the phase markers and status files written under `var/parcels-sync`, and cross-linked the workflow page to the API runtime, pipeline monitor, sync architecture, and runbook surfaces that consume those artifacts.
+- Files changed:
+  - `apps/docs/src/content/operations/parcel-and-tile-workflows.md`
+  - `.ralph-tui/progress.md`
+- **Learnings:**
+  - The parcel production path is best documented from `scripts/refresh-parcels.sh` outward because that wrapper owns the real phase order, resume logic, status heartbeat, and completion markers; the individual subcommands make sense mainly as targeted recovery surfaces.
+  - The clean rollback story in this repo is manifest-level only: `scripts/rollback-parcels-manifest.ts` safely flips `latest.json`, while database-side recovery depends on the archived `parcel_history.parcels_prev_<timestamp>` table rather than a matching one-command DB rollback script.
+  - Browser verification remains blocked in this sandbox because `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser open http://127.0.0.1:4173` fails with `Daemon failed to start`.
+---
 ---
 ## 2026-03-06 - docs-1.23
 - Split the package-runtime docs into a real overview page plus four concrete package pages for `contracts`, `map-engine`, `map-layer-catalog`, and `map-style`, each covering exported responsibilities, current consumers, build/test behavior, and links back to the app/runtime docs that depend on them.
@@ -189,5 +202,14 @@ ress.md), then closed bead `docs-1.18`.\n\nChecks passed: `bun --cwd apps/docs l
 
 **Notes:**
 ld`, `bun x ultracite fix apps/docs docs`, and `bun x ultracite check apps/docs docs`. I also appended the required entry to [.ralph-tui/progress.md](/Users/robertfarris/map/.ralph-tui/progress.md) and closed bead `docs-1.23`.\n\nBrowser verification is still blocked in this sandbox. `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser` fails with `Daemon failed to start`, so I could not capture the required desktop/mobile screenshots here.\n\n
+
+---
+## ✓ Iteration 8 - docs-1.16: US-006: Migrate the existing docs corpus into the new app
+*2026-03-06T03:18:00.166Z (348s)*
+
+**Status:** Completed
+
+**Notes:**
+s-1.16`.\n\nValidation passed: `bun --cwd apps/docs lint`, `bun --cwd apps/docs typecheck`, `bun --cwd apps/docs build`, `bun x ultracite fix apps/docs docs`, and `bun x ultracite check apps/docs docs`. Browser verification is still blocked in this sandbox: `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser open http://127.0.0.1:4173` fails with `Daemon failed to start`, so I could not capture the required desktop/mobile screenshots here.\n\n
 
 ---
