@@ -15,6 +15,7 @@ after each iteration and included in agent prompts for context.
 - Legacy docs-corpus migration works best when the docs app treats `docs/architecture`, `docs/research`, `docs/review`, and `docs/runbooks` as first-class content sources with explicit metadata and nav ordering, instead of copying those files into shadow duplicates under `apps/docs`.
 - Operational workflow pages are clearest when they start with the root script aliases from `package.json`, then map those aliases to the wrapper scripts, phase markers, and on-disk artifacts that the API and pipeline monitor consume; that keeps the docs aligned with the commands operators actually run.
 - Final release-verification pages stay honest when they derive representative route and search checks from `docsCollection` and `searchDocsPages` instead of hand-maintained status prose; that way navigation or search drift shows up directly in the docs UI.
+- Reference-oriented docs are more usable when page-level `sources` frontmatter is rendered by the shared page shell: readers can see the authored-doc source separately from the authoritative runtime files or imported artifacts, and companion docs links can be derived from those same paths.
 
 ---
 ## 2026-03-06 - docs-1.25
@@ -237,4 +238,29 @@ s-1.16`.\n\nValidation passed: `bun --cwd apps/docs lint`, `bun --cwd apps/docs 
 **Notes:**
 apps/docs lint`, `bun --cwd apps/docs typecheck`, `bun --cwd apps/docs build`, and `bun x ultracite check apps/docs docs .ralph-tui/progress.md`. I also ran `bun x ultracite fix apps/docs docs .ralph-tui/progress.md`. Browser verification is still blocked in this sandbox: `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser open http://127.0.0.1:4173` fails with `Daemon failed to start`, so I could not capture the required screenshots here.\n\n
 
+---
+## ✓ Iteration 10 - docs-1.29: US-019: Add final parity and release verification for the docs app
+*2026-03-06T03:34:36.883Z (474s)*
+
+**Status:** Completed
+
+**Notes:**
+ultracite fix apps/docs docs .ralph-tui/progress.md`, and `bun x ultracite check apps/docs docs .ralph-tui/progress.md`. Browser verification is still blocked in this sandbox: `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser open http://127.0.0.1:4173` fails with `Daemon failed to start`, so I could not capture the required screenshots. `docs-1.29` is closed with `--force` because the bead tracker still has dependent beads marked open.\n\n
+
+---
+## 2026-03-06 - docs-1.27
+- Added a shared `Source References` panel to the docs page shell so every non-home route can show its authored-doc source, any authoritative runtime or artifact paths from frontmatter `sources`, and companion docs links derived from those paths.
+- Expanded the `Source Reference Patterns` and `Contracts And API Surfaces` pages with concrete source-of-truth matrices, module-level contract coverage, and explicit OpenAPI alignment guidance tied to the real `packages/contracts` and `apps/api` seams.
+- Files changed:
+  - `apps/docs/src/content/references/contracts-and-api-surfaces.md`
+  - `apps/docs/src/content/references/source-reference-patterns.md`
+  - `apps/docs/src/features/docs/components/source-reference-panel.vue`
+  - `apps/docs/src/features/docs/docs-source-references.service.ts`
+  - `apps/docs/src/features/docs/docs-source-references.types.ts`
+  - `apps/docs/src/features/docs/pages/docs-page-view.vue`
+  - `.ralph-tui/progress.md`
+- **Learnings:**
+  - Page-level `sources` metadata becomes much more valuable once the shared page shell renders it consistently; that keeps reference pages and runtime pages aligned without inventing a second manual link inventory.
+  - The clean distinction for this docs app is between the page source file and the authoritative runtime sources it references; imported legacy artifact pages are the special case where the rendered page source is itself authoritative.
+  - Browser verification remains blocked in this sandbox because `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser open http://127.0.0.1:4173` fails with `Daemon failed to start`.
 ---

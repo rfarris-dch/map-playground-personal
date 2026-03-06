@@ -4,6 +4,7 @@
   import PrevNextLinks from "@/features/docs/components/prev-next-links.vue";
   import ProseContent from "@/features/docs/components/prose-content.vue";
   import ReleaseVerificationPanel from "@/features/docs/components/release-verification-panel.vue";
+  import SourceReferencePanel from "@/features/docs/components/source-reference-panel.vue";
   import TableOfContents from "@/features/docs/components/table-of-contents.vue";
   import { useDocsContent } from "@/features/docs/composables/use-docs-content";
 
@@ -21,6 +22,7 @@
         />
         <HomeBody v-if="currentPage.slug === '/'" :page="currentPage" />
         <ProseContent v-else :html="currentPage.html" />
+        <SourceReferencePanel v-if="currentPage.slug !== '/'" :page="currentPage" />
         <ReleaseVerificationPanel
           v-if="currentPage.slug === '/docs/contributing/release-checklist'"
         />
