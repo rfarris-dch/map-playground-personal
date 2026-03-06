@@ -25,6 +25,7 @@ export type LayerId =
   | "county"
   | "state"
   | "country"
+  | "environmental.water-features"
   | "facilities.colocation"
   | "facilities.hyperscale"
   | "power.transmission"

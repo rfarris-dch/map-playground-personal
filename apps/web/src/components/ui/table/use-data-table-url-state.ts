@@ -32,6 +32,24 @@ export function useDataTableUrlState(options: UseDataTableUrlStateOptions): void
   const router = useRouter();
   const applyingUrlState = shallowRef<boolean>(false);
   const urlStateParamKey = computed(() => `table_${options.tableId.value}`);
+  const initialSortingState = options.sorting.value.map((entry) => ({ ...entry }));
+  const initialGlobalQuery = options.globalQuery.value;
+  const initialActiveFacets = { ...options.activeFacets.value };
+  const initialGrouping = [...options.grouping.value];
+  const initialColumnVisibility = { ...options.columnVisibility.value };
+  const initialRowSelection = { ...options.rowSelection.value };
+
+  function applyInitialTableState(): void {
+    options.globalQuery.value = initialGlobalQuery;
+    options.activeFacets.value = { ...initialActiveFacets };
+    options.grouping.value = [...initialGrouping];
+    options.columnVisibility.value = { ...initialColumnVisibility };
+    options.rowSelection.value = { ...initialRowSelection };
+
+    if (!sortingStatesEqual(initialSortingState, options.sorting.value)) {
+      options.onSortingChange(initialSortingState.map((entry) => ({ ...entry })));
+    }
+  }
 
   watch(
     () => route.query[urlStateParamKey.value],
@@ -41,27 +59,29 @@ export function useDataTableUrlState(options: UseDataTableUrlStateOptions): void
       }
 
       const serializedState = readQueryValue(queryValue);
-      if (serializedState === null) {
-        return;
-      }
-
-      const parsedState = parsePersistedTableState(serializedState);
-      if (parsedState === null) {
-        return;
-      }
+      const parsedState =
+        serializedState === null ? null : parsePersistedTableState(serializedState);
 
       applyingUrlState.value = true;
-      options.globalQuery.value = typeof parsedState.q === "string" ? parsedState.q : "";
-      options.activeFacets.value = parsedState.f ? { ...parsedState.f } : {};
-      options.grouping.value = parsedState.g ? [...parsedState.g] : [];
-      options.columnVisibility.value = createColumnVisibilityState(parsedState.v ?? []);
-      options.rowSelection.value = createRowSelectionState(parsedState.x ?? []);
+      try {
+        if (parsedState === null) {
+          applyInitialTableState();
+          return;
+        }
 
-      if (parsedState.s && !sortingStatesEqual(parsedState.s, options.sorting.value)) {
-        options.onSortingChange(parsedState.s);
+        options.globalQuery.value = typeof parsedState.q === "string" ? parsedState.q : "";
+        options.activeFacets.value = parsedState.f ? { ...parsedState.f } : {};
+        options.grouping.value = parsedState.g ? [...parsedState.g] : [];
+        options.columnVisibility.value = createColumnVisibilityState(parsedState.v ?? []);
+        options.rowSelection.value = createRowSelectionState(parsedState.x ?? []);
+
+        const nextSortingState = parsedState.s ?? initialSortingState;
+        if (!sortingStatesEqual(nextSortingState, options.sorting.value)) {
+          options.onSortingChange(nextSortingState.map((entry) => ({ ...entry })));
+        }
+      } finally {
+        applyingUrlState.value = false;
       }
-
-      applyingUrlState.value = false;
     },
     { immediate: true }
   );

@@ -1,7 +1,7 @@
 import { ApiRoutes, ParcelsSyncStatusResponseSchema } from "@map-migration/contracts";
 import type { Env, Hono } from "hono";
 import { EXPOSE_SYNC_INTERNALS } from "@/geo/parcels/route/parcels-route-meta.service";
-import { getOrCreateRequestId, jsonOk } from "@/http/api-response";
+import { getOrCreateRequestId, jsonError, jsonOk, toDebugDetails } from "@/http/api-response";
 import { getParcelsSyncStatusSnapshot } from "@/sync/parcels-sync.service";
 
 function sanitizeRunProgress(
@@ -32,7 +32,19 @@ export function registerParcelsSyncStatusRoute<E extends Env>(app: Hono<E>): voi
   app.get(ApiRoutes.parcelsSyncStatus, (c) => {
     const requestId = getOrCreateRequestId(c, "api");
 
-    const syncStatus = getParcelsSyncStatusSnapshot();
+    let syncStatus: ReturnType<typeof getParcelsSyncStatusSnapshot>;
+    try {
+      syncStatus = getParcelsSyncStatusSnapshot();
+    } catch (error) {
+      return jsonError(c, {
+        requestId,
+        httpStatus: 503,
+        code: "PARCELS_SYNC_STATUS_REFRESH_FAILED",
+        message: "parcels sync status refresh failed",
+        details: toDebugDetails(error),
+      });
+    }
+
     const run = syncStatus.run;
     const payload = {
       status: "ok",

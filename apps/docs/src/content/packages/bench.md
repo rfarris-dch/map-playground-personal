@@ -23,7 +23,7 @@ The package standardizes five runtime-budget categories:
 
 - `interactive-query`
 - `feature-collection`
-- `administrative-aggregation`
+- `boundary-aggregation`
 - `proximity-enrichment`
 - `tile-serving`
 

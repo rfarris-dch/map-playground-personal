@@ -4,6 +4,7 @@ import {
   facilitiesLayerId,
   PARCELS_LAYER_ID,
   powerLayerId,
+  WATER_FEATURES_LAYER_ID,
 } from "@/features/app/core/app-shell.constants";
 import type {
   BoundaryVisibilityState,
@@ -14,10 +15,12 @@ import {
   buildInitialParcelsVisible,
   buildInitialPerspectiveVisibilityState,
   buildInitialPowerVisibilityState,
+  buildInitialWaterVisible,
   syncBoundaryVisibilityState,
   syncParcelsVisible,
   syncPerspectiveVisibilityState,
   syncPowerVisibilityState,
+  syncWaterVisible,
   withBoundaryVisibility,
   withPerspectiveVisibility,
   withPowerVisibility,
@@ -45,6 +48,7 @@ export function useAppShellVisibility(options: UseAppShellVisibilityOptions) {
   );
   const parcelsVisible = shallowRef<boolean>(buildInitialParcelsVisible());
   const powerVisibility = shallowRef<PowerVisibilityState>(buildInitialPowerVisibilityState());
+  const waterVisible = shallowRef<boolean>(buildInitialWaterVisible());
 
   function applyBasemapVisibility(): void {
     const controller = options.basemapLayerController.value;
@@ -76,6 +80,10 @@ export function useAppShellVisibility(options: UseAppShellVisibilityOptions) {
       runtime,
       fallback: powerVisibility.value,
     });
+    waterVisible.value = syncWaterVisible({
+      runtime,
+      fallback: waterVisible.value,
+    });
   }
 
   function setPerspectiveVisibility(perspective: FacilityPerspective, visible: boolean): void {
@@ -103,6 +111,11 @@ export function useAppShellVisibility(options: UseAppShellVisibilityOptions) {
   function setBasemapLayerVisible(layerId: BasemapLayerId, visible: boolean): void {
     basemapVisibility.value = withBasemapLayerVisibility(basemapVisibility.value, layerId, visible);
     options.basemapLayerController.value?.setVisible(layerId, visible);
+  }
+
+  function setWaterVisible(visible: boolean): void {
+    waterVisible.value = visible;
+    options.layerRuntime.value?.setUserVisible(WATER_FEATURES_LAYER_ID, visible);
   }
 
   function setPowerLayerVisible(layerId: PowerLayerId, visible: boolean): void {
@@ -139,12 +152,14 @@ export function useAppShellVisibility(options: UseAppShellVisibilityOptions) {
     visiblePerspectives,
     parcelsVisible,
     powerVisibility,
+    waterVisible,
     applyBasemapVisibility,
     syncRuntimeVisibility,
     setPerspectiveVisibility,
     setParcelsVisible,
     setBasemapLayerVisible,
     setPowerLayerVisible,
+    setWaterVisible,
     setBoundaryVisible,
   };
 }

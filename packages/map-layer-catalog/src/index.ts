@@ -6,6 +6,7 @@ export const LAYER_IDS: readonly LayerId[] = [
   "county",
   "state",
   "country",
+  "environmental.water-features",
   "facilities.colocation",
   "facilities.hyperscale",
   "power.transmission",
@@ -51,12 +52,23 @@ export const DEFAULT_LAYER_CATALOG: LayerCatalog = {
     dependencies: [],
     budgetWeight: 1,
   },
+  "environmental.water-features": {
+    id: "environmental.water-features",
+    group: "environmental",
+    sourceId: "environmental.water-features",
+    sourceType: "raster",
+    zoomMin: 0,
+    zoomMax: 22,
+    defaultVisible: false,
+    dependencies: [],
+    budgetWeight: 1,
+  },
   "facilities.colocation": {
     id: "facilities.colocation",
     group: "facilities",
     sourceId: "facilities.colocation",
     sourceType: "geojson",
-    zoomMin: 4,
+    zoomMin: 2.5,
     zoomMax: 22,
     defaultVisible: true,
     dependencies: [],
@@ -67,7 +79,7 @@ export const DEFAULT_LAYER_CATALOG: LayerCatalog = {
     group: "facilities",
     sourceId: "facilities.hyperscale",
     sourceType: "geojson",
-    zoomMin: 4,
+    zoomMin: 2.5,
     zoomMax: 22,
     defaultVisible: true,
     dependencies: [],
@@ -146,6 +158,7 @@ export function isLayerId(value: string): value is LayerId {
     value === "county" ||
     value === "state" ||
     value === "country" ||
+    value === "environmental.water-features" ||
     value === "facilities.colocation" ||
     value === "facilities.hyperscale" ||
     value === "power.transmission" ||

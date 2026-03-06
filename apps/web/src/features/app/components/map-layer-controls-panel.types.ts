@@ -29,6 +29,7 @@ export interface MapLayerControlsPanelProps {
   readonly selectedFiberSourceLayerNames: FiberSourceLayerSelectionState;
   readonly visibleFiberLayers: FiberVisibilityState;
   readonly visiblePerspectives: PerspectiveVisibilityState;
+  readonly waterVisible: boolean;
 }
 
 export interface MapLayerControlsPanelEmits {
@@ -45,4 +46,5 @@ export interface MapLayerControlsPanelEmits {
   "update:parcels-visible": [visible: boolean];
   "update:perspective-visibility": [perspective: FacilityPerspective, visible: boolean];
   "update:power-layer-visible": [layerId: PowerLayerId, visible: boolean];
+  "update:water-visible": [visible: boolean];
 }

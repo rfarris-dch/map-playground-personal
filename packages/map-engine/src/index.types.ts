@@ -31,6 +31,7 @@ export interface IMap {
   destroy(): void;
   getBounds(): LngLatBounds;
   getCanvasSize(): { readonly height: number; readonly width: number };
+  getProjection(): MapProjectionSpecification;
   getStyle(): MapStyleSpecification;
   getZoom(): number;
   hasLayer(layerId: string): boolean;

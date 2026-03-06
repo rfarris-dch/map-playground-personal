@@ -5,7 +5,7 @@ export type { EndpointBudgetClass, LatencyBudget } from "./index.types";
 export const DEFAULT_ENDPOINT_BUDGETS: Record<EndpointBudgetClass, LatencyBudget> = {
   "interactive-query": { p95Ms: 250, p99Ms: 600 },
   "feature-collection": { p95Ms: 500, p99Ms: 900 },
-  "administrative-aggregation": { p95Ms: 250, p99Ms: 500 },
+  "boundary-aggregation": { p95Ms: 250, p99Ms: 500 },
   "proximity-enrichment": { p95Ms: 400, p99Ms: 800 },
   "tile-serving": { p95Ms: 150, p99Ms: 400 },
 };

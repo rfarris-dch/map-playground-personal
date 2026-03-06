@@ -4,6 +4,7 @@ import {
   fiberLayerId,
   PARCELS_LAYER_ID,
   powerLayerId,
+  WATER_FEATURES_LAYER_ID,
 } from "@/features/app/core/app-shell.constants";
 import type {
   BoundaryVisibilityState,
@@ -77,6 +78,10 @@ export function buildInitialParcelsVisible(catalog: LayerCatalog = DEFAULT_LAYER
   return readCatalogDefaultVisible(PARCELS_LAYER_ID, catalog);
 }
 
+export function buildInitialWaterVisible(catalog: LayerCatalog = DEFAULT_LAYER_CATALOG): boolean {
+  return readCatalogDefaultVisible(WATER_FEATURES_LAYER_ID, catalog);
+}
+
 export function buildInitialBasemapVisibilityState(): BasemapVisibilityState {
   return defaultBasemapVisibilityState();
 }
@@ -134,6 +139,13 @@ export function syncParcelsVisible(args: {
   readonly runtime: LayerRuntimeController | null;
 }): boolean {
   return readRuntimeUserVisible(args.runtime, PARCELS_LAYER_ID, args.fallback);
+}
+
+export function syncWaterVisible(args: {
+  readonly fallback: boolean;
+  readonly runtime: LayerRuntimeController | null;
+}): boolean {
+  return readRuntimeUserVisible(args.runtime, WATER_FEATURES_LAYER_ID, args.fallback);
 }
 
 export function withPerspectiveVisibility(args: {

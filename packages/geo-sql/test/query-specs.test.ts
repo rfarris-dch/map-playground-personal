@@ -11,7 +11,7 @@ import {
 
 const ENDPOINT_CLASSES = new Set([
   "feature-collection",
-  "administrative-aggregation",
+  "boundary-aggregation",
   "proximity-enrichment",
 ]);
 

@@ -10,9 +10,13 @@ WITH facility_power AS (
     county_fips,
     SUM(COALESCE(commissioned_power_mw, 0))::double precision AS commissioned_power_mw
   FROM (
-    SELECT county_fips, commissioned_power_mw FROM serve.facility_site
+    SELECT county_fips, commissioned_power_mw
+    FROM serve.facility_site
+    WHERE county_fips ~ '^[0-9]{5}$'
     UNION ALL
-    SELECT county_fips, commissioned_power_mw FROM serve.hyperscale_site
+    SELECT county_fips, commissioned_power_mw
+    FROM serve.hyperscale_site
+    WHERE county_fips ~ '^[0-9]{5}$'
   ) AS all_facilities
   GROUP BY county_fips
 )`;
@@ -25,7 +29,7 @@ SELECT
   county.state_abbrev::text AS parent_region_name,
   COALESCE(facility_power.commissioned_power_mw, 0)::double precision AS commissioned_power_mw,
   ST_AsGeoJSON(county.geom)::jsonb AS geom_json
-FROM serve.admin_county_geom_lod1 AS county
+FROM serve.boundary_county_geom_lod1 AS county
 LEFT JOIN facility_power ON facility_power.county_fips = county.county_fips;`;
 
 const STATE_POWER_SQL = `
@@ -43,7 +47,7 @@ SELECT
   'United States'::text AS parent_region_name,
   COALESCE(state_power.commissioned_power_mw, 0)::double precision AS commissioned_power_mw,
   ST_AsGeoJSON(ST_Multi(ST_Union(county.geom)))::jsonb AS geom_json
-FROM serve.admin_county_geom_lod2 AS county
+FROM serve.boundary_county_geom_lod2 AS county
 LEFT JOIN state_power ON state_power.state_fips = LEFT(county.county_fips, 2)
 GROUP BY LEFT(county.county_fips, 2), state_power.commissioned_power_mw;`;
 
@@ -51,7 +55,7 @@ const COUNTRY_POWER_SQL = `
 ${FACILITY_POWER_CTE},
 country_geom AS (
   SELECT ST_AsGeoJSON(ST_Multi(ST_Union(county.geom)))::jsonb AS geom_json
-  FROM serve.admin_county_geom_lod3 AS county
+  FROM serve.boundary_county_geom_lod3 AS county
 ),
 total_power AS (
   SELECT COALESCE(SUM(commissioned_power_mw), 0)::double precision AS commissioned_power_mw

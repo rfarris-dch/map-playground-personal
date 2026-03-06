@@ -6,6 +6,7 @@ import type { PowerLayerId } from "@/features/power/power.types";
 export const MAPLIBRE_GLYPH_WARNING_PREFIX = "Unable to load glyph range";
 export const FIBER_MIN_ZOOM = 4;
 export const PARCELS_LAYER_ID: LayerId = "property.parcels";
+export const WATER_FEATURES_LAYER_ID: LayerId = "environmental.water-features";
 
 const FACILITIES_LAYER_ID_BY_PERSPECTIVE: Readonly<Record<FacilityPerspective, LayerId>> = {
   colocation: "facilities.colocation",

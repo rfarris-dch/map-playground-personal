@@ -3,6 +3,7 @@ import type { UseInfiniteScrollArgs } from "./use-infinite-scroll.types";
 
 export function useInfiniteScroll(args: UseInfiniteScrollArgs): void {
   let observer: IntersectionObserver | null = null;
+  let isDisposed = false;
   let loadRequested = false;
 
   function disconnectObserver(): void {
@@ -15,6 +16,10 @@ export function useInfiniteScroll(args: UseInfiniteScrollArgs): void {
   }
 
   function connectObserver(): void {
+    if (isDisposed) {
+      return;
+    }
+
     disconnectObserver();
 
     const container = args.containerRef.value;
@@ -39,6 +44,7 @@ export function useInfiniteScroll(args: UseInfiniteScrollArgs): void {
           await args.loadMore();
         } finally {
           loadRequested = false;
+          connectObserver();
         }
       },
       {
@@ -60,6 +66,7 @@ export function useInfiniteScroll(args: UseInfiniteScrollArgs): void {
   );
 
   onBeforeUnmount(() => {
+    isDisposed = true;
     disconnectObserver();
   });
 }

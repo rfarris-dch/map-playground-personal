@@ -4,7 +4,7 @@ import type {
   ParcelsFeatureCollection,
 } from "@map-migration/contracts";
 import type { IMap } from "@map-migration/map-engine";
-import type { ShallowRef } from "vue";
+import type { Ref, ShallowRef } from "vue";
 import type { MapBounds } from "@/features/app/overlays/map-overlays.types";
 
 export interface UseMapOverlaysScannerParcelsOptions {
@@ -13,6 +13,7 @@ export interface UseMapOverlaysScannerParcelsOptions {
   readonly hyperscaleViewportFeatures: ShallowRef<FacilitiesFeatureCollection["features"]>;
   readonly map: ShallowRef<IMap | null>;
   readonly scannerActive: ShallowRef<boolean>;
+  readonly scannerFetchEnabled: Readonly<Ref<boolean>>;
 }
 
 export interface ScannerParcelsRefreshScope {

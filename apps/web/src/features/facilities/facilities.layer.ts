@@ -91,6 +91,95 @@ export function mountFacilitiesLayer(
     });
   };
 
+  const ensureFacilitiesLayers = (): boolean => {
+    try {
+      if (!map.hasSource(sourceId)) {
+        map.addSource(sourceId, {
+          type: "geojson",
+          data: emptyFacilitiesSourceData(),
+          cluster: true,
+          clusterRadius: 55,
+          clusterMaxZoom: 12,
+        });
+      }
+
+      if (!map.hasLayer(clusterLayerId)) {
+        map.addLayer({
+          id: clusterLayerId,
+          type: "circle",
+          source: sourceId,
+          minzoom: minZoom,
+          filter: ["has", "point_count"],
+          paint: {
+            "circle-color": defaultCircleColor,
+            "circle-stroke-color": "#111827",
+            "circle-stroke-width": 1,
+            "circle-radius": ["step", ["get", "point_count"], 16, 10, 22, 25, 28, 50, 36, 100, 44],
+          },
+        });
+      }
+
+      if (!map.hasLayer(clusterCountLayerId)) {
+        map.addLayer({
+          id: clusterCountLayerId,
+          type: "symbol",
+          source: sourceId,
+          minzoom: minZoom,
+          filter: ["has", "point_count"],
+          layout: {
+            "text-field": ["get", "point_count_abbreviated"],
+            "text-font": ["Noto Sans Bold"],
+            "text-size": 12,
+          },
+          paint: {
+            "text-color": "#ffffff",
+          },
+        });
+      }
+
+      if (!map.hasLayer(pointLayerId)) {
+        map.addLayer({
+          id: pointLayerId,
+          type: "circle",
+          source: sourceId,
+          minzoom: minZoom,
+          filter: ["!", ["has", "point_count"]],
+          paint: {
+            "circle-radius": [
+              "case",
+              ["boolean", ["feature-state", "selected"], false],
+              7,
+              ["boolean", ["feature-state", "hover"], false],
+              6,
+              4,
+            ],
+            "circle-stroke-width": [
+              "case",
+              ["boolean", ["feature-state", "selected"], false],
+              2,
+              ["boolean", ["feature-state", "hover"], false],
+              2,
+              1,
+            ],
+            "circle-stroke-color": "#111827",
+            "circle-color": [
+              "case",
+              ["boolean", ["feature-state", "selected"], false],
+              selectedCircleColor,
+              ["boolean", ["feature-state", "hover"], false],
+              hoverCircleColor,
+              defaultCircleColor,
+            ],
+          },
+        });
+      }
+
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const setSelectedFeatureId = (nextFeatureId: number | string | null): void => {
     const previousFeatureId = state.selectedFeatureId;
     if (previousFeatureId === nextFeatureId) {
@@ -154,79 +243,9 @@ export function mountFacilitiesLayer(
 
   const onLoad = (): void => {
     state.ready = true;
-
-    map.addSource(sourceId, {
-      type: "geojson",
-      data: emptyFacilitiesSourceData(),
-      cluster: true,
-      clusterRadius: 55,
-      clusterMaxZoom: 12,
-    });
-
-    map.addLayer({
-      id: clusterLayerId,
-      type: "circle",
-      source: sourceId,
-      minzoom: minZoom,
-      filter: ["has", "point_count"],
-      paint: {
-        "circle-color": defaultCircleColor,
-        "circle-stroke-color": "#111827",
-        "circle-stroke-width": 1,
-        "circle-radius": ["step", ["get", "point_count"], 16, 10, 22, 25, 28, 50, 36, 100, 44],
-      },
-    });
-
-    map.addLayer({
-      id: clusterCountLayerId,
-      type: "symbol",
-      source: sourceId,
-      minzoom: minZoom,
-      filter: ["has", "point_count"],
-      layout: {
-        "text-field": ["get", "point_count_abbreviated"],
-        "text-font": ["Noto Sans Bold"],
-        "text-size": 12,
-      },
-      paint: {
-        "text-color": "#ffffff",
-      },
-    });
-
-    map.addLayer({
-      id: pointLayerId,
-      type: "circle",
-      source: sourceId,
-      minzoom: minZoom,
-      filter: ["!", ["has", "point_count"]],
-      paint: {
-        "circle-radius": [
-          "case",
-          ["boolean", ["feature-state", "selected"], false],
-          7,
-          ["boolean", ["feature-state", "hover"], false],
-          6,
-          4,
-        ],
-        "circle-stroke-width": [
-          "case",
-          ["boolean", ["feature-state", "selected"], false],
-          2,
-          ["boolean", ["feature-state", "hover"], false],
-          2,
-          1,
-        ],
-        "circle-stroke-color": "#111827",
-        "circle-color": [
-          "case",
-          ["boolean", ["feature-state", "selected"], false],
-          selectedCircleColor,
-          ["boolean", ["feature-state", "hover"], false],
-          hoverCircleColor,
-          defaultCircleColor,
-        ],
-      },
-    });
+    if (!ensureFacilitiesLayers()) {
+      return;
+    }
 
     if (!state.visible) {
       map.setGeoJSONSourceData(sourceId, emptyFacilitiesSourceData());
@@ -289,6 +308,11 @@ export function mountFacilitiesLayer(
 
   const refresh = async (): Promise<void> => {
     if (!state.visible) {
+      return;
+    }
+
+    if (!ensureFacilitiesLayers()) {
+      state.lastFetchKey = null;
       return;
     }
 
@@ -390,6 +414,10 @@ export function mountFacilitiesLayer(
         state.selectedFeatureId = null;
         emitSelectedFacility(null);
       }
+      return;
+    }
+
+    if (!ensureFacilitiesLayers()) {
       return;
     }
 

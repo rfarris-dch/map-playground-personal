@@ -54,8 +54,8 @@ export function initializeAppShellMap(container: HTMLDivElement): AppShellMapSet
   const map = createMap(createMapLibreAdapter(), container, {
     style: defaultBasemapStyleUrl(),
     center: [-98.5795, 39.8283],
-    zoom: 0.9,
-    projection: { type: "globe" },
+    zoom: 3.2,
+    projection: { type: "mercator" },
     transformRequest: (url) => {
       const rewrittenUrl = rewriteGlyphRequestUrl(url);
       if (rewrittenUrl === url) {

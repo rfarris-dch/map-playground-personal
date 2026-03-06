@@ -14,6 +14,10 @@ export function useMapOverlays(args: UseMapOverlaysArgs) {
       facilitiesStatus: args.facilitiesStatus.value,
     })
   );
+  const isSelectionSummaryVisible = computed(() => args.measureState.value.selectionRing !== null);
+  const isMeasureDrawing = computed(
+    () => args.measureState.value.mode === "area" && !args.measureState.value.isSelectionComplete
+  );
   const quickViewDisabledReason = computed(() =>
     resolveQuickViewDisabledReason({
       colocationFeatures: args.colocationViewportFeatures.value,
@@ -35,6 +39,13 @@ export function useMapOverlays(args: UseMapOverlaysArgs) {
     hyperscaleViewportFeatures: args.hyperscaleViewportFeatures,
     map: args.map,
     scannerActive: overlayShortcuts.scannerActive,
+    scannerFetchEnabled: computed(
+      () =>
+        overlayShortcuts.scannerActive.value &&
+        overlaysBlockedReason.value === null &&
+        !isSelectionSummaryVisible.value &&
+        !isMeasureDrawing.value
+    ),
   });
   const overlayDisplay = useMapOverlaysDisplay({
     args,

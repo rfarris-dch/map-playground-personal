@@ -27,6 +27,7 @@ import type {
 import type { ParcelsLayerController, ParcelsStatus } from "@/features/parcels/parcels.types";
 import type { PowerLayerVisibilityController } from "@/features/power/power.types";
 import type { PowerHoverController, PowerHoverState } from "@/features/power/power-hover.types";
+import type { WaterLayerVisibilityController } from "@/features/water/water.types";
 
 export interface UseAppShellStateResult {
   readonly basemapLayerController: ShallowRef<BasemapLayerVisibilityController | null>;
@@ -66,4 +67,5 @@ export interface UseAppShellStateResult {
   ) => void;
   readonly toggleLayerPanel: () => void;
   readonly toggleMeasurePanel: () => void;
+  readonly waterController: ShallowRef<WaterLayerVisibilityController | null>;
 }

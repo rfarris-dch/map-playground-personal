@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import { BookOpen, Monitor, Package, Pencil, Server, Shield } from "lucide-vue-next";
+  import type { Component } from "vue";
   import { computed } from "vue";
   import ProseContent from "@/features/docs/components/prose-content.vue";
   import { docsCollection } from "@/features/docs/docs-content.service";
@@ -46,7 +48,11 @@
 
     return featuredSlugs
       .map((slug) => docsCollection.pages.find((page) => page.slug === slug))
-      .filter((page): page is DocsPage => typeof page !== "undefined");
+      .filter((page): page is DocsPage => typeof page !== "undefined")
+      .map((page) => ({
+        page,
+        icon: resolveFeaturedIcon(page.slug),
+      }));
   });
 
   const sectionCards = computed(() =>
@@ -68,6 +74,25 @@
       pageCount: group.pages.length,
     };
   }
+
+  function resolveFeaturedIcon(slug: string): Component {
+    switch (slug) {
+      case "/docs/getting-started/workspace-and-commands":
+        return BookOpen;
+      case "/docs/applications/web-runtime":
+        return Monitor;
+      case "/docs/applications/api-runtime":
+        return Server;
+      case "/docs/packages/core-runtime":
+        return Package;
+      case "/docs/operations/troubleshooting-and-recovery":
+        return Shield;
+      case "/docs/contributing/docs-authoring":
+        return Pencil;
+      default:
+        return BookOpen;
+    }
+  }
 </script>
 
 <template>
@@ -75,7 +100,7 @@
     <div class="not-prose my-12 grid grid-cols-1 gap-6 sm:grid-cols-2">
       <article
         v-for="featuredPage in featuredPages"
-        :key="featuredPage.slug"
+        :key="featuredPage.page.slug"
         class="group relative rounded-xl border border-slate-200 dark:border-slate-800"
       >
         <div
@@ -83,16 +108,18 @@
         />
         <div class="relative overflow-hidden rounded-xl p-6">
           <div
-            class="h-8 w-8 rounded-lg bg-linear-to-br from-sky-500/25 to-indigo-500/25 ring-1 ring-sky-500/25"
-          />
+            class="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-sky-500/25 to-indigo-500/25 text-sky-700 ring-1 ring-sky-500/25 dark:text-sky-200"
+          >
+            <component :is="featuredPage.icon" class="h-4 w-4" />
+          </div>
           <h2 class="mt-4 font-display text-base text-slate-900 dark:text-white">
-            <RouterLink :to="featuredPage.slug">
+            <RouterLink :to="featuredPage.page.slug">
               <span class="absolute -inset-px rounded-xl" />
-              {{ featuredPage.title }}
+              {{ featuredPage.page.title }}
             </RouterLink>
           </h2>
           <p class="mt-1 text-sm text-slate-700 dark:text-slate-400">
-            {{ featuredPage.description }}
+            {{ featuredPage.page.description }}
           </p>
         </div>
       </article>

@@ -21,6 +21,7 @@ import {
   REQUEST_ID_MAX_LENGTH,
   toDebugDetails,
 } from "@/http/api-response";
+import { registerTilesRoute } from "@/http/tiles.route";
 import type { ApiAppOptions, CreateApiAppOptions } from "./app.types";
 
 const DEFAULT_REQUEST_BODY_LIMIT_BYTES = parsePositiveIntFlag(
@@ -157,6 +158,7 @@ export function createApiApp(options: CreateApiAppOptions = {}): Hono {
   registerBoundariesRoute(app);
   registerMarketsRoute(app);
   registerProvidersRoute(app);
+  registerTilesRoute(app);
 
   return app;
 }

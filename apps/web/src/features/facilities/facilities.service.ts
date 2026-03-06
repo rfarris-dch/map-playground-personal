@@ -22,6 +22,18 @@ function roundTo(value: number, decimals: number): number {
   return Math.round(value * precision) / precision;
 }
 
+function clamp(value: number, min: number, max: number): number {
+  if (value < min) {
+    return min;
+  }
+
+  if (value > max) {
+    return max;
+  }
+
+  return value;
+}
+
 function floorTo(value: number, decimals: number): number {
   const precision = 10 ** decimals;
   return Math.floor(value * precision) / precision;
@@ -68,12 +80,16 @@ function quantizeOutwardRange(
 export function quantizeBbox(bounds: BBox, decimals = 4): BBox {
   const longitudeRange = quantizeOutwardRange(bounds.west, bounds.east, decimals);
   const latitudeRange = quantizeOutwardRange(bounds.south, bounds.north, decimals);
+  const west = clamp(longitudeRange.min, -180, 180);
+  const east = clamp(longitudeRange.max, -180, 180);
+  const south = clamp(latitudeRange.min, -90, 90);
+  const north = clamp(latitudeRange.max, -90, 90);
 
   return {
-    east: longitudeRange.max,
-    north: latitudeRange.max,
-    south: latitudeRange.min,
-    west: longitudeRange.min,
+    east,
+    north,
+    south,
+    west,
   };
 }
 

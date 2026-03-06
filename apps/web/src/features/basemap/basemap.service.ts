@@ -1,4 +1,4 @@
-import type { IMap } from "@map-migration/map-engine";
+import type { IMap, MapProjectionSpecification } from "@map-migration/map-engine";
 import type {
   BasemapLayerId,
   BasemapLayerVisibilityController,
@@ -10,7 +10,8 @@ import type {
   MountBasemapLayerVisibilityOptions,
 } from "./basemap.service.types";
 
-const DEFAULT_BASEMAP_PROFILE: BasemapProfile = {
+const MONOCHROME_BASEMAP_PROFILE: BasemapProfile = {
+  id: "monochrome",
   styleUrl: "https://tiles.openfreemap.org/styles/positron",
   buildingSourceLayer: "building",
   buildingsLayerId: "basemap.3d-buildings",
@@ -18,9 +19,22 @@ const DEFAULT_BASEMAP_PROFILE: BasemapProfile = {
   buildingsOpacity: 0.65,
 };
 
+const COLOR_BASEMAP_PROFILE: BasemapProfile = {
+  id: "color",
+  styleUrl: "https://tiles.openfreemap.org/styles/liberty",
+  buildingSourceLayer: "building",
+  buildingsLayerId: "basemap.3d-buildings",
+  buildingsMinZoom: 15,
+  buildingsOpacity: 0.65,
+};
+
+const DEFAULT_BASEMAP_PROFILE = MONOCHROME_BASEMAP_PROFILE;
+
 const DEFAULT_BASEMAP_VISIBILITY_STATE: BasemapVisibilityState = {
   boundaries: false,
   buildings3d: true,
+  color: false,
+  globe: false,
   labels: true,
   landmarks: false,
   roads: true,
@@ -28,6 +42,8 @@ const DEFAULT_BASEMAP_VISIBILITY_STATE: BasemapVisibilityState = {
 };
 
 const BASEMAP_LAYER_IDS: BasemapLayerId[] = [
+  "color",
+  "globe",
   "satellite",
   "landmarks",
   "labels",
@@ -199,6 +215,19 @@ function readLayerType(layer: unknown): string | null {
   }
 
   return layerType;
+}
+
+function readProjectionType(projection: unknown): string | null {
+  if (!isRecord(projection)) {
+    return null;
+  }
+
+  const projectionType = Reflect.get(projection, "type");
+  if (typeof projectionType !== "string" || projectionType.trim().length === 0) {
+    return null;
+  }
+
+  return projectionType;
 }
 
 function readSourceLayerId(layer: unknown): string | null {
@@ -423,6 +452,26 @@ function applyBasemapVisibility(args: {
   args.map.setLayerVisibility(SATELLITE_LAYER_ID, args.visibility.satellite);
 }
 
+function resolveBasemapProfile(visibility: BasemapVisibilityState): BasemapProfile {
+  if (visibility.color) {
+    return COLOR_BASEMAP_PROFILE;
+  }
+
+  return MONOCHROME_BASEMAP_PROFILE;
+}
+
+function resolveBasemapProjection(visibility: BasemapVisibilityState): MapProjectionSpecification {
+  if (visibility.globe) {
+    return { type: "globe" };
+  }
+
+  return { type: "mercator" };
+}
+
+function applyBasemapProjection(map: IMap, visibility: BasemapVisibilityState): void {
+  map.setProjection(resolveBasemapProjection(visibility));
+}
+
 export function withBasemapLayerVisibility(
   visibility: BasemapVisibilityState,
   layerId: BasemapLayerId,
@@ -439,6 +488,20 @@ export function withBasemapLayerVisibility(
     return {
       ...visibility,
       buildings3d: visible,
+    };
+  }
+
+  if (layerId === "color") {
+    return {
+      ...visibility,
+      color: visible,
+    };
+  }
+
+  if (layerId === "globe") {
+    return {
+      ...visibility,
+      globe: visible,
     };
   }
 
@@ -481,6 +544,14 @@ export function isBasemapLayerVisible(
     return visibility.buildings3d;
   }
 
+  if (layerId === "color") {
+    return visibility.color;
+  }
+
+  if (layerId === "globe") {
+    return visibility.globe;
+  }
+
   if (layerId === "labels") {
     return visibility.labels;
   }
@@ -516,11 +587,39 @@ export function mountBasemapLayerVisibility(
   map: IMap,
   options: MountBasemapLayerVisibilityOptions = {}
 ): BasemapLayerVisibilityController {
-  const profile = options.profile ?? DEFAULT_BASEMAP_PROFILE;
   let visibility = options.visibility ?? DEFAULT_BASEMAP_VISIBILITY_STATE;
+  let profile = options.profile ?? resolveBasemapProfile(visibility);
   let groups: BasemapLayerGroups | null = null;
+  let projectionSyncTimer: number | null = null;
+
+  function clearProjectionSyncTimer(): void {
+    if (projectionSyncTimer === null) {
+      return;
+    }
+
+    window.clearTimeout(projectionSyncTimer);
+    projectionSyncTimer = null;
+  }
+
+  function syncProjection(attempt = 0): void {
+    const desiredProjection = resolveBasemapProjection(visibility);
+
+    applyBasemapProjection(map, visibility);
+
+    const currentProjectionType = readProjectionType(map.getProjection());
+    if (currentProjectionType === desiredProjection.type || attempt >= 6) {
+      clearProjectionSyncTimer();
+      return;
+    }
+
+    clearProjectionSyncTimer();
+    projectionSyncTimer = window.setTimeout(() => {
+      syncProjection(attempt + 1);
+    }, 120);
+  }
 
   const onLoad = (): void => {
+    syncProjection();
     ensureSatelliteLayer(map);
     ensureLandmarkLayers(map);
     add3DBuildings(map, profile);
@@ -538,6 +637,19 @@ export function mountBasemapLayerVisibility(
   return {
     setVisible(layerId: BasemapLayerId, nextVisible: boolean): void {
       visibility = withBasemapLayerVisibility(visibility, layerId, nextVisible);
+      if (layerId === "globe") {
+        syncProjection();
+      }
+
+      const nextProfile = resolveBasemapProfile(visibility);
+      if (nextProfile.id !== profile.id) {
+        profile = nextProfile;
+        groups = null;
+        map.setStyle(profile.styleUrl);
+        syncProjection();
+        return;
+      }
+
       if (groups === null) {
         return;
       }
@@ -553,6 +665,7 @@ export function mountBasemapLayerVisibility(
       return isBasemapLayerVisible(visibility, layerId);
     },
     destroy(): void {
+      clearProjectionSyncTimer();
       map.off("load", onLoad);
     },
   };

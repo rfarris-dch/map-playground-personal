@@ -45,7 +45,7 @@ That makes `parcel_current.parcels` and the geometry-shaping logic explicit shar
 
 `SqlQuerySpec` exposes two important operational hints alongside the SQL text:
 
-- `endpointClass` ties the query to runtime budget classes such as `feature-collection`, `administrative-aggregation`, or `proximity-enrichment`.
+- `endpointClass` ties the query to runtime budget classes such as `feature-collection`, `boundary-aggregation`, or `proximity-enrichment`.
 - `maxRows` gives the API layer one shared row-budget value to enforce or expose.
 
 ## Current consumers

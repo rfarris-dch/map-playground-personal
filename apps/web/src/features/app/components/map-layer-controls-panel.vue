@@ -12,6 +12,7 @@
   import FiberLocatorControls from "@/features/fiber-locator/components/fiber-locator-controls.vue";
   import ParcelsControls from "@/features/parcels/components/parcels-controls.vue";
   import PowerControls from "@/features/power/components/power-controls.vue";
+  import WaterControls from "@/features/water/components/water-controls.vue";
 
   const props = defineProps<MapLayerControlsPanelProps>();
   const emit = defineEmits<MapLayerControlsPanelEmits>();
@@ -45,12 +46,16 @@
       <MapLayerSection title="Basemap" value="basemap">
         <BasemapControls
           :embedded="true"
+          :color-visible="props.basemapVisibility.color"
+          :globe-visible="props.basemapVisibility.globe"
           :satellite-visible="props.basemapVisibility.satellite"
           :landmarks-visible="props.basemapVisibility.landmarks"
           :labels-visible="props.basemapVisibility.labels"
           :roads-visible="props.basemapVisibility.roads"
           :boundaries-visible="props.basemapVisibility.boundaries"
           :buildings3d-visible="props.basemapVisibility.buildings3d"
+          @update:color-visible="emit('update:basemap-layer-visible', 'color', $event)"
+          @update:globe-visible="emit('update:basemap-layer-visible', 'globe', $event)"
           @update:satellite-visible="emit('update:basemap-layer-visible', 'satellite', $event)"
           @update:landmarks-visible="emit('update:basemap-layer-visible', 'landmarks', $event)"
           @update:labels-visible="emit('update:basemap-layer-visible', 'labels', $event)"
@@ -105,6 +110,14 @@
           :visible="props.parcelsVisible"
           :status="props.parcelsStatusText"
           @update:visible="emit('update:parcels-visible', $event)"
+        />
+      </MapLayerSection>
+
+      <MapLayerSection title="Environmental" value="environmental">
+        <WaterControls
+          :embedded="true"
+          :visible="props.waterVisible"
+          @update:visible="emit('update:water-visible', $event)"
         />
       </MapLayerSection>
 

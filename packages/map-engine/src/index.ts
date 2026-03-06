@@ -82,11 +82,49 @@ function isStyleNotDoneLoadingError(error: unknown): boolean {
   return error.message.includes("Style is not done loading.");
 }
 
+const MIN_LONGITUDE = -180;
+const MAX_LONGITUDE = 180;
+const MIN_LATITUDE = -90;
+const MAX_LATITUDE = 90;
+
+function clamp(value: number, min: number, max: number): number {
+  if (value < min) {
+    return min;
+  }
+
+  if (value > max) {
+    return max;
+  }
+
+  return value;
+}
+
+function normalizeViewportLongitudes(
+  rawWest: number,
+  rawEast: number
+): {
+  readonly east: number;
+  readonly west: number;
+} {
+  const west = clamp(rawWest, MIN_LONGITUDE, MAX_LONGITUDE);
+  const east = clamp(rawEast, MIN_LONGITUDE, MAX_LONGITUDE);
+
+  if (west < east) {
+    return { west, east };
+  }
+
+  return {
+    west: MIN_LONGITUDE,
+    east: MAX_LONGITUDE,
+  };
+}
+
 class MapLibreEngine implements IMap {
   private readonly clickHandlers: Map<
     (event: MapClickEvent) => void,
     (event: MapMouseEvent) => void
   >;
+  private readonly initialMoveEndHandlers: Map<() => void, () => void>;
   private preferredProjection: MapProjectionSpecification | null;
   private projectionLoadHandler: (() => void) | null;
   private readonly pointerLeaveHandlers: Map<() => void, () => void>;
@@ -99,6 +137,7 @@ class MapLibreEngine implements IMap {
   constructor(map: MapLibreMap) {
     this.map = map;
     this.clickHandlers = new Map();
+    this.initialMoveEndHandlers = new Map();
     this.pointerMoveHandlers = new Map();
     this.pointerLeaveHandlers = new Map();
     this.preferredProjection = null;
@@ -174,11 +213,13 @@ class MapLibreEngine implements IMap {
 
   getBounds(): LngLatBounds {
     const bounds = this.map.getBounds();
+    const longitudes = normalizeViewportLongitudes(bounds.getWest(), bounds.getEast());
+
     return {
-      west: bounds.getWest(),
-      south: bounds.getSouth(),
-      east: bounds.getEast(),
-      north: bounds.getNorth(),
+      west: longitudes.west,
+      south: clamp(bounds.getSouth(), MIN_LATITUDE, MAX_LATITUDE),
+      east: longitudes.east,
+      north: clamp(bounds.getNorth(), MIN_LATITUDE, MAX_LATITUDE),
     };
   }
 
@@ -188,6 +229,10 @@ class MapLibreEngine implements IMap {
 
   getStyle(): MapStyleSpecification {
     return this.map.getStyle();
+  }
+
+  getProjection(): MapProjectionSpecification {
+    return this.map.getProjection();
   }
 
   setStyle(style: StyleInput): void {
@@ -222,15 +267,52 @@ class MapLibreEngine implements IMap {
   }
 
   on(event: "load" | "moveend", handler: () => void): void {
-    if (event === "load" && this.map.isStyleLoaded()) {
-      queueMicrotask(handler);
+    if (event === "load") {
+      if (this.map.isStyleLoaded()) {
+        queueMicrotask(handler);
+      }
+
+      this.map.on("style.load", handler);
       return;
+    }
+
+    if (event === "moveend") {
+      if (this.map.isStyleLoaded()) {
+        queueMicrotask(handler);
+      } else {
+        const initialMoveEndHandler = (): void => {
+          this.map.off("style.load", initialMoveEndHandler);
+
+          const registeredHandler = this.initialMoveEndHandlers.get(handler);
+          if (registeredHandler === initialMoveEndHandler) {
+            this.initialMoveEndHandlers.delete(handler);
+          }
+
+          queueMicrotask(handler);
+        };
+
+        this.initialMoveEndHandlers.set(handler, initialMoveEndHandler);
+        this.map.on("style.load", initialMoveEndHandler);
+      }
     }
 
     this.map.on(event, handler);
   }
 
   off(event: "load" | "moveend", handler: () => void): void {
+    if (event === "load") {
+      this.map.off("style.load", handler);
+      return;
+    }
+
+    if (event === "moveend") {
+      const initialMoveEndHandler = this.initialMoveEndHandlers.get(handler);
+      if (typeof initialMoveEndHandler === "function") {
+        this.map.off("style.load", initialMoveEndHandler);
+        this.initialMoveEndHandlers.delete(handler);
+      }
+    }
+
     this.map.off(event, handler);
   }
 
@@ -315,6 +397,10 @@ class MapLibreEngine implements IMap {
 
   destroy(): void {
     this.stopProjectionListeners();
+    for (const initialMoveEndHandler of this.initialMoveEndHandlers.values()) {
+      this.map.off("style.load", initialMoveEndHandler);
+    }
+    this.initialMoveEndHandlers.clear();
     this.clickHandlers.clear();
     this.pointerMoveHandlers.clear();
     this.pointerLeaveHandlers.clear();

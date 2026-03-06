@@ -5,7 +5,9 @@
   interface BasemapControlsProps {
     readonly boundariesVisible: boolean;
     readonly buildings3dVisible: boolean;
+    readonly colorVisible: boolean;
     readonly embedded?: boolean;
+    readonly globeVisible: boolean;
     readonly labelsVisible: boolean;
     readonly landmarksVisible: boolean;
     readonly roadsVisible: boolean;
@@ -26,6 +28,8 @@
   const emit = defineEmits<{
     "update:boundariesVisible": [value: boolean];
     "update:buildings3dVisible": [value: boolean];
+    "update:colorVisible": [value: boolean];
+    "update:globeVisible": [value: boolean];
     "update:labelsVisible": [value: boolean];
     "update:landmarksVisible": [value: boolean];
     "update:roadsVisible": [value: boolean];
@@ -40,6 +44,18 @@
 
   const controls = computed<readonly BasemapControlOption[]>(() => {
     return [
+      {
+        layerId: "color",
+        label: "Color Basemap",
+        description: "Colored vector basemap style, not satellite imagery",
+        color: "#16a34a",
+      },
+      {
+        layerId: "globe",
+        label: "Globe Projection",
+        description: "Spherical map view you can use with any basemap color mode",
+        color: "#7c3aed",
+      },
       {
         layerId: "satellite",
         label: "Satellite",
@@ -67,7 +83,7 @@
       {
         layerId: "boundaries",
         label: "Basemap Boundaries",
-        description: "Country and admin boundary lines from basemap",
+        description: "Country and boundary lines from basemap",
         color: "#7c2d12",
       },
       {
@@ -86,6 +102,14 @@
 
     if (layerId === "buildings3d") {
       return props.buildings3dVisible;
+    }
+
+    if (layerId === "color") {
+      return props.colorVisible;
+    }
+
+    if (layerId === "globe") {
+      return props.globeVisible;
     }
 
     if (layerId === "labels") {
@@ -111,6 +135,16 @@
 
     if (layerId === "buildings3d") {
       emit("update:buildings3dVisible", visible);
+      return;
+    }
+
+    if (layerId === "color") {
+      emit("update:colorVisible", visible);
+      return;
+    }
+
+    if (layerId === "globe") {
+      emit("update:globeVisible", visible);
       return;
     }
 

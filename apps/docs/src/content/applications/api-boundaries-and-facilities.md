@@ -35,7 +35,7 @@ This slice does not need a `route/` helper folder because the transport surface 
 
 - builds a shared facility-power CTE from `serve.facility_site` and `serve.hyperscale_site`
 - chooses county, state, or country aggregation SQL based on the parsed level
-- reads from the `serve.admin_county_geom_lod*` geometry tables
+- reads from the `serve.boundary_county_geom_lod*` geometry tables
 - returns raw rows with `geom_json`, IDs, labels, and commissioned MW totals
 
 The important design point is that the repo returns raw database rows, not contract-ready GeoJSON features.

@@ -3,12 +3,15 @@ export interface BasemapProfile {
   readonly buildingsLayerId: string;
   readonly buildingsMinZoom: number;
   readonly buildingsOpacity: number;
+  readonly id: "color" | "monochrome";
   readonly styleUrl: string;
 }
 
 export type BasemapLayerId =
   | "boundaries"
   | "buildings3d"
+  | "color"
+  | "globe"
   | "labels"
   | "landmarks"
   | "roads"
@@ -17,6 +20,8 @@ export type BasemapLayerId =
 export interface BasemapVisibilityState {
   readonly boundaries: boolean;
   readonly buildings3d: boolean;
+  readonly color: boolean;
+  readonly globe: boolean;
   readonly labels: boolean;
   readonly landmarks: boolean;
   readonly roads: boolean;

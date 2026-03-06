@@ -14,6 +14,10 @@ import {
   destroyPowerRuntime,
   initializePowerRuntime,
 } from "@/features/app/lifecycle/app-shell-power-runtime.service";
+import {
+  destroyWaterRuntime,
+  initializeWaterRuntime,
+} from "@/features/app/lifecycle/app-shell-water-runtime.service";
 import type { UseAppShellMapLifecycleOptions } from "@/features/app/lifecycle/use-app-shell-map-lifecycle.types";
 
 export function initializeMapLayerRuntime(options: UseAppShellMapLifecycleOptions): void {
@@ -26,11 +30,13 @@ export function initializeMapLayerRuntime(options: UseAppShellMapLifecycleOption
   initializeParcelsRuntime(options);
   options.fiber.initialize(currentMap);
   initializePowerRuntime(options);
+  initializeWaterRuntime(options);
   initializeMeasureRuntime(options);
 }
 
 export function destroyMapLayerRuntime(options: UseAppShellMapLifecycleOptions): void {
   destroyMeasureRuntime(options);
+  destroyWaterRuntime(options);
   destroyPowerRuntime(options);
   const currentMap = options.runtime.map.value;
   options.fiber.destroy(currentMap);

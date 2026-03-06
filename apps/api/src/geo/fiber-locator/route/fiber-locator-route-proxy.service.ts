@@ -82,13 +82,6 @@ export async function proxyFiberLocatorTileRequest(
   }
 
   if (!upstreamResponse.ok) {
-    let details: unknown;
-    try {
-      details = await upstreamResponse.text();
-    } catch {
-      details = undefined;
-    }
-
     return responseError({
       requestId: args.requestId,
       httpStatus: 502,
@@ -96,7 +89,6 @@ export async function proxyFiberLocatorTileRequest(
       message: "fiberlocator upstream returned an error",
       details: {
         upstreamStatus: upstreamResponse.status,
-        upstreamBody: details,
       },
     });
   }

@@ -61,7 +61,7 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
 
   function startScannerParcelsRefresh(): ScannerParcelsRefreshScope | null {
     const currentMap = options.map.value;
-    if (currentMap === null || !options.scannerActive.value) {
+    if (currentMap === null || !options.scannerFetchEnabled.value) {
       clearScannerParcelsState();
       return null;
     }
@@ -253,7 +253,8 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
   }
 
   function scheduleScannerParcelsRefresh(): void {
-    if (!options.scannerActive.value) {
+    if (!options.scannerFetchEnabled.value) {
+      clearScannerParcelsState();
       return;
     }
 
@@ -309,10 +310,11 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
       () => options.colocationViewportFeatures.value,
       () => options.hyperscaleViewportFeatures.value,
       () => options.expectedParcelsIngestionRunId.value,
-      options.scannerActive,
+      options.scannerFetchEnabled,
     ],
-    ([, , , nextScannerActive]) => {
-      if (!nextScannerActive) {
+    ([, , , nextScannerFetchEnabled]) => {
+      if (!nextScannerFetchEnabled) {
+        clearScannerParcelsState();
         return;
       }
 
@@ -323,9 +325,9 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
   );
 
   watch(
-    [options.scannerActive, () => options.map.value],
-    ([nextScannerActive, currentMap]) => {
-      if (!(nextScannerActive && currentMap !== null)) {
+    [options.scannerFetchEnabled, () => options.map.value],
+    ([nextScannerFetchEnabled, currentMap]) => {
+      if (!(nextScannerFetchEnabled && currentMap !== null)) {
         clearScannerParcelsState();
         return;
       }

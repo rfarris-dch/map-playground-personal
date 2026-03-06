@@ -1,4 +1,4 @@
-import { computed, onMounted, shallowRef, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, shallowRef, watch } from "vue";
 
 type ThemeValue = "light" | "dark" | "system";
 
@@ -33,6 +33,9 @@ function readSystemTheme(): "light" | "dark" {
 const currentTheme = shallowRef<ThemeValue>(readStoredTheme());
 const systemTheme = shallowRef<"light" | "dark">(readSystemTheme());
 const hasMounted = shallowRef(false);
+let activeThemeConsumerCount = 0;
+let mediaQuery: MediaQueryList | null = null;
+let mediaQueryListener: ((event: MediaQueryListEvent) => void) | null = null;
 
 function applyThemeClass(): void {
   const rootElement = document.documentElement;
@@ -41,15 +44,32 @@ function applyThemeClass(): void {
   rootElement.classList.add(resolvedTheme);
 }
 
+function startSystemThemeTracking(): void {
+  if (mediaQuery !== null) {
+    return;
+  }
+
+  mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+  systemTheme.value = mediaQuery.matches ? "dark" : "light";
+  mediaQueryListener = (event) => {
+    systemTheme.value = event.matches ? "dark" : "light";
+  };
+  mediaQuery.addEventListener("change", mediaQueryListener);
+}
+
+function stopSystemThemeTracking(): void {
+  if (mediaQuery === null || mediaQueryListener === null) {
+    return;
+  }
+
+  mediaQuery.removeEventListener("change", mediaQueryListener);
+  mediaQuery = null;
+  mediaQueryListener = null;
+}
+
 function initializeTheme(): void {
   currentTheme.value = readStoredTheme();
-
-  const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-  systemTheme.value = mediaQuery.matches ? "dark" : "light";
-  mediaQuery.addEventListener("change", (event) => {
-    systemTheme.value = event.matches ? "dark" : "light";
-  });
-
+  startSystemThemeTracking();
   applyThemeClass();
 }
 
@@ -65,6 +85,7 @@ watch([currentTheme, systemTheme], () => {
 
 export function useTheme() {
   onMounted(() => {
+    activeThemeConsumerCount += 1;
     if (!hasMounted.value) {
       initializeTheme();
       hasMounted.value = true;
@@ -72,6 +93,14 @@ export function useTheme() {
     }
 
     applyThemeClass();
+  });
+
+  onBeforeUnmount(() => {
+    activeThemeConsumerCount = Math.max(0, activeThemeConsumerCount - 1);
+    if (activeThemeConsumerCount === 0) {
+      stopSystemThemeTracking();
+      hasMounted.value = false;
+    }
   });
 
   return {

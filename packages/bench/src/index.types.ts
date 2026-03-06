@@ -6,6 +6,6 @@ export interface LatencyBudget {
 export type EndpointBudgetClass =
   | "interactive-query"
   | "feature-collection"
-  | "administrative-aggregation"
+  | "boundary-aggregation"
   | "proximity-enrichment"
   | "tile-serving";

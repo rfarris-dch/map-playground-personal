@@ -23,6 +23,7 @@
     parcelsVisible,
     parcelsStatusText,
     powerVisibility,
+    waterVisible,
     visibleFiberLayers,
     fiberStatusText,
     fiberSourceLayerOptions,
@@ -54,6 +55,7 @@
     setBasemapLayerVisible,
     setParcelsVisible,
     setPowerLayerVisible,
+    setWaterVisible,
     setFiberLayerVisibility,
     setFiberSourceLayerVisible,
     setAllFiberSourceLayers,
@@ -102,6 +104,7 @@
         :parcels-visible="parcelsVisible"
         :parcels-status-text="parcelsStatusText"
         :power-visibility="powerVisibility"
+        :water-visible="waterVisible"
         :visible-fiber-layers="visibleFiberLayers"
         :fiber-status-text="fiberStatusText"
         :fiber-source-layer-options="fiberSourceLayerOptions"
@@ -121,6 +124,7 @@
         @update:boundary-selected-region-ids="setBoundarySelectedRegionIds"
         @update:perspective-visibility="setPerspectiveVisibility"
         @update:parcels-visible="setParcelsVisible"
+        @update:water-visible="setWaterVisible"
         @update:fiber-layer-visibility="setFiberLayerVisibility"
         @toggle-fiber-source-layer="setFiberSourceLayerVisible"
         @set-all-fiber-source-layers="setAllFiberSourceLayers"

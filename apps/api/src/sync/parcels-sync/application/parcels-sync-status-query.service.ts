@@ -6,11 +6,6 @@ import type { ParcelsSyncStatusSnapshot } from "@/sync/parcels-sync.types";
 
 export function getParcelsSyncStatusSnapshot(): ParcelsSyncStatusSnapshot {
   const statusStore = getParcelsSyncStatusStore();
-  try {
-    refreshParcelsSyncStatusStore();
-  } catch (error) {
-    console.error("[api] parcels sync status refresh failed", error);
-  }
-
+  refreshParcelsSyncStatusStore();
   return statusStore.snapshot();
 }

@@ -1,17 +1,18 @@
 import { computed } from "vue";
-import { useAppShellState } from "@/features/app/core/use-app-shell-state";
-import { useAppShellStatus } from "@/features/app/core/use-app-shell-status";
 import { useAppShellFiber } from "@/features/app/fiber/use-app-shell-fiber";
 import { useAppShellMapLifecycle } from "@/features/app/lifecycle/use-app-shell-map-lifecycle";
 import { useAppShellMeasureSelection } from "@/features/app/measure-selection/use-app-shell-measure-selection";
 import { useMapOverlays } from "@/features/app/overlays/use-map-overlays";
 import { useAppShellSelection } from "@/features/app/selection/use-app-shell-selection";
 import { useAppShellVisibility } from "@/features/app/visibility/use-app-shell-visibility";
+import type { UseAppShellRuntimeResult } from "./use-app-shell.types";
+import { useAppShellState } from "./use-app-shell-state";
+import { useAppShellStatus } from "./use-app-shell-status";
 
-export function useAppShell() {
+export function useAppShellRuntime(): UseAppShellRuntimeResult {
   const state = useAppShellState();
-
   const areFacilityInteractionsEnabled = computed(() => state.measureState.value.mode === "off");
+
   const status = useAppShellStatus({
     facilitiesStatus: state.facilitiesStatus,
     parcelsStatus: state.parcelsStatus,
@@ -40,6 +41,7 @@ export function useAppShell() {
     layerRuntime: state.layerRuntime,
     isInteractionEnabled: () => areFacilityInteractionsEnabled.value,
   });
+
   const mapOverlays = useMapOverlays({
     map: state.map,
     measureState: state.measureState,
@@ -52,6 +54,7 @@ export function useAppShell() {
     finishMeasureSelection: state.finishMeasureSelection,
     setMeasureMode: state.setMeasureMode,
   });
+
   const measureSelection = useAppShellMeasureSelection({
     expectedParcelsIngestionRunId: status.expectedParcelsIngestionRunId,
     measureState: state.measureState,
@@ -105,78 +108,13 @@ export function useAppShell() {
   });
 
   return {
-    mapContainer: state.mapContainer,
-    map: state.map,
-    selectedFacility: selection.selectedFacility,
-    selectedParcel: selection.selectedParcel,
-    hoveredFacility: state.hoveredFacility,
-    hoveredBoundary: state.hoveredBoundary,
-    hoveredFiber: fiber.hoveredFiber,
-    hoveredPower: state.hoveredPower,
-    basemapVisibility: visibility.basemapVisibility,
-    boundaryVisibility: visibility.boundaryVisibility,
-    boundaryFacetOptions: state.boundaryFacetOptions,
-    boundaryFacetSelection: state.boundaryFacetSelection,
-    visiblePerspectives: visibility.visiblePerspectives,
-    colocationStatusText: status.colocationStatusText,
-    hyperscaleStatusText: status.hyperscaleStatusText,
-    parcelsVisible: visibility.parcelsVisible,
-    parcelsStatusText: status.parcelsStatusText,
-    powerVisibility: visibility.powerVisibility,
-    waterVisible: visibility.waterVisible,
-    visibleFiberLayers: fiber.visibleFiberLayers,
-    fiberStatusText: fiber.fiberStatusText,
-    fiberSourceLayerOptions: fiber.fiberSourceLayerOptions,
-    selectedFiberSourceLayerNames: fiber.selectedFiberSourceLayerNames,
-    measureState: state.measureState,
-    measureSelectionSummary: measureSelection.measureSelectionSummary,
-    measureSelectionError: measureSelection.measureSelectionError,
-    isMeasureSelectionLoading: measureSelection.isMeasureSelectionLoading,
-    quickViewActive: mapOverlays.quickViewActive,
-    scannerActive: mapOverlays.scannerActive,
-    scannerSummary: mapOverlays.scannerSummary,
-    scannerFacilities: mapOverlays.scannerFacilities,
-    scannerTotalCount: mapOverlays.scannerTotalCount,
-    scannerIsFiltered: mapOverlays.scannerIsFiltered,
-    overlaysBlockedReason: mapOverlays.overlaysBlockedReason,
-    quickViewDisabledReason: mapOverlays.quickViewDisabledReason,
-    scannerEmptyMessage: mapOverlays.scannerEmptyMessage,
-    overlayStatusMessage: mapOverlays.overlayStatusMessage,
-    isScannerParcelsLoading: mapOverlays.isScannerParcelsLoading,
-    scannerParcelsError: mapOverlays.scannerParcelsError,
-    isQuickViewVisible: mapOverlays.isQuickViewVisible,
-    isScannerVisible: mapOverlays.isScannerVisible,
-    isQuickViewDensityOk: mapOverlays.isQuickViewDensityOk,
-    quickViewObjectCount: mapOverlays.quickViewObjectCount,
-    isLayerPanelOpen: state.isLayerPanelOpen,
-    isMeasurePanelOpen: state.isMeasurePanelOpen,
-    facilityDetailQuery: selection.facilityDetailQuery,
-    parcelDetailQuery: selection.parcelDetailQuery,
-    setPerspectiveVisibility: visibility.setPerspectiveVisibility,
-    setBoundaryVisible: visibility.setBoundaryVisible,
-    setBoundarySelectedRegionIds: mapLifecycle.setBoundarySelectedRegionIds,
-    setBasemapLayerVisible: visibility.setBasemapLayerVisible,
-    setParcelsVisible: visibility.setParcelsVisible,
-    setPowerLayerVisible: visibility.setPowerLayerVisible,
-    setWaterVisible: visibility.setWaterVisible,
-    setFiberLayerVisibility: fiber.setFiberLayerVisibility,
-    setFiberSourceLayerVisible: fiber.setFiberSourceLayerVisible,
-    setAllFiberSourceLayers: fiber.setAllFiberSourceLayers,
-    setMeasureMode: state.setMeasureMode,
-    setMeasureAreaShape: state.setMeasureAreaShape,
-    finishMeasureSelection: state.finishMeasureSelection,
-    exportMeasureSelection: measureSelection.exportMeasureSelection,
-    exportScannerSelection: mapOverlays.exportScannerSelection,
-    clearMeasure: state.clearMeasure,
-    clearSelectedFacility: selection.clearSelectedFacility,
-    selectFacilityFromAnalysis: selection.selectFacilityFromAnalysis,
-    clearSelectedParcel: selection.clearSelectedParcel,
-    setQuickViewActive: mapOverlays.setQuickViewActive,
-    toggleQuickView: mapOverlays.toggleQuickView,
-    setScannerActive: mapOverlays.setScannerActive,
-    toggleScanner: mapOverlays.toggleScanner,
-    setQuickViewObjectCount: mapOverlays.setQuickViewObjectCount,
-    toggleLayerPanel: state.toggleLayerPanel,
-    toggleMeasurePanel: state.toggleMeasurePanel,
+    state,
+    status,
+    selection,
+    visibility,
+    fiber,
+    mapOverlays,
+    measureSelection,
+    mapLifecycle,
   };
 }

@@ -41,6 +41,10 @@
     emit("update:parcels-visible", visible);
   }
 
+  function forwardWaterVisible(visible: boolean): void {
+    emit("update:water-visible", visible);
+  }
+
   function forwardFiberLayerVisibility(lineId: FiberLocatorLineId, visible: boolean): void {
     emit("update:fiber-layer-visibility", lineId, visible);
   }
@@ -87,6 +91,7 @@
     :parcels-visible="props.parcelsVisible"
     :parcels-status-text="props.parcelsStatusText"
     :power-visibility="props.powerVisibility"
+    :water-visible="props.waterVisible"
     :visible-fiber-layers="props.visibleFiberLayers"
     :fiber-status-text="props.fiberStatusText"
     :fiber-source-layer-options="props.fiberSourceLayerOptions"
@@ -97,6 +102,7 @@
     @update:boundary-selected-region-ids="forwardBoundarySelectedRegionIds"
     @update:perspective-visibility="forwardPerspectiveVisibility"
     @update:parcels-visible="forwardParcelsVisible"
+    @update:water-visible="forwardWaterVisible"
     @update:fiber-layer-visibility="forwardFiberLayerVisibility"
     @toggle-fiber-source-layer="forwardFiberSourceLayer"
     @set-all-fiber-source-layers="forwardAllFiberSourceLayers"

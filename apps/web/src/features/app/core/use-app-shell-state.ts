@@ -38,6 +38,7 @@ import type {
 import type { ParcelsLayerController, ParcelsStatus } from "@/features/parcels/parcels.types";
 import type { PowerLayerVisibilityController } from "@/features/power/power.types";
 import type { PowerHoverController, PowerHoverState } from "@/features/power/power-hover.types";
+import type { WaterLayerVisibilityController } from "@/features/water/water.types";
 import type { UseAppShellStateResult } from "./use-app-shell-state.types";
 
 export function useAppShellState(): UseAppShellStateResult {
@@ -58,6 +59,7 @@ export function useAppShellState(): UseAppShellStateResult {
   const powerHoverController = shallowRef<PowerHoverController | null>(null);
   const measureController = shallowRef<MeasureLayerController | null>(null);
   const basemapLayerController = shallowRef<BasemapLayerVisibilityController | null>(null);
+  const waterController = shallowRef<WaterLayerVisibilityController | null>(null);
   const disposePmtilesProtocol = shallowRef<(() => void) | null>(null);
   const restoreConsoleWarn = shallowRef<(() => void) | null>(null);
   const mapControls = shallowRef<readonly MapControl[]>([]);
@@ -72,8 +74,8 @@ export function useAppShellState(): UseAppShellStateResult {
   const measureState = shallowRef<MeasureState>(initialMeasureState());
   const colocationViewportFeatures = shallowRef<FacilitiesFeatureCollection["features"]>([]);
   const hyperscaleViewportFeatures = shallowRef<FacilitiesFeatureCollection["features"]>([]);
-  const isLayerPanelOpen = shallowRef<boolean>(true);
-  const isMeasurePanelOpen = shallowRef<boolean>(true);
+  const isLayerPanelOpen = shallowRef<boolean>(false);
+  const isMeasurePanelOpen = shallowRef<boolean>(false);
 
   function setViewportFacilities(
     perspective: FacilityPerspective,
@@ -104,11 +106,23 @@ export function useAppShellState(): UseAppShellStateResult {
   }
 
   function toggleLayerPanel(): void {
-    isLayerPanelOpen.value = !isLayerPanelOpen.value;
+    const nextLayerPanelOpen = !isLayerPanelOpen.value;
+
+    isLayerPanelOpen.value = nextLayerPanelOpen;
+
+    if (nextLayerPanelOpen) {
+      isMeasurePanelOpen.value = false;
+    }
   }
 
   function toggleMeasurePanel(): void {
-    isMeasurePanelOpen.value = !isMeasurePanelOpen.value;
+    const nextMeasurePanelOpen = !isMeasurePanelOpen.value;
+
+    isMeasurePanelOpen.value = nextMeasurePanelOpen;
+
+    if (nextMeasurePanelOpen) {
+      isLayerPanelOpen.value = false;
+    }
   }
 
   return {
@@ -127,6 +141,7 @@ export function useAppShellState(): UseAppShellStateResult {
     powerHoverController,
     measureController,
     basemapLayerController,
+    waterController,
     disposePmtilesProtocol,
     restoreConsoleWarn,
     mapControls,

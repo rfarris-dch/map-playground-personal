@@ -1,35 +1,28 @@
 <script setup lang="ts">
-  import { computed } from "vue";
   import blurCyanImage from "@/assets/blur-cyan.png";
   import blurIndigoImage from "@/assets/blur-indigo.png";
   import HeroBackground from "@/features/docs/components/hero-background.vue";
+  import { workspaceHeroModel } from "@/features/docs/workspace-surface.service";
 
-  interface HeroTab {
-    readonly isActive: boolean;
-    readonly name: string;
-  }
-
-  const tabs: readonly HeroTab[] = [
-    { name: "apps/web", isActive: true },
-    { name: "apps/api", isActive: false },
-    { name: "apps/pipeline-monitor", isActive: false },
-  ];
-
-  const heroCode = `export const docsMap = {
-  web: "/docs/applications/web-runtime",
-  api: "/docs/applications/api-runtime",
-  monitor: "/docs/applications/pipeline-monitor",
-  packages: "/docs/packages/core-runtime",
-  operations: "/docs/operations/troubleshooting-and-recovery",
-};`;
-  const heroCodeLines = computed(() => heroCode.split("\n"));
+  const heroCode = workspaceHeroModel.codeSample;
+  const heroCodeLines = heroCode.split("\n");
 </script>
 
 <template>
-  <div class="overflow-hidden bg-slate-900 dark:-mt-19 dark:-mb-32 dark:pt-19 dark:pb-32">
-    <div class="py-16 sm:px-2 lg:relative lg:px-0 lg:py-20">
+  <div class="relative overflow-hidden bg-slate-900 dark:-mt-19 dark:-mb-32 dark:pt-19 dark:pb-32">
+    <div class="absolute inset-0 overflow-hidden pointer-events-none">
       <div
-        class="mx-auto grid max-w-2xl grid-cols-1 items-center gap-x-8 gap-y-16 px-4 lg:max-w-8xl lg:grid-cols-2 lg:px-8 xl:gap-x-16 xl:px-12"
+        class="absolute inset-x-[-50vw] -top-32 -bottom-48 mask-[linear-gradient(transparent,white,white)] dark:mask-[linear-gradient(transparent,white,transparent)] lg:inset-x-0 lg:-top-32 lg:-bottom-32 lg:mask-none lg:dark:mask-[linear-gradient(white,white,transparent)]"
+      >
+        <HeroBackground
+          class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 lg:left-[72%] lg:-translate-x-1/2 lg:-translate-y-[60%] xl:left-[70%]"
+        />
+      </div>
+    </div>
+
+    <div class="relative py-16 sm:px-2 lg:px-0 lg:py-20">
+      <div
+        class="mx-auto grid w-full max-w-[110rem] grid-cols-1 items-center gap-x-8 gap-y-16 px-4 lg:grid-cols-2 lg:px-8 xl:gap-x-16 xl:px-12 2xl:px-16"
       >
         <div class="relative z-10 md:text-center lg:text-left">
           <img
@@ -46,8 +39,9 @@
               Technical docs for the datacenterHawk map platform.
             </p>
             <p class="mt-3 text-2xl tracking-tight text-slate-400">
-              Reference the web app, API, pipeline monitor, and shared packages in one place, with
-              links back to the source files behind each area.
+              Reference all {{ workspaceHeroModel.appCount }} apps and
+              {{ workspaceHeroModel.packageCount }}
+              shared packages in one place, with links back to the source files behind each area.
             </p>
             <div class="mt-8 flex gap-4 md:justify-center lg:justify-start">
               <RouterLink
@@ -57,22 +51,15 @@
                 Workspace guide
               </RouterLink>
               <RouterLink
-                to="/docs/applications/web-runtime"
+                to="/docs/applications/docs-runtime"
                 class="rounded-full bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/50 active:text-slate-400"
               >
-                Open web runtime docs
+                Open docs runtime docs
               </RouterLink>
             </div>
           </div>
         </div>
-        <div class="relative lg:static xl:pl-10">
-          <div
-            class="absolute inset-x-[-50vw] -top-32 -bottom-48 mask-[linear-gradient(transparent,white,white)] lg:-top-32 lg:right-0 lg:-bottom-32 lg:left-[calc(50%+14rem)] lg:mask-none dark:mask-[linear-gradient(transparent,white,transparent)] lg:dark:mask-[linear-gradient(white,white,transparent)]"
-          >
-            <HeroBackground
-              class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 lg:left-0 lg:translate-x-0 lg:translate-y-[-60%]"
-            />
-          </div>
+        <div class="relative xl:pl-10">
           <div class="relative">
             <img
               class="absolute -top-64 -right-64"
@@ -114,7 +101,7 @@
                 </svg>
                 <div class="mt-4 flex space-x-2 text-xs">
                   <div
-                    v-for="tab in tabs"
+                    v-for="tab in workspaceHeroModel.tabs"
                     :key="tab.name"
                     class="flex h-6 rounded-full"
                     :class="

@@ -48,7 +48,7 @@ SELECT
   s.facility_name,
   s.provider_id,
   COALESCE(NULLIF(BTRIM(p."NAME"), ''), s.provider_id::text) AS provider_name,
-  s.county_fips,
+  COALESCE(s.county_fips, ''::text) AS county_fips,
   s.commissioned_power_mw,
   s.commissioned_semantic,
   NULL::text AS lease_or_own,
@@ -75,7 +75,7 @@ SELECT
   s.facility_name,
   s.provider_id,
   COALESCE(NULLIF(BTRIM(p."NAME"), ''), s.provider_id::text) AS provider_name,
-  s.county_fips,
+  COALESCE(s.county_fips, ''::text) AS county_fips,
   s.commissioned_power_mw,
   s.commissioned_semantic,
   s.lease_or_own,
@@ -102,7 +102,7 @@ SELECT
   f.facility_name,
   f.provider_id,
   COALESCE(NULLIF(BTRIM(p."NAME"), ''), f.provider_id::text) AS provider_name,
-  f.county_fips,
+  COALESCE(f.county_fips, ''::text) AS county_fips,
   f.commissioned_power_mw,
   f.commissioned_semantic,
   NULL::text AS lease_or_own,
@@ -129,7 +129,7 @@ SELECT
   h.facility_name,
   h.provider_id,
   COALESCE(NULLIF(BTRIM(p."NAME"), ''), h.provider_id::text) AS provider_name,
-  h.county_fips,
+  COALESCE(h.county_fips, ''::text) AS county_fips,
   h.commissioned_power_mw,
   h.commissioned_semantic,
   h.lease_or_own,
@@ -153,7 +153,7 @@ SELECT
   s.facility_name,
   s.provider_id,
   COALESCE(NULLIF(BTRIM(p."NAME"), ''), s.provider_id::text) AS provider_name,
-  s.county_fips,
+  COALESCE(s.county_fips, ''::text) AS county_fips,
   s.commissioned_power_mw,
   s.planned_power_mw,
   s.under_construction_power_mw,
@@ -165,6 +165,7 @@ FROM serve.facility_site AS s
 LEFT JOIN mirror."HAWK_PROVIDER_PROFILE" AS p
   ON p."PROVIDER_PROFILE_ID"::text = s.provider_id::text
 WHERE s.facility_id = $1
+  AND s.geom IS NOT NULL
   AND s.provider_id IS NOT NULL
 LIMIT 1;`,
   },
@@ -178,7 +179,7 @@ SELECT
   s.facility_name,
   s.provider_id,
   COALESCE(NULLIF(BTRIM(p."NAME"), ''), s.provider_id::text) AS provider_name,
-  s.county_fips,
+  COALESCE(s.county_fips, ''::text) AS county_fips,
   s.commissioned_power_mw,
   s.planned_power_mw,
   s.under_construction_power_mw,
@@ -190,12 +191,13 @@ FROM serve.hyperscale_site AS s
 LEFT JOIN mirror."HAWK_PROVIDER_PROFILE" AS p
   ON p."PROVIDER_PROFILE_ID"::text = s.provider_id::text
 WHERE s.hyperscale_id = $1
+  AND s.geom IS NOT NULL
   AND s.provider_id IS NOT NULL
 LIMIT 1;`,
   },
   county_metrics: {
     name: "county_metrics",
-    endpointClass: "administrative-aggregation",
+    endpointClass: "boundary-aggregation",
     maxRows: 4000,
     sql: `
 SELECT

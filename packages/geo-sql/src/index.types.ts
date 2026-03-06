@@ -12,10 +12,7 @@ export interface ParcelSqlQuery {
 }
 
 export interface SqlQuerySpec {
-  readonly endpointClass:
-    | "feature-collection"
-    | "administrative-aggregation"
-    | "proximity-enrichment";
+  readonly endpointClass: "feature-collection" | "boundary-aggregation" | "proximity-enrichment";
   readonly maxRows: number;
   readonly sql: string;
 }

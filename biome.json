@@ -8,7 +8,7 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!docs/tailwind-plus-syntax/**"]
+    "includes": ["!docs/tailwind-plus-syntax"]
   },
   "formatter": {
     "enabled": true,

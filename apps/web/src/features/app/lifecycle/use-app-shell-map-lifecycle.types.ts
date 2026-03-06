@@ -29,6 +29,7 @@ import type {
 } from "@/features/parcels/parcels.types";
 import type { PowerLayerVisibilityController } from "@/features/power/power.types";
 import type { PowerHoverController, PowerHoverState } from "@/features/power/power-hover.types";
+import type { WaterLayerVisibilityController } from "@/features/water/water.types";
 
 export interface AppShellFiberLifecycleController {
   clearFiberHover(): void;
@@ -59,6 +60,7 @@ export interface AppShellMapLifecycleLayerRefs {
   readonly parcelsController: ShallowRef<ParcelsLayerController | null>;
   readonly powerControllers: ShallowRef<readonly PowerLayerVisibilityController[]>;
   readonly powerHoverController: ShallowRef<PowerHoverController | null>;
+  readonly waterController: ShallowRef<WaterLayerVisibilityController | null>;
 }
 
 export interface AppShellMapLifecycleStateRefs {
