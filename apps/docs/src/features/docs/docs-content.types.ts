@@ -4,6 +4,12 @@ export interface HeadingItem {
   readonly title: string;
 }
 
+export interface DocsSearchSection {
+  readonly content: string;
+  readonly hash: string | undefined;
+  readonly title: string;
+}
+
 export interface TocSection {
   readonly children: readonly HeadingItem[];
   readonly id: string;
@@ -16,6 +22,7 @@ export interface DocsPage {
   readonly headings: readonly HeadingItem[];
   readonly html: string;
   readonly order: number;
+  readonly searchSections: readonly DocsSearchSection[];
   readonly searchTerms: readonly string[];
   readonly searchText: string;
   readonly sectionOrder: number;
@@ -45,6 +52,7 @@ export interface DocsCollection {
 
 export interface SearchResultItem {
   readonly description: string;
+  readonly pageTitle: string | undefined;
   readonly score: number;
   readonly sectionTitle: string;
   readonly slug: string;

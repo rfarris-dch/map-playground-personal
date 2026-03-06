@@ -10,12 +10,17 @@ import "prismjs/components/prism-sql";
 import "prismjs/components/prism-typescript";
 import "prismjs/components/prism-tsx";
 import "prismjs/components/prism-yaml";
-import type { HeadingItem, TocSection } from "@/features/docs/docs-content.types";
+import type {
+  DocsSearchSection,
+  HeadingItem,
+  TocSection,
+} from "@/features/docs/docs-content.types";
 
 interface RenderedMarkdown {
   readonly headings: readonly HeadingItem[];
   readonly html: string;
   readonly plainText: string;
+  readonly searchSections: readonly DocsSearchSection[];
   readonly tocSections: readonly TocSection[];
 }
 
@@ -32,6 +37,18 @@ interface MutableTocSection {
   children: HeadingItem[];
   id: string;
   title: string;
+}
+
+interface MutableSearchSection {
+  content: string;
+  hash: string | undefined;
+  title: string;
+}
+
+interface MarkdownToken {
+  readonly content: string;
+  readonly tag: string;
+  readonly type: string;
 }
 
 function escapeHtml(value: string): string {
@@ -91,10 +108,82 @@ function buildTableOfContents(headings: readonly HeadingItem[]): readonly TocSec
 
     const currentSection = sections.at(-1);
     if (!currentSection) {
-      continue;
+      throw new Error(
+        `Cannot add \`h3\` heading \`${heading.title}\` to table of contents without a preceding \`h2\`.`
+      );
     }
 
     currentSection.children = [...currentSection.children, heading];
+  }
+
+  return sections;
+}
+
+function appendSectionContent(section: MutableSearchSection | undefined, content: string): void {
+  if (!section) {
+    return;
+  }
+
+  const normalizedContent = content.trim();
+  if (normalizedContent.length === 0) {
+    return;
+  }
+
+  section.content =
+    section.content.length > 0 ? `${section.content}\n${normalizedContent}` : normalizedContent;
+}
+
+function collectInlineContent(tokens: readonly MarkdownToken[], startIndex: number): string {
+  const inlineToken = tokens[startIndex];
+  if (!inlineToken || inlineToken.type !== "inline") {
+    return "";
+  }
+
+  return inlineToken.content.trim();
+}
+
+function buildSearchSections(
+  tokens: readonly MarkdownToken[],
+  pageTitle: string,
+  slugger: (value: string) => string
+): readonly DocsSearchSection[] {
+  const sections: MutableSearchSection[] = [
+    {
+      title: pageTitle,
+      hash: undefined,
+      content: "",
+    },
+  ];
+
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    if (!token) {
+      continue;
+    }
+
+    if (token.type === "heading_open") {
+      const level = Number(token.tag.replace("h", ""));
+      const title = collectInlineContent(tokens, index + 1);
+
+      if (title.length === 0) {
+        continue;
+      }
+
+      const hash = slugger(title);
+      if (level <= 2) {
+        sections.push({
+          title,
+          hash,
+          content: "",
+        });
+      }
+
+      continue;
+    }
+
+    if (token.type === "paragraph_open") {
+      appendSectionContent(sections.at(-1), collectInlineContent(tokens, index + 1));
+    }
   }
 
   return sections;
@@ -110,9 +199,15 @@ function stripMarkdownSyntax(content: string): string {
     .trim();
 }
 
-export function renderMarkdown(content: string): RenderedMarkdown {
+export function renderMarkdown(
+  content: string,
+  options?: {
+    readonly pageTitle?: string;
+  }
+): RenderedMarkdown {
   const headings: HeadingItem[] = [];
-  const slugger = createSlugger();
+  const headingSlugger = createSlugger();
+  const searchSlugger = createSlugger();
 
   const markdown = new MarkdownIt({
     html: true,
@@ -133,7 +228,7 @@ export function renderMarkdown(content: string): RenderedMarkdown {
   markdown.use(markdownItAnchor, {
     level: [2, 3],
     slugify(value: string) {
-      return slugger(value);
+      return headingSlugger(value);
     },
     callback(token: AnchorCallbackToken, info: AnchorCallbackInfo) {
       const level = Number(token.tag.replace("h", ""));
@@ -150,12 +245,18 @@ export function renderMarkdown(content: string): RenderedMarkdown {
     },
   });
 
+  const tokens = markdown.parse(content, {});
   const html = markdown.render(content);
+  const searchSections =
+    typeof options?.pageTitle === "string" && options.pageTitle.trim().length > 0
+      ? buildSearchSections(tokens, options.pageTitle.trim(), searchSlugger)
+      : [];
 
   return {
     html,
     headings,
     tocSections: buildTableOfContents(headings),
     plainText: stripMarkdownSyntax(content),
+    searchSections,
   };
 }

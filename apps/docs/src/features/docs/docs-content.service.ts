@@ -175,9 +175,11 @@ function loadRawContentFiles(): readonly {
 function createDocsPage(sourceFile: string, raw: string): DocsPage {
   const parsed = parseFrontmatter(raw);
   const data = parsed.data satisfies RawPageData;
-  const rendered = renderMarkdown(parsed.content);
   const derivedMeta = derivePageMeta(sourceFile);
   const title = requireString(data.title, "title", sourceFile);
+  const rendered = renderMarkdown(parsed.content, {
+    pageTitle: title,
+  });
   const slug =
     typeof data.slug === "string" && data.slug.trim().length > 0
       ? data.slug.trim()
@@ -205,6 +207,7 @@ function createDocsPage(sourceFile: string, raw: string): DocsPage {
     sectionTitle,
     sectionOrder,
     order,
+    searchSections: rendered.searchSections,
     searchTerms,
     sources,
     sourceFile,
@@ -233,11 +236,46 @@ export function findPrevNextLinkForSlug(slug: string) {
   return findPrevNextLink(slug, docsCollection.pages);
 }
 
-function scoreSearchResult(query: string, page: DocsPage): number {
+interface SearchIndexEntry {
+  readonly description: string;
+  readonly pageTitle: string | undefined;
+  readonly scoreText: string;
+  readonly sectionTitle: string;
+  readonly slug: string;
+  readonly title: string;
+}
+
+function createSearchIndexEntry(
+  page: DocsPage,
+  section: DocsPage["searchSections"][number]
+): SearchIndexEntry {
+  return {
+    slug: typeof section.hash === "string" ? `${page.slug}#${section.hash}` : page.slug,
+    title: section.title,
+    pageTitle: typeof section.hash === "string" ? page.title : undefined,
+    description: page.description,
+    sectionTitle: page.sectionTitle,
+    scoreText: [
+      section.title,
+      section.content,
+      page.title,
+      page.description,
+      ...page.searchTerms,
+      ...page.sources,
+    ].join(" "),
+  };
+}
+
+const docsSearchIndex = docsCollection.pages.flatMap((page) =>
+  page.searchSections.map((section) => createSearchIndexEntry(page, section))
+);
+
+function scoreSearchEntry(query: string, entry: SearchIndexEntry): number {
   const normalizedQuery = query.toLowerCase();
-  const title = page.title.toLowerCase();
-  const description = page.description.toLowerCase();
-  const searchText = page.searchText.toLowerCase();
+  const title = entry.title.toLowerCase();
+  const pageTitle = entry.pageTitle?.toLowerCase() ?? "";
+  const description = entry.description.toLowerCase();
+  const searchText = entry.scoreText.toLowerCase();
 
   let score = 0;
 
@@ -251,6 +289,18 @@ function scoreSearchResult(query: string, page: DocsPage): number {
 
   if (title.includes(normalizedQuery)) {
     score += 20;
+  }
+
+  if (pageTitle === normalizedQuery) {
+    score += 40;
+  }
+
+  if (pageTitle.startsWith(normalizedQuery)) {
+    score += 20;
+  }
+
+  if (pageTitle.includes(normalizedQuery)) {
+    score += 10;
   }
 
   if (description.includes(normalizedQuery)) {
@@ -271,15 +321,12 @@ export function searchDocsPages(query: string): readonly SearchResultItem[] {
     return [];
   }
 
-  return docsCollection.pages
-    .map((page) => ({
-      slug: page.slug,
-      title: page.title,
-      description: page.description,
-      sectionTitle: page.sectionTitle,
-      score: scoreSearchResult(normalizedQuery, page),
+  return docsSearchIndex
+    .map((entry) => ({
+      ...entry,
+      score: scoreSearchEntry(normalizedQuery, entry),
     }))
-    .filter((page) => page.score > 0)
+    .filter((entry) => entry.score > 0)
     .sort((left, right) => right.score - left.score || left.title.localeCompare(right.title))
     .slice(0, 8);
 }

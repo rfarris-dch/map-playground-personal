@@ -122,7 +122,10 @@
                     class="mt-0.5 truncate whitespace-nowrap text-xs text-slate-500 dark:text-slate-400"
                   >
                     {{ result.sectionTitle }}
-                    / {{ result.description }}
+                    <template v-if="result.pageTitle"> / {{ result.pageTitle }} </template>
+                    <template v-else-if="result.description.length > 0">
+                      / {{ result.description }}
+                    </template>
                   </div>
                 </button>
               </li>
