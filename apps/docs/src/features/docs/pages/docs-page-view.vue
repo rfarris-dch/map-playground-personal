@@ -3,6 +3,7 @@
   import HomeBody from "@/features/docs/components/home-body.vue";
   import PrevNextLinks from "@/features/docs/components/prev-next-links.vue";
   import ProseContent from "@/features/docs/components/prose-content.vue";
+  import ReleaseVerificationPanel from "@/features/docs/components/release-verification-panel.vue";
   import TableOfContents from "@/features/docs/components/table-of-contents.vue";
   import { useDocsContent } from "@/features/docs/composables/use-docs-content";
 
@@ -20,6 +21,9 @@
         />
         <HomeBody v-if="currentPage.slug === '/'" :page="currentPage" />
         <ProseContent v-else :html="currentPage.html" />
+        <ReleaseVerificationPanel
+          v-if="currentPage.slug === '/docs/contributing/release-checklist'"
+        />
       </article>
       <PrevNextLinks :previous="prevNext.previous" :next="prevNext.next" />
     </div>

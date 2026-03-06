@@ -1,19 +1,57 @@
 ---
 title: Release Checklist
 description: Final parity and integrity checks for the docs app before shipping changes.
+searchTerms:
+  - docs release
+  - syntax parity
+  - browser verification
+  - final QA
 ---
 
 Use this checklist before treating the docs app as releasable.
 
-## UI and interaction parity
+The live coverage audit below validates representative docs routes against the actual navigation tree and search index. Use the rest of this page for the browser pass, parity review, and scope checks that still require a human reviewer.
 
-- Landing page preserves the Tailwind Plus Syntax hero, shell, and typography model.
-- Desktop navigation matches the intended information architecture.
-- Mobile navigation opens, closes, and routes correctly.
-- Search modal opens from keyboard shortcut and returns the expected pages.
+## Tailwind Plus Syntax parity targets
+
+Compare the Vue docs app against the in-repo reference implementation under `docs/tailwind-plus-syntax/syntax-ts`.
+
+- Visual tokens and prose styles: `src/styles/tailwind.css` and `src/styles/prism.css`
+- App-shell structure and hero treatment: `src/app/page.tsx` and `src/app/layout.tsx`
+- Shared docs shell components: `src/components/*`
+- Navigation grouping: `src/lib/navigation.ts`
+- Table-of-contents extraction: `src/lib/sections.ts`
+
+## Required browser pass
+
+Verify these routes with `agent-browser` at desktop (`1440x900`) and mobile (`390x844`):
+
+| Surface | Route | What to confirm |
+| --- | --- | --- |
+| Homepage | `/` | Hero parity, shell layout, desktop navigation, light/dark theme toggle |
+| Deep docs page | `/docs/applications/api-geo-slices` | Long-form prose, TOC tracking, prev/next links, code fences |
+| Operations page | `/docs/operations/parcel-and-tile-workflows` | Large-page readability, callouts, tables, source references |
+| Artifact page | `/docs/artifacts/main-intitial-research` | Imported legacy content renders cleanly inside the same shell |
+
+Capture final screenshots for:
+
+- homepage
+- deep docs page
+- search flow
+- mobile navigation flow
+
+## Search and route integrity
+
+Run these checks during the browser pass:
+
+- Search keyboard shortcut opens the modal.
+- Query `workspace commands` returns `Workspace And Commands`.
+- Query `pipeline monitor` returns `Pipeline Monitor`.
+- Query `parcel tile workflows` returns `Parcel And Tile Workflows`.
+- Query `openapi artifact` returns `Spatial Analysis OpenAPI Artifact`.
+- Deep links from search preserve hash fragments when a section-level match is selected.
 - Table of contents highlights the active section on long pages.
-- Previous and next links follow the navigation order.
-- Light and dark mode both render correctly.
+- Previous and next links follow `docs-navigation.service.ts` order.
 
 ## Content integrity
 
@@ -23,11 +61,13 @@ Use this checklist before treating the docs app as releasable.
 - Operations pages cover scripts, runbooks, and troubleshooting paths.
 - Migrated artifact pages cover the existing docs corpus in `docs/architecture`, `docs/research`, `docs/review`, and `docs/runbooks`.
 
-## Safety checks
+## Scope and safety checks
 
 - Docs work is limited to docs surfaces plus minimal workspace wiring.
 - No business behavior changed in `apps/web`, `apps/api`, `apps/pipeline-monitor`, `packages/*`, or production scripts.
 - Source references still point to real files and real operational artifacts.
+
+Use `git diff --name-only` before release review. The changed paths should stay inside `apps/docs/**`, `docs/**`, and any intentionally minimal workspace wiring such as root `package.json`, `turbo.json`, or `biome.json`.
 
 ## Required commands
 

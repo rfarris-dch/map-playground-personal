@@ -3,10 +3,10 @@
   "sessionId": "bb6d6650-9cf8-442a-b52f-191243c475bf",
   "status": "running",
   "startedAt": "2026-03-06T01:32:18.832Z",
-  "updatedAt": "2026-03-06T03:18:00.167Z",
-  "currentIteration": 8,
+  "updatedAt": "2026-03-06T03:26:40.993Z",
+  "currentIteration": 9,
   "maxIterations": 100,
-  "tasksCompleted": 8,
+  "tasksCompleted": 9,
   "isPaused": false,
   "agentPlugin": "codex",
   "trackerState": {
@@ -77,8 +77,8 @@
       {
         "id": "docs-1.25",
         "title": "US-015: Document the parcel and tile scripts",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "docs-1.24",
@@ -210,6 +210,16 @@
       "durationMs": 348333,
       "startedAt": "2026-03-06T03:12:11.322Z",
       "endedAt": "2026-03-06T03:17:59.655Z"
+    },
+    {
+      "iteration": 9,
+      "status": "completed",
+      "taskId": "docs-1.25",
+      "taskTitle": "US-015: Document the parcel and tile scripts",
+      "taskCompleted": true,
+      "durationMs": 518677,
+      "startedAt": "2026-03-06T03:18:01.810Z",
+      "endedAt": "2026-03-06T03:26:40.487Z"
     }
   ],
   "skippedTaskIds": [],

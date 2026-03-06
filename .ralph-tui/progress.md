@@ -14,6 +14,7 @@ after each iteration and included in agent prompts for context.
 - Package documentation reads more clearly when the `Packages` section keeps an overview page for orientation but gives each core runtime package its own page for exports, consumers, and build/test reality; application pages can then deep-link to the exact package seam instead of a catch-all summary.
 - Legacy docs-corpus migration works best when the docs app treats `docs/architecture`, `docs/research`, `docs/review`, and `docs/runbooks` as first-class content sources with explicit metadata and nav ordering, instead of copying those files into shadow duplicates under `apps/docs`.
 - Operational workflow pages are clearest when they start with the root script aliases from `package.json`, then map those aliases to the wrapper scripts, phase markers, and on-disk artifacts that the API and pipeline monitor consume; that keeps the docs aligned with the commands operators actually run.
+- Final release-verification pages stay honest when they derive representative route and search checks from `docsCollection` and `searchDocsPages` instead of hand-maintained status prose; that way navigation or search drift shows up directly in the docs UI.
 
 ---
 ## 2026-03-06 - docs-1.25
@@ -211,5 +212,29 @@ ld`, `bun x ultracite fix apps/docs docs`, and `bun x ultracite check apps/docs 
 
 **Notes:**
 s-1.16`.\n\nValidation passed: `bun --cwd apps/docs lint`, `bun --cwd apps/docs typecheck`, `bun --cwd apps/docs build`, `bun x ultracite fix apps/docs docs`, and `bun x ultracite check apps/docs docs`. Browser verification is still blocked in this sandbox: `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser open http://127.0.0.1:4173` fails with `Daemon failed to start`, so I could not capture the required desktop/mobile screenshots here.\n\n
+
+---
+## 2026-03-06 - docs-1.29
+- Expanded the release checklist page into a real ship gate with explicit Tailwind Plus Syntax comparison targets, route-level browser checks, search expectations, screenshot requirements, and docs-only scope validation guidance.
+- Added a docs-only live coverage audit on the release-checklist route that derives representative onboarding, application, package, operations, reference, and artifact checks from the actual docs navigation and search index instead of relying on static prose alone.
+- Files changed:
+  - `apps/docs/src/content/contributing/release-checklist.md`
+  - `apps/docs/src/features/docs/components/release-verification-panel.vue`
+  - `apps/docs/src/features/docs/pages/docs-page-view.vue`
+  - `apps/docs/src/features/docs/release-verification.service.ts`
+  - `apps/docs/src/features/docs/release-verification.types.ts`
+  - `.ralph-tui/progress.md`
+- **Learnings:**
+  - The final verification story is stronger when the checklist page includes a live audit sourced from `docsCollection` and `searchDocsPages`; it turns navigation and search coverage into something maintainers can see drift immediately instead of a note they must trust.
+  - The most deterministic search checks are exact page-title phrases, not fuzzier topical queries, because the docs search scorer intentionally favors title equality and prefix matches.
+  - Browser verification remains blocked in this sandbox because `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser open http://127.0.0.1:4173` fails with `Daemon failed to start`.
+---
+## ✓ Iteration 9 - docs-1.25: US-015: Document the parcel and tile scripts
+*2026-03-06T03:26:40.992Z (519s)*
+
+**Status:** Completed
+
+**Notes:**
+apps/docs lint`, `bun --cwd apps/docs typecheck`, `bun --cwd apps/docs build`, and `bun x ultracite check apps/docs docs .ralph-tui/progress.md`. I also ran `bun x ultracite fix apps/docs docs .ralph-tui/progress.md`. Browser verification is still blocked in this sandbox: `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser open http://127.0.0.1:4173` fails with `Daemon failed to start`, so I could not capture the required screenshots here.\n\n
 
 ---
