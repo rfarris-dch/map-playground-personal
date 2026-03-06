@@ -51,8 +51,193 @@ interface MarkdownToken {
   readonly type: string;
 }
 
+interface MarkdownParserToken {
+  attrSet(name: string, value: string): void;
+  block: boolean;
+  children: MarkdownParserToken[] | null;
+  content: string;
+  map: [number, number] | null;
+}
+
+interface MarkdownBlockState {
+  readonly blkIndent: number;
+  readonly bMarks: readonly number[];
+  readonly eMarks: readonly number[];
+  line: number;
+  lineMax: number;
+  readonly md: {
+    readonly block: {
+      tokenize(state: MarkdownBlockState, startLine: number, endLine: number): void;
+    };
+  };
+  parentType: string;
+  push(type: string, tag: string, nesting: -1 | 0 | 1): MarkdownParserToken;
+  readonly sCount: readonly number[];
+  readonly src: string;
+  readonly tShift: readonly number[];
+}
+
+interface MarkdownTokenRenderer {
+  renderToken(tokens: readonly MarkdownParserToken[], index: number, options: unknown): string;
+}
+
+type CalloutKind = "note" | "warning";
+
+interface CalloutDirective {
+  readonly kind: CalloutKind;
+  readonly markerCount: number;
+  readonly title: string;
+}
+
+interface MarkdownLineRange {
+  readonly max: number;
+  readonly start: number;
+}
+
+const whitespaceSplitPattern = /\s+/u;
+type MarkdownBlockRule = (
+  state: MarkdownBlockState,
+  startLine: number,
+  endLine: number,
+  silent: boolean
+) => boolean;
+type MarkdownRenderRule = (
+  tokens: readonly MarkdownParserToken[],
+  index: number,
+  rendererOptions: unknown,
+  environment: unknown,
+  self: MarkdownTokenRenderer
+) => string;
+
 function escapeHtml(value: string): string {
   return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+}
+
+function defaultCalloutTitle(kind: CalloutKind): string {
+  switch (kind) {
+    case "note":
+      return "Note";
+    case "warning":
+      return "Warning";
+    default:
+      return "Note";
+  }
+}
+
+function parseCalloutDirective(line: string): CalloutDirective | undefined {
+  const trimmed = line.trim();
+
+  if (!trimmed.startsWith(":::")) {
+    return undefined;
+  }
+
+  let markerCount = 0;
+  while (trimmed[markerCount] === ":") {
+    markerCount += 1;
+  }
+
+  if (markerCount < 3) {
+    return undefined;
+  }
+
+  const body = trimmed.slice(markerCount).trim();
+  if (body.length === 0) {
+    return undefined;
+  }
+
+  const [rawKind, ...titleParts] = body.split(whitespaceSplitPattern);
+  if (rawKind !== "note" && rawKind !== "warning") {
+    return undefined;
+  }
+
+  const title = titleParts.join(" ").trim();
+
+  return {
+    kind: rawKind,
+    markerCount,
+    title: title.length > 0 ? title : defaultCalloutTitle(rawKind),
+  };
+}
+
+function isCalloutClose(line: string, markerCount: number): boolean {
+  const trimmed = line.trim();
+  if (trimmed.length < markerCount) {
+    return false;
+  }
+
+  return trimmed === ":".repeat(markerCount);
+}
+
+function getMarkdownLineRange(state: MarkdownBlockState, line: number): MarkdownLineRange {
+  const startMark = state.bMarks[line] ?? 0;
+  const shift = state.tShift[line] ?? 0;
+  const start = startMark + shift;
+
+  return {
+    start,
+    max: state.eMarks[line] ?? start,
+  };
+}
+
+function findCalloutCloseLine(
+  state: MarkdownBlockState,
+  startLine: number,
+  endLine: number,
+  markerCount: number
+): number | undefined {
+  let nextLine = startLine;
+
+  while (nextLine + 1 < endLine) {
+    nextLine += 1;
+    const lineRange = getMarkdownLineRange(state, nextLine);
+
+    if (lineRange.start < lineRange.max && (state.sCount[nextLine] ?? 0) < state.blkIndent) {
+      return undefined;
+    }
+
+    if (isCalloutClose(state.src.slice(lineRange.start, lineRange.max), markerCount)) {
+      return nextLine;
+    }
+  }
+
+  return undefined;
+}
+
+function pushCalloutTokens(
+  state: MarkdownBlockState,
+  startLine: number,
+  closeLine: number,
+  directive: CalloutDirective
+): void {
+  const previousParentType = state.parentType;
+  const previousLineMax = state.lineMax;
+  state.parentType = "container";
+  state.lineMax = closeLine;
+
+  const containerOpen = state.push("docs_callout_open", "div", 1);
+  containerOpen.block = true;
+  containerOpen.map = [startLine, closeLine];
+  containerOpen.attrSet("class", `docs-callout docs-callout-${directive.kind}`);
+
+  const titleOpen = state.push("docs_callout_title_open", "p", 1);
+  titleOpen.block = true;
+  titleOpen.attrSet("class", "docs-callout-title");
+
+  const titleInline = state.push("inline", "", 0);
+  titleInline.content = directive.title;
+  titleInline.map = [startLine, startLine + 1];
+  titleInline.children = [];
+
+  const titleClose = state.push("docs_callout_title_close", "p", -1);
+  titleClose.block = true;
+
+  state.md.block.tokenize(state, startLine + 1, closeLine);
+
+  const containerClose = state.push("docs_callout_close", "div", -1);
+  containerClose.block = true;
+
+  state.parentType = previousParentType;
+  state.lineMax = previousLineMax;
 }
 
 function createSlugger(): (value: string) => string {
@@ -191,6 +376,8 @@ function buildSearchSections(
 
 function stripMarkdownSyntax(content: string): string {
   return content
+    .replaceAll(/:::(note|warning)([^\n]*)\n/g, " ")
+    .replaceAll(/\n:::\s*$/gmu, " ")
     .replaceAll(/```[\s\S]*?```/g, " ")
     .replaceAll(/`([^`]+)`/g, "$1")
     .replaceAll(/\[(.*?)\]\((.*?)\)/g, "$1")
@@ -224,6 +411,43 @@ export function renderMarkdown(
       return `<pre class="language-${language}"><code class="language-${language}">${highlighted}</code></pre>`;
     },
   });
+
+  const calloutBlockRule: MarkdownBlockRule = (state, startLine, endLine, silent) => {
+    const lineRange = getMarkdownLineRange(state, startLine);
+    const directive = parseCalloutDirective(state.src.slice(lineRange.start, lineRange.max));
+
+    if (typeof directive === "undefined") {
+      return false;
+    }
+
+    if (silent) {
+      return true;
+    }
+
+    const closeLine = findCalloutCloseLine(state, startLine, endLine, directive.markerCount);
+    if (typeof closeLine === "undefined") {
+      return false;
+    }
+
+    pushCalloutTokens(state, startLine, closeLine, directive);
+    state.line = closeLine + 1;
+
+    return true;
+  };
+
+  const renderCalloutToken: MarkdownRenderRule = (
+    tokens,
+    index,
+    rendererOptions,
+    _environment,
+    self
+  ) => self.renderToken(tokens, index, rendererOptions);
+
+  markdown.block.ruler.before("blockquote", "docs-callout", calloutBlockRule);
+  markdown.renderer.rules.docs_callout_open = renderCalloutToken;
+  markdown.renderer.rules.docs_callout_close = renderCalloutToken;
+  markdown.renderer.rules.docs_callout_title_open = renderCalloutToken;
+  markdown.renderer.rules.docs_callout_title_close = renderCalloutToken;
 
   markdown.use(markdownItAnchor, {
     level: [2, 3],

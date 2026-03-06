@@ -19,6 +19,7 @@ after each iteration and included in agent prompts for context.
 - Final release-verification pages stay honest when they derive representative route and search checks from `docsCollection` and `searchDocsPages` instead of hand-maintained status prose; that way navigation or search drift shows up directly in the docs UI.
 - Reference-oriented docs are more usable when page-level `sources` frontmatter is rendered by the shared page shell: readers can see the authored-doc source separately from the authoritative runtime files or imported artifacts, and companion docs links can be derived from those same paths.
 - Support-package docs are stronger when they explicitly state that a package currently has no direct `apps/*` or `scripts/*` consumers; for packages like `bench` and `fixtures`, that absence is concrete repo information and keeps the page honest about present-day runtime impact.
+- Docs-authoring guidance stays trustworthy when every documented Markdown affordance is backed by `markdown.service.ts`; if contributors are told to use a syntax like `:::note`, the renderer and shared prose styles need to implement it centrally instead of leaving the convention as aspirational prose.
 
 ## 2026-03-06 - docs-1.24
 - Split the shared data-and-operations docs into a real package overview plus five concrete package pages for `geo-sql`, `geo-tiles`, `ops`, `bench`, and `fixtures`, each covering package purpose, exported responsibilities, current consumers, build/test behavior, and links back to the app and operations docs that rely on them.
@@ -36,6 +37,19 @@ after each iteration and included in agent prompts for context.
   - `geo-sql` is best documented as a query-contract package, not a database-access package: it owns SQL specs and row-budget metadata, while `apps/api` still owns execution and row mapping.
   - `geo-tiles` sits on both sides of the parcel tile path in this repo, with the scripts using it to publish and roll back manifests and the web app using it to validate and consume the live manifest.
   - `bench` and `fixtures` are concrete support packages even without current runtime imports, so their docs should call out the missing consumers directly instead of implying active enforcement or generated fixture flows that do not exist in code today.
+  - Browser verification remains blocked in this sandbox because `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser open http://127.0.0.1:4173` fails with `Daemon failed to start`.
+---
+## 2026-03-06 - docs-1.28
+- Replaced the thin `Docs Authoring` page with a maintainer-facing workflow that now documents where authored and imported content lives, how to add or edit pages, the required frontmatter contract, kebab-case naming, heading and TOC rules, code-fence and callout conventions, cross-link and source-reference expectations, Tailwind Plus Syntax parity rules, and the required `agent-browser` verification flow.
+- Added real support for the existing `:::note` and `:::warning` Markdown syntax in the shared docs renderer and styled those callouts in the shared docs CSS so the authoring guidance matches the behavior contributors now see in the app.
+- Files changed:
+  - `apps/docs/src/content/contributing/docs-authoring.md`
+  - `apps/docs/src/features/docs/markdown.service.ts`
+  - `apps/docs/src/styles/tailwind.css`
+  - `.ralph-tui/progress.md`
+- **Learnings:**
+  - The docs authoring page is most useful when it documents the real contract between `docs-navigation.service.ts`, frontmatter, the Markdown renderer, and the source-reference panel instead of only describing Markdown content in isolation.
+  - Shared docs syntax such as callouts belongs in `markdown.service.ts` and the shared prose CSS, not as one-off page conventions; otherwise maintainers inherit guidance they cannot safely follow.
   - Browser verification remains blocked in this sandbox because `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser open http://127.0.0.1:4173` fails with `Daemon failed to start`.
 ---
 
@@ -333,5 +347,14 @@ s.md) and closed bead `docs-1.17`.\n\nValidation passed with `bun --cwd apps/doc
 
 **Notes:**
 /docs lint`, `bun --cwd apps/docs typecheck`, `bun --cwd apps/docs build`, `bun x ultracite fix apps/docs docs .ralph-tui/progress.md`, and `bun x ultracite check apps/docs docs .ralph-tui/progress.md`. Browser verification is still blocked in this sandbox: `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser open http://127.0.0.1:4173` fails with `Daemon failed to start`, so I could not capture the required desktop/mobile screenshots here.\n\n
+
+---
+## ✓ Iteration 14 - docs-1.24: US-014: Document the shared data and operations packages
+*2026-03-06T03:59:31.811Z (406s)*
+
+**Status:** Completed
+
+**Notes:**
+lph-tui/progress.md`. I closed the bead with `bd close docs-1.24 --db /Users/robertfarris/map/.beads/beads.db --reason \"Documented the shared data and operations package surfaces in the docs app\"`.\n\nBrowser verification is still blocked in this sandbox. `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser open http://127.0.0.1:4173` fails with `Daemon failed to start`, so I could not capture the required desktop/mobile screenshots here.\n\n
 
 ---
