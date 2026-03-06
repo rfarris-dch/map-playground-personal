@@ -8,6 +8,7 @@ after each iteration and included in agent prompts for context.
 - The docs app treats `apps/docs/src/features/docs/docs-navigation.service.ts` as the authoritative navigation tree. Section order, page order, derived slugs, search grouping, and prev/next links should all be driven from that single definition, while Markdown content stays focused on page content.
 - Tailwind Plus Syntax parity in the Vue docs app depends on document-level setup, not copied CSS alone: define the font variables in `apps/docs/src/styles/tailwind.css` and set the initial `light`/`dark` class from `apps/docs/index.html` before Vue mounts to avoid first-paint drift.
 - Tailwind Plus Syntax-style docs search works best when the Markdown pipeline emits section-level search entries alongside rendered HTML: index the page title plus each `h2` section with anchor-aware slugs so the modal can deep-link into content instead of only returning whole pages.
+- The docs app stays isolated by keeping its runtime entirely inside `apps/docs` and wiring root workspace commands through filtered package scripts like `dev:docs`, `build:docs`, and `typecheck:docs` rather than sharing entrypoints with product apps.
 
 ---
 
@@ -58,6 +59,17 @@ after each iteration and included in agent prompts for context.
   - The vendored Tailwind Plus Syntax reference under `docs/tailwind-plus-syntax` is not Biome-clean under this repo’s Ultracite rules, so checks that target `docs/` need that subtree excluded unless the intent is to lint and refactor the upstream template itself.
   - Browser automation was attempted, but `agent-browser` could not start its daemon in this sandbox and local preview servers are blocked from binding to a port here.
 ---
+## 2026-03-06 - docs-1.1
+- Verified the docs workspace bootstrap was already implemented: `apps/docs` is a standalone Vue 3 + Vite + Tailwind CSS 4 + TypeScript application with its own `package.json`, Vite config, tsconfig files, router, and Composition API app shell.
+- Confirmed the root workspace wiring is minimal and docs-specific through the filtered scripts in the root `package.json` (`dev:docs`, `build:docs`, `typecheck:docs`) and the existing Bun workspace plus Turbo setup.
+- Verified the docs app does not import runtime code from `apps/web`, `apps/api`, or `apps/pipeline-monitor`; the remaining quality-gate gap is browser verification, which is blocked in this sandbox because preview servers cannot bind and `agent-browser` cannot start its daemon.
+- Files changed:
+  - `.ralph-tui/progress.md`
+- **Learnings:**
+  - In this repo, the bootstrap story is satisfied by package-level isolation plus root filtered commands; no extra cross-workspace wiring is needed once `apps/docs` has its own Vite, tsconfig, and scripts.
+  - Verifying docs-app independence is easiest with a targeted import scan across `apps/docs` plus a check of the root Turbo and package scripts.
+  - Browser verification remains blocked in this sandbox because `vite preview` cannot bind to localhost (`listen EPERM`) and `agent-browser` fails to start.
+---
 ## ✓ Iteration 1 - docs-1.4: US-004: Define the repository documentation information architecture
 *2026-03-06T02:36:08.405Z (441s)*
 
@@ -74,5 +86,14 @@ ady exists in code. I added a minimal authored-docs linting exclusion in [biome.
 
 **Notes:**
 tes passed: `bun --cwd apps/docs lint`, `bun --cwd apps/docs typecheck`, `bun --cwd apps/docs build`, `bun x ultracite fix apps/docs docs`, and `bun x ultracite check apps/docs docs`. Browser verification is still blocked in this sandbox: `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, so `agent-browser` parity checks and screenshots could not be completed here. `docs-1.2` is closed; I had to use `--force` because the tracker still shows `docs-1.1` open.\n\n
+
+---
+## ✓ Iteration 3 - docs-1.3: US-003: Recreate the Tailwind Plus Syntax shell, navigation, and search in Vue
+*2026-03-06T02:54:01.551Z (415s)*
+
+**Status:** Completed
+
+**Notes:**
+ralph-tui/progress.md) and closed bead `docs-1.3`.\n\nValidation passed: `bun --cwd apps/docs lint`, `bun --cwd apps/docs typecheck`, `bun --cwd apps/docs build`, `bun x ultracite fix apps/docs docs`, and `bun x ultracite check apps/docs docs`. Browser verification is still blocked in this sandbox: `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser` fails with `Daemon failed to start`, so I could not capture the required screenshots here.\n\n
 
 ---
