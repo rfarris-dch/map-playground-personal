@@ -53,7 +53,10 @@ export const docsNavigationDefinitions: readonly DocsNavigationDefinition[] = [
       "web-reporting-and-analysis-domains": 5,
       "api-runtime": 6,
       "api-geo-slices": 7,
-      "pipeline-monitor": 8,
+      "api-boundaries-and-facilities": 8,
+      "api-fiber-markets-and-providers": 9,
+      "api-parcels-and-sync": 10,
+      "pipeline-monitor": 11,
     },
   },
   {

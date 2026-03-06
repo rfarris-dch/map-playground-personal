@@ -11,6 +11,7 @@ after each iteration and included in agent prompts for context.
 - The docs app stays isolated by keeping its runtime entirely inside `apps/docs` and wiring root workspace commands through filtered package scripts like `dev:docs`, `build:docs`, and `typecheck:docs` rather than sharing entrypoints with product apps.
 - Onboarding docs are strongest when `Start Here` gives a fixed contributor path, `Workspace And Commands` maps root scripts to the actual workflows they start, and `Repository Architecture` points directly to preserved `docs/architecture` artifacts for older design context.
 - Application foundation pages work best when they document process entrypoints, shared runtime helpers, and cross-cutting config in one place, while pushing route- or slice-specific behavior into companion pages such as `api-geo-slices.md`.
+- API geo docs stay readable when they group slices by runtime shape instead of forcing every domain into one inventory page: compact PostGIS route -> repo -> mapper slices, transport-heavy multi-endpoint slices, upstream proxy slices, and paginated reporting slices each need different documentation emphasis.
 - Web-application foundation pages read more clearly when they separate the composition-root route (`/map`) from narrower reporting routes first, then document shell orchestration, shared UI plumbing, and package/API seams without duplicating the feature-domain inventory.
 - Package documentation reads more clearly when the `Packages` section keeps an overview page for orientation but gives each core runtime package its own page for exports, consumers, and build/test reality; application pages can then deep-link to the exact package seam instead of a catch-all summary.
 - Legacy docs-corpus migration works best when the docs app treats `docs/architecture`, `docs/research`, `docs/review`, and `docs/runbooks` as first-class content sources with explicit metadata and nav ordering, instead of copying those files into shadow duplicates under `apps/docs`.
@@ -258,6 +259,23 @@ s-1.16`.\n\nValidation passed: `bun --cwd apps/docs lint`, `bun --cwd apps/docs 
   - `apps/docs/src/features/docs/components/release-verification-panel.vue`
   - `apps/docs/src/features/docs/pages/docs-page-view.vue`
   - `apps/docs/src/features/docs/release-verification.service.ts`
+
+## 2026-03-06 - docs-1.21
+- Replaced the thin `API Geo Slices` stub with a real hub page and three focused companion docs that now cover the six `apps/api/src/geo` slices by runtime shape: compact PostGIS reads for boundaries, transport-heavy facilities routes, the fiber-locator upstream proxy, table/reporting slices for markets and providers, and the parcel slice with its sync-worker intersections.
+- Documented the route, repo, mapper, service, and policy seams where they actually exist today, including facilities route-helper services, fiber-locator config or fetch or tile-cache logic, the markets/providers query-service pipeline, parcel AOI policy and ingestion-run coherency checks, and the parcel or hyperscale sync services that influence geo serving.
+- Expanded the `Applications` navigation so the API section now exposes the new detailed slice pages as first-class routes participating in navigation, search, and prev or next flow.
+- Files changed:
+  - `apps/docs/src/content/applications/api-geo-slices.md`
+  - `apps/docs/src/content/applications/api-boundaries-and-facilities.md`
+  - `apps/docs/src/content/applications/api-fiber-markets-and-providers.md`
+  - `apps/docs/src/content/applications/api-parcels-and-sync.md`
+  - `apps/docs/src/features/docs/docs-navigation.service.ts`
+  - `.ralph-tui/progress.md`
+- **Learnings:**
+  - `apps/api/src/geo` is easier to document by runtime shape than by alphabetical slice order because the repo -> mapper seams, route-helper seams, and service-first proxy seams are genuinely different patterns in code.
+  - The parcel slice is the only geo domain that directly exposes worker state to HTTP consumers, so sync-runtime coverage belongs with parcel docs first and with the broader sync architecture second.
+  - Browser verification remains blocked in this sandbox because `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser` fails with `Daemon failed to start`.
+---
   - `apps/docs/src/features/docs/release-verification.types.ts`
   - `.ralph-tui/progress.md`
 - **Learnings:**
@@ -383,4 +401,13 @@ lph-tui/progress.md`. I closed the bead with `bd close docs-1.24 --db /Users/rob
   - The cleanest split for `apps/web/src/features` docs is route-facing shell orchestration first, then map-data runtimes, then reporting/analysis helpers; trying to cover all of that on one page hides the real ownership boundaries.
   - `features/facilities` is intentionally dual-purpose in this repo: the same domain owns both map-layer behavior and facilities-table transport, so the docs need to call out that split instead of forcing facilities into only one bucket.
   - Browser verification remains blocked in this sandbox because `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser open http://127.0.0.1:4173` fails with `Daemon failed to start`.
+---
+## ✓ Iteration 16 - docs-1.19: US-009: Document the web feature domains
+*2026-03-06T04:16:53.191Z (392s)*
+
+**Status:** Completed
+
+**Notes:**
+s/docs typecheck`, `bun --cwd apps/docs build`, `bun x ultracite fix apps/docs docs .ralph-tui/progress.md`, and `bun x ultracite check apps/docs docs .ralph-tui/progress.md`. I closed bead `docs-1.19`. Browser verification is still blocked in this sandbox: `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser open http://127.0.0.1:4173` fails with `Daemon failed to start`, so I could not capture the required desktop/mobile screenshots here.\n\n
+
 ---

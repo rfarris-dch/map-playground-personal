@@ -1,68 +1,88 @@
 ---
 title: API Geo Slices
 description: The geo-serving route groups under apps/api/src/geo and the route, repo, mapper, service, and policy seams they use.
+sources:
+  - apps/docs/src/content/applications/api-geo-slices.md
+  - apps/api/src/app.ts
+  - apps/api/src/geo/boundaries
+  - apps/api/src/geo/facilities
+  - apps/api/src/geo/fiber-locator
+  - apps/api/src/geo/markets
+  - apps/api/src/geo/parcels
+  - apps/api/src/geo/providers
 ---
 
-The `apps/api/src/geo` tree follows a pragmatic slice model. Not every slice has every layer, but the boundaries are consistent enough to document.
+The bottom of `apps/api/src/app.ts` registers six geo-serving slices. They share the same Hono middleware, response envelopes, pagination helpers, runtime config, and Postgres client, but the internal slice shape is intentionally not uniform.
 
-## Boundaries
+This route is the reading guide. The detailed pages below split the surface by runtime shape so the docs stay readable as the API grows.
 
-`geo/boundaries` is a compact slice:
+## Slice map
 
-- `boundaries.route.ts` parses the `level` query param, runs the read, maps rows, and returns a `BoundaryPowerFeatureCollection`.
-- `boundaries.repo.ts` performs the PostGIS-backed read.
-- `boundaries.mapper.ts` maps rows into the contract payload.
+| Docs page | Slices | Dominant shape | What to look for first |
+| --- | --- | --- | --- |
+| [API Boundaries And Facilities](/docs/applications/api-boundaries-and-facilities) | `boundaries`, `facilities` | PostGIS-backed geo reads | Repo queries, contract mappers, and route-level transport helpers |
+| [API Fiber, Markets, And Providers](/docs/applications/api-fiber-markets-and-providers) | `fiber-locator`, `markets`, `providers` | Upstream proxy plus paginated reporting tables | Config and fetch services for fiber, query-service pipelines for tables |
+| [API Parcels And Sync](/docs/applications/api-parcels-and-sync) | `parcels` plus sync intersections | Policy-heavy geo serving tied to worker state | AOI policy helpers, ingestion-run metadata, sync status seams, worker services |
 
-This slice is the clearest example of a small route -> repo -> mapper shape.
+## What stays shared vs slice-local
 
-## Facilities
+### Shared runtime surface
 
-`geo/facilities` uses a broader route set because facilities expose multiple interaction modes:
+[API Runtime Foundations](/docs/applications/api-runtime) owns the transport rules every slice inherits:
 
-- bbox map fetch
-- selection fetch
-- table fetch
-- detail fetch
+- Hono app construction and middleware registration
+- request ID propagation and JSON envelope shaping
+- request timeout and body-size hardening
+- runtime config and Bun SQL lifecycle
+- dataset-level policy helpers in `apps/api/src/http`
 
-The route folder contains focused transport helpers for params, errors, policy, meta, and query orchestration. This keeps the slice transport-heavy without collapsing everything into one file.
+### Slice-local surface
 
-## Fiber locator
+Each folder under `apps/api/src/geo` owns the domain logic that is not generic enough for `src/http`:
 
-`geo/fiber-locator` is an integration slice rather than a pure SQL slice:
+- route registration and endpoint-specific validation
+- repo/query code for slice-specific reads
+- mappers that normalize database or upstream payloads into contracts
+- policy, meta, or error helpers when the slice has nontrivial transport behavior
 
-- config loading
-- upstream request shaping
-- tile proxy behavior
-- catalog and layers-in-view endpoints
+## Repeated slice patterns
 
-Its route helpers are specialized around proxy policy and path decoding instead of repo access.
+### Compact route -> repo -> mapper slices
 
-## Markets and providers
+`boundaries` is the smallest example. The route validates one query param, the repo executes one of three SQL shapes, and the mapper turns rows into a feature collection.
 
-`geo/markets` and `geo/providers` both use the paginated table shape:
+### Multi-endpoint transport slices
 
-- route parses pagination and sort args
-- query service orchestrates the read
-- repo executes SQL
-- mapper converts rows
+`facilities` and `parcels` both break route behavior into small helpers under `route/`:
 
-These slices are closer to table/reporting surfaces than map tile surfaces.
+- param parsing
+- policy checks
+- response meta builders
+- query orchestration
+- shared error responses
 
-## Parcels
+That keeps the entry route files small even though each slice serves several endpoints.
 
-`geo/parcels` is the most operationally sensitive slice. It currently exposes:
+### Service-first slices
 
-- sync status
-- lookup
-- enrich
-- detail
+`fiber-locator` is not a PostGIS slice. Its main value lives in env-driven config, upstream fetch behavior, tile proxy validation, caching, and retry handling.
 
-The route subfolder also includes AOI query helpers, enrich services, error/meta helpers, and policy services. This is where parcel coherency checks and sync-facing behavior intersect with geo-serving.
+### Paginated reporting slices
 
-## Sync intersections
+`markets` and `providers` both use the same shape:
 
-Parcel serving intersects with the sync worker and operational scripts more directly than the other slices. Use this page together with:
+1. route validates pagination and sort params
+2. query service orchestrates count + page reads
+3. repo executes SQL against mirror tables
+4. mapper normalizes nullable database fields into contract rows
+
+## Operational seam
+
+Only the parcel slice exposes the sync worker directly to HTTP readers through `GET /api/geo/parcels/sync/status`. That makes parcels the place where geo serving, sync lifecycle, pipeline monitoring, and runbooks intersect most tightly.
+
+Use these pages together with:
 
 - [API Runtime Foundations](/docs/applications/api-runtime)
+- [Sync Architecture](/docs/data-and-sync/sync-architecture)
 - [Parcel And Tile Workflows](/docs/operations/parcel-and-tile-workflows)
 - [Runbooks And Troubleshooting](/docs/operations/runbooks-and-troubleshooting)
