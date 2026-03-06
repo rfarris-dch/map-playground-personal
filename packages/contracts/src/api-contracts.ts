@@ -29,7 +29,9 @@ export type {
   FacilitiesBboxRouteArgs,
   FacilityDetailRouteOptions,
   HealthResponse,
+  PaginatedRouteArgs,
   ParcelDetailRouteOptions,
+  SortedPaginatedRouteArgs,
 } from "./api-contracts.types";
 
 export const HealthSchema = z.object({

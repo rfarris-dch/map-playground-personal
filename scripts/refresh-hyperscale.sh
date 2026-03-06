@@ -334,10 +334,25 @@ SET
 SQL
 
 echo "[verify] mysql vs pg mirror vs serve"
+VERIFY_FAILED=0
+set +e
 mysql -h "${DB_HOST}" -P "${DB_PORT}" -u "${DB_USER}" -p"${DB_PASSWORD}" "${DB_NAME}" -N -e \
   "SELECT 'mysql.HYPERSCALE_FACILITY', COUNT(*) FROM HYPERSCALE_FACILITY UNION ALL SELECT 'mysql.HYPERSCALE_PROVIDER', COUNT(*) FROM HYPERSCALE_PROVIDER UNION ALL SELECT 'mysql.HYPERSCALE_HISTORICAL_CAPACITY', COUNT(*) FROM HYPERSCALE_HISTORICAL_CAPACITY;"
+MYSQL_VERIFY_EXIT_CODE="$?"
 
 psql "${POSTGRES_URL}" -At -F $'\t' -c \
   "SELECT 'pg.mirror.HYPERSCALE_FACILITY', COUNT(*) FROM mirror.\"HYPERSCALE_FACILITY\" UNION ALL SELECT 'pg.mirror.HYPERSCALE_PROVIDER', COUNT(*) FROM mirror.\"HYPERSCALE_PROVIDER\" UNION ALL SELECT 'pg.mirror.HYPERSCALE_HISTORICAL_CAPACITY', COUNT(*) FROM mirror.\"HYPERSCALE_HISTORICAL_CAPACITY\" UNION ALL SELECT 'pg.spatial.hyperscale_facility_features', COUNT(*) FROM spatial.hyperscale_facility_features UNION ALL SELECT 'pg.serve.hyperscale_site', COUNT(*) FROM serve.hyperscale_site;"
+POSTGRES_VERIFY_EXIT_CODE="$?"
+set -e
+
+if [[ "${MYSQL_VERIFY_EXIT_CODE}" -ne 0 || "${POSTGRES_VERIFY_EXIT_CODE}" -ne 0 ]]; then
+  VERIFY_FAILED=1
+  echo "[sync] WARNING: post-commit verification encountered errors (mysql=${MYSQL_VERIFY_EXIT_CODE} postgres=${POSTGRES_VERIFY_EXIT_CODE})" >&2
+fi
+
+if [[ "${VERIFY_FAILED}" -eq 1 ]]; then
+  echo "[done] hyperscale refresh complete with verification warnings"
+  exit 0
+fi
 
 echo "[done] hyperscale refresh complete"

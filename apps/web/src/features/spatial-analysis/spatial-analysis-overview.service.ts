@@ -1,8 +1,8 @@
+import type { SpatialAnalysisParcelOverview } from "@/features/spatial-analysis/spatial-analysis-overview.service.types";
 import { spatialAnalysisParcelFieldValue } from "@/features/spatial-analysis/spatial-analysis-parcels.service";
 import type { SpatialAnalysisParcelRecord } from "@/features/spatial-analysis/spatial-analysis-parcels.types";
-import type { SpatialAnalysisParcelOverview } from "./spatial-analysis-overview.service.types";
 
-export type { SpatialAnalysisParcelOverview } from "./spatial-analysis-overview.service.types";
+export type { SpatialAnalysisParcelOverview } from "@/features/spatial-analysis/spatial-analysis-overview.service.types";
 
 export function summarizeSpatialAnalysisParcels(
   parcels: readonly SpatialAnalysisParcelRecord[]

@@ -1,5 +1,5 @@
+import type { ParcelFieldReader } from "@/features/spatial-analysis/spatial-analysis-parcels.service.types";
 import type { SpatialAnalysisParcelRecord } from "@/features/spatial-analysis/spatial-analysis-parcels.types";
-import type { ParcelFieldReader } from "./spatial-analysis-parcels.service.types";
 
 export const SPATIAL_ANALYSIS_PARCEL_FOCUS_FIELDS: readonly string[] = [
   "address",

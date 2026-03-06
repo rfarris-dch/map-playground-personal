@@ -1,5 +1,5 @@
 import type { FacilityPerspective } from "@map-migration/contracts";
-import type { SpatialAnalysisFacilityComparable } from "./spatial-analysis-facilities.service.types";
+import type { SpatialAnalysisFacilityComparable } from "@/features/spatial-analysis/spatial-analysis-facilities.service.types";
 
 function perspectiveSortRank(perspective: FacilityPerspective): number {
   if (perspective === "colocation") {

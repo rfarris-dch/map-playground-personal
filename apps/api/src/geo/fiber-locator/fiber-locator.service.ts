@@ -18,18 +18,25 @@ import {
   payloadRecordOrThrow,
   toCatalogLayer,
 } from "@/geo/fiber-locator/fiber-locator-upstream-payload.service";
-import type {
-  FetchWithTimeoutResult,
-  FiberLocatorTileSnapshot,
-} from "./fiber-locator.service.types";
+import type { FiberLocatorTileSnapshot } from "./fiber-locator.service.types";
+import {
+  createTileSnapshotResponse,
+  fetchFiberLocatorTileSnapshot,
+  fetchWithTimeout,
+  waitForAbortableValue,
+} from "./fiber-locator-fetch.service";
+import {
+  cacheTileSnapshot,
+  clearInFlightTileSnapshot,
+  getInFlightTileSnapshot,
+  readFreshTileSnapshot,
+  setInFlightTileSnapshot,
+  tileCacheKey,
+} from "./fiber-locator-tile-cache.service";
 
-const FIBER_LOCATOR_TILE_RETRY_MAX_ATTEMPTS = 3;
-const FIBER_LOCATOR_TILE_RETRY_BASE_DELAY_MS = 250;
 const FIBER_LOCATOR_TILE_CACHE_TTL_MS = 15_000;
 const FIBER_LOCATOR_TILE_CACHE_MAX_ENTRIES = 512;
 
-const tileSnapshotByKey = new Map<string, FiberLocatorTileSnapshot>();
-const tileSnapshotInFlightByKey = new Map<string, Promise<FiberLocatorTileSnapshot>>();
 const fiberLocatorConfigDefaults: FiberLocatorConfigDefaults = {
   requestTimeoutMs: 30_000,
   tileCacheMaxEntries: FIBER_LOCATOR_TILE_CACHE_MAX_ENTRIES,
@@ -47,116 +54,7 @@ function buildInViewPath(config: FiberLocatorConfig, bbox: BBox): string {
   return `/layers/inview/${encodedBbox}/${encodedBranches}`;
 }
 
-function shouldRetryUpstreamResponse(response: Response): boolean {
-  return response.status === 408 || response.status === 429 || response.status >= 500;
-}
-
-function retryDelayMs(attempt: number): number {
-  const exponent = Math.max(0, attempt);
-  return FIBER_LOCATOR_TILE_RETRY_BASE_DELAY_MS * 2 ** exponent;
-}
-
-function delay(ms: number, signal?: AbortSignal): Promise<void> {
-  if (ms <= 0) {
-    return Promise.resolve();
-  }
-
-  return new Promise<void>((resolve, reject) => {
-    const timeoutId = setTimeout(() => {
-      cleanup();
-      resolve();
-    }, ms);
-
-    const cleanup = (): void => {
-      clearTimeout(timeoutId);
-      if (typeof signal !== "undefined") {
-        signal.removeEventListener("abort", handleAbort);
-      }
-    };
-
-    const handleAbort = (): void => {
-      cleanup();
-      reject(new Error("fiberlocator tile retry aborted"));
-    };
-
-    if (typeof signal !== "undefined") {
-      if (signal.aborted) {
-        cleanup();
-        reject(new Error("fiberlocator tile retry aborted"));
-        return;
-      }
-
-      signal.addEventListener("abort", handleAbort, { once: true });
-    }
-  });
-}
-
-function tileCacheKey(args: FiberLocatorTileRequest): string {
-  return `${args.format}:${args.layerName}:${String(args.z)}:${String(args.x)}:${String(args.y)}`;
-}
-
-function copyTileHeaders(headers: Headers): Headers {
-  const passThroughHeaders = [
-    "cache-control",
-    "content-type",
-    "etag",
-    "expires",
-    "last-modified",
-    "vary",
-  ];
-
-  return passThroughHeaders.reduce((copiedHeaders, headerName) => {
-    const headerValue = headers.get(headerName);
-    if (typeof headerValue === "string") {
-      copiedHeaders.set(headerName, headerValue);
-    }
-
-    return copiedHeaders;
-  }, new Headers());
-}
-
-function createTileSnapshotResponse(snapshot: FiberLocatorTileSnapshot): Response {
-  return new Response(snapshot.body.slice(), {
-    headers: new Headers(snapshot.headers),
-    status: snapshot.status,
-    statusText: snapshot.statusText,
-  });
-}
-
-function isTileSnapshotFresh(
-  config: FiberLocatorConfig,
-  snapshot: FiberLocatorTileSnapshot,
-  nowMs: number
-): boolean {
-  return nowMs - snapshot.cachedAtMs <= config.tileCacheTtlMs;
-}
-
-function pruneTileSnapshotCache(config: FiberLocatorConfig, nowMs: number): void {
-  for (const [cacheKey, snapshot] of tileSnapshotByKey.entries()) {
-    if (!isTileSnapshotFresh(config, snapshot, nowMs)) {
-      tileSnapshotByKey.delete(cacheKey);
-    }
-  }
-
-  while (tileSnapshotByKey.size > config.tileCacheMaxEntries) {
-    const oldestCacheKey = tileSnapshotByKey.keys().next().value;
-    if (typeof oldestCacheKey !== "string") {
-      break;
-    }
-    tileSnapshotByKey.delete(oldestCacheKey);
-  }
-}
-
-function cacheTileSnapshot(
-  config: FiberLocatorConfig,
-  cacheKey: string,
-  snapshot: FiberLocatorTileSnapshot
-): void {
-  tileSnapshotByKey.set(cacheKey, snapshot);
-  pruneTileSnapshotCache(config, Date.now());
-}
-
-async function fetchFiberLocatorTileFromUpstream(
+function fetchFiberLocatorTileFromUpstream(
   config: FiberLocatorConfig,
   args: FiberLocatorTileRequest,
   signal?: AbortSignal
@@ -168,90 +66,7 @@ async function fetchFiberLocatorTileFromUpstream(
 
   const upstreamUrl = buildTokenPathUrl(config, upstreamPath);
   const accept = args.format === "png" ? "image/png" : "application/x-protobuf";
-
-  const requestInit: RequestInit = {
-    method: "GET",
-    headers: {
-      accept,
-    },
-  };
-  if (typeof signal !== "undefined") {
-    requestInit.signal = signal;
-  }
-
-  let attempt = 0;
-  while (attempt < FIBER_LOCATOR_TILE_RETRY_MAX_ATTEMPTS) {
-    try {
-      const { response } = await fetchWithTimeout(
-        upstreamUrl,
-        config.requestTimeoutMs,
-        requestInit
-      );
-      if (
-        shouldRetryUpstreamResponse(response) &&
-        attempt < FIBER_LOCATOR_TILE_RETRY_MAX_ATTEMPTS - 1
-      ) {
-        response.body?.cancel();
-      } else {
-        const body = new Uint8Array(await response.arrayBuffer());
-        return {
-          body,
-          cachedAtMs: Date.now(),
-          headers: copyTileHeaders(response.headers),
-          status: response.status,
-          statusText: response.statusText,
-        };
-      }
-    } catch (error) {
-      if (attempt >= FIBER_LOCATOR_TILE_RETRY_MAX_ATTEMPTS - 1) {
-        throw error;
-      }
-    }
-
-    const waitMs = retryDelayMs(attempt);
-    attempt += 1;
-    await delay(waitMs, signal);
-  }
-
-  throw new Error("fiberlocator tile request exceeded retry attempts");
-}
-
-async function fetchWithTimeout(
-  url: string,
-  timeoutMs: number,
-  init: RequestInit = {}
-): Promise<FetchWithTimeoutResult> {
-  const timeoutController = new AbortController();
-  const externalSignal = init.signal ?? null;
-
-  const onAbort = (): void => {
-    timeoutController.abort();
-  };
-
-  if (externalSignal !== null) {
-    if (externalSignal.aborted) {
-      timeoutController.abort();
-    }
-    externalSignal.addEventListener("abort", onAbort, { once: true });
-  }
-
-  const timeoutHandle = setTimeout(() => {
-    timeoutController.abort();
-  }, timeoutMs);
-
-  try {
-    const response = await fetch(url, {
-      ...init,
-      signal: timeoutController.signal,
-    });
-
-    return { response };
-  } finally {
-    clearTimeout(timeoutHandle);
-    if (externalSignal !== null) {
-      externalSignal.removeEventListener("abort", onAbort);
-    }
-  }
+  return fetchFiberLocatorTileSnapshot(config, upstreamUrl, accept, signal);
 }
 
 export function isAllowedFiberLocatorLayer(config: FiberLocatorConfig, layerName: string): boolean {
@@ -410,21 +225,20 @@ export function fetchFiberLocatorTile(
   args: FiberLocatorTileRequest,
   signal?: AbortSignal
 ): Promise<Response> {
-  const cacheKey = tileCacheKey(args);
+  const cacheKey = tileCacheKey(args.layerName, args.format, args.z, args.x, args.y);
   const nowMs = Date.now();
 
-  pruneTileSnapshotCache(config, nowMs);
-  const cachedSnapshot = tileSnapshotByKey.get(cacheKey);
-  if (typeof cachedSnapshot !== "undefined" && isTileSnapshotFresh(config, cachedSnapshot, nowMs)) {
-    return Promise.resolve(createTileSnapshotResponse(cachedSnapshot));
-  }
-  if (typeof cachedSnapshot !== "undefined") {
-    tileSnapshotByKey.delete(cacheKey);
+  const cachedSnapshot = readFreshTileSnapshot(config, cacheKey, nowMs);
+  if (cachedSnapshot !== null) {
+    return waitForAbortableValue(Promise.resolve(cachedSnapshot), signal).then((snapshot) =>
+      createTileSnapshotResponse(snapshot)
+    );
   }
 
-  let inFlightSnapshotPromise = tileSnapshotInFlightByKey.get(cacheKey);
+  let inFlightSnapshotPromise = getInFlightTileSnapshot(cacheKey);
   if (typeof inFlightSnapshotPromise === "undefined") {
-    inFlightSnapshotPromise = fetchFiberLocatorTileFromUpstream(config, args, signal)
+    // Keep the shared upstream fetch independent from any single caller's abort signal.
+    inFlightSnapshotPromise = fetchFiberLocatorTileFromUpstream(config, args)
       .then((snapshot) => {
         if (snapshot.status >= 200 && snapshot.status < 300) {
           cacheTileSnapshot(config, cacheKey, snapshot);
@@ -432,11 +246,13 @@ export function fetchFiberLocatorTile(
         return snapshot;
       })
       .finally(() => {
-        tileSnapshotInFlightByKey.delete(cacheKey);
+        clearInFlightTileSnapshot(cacheKey);
       });
 
-    tileSnapshotInFlightByKey.set(cacheKey, inFlightSnapshotPromise);
+    setInFlightTileSnapshot(cacheKey, inFlightSnapshotPromise);
   }
 
-  return inFlightSnapshotPromise.then((snapshot) => createTileSnapshotResponse(snapshot));
+  return waitForAbortableValue(inFlightSnapshotPromise, signal).then((snapshot) =>
+    createTileSnapshotResponse(snapshot)
+  );
 }

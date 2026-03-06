@@ -1,23 +1,13 @@
 import maplibregl, {
-  type AddLayerObject,
   type AddProtocolAction,
   addProtocol,
-  type ControlPosition,
-  type IControl,
-  type MapGeoJSONFeature,
   type FullscreenControlOptions as MapLibreFullscreenControlOptions,
   type Map as MapLibreMap,
   type NavigationControlOptions as MapLibreNavigationControlOptions,
   type ScaleControlOptions as MapLibreScaleControlOptions,
   type MapMouseEvent,
   type MapOptions,
-  type PointLike,
-  type ProjectionSpecification,
-  type QueryRenderedFeaturesOptions,
   removeProtocol,
-  type SourceSpecification,
-  type StyleSpecification,
-  type TerrainSpecification,
 } from "maplibre-gl";
 import { Protocol } from "pmtiles";
 import type {
@@ -29,8 +19,17 @@ import type {
   MapAdapter,
   MapClickEvent,
   MapControl,
+  MapControlPosition,
   MapCreateOptions,
+  MapLayerSpecification,
   MapPointerEvent,
+  MapPointLike,
+  MapProjectionSpecification,
+  MapQueryRenderedFeaturesOptions,
+  MapRenderedFeature,
+  MapSourceSpecification,
+  MapStyleSpecification,
+  MapTerrainSpecification,
   NavigationControlOptions,
   PmtilesProtocolRuntime,
   ScaleControlOptions,
@@ -46,9 +45,22 @@ export type {
   MapAdapter,
   MapClickEvent,
   MapControl,
+  MapControlPosition,
   MapCreateOptions,
   MapExpression,
+  MapLayerSpecification,
   MapPointerEvent,
+  MapPointLike,
+  MapProjectionSpecification,
+  MapQueryRenderedFeaturesOptions,
+  MapRenderedFeature,
+  MapRequestParameters,
+  MapRequestTransformFunction,
+  MapResourceType,
+  MapSourceSpecification,
+  MapStyleLayer,
+  MapStyleSpecification,
+  MapTerrainSpecification,
   NavigationControlOptions,
   ScaleControlOptions,
   StyleInput,
@@ -75,7 +87,7 @@ class MapLibreEngine implements IMap {
     (event: MapClickEvent) => void,
     (event: MapMouseEvent) => void
   >;
-  private preferredProjection: ProjectionSpecification | null;
+  private preferredProjection: MapProjectionSpecification | null;
   private projectionLoadHandler: (() => void) | null;
   private readonly pointerLeaveHandlers: Map<() => void, () => void>;
   private readonly pointerMoveHandlers: Map<
@@ -93,15 +105,15 @@ class MapLibreEngine implements IMap {
     this.projectionLoadHandler = null;
   }
 
-  addControl(control: IControl, position?: ControlPosition): void {
+  addControl(control: MapControl, position?: MapControlPosition): void {
     this.map.addControl(control, position);
   }
 
-  addSource(id: string, spec: SourceSpecification): void {
+  addSource(id: string, spec: MapSourceSpecification): void {
     this.map.addSource(id, spec);
   }
 
-  addLayer(layerSpec: AddLayerObject, beforeId?: string): void {
+  addLayer(layerSpec: MapLayerSpecification, beforeId?: string): void {
     this.map.addLayer(layerSpec, beforeId);
   }
 
@@ -113,7 +125,7 @@ class MapLibreEngine implements IMap {
     return typeof this.map.getLayer(layerId) !== "undefined";
   }
 
-  removeControl(control: IControl): void {
+  removeControl(control: MapControl): void {
     this.map.removeControl(control);
   }
 
@@ -138,9 +150,9 @@ class MapLibreEngine implements IMap {
   }
 
   queryRenderedFeatures(
-    target: PointLike | [PointLike, PointLike],
-    options?: QueryRenderedFeaturesOptions
-  ): MapGeoJSONFeature[] {
+    target: MapPointLike | [MapPointLike, MapPointLike],
+    options?: MapQueryRenderedFeaturesOptions
+  ): MapRenderedFeature[] {
     return this.map.queryRenderedFeatures(target, options);
   }
 
@@ -174,7 +186,7 @@ class MapLibreEngine implements IMap {
     return this.map.getZoom();
   }
 
-  getStyle(): StyleSpecification {
+  getStyle(): MapStyleSpecification {
     return this.map.getStyle();
   }
 
@@ -183,12 +195,12 @@ class MapLibreEngine implements IMap {
     this.scheduleProjectionApplication();
   }
 
-  setProjection(projection: ProjectionSpecification): void {
+  setProjection(projection: MapProjectionSpecification): void {
     this.preferredProjection = projection;
     this.scheduleProjectionApplication();
   }
 
-  setTerrain(terrain: TerrainSpecification | null): void {
+  setTerrain(terrain: MapTerrainSpecification | null): void {
     this.map.setTerrain(terrain);
   }
 

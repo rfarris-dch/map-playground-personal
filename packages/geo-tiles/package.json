@@ -8,7 +8,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "echo 'geo-tiles tests not implemented yet'",
+    "test": "bun test",
     "lint": "biome check .",
     "dev": "tsc -w -p tsconfig.json"
   },

@@ -1,6 +1,11 @@
 import type { TileDataset, TileManifestEntry, TilePublishManifest } from "./index.types";
 
-export type { TileDataset, TileManifestEntry, TilePublishManifest } from "./index.types";
+export type {
+  TileDataset,
+  TileManifestEntry,
+  TilePublishManifest,
+  VectorTilesetSchemaContract,
+} from "./index.types";
 
 export function parseTileDataset(value: string): TileDataset | null {
   switch (value) {
@@ -89,12 +94,41 @@ export function parseTilePublishManifest(value: unknown): TilePublishManifest {
     previous = parseTileManifestEntry(previousRaw);
   }
 
-  return {
+  const manifest: TilePublishManifest = {
     dataset,
     publishedAt: readRequiredString(value, "publishedAt", "tile publish manifest"),
     current: parseTileManifestEntry(Reflect.get(value, "current")),
     previous,
   };
+
+  assertTileManifestMatchesDataset(manifest, manifest.dataset, "tile publish manifest");
+
+  return manifest;
+}
+
+export function assertTileManifestMatchesDataset(
+  manifest: TilePublishManifest,
+  expectedDataset: TileDataset,
+  context: string
+): void {
+  if (manifest.dataset !== expectedDataset) {
+    throw new Error(
+      `Invalid ${context}: expected manifest dataset "${expectedDataset}" but received "${manifest.dataset}"`
+    );
+  }
+
+  if (manifest.current.dataset !== expectedDataset) {
+    throw new Error(
+      `Invalid ${context}: expected current manifest dataset "${expectedDataset}" but received "${manifest.current.dataset}"`
+    );
+  }
+
+  const previous = manifest.previous;
+  if (previous !== null && previous.dataset !== expectedDataset) {
+    throw new Error(
+      `Invalid ${context}: expected previous manifest dataset "${expectedDataset}" but received "${previous.dataset}"`
+    );
+  }
 }
 
 export function createTileVersion(date: Date, checksum: string): string {
@@ -138,10 +172,14 @@ export function createPublishManifest(
   current: TileManifestEntry,
   previous: TileManifestEntry | null
 ): TilePublishManifest {
-  return {
+  const manifest: TilePublishManifest = {
     dataset,
     current,
     previous,
     publishedAt: new Date().toISOString(),
   };
+
+  assertTileManifestMatchesDataset(manifest, dataset, "tile publish manifest");
+
+  return manifest;
 }

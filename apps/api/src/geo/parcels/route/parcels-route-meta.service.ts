@@ -109,17 +109,26 @@ export function profileMetadataWarnings(profile: ParcelProfile): Warning[] {
 export function readIngestionRunId(
   features: ParcelsFeatureCollection["features"]
 ): string | undefined {
-  const first = features[0];
-  if (typeof first === "undefined") {
-    return undefined;
+  let resolvedIngestionRunId: string | undefined;
+
+  for (const feature of features) {
+    const ingestionRunId = feature.lineage.ingestionRunId;
+    if (typeof ingestionRunId !== "string" || ingestionRunId.trim().length === 0) {
+      return undefined;
+    }
+
+    const normalizedIngestionRunId = ingestionRunId.trim();
+    if (typeof resolvedIngestionRunId === "undefined") {
+      resolvedIngestionRunId = normalizedIngestionRunId;
+      continue;
+    }
+
+    if (resolvedIngestionRunId !== normalizedIngestionRunId) {
+      return undefined;
+    }
   }
 
-  const ingestionRunId = first.lineage.ingestionRunId;
-  if (typeof ingestionRunId !== "string" || ingestionRunId.trim().length === 0) {
-    return undefined;
-  }
-
-  return ingestionRunId;
+  return resolvedIngestionRunId;
 }
 
 export function readExpectedIngestionRunId(c: Context): string | null {

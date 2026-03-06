@@ -18,6 +18,7 @@ export function initialBoundaryLayerState(): BoundaryLayerState {
   return {
     allFeatures: [],
     abortController: null,
+    basemapLayersSuppressed: false,
     dataLoaded: false,
     hoveredFeatureId: null,
     includedRegionIds: null,

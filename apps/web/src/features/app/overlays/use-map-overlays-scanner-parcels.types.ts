@@ -1,0 +1,42 @@
+import type {
+  FacilitiesFeatureCollection,
+  ParcelEnrichRequest,
+  ParcelsFeatureCollection,
+} from "@map-migration/contracts";
+import type { IMap } from "@map-migration/map-engine";
+import type { ShallowRef } from "vue";
+import type { MapBounds } from "@/features/app/overlays/map-overlays.types";
+
+export interface UseMapOverlaysScannerParcelsOptions {
+  readonly colocationViewportFeatures: ShallowRef<FacilitiesFeatureCollection["features"]>;
+  readonly expectedParcelsIngestionRunId: ShallowRef<string | null>;
+  readonly hyperscaleViewportFeatures: ShallowRef<FacilitiesFeatureCollection["features"]>;
+  readonly map: ShallowRef<IMap | null>;
+  readonly scannerActive: ShallowRef<boolean>;
+}
+
+export interface ScannerParcelsRefreshScope {
+  readonly abortController: AbortController;
+  readonly mapBounds: MapBounds;
+  readonly requestSequence: number;
+}
+
+export interface ScannerParcelsSelection {
+  readonly features: ParcelsFeatureCollection["features"];
+  readonly nextCursor: string | null;
+  readonly truncated: boolean;
+}
+
+export interface ScannerAnchorSelectionAccumulator {
+  nextCursor: string | null;
+  readonly parcelById: Map<string, ParcelsFeatureCollection["features"][number]>;
+  truncated: boolean;
+}
+
+export interface ScannerAnchorSelectionArgs {
+  readonly anchorRequests: readonly ParcelEnrichRequest[];
+  readonly nextCursor: string | null;
+  readonly requestSequence: number;
+  readonly selection: ScannerParcelsSelection;
+  readonly signal: AbortSignal;
+}

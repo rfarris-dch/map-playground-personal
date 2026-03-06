@@ -10,7 +10,6 @@ build
 var
 apps/web/public/tiles
 coverage
-docs/
 
 # environment
 .env
@@ -24,3 +23,6 @@ docs/
 .DS_Store
 .vscode
 .idea
+
+# bv (beads viewer) local config and caches
+.bv/

@@ -4,16 +4,11 @@ import {
   type ParcelSyncPhase,
   ParcelsSyncStatusResponseSchema,
 } from "@map-migration/contracts";
+import { createRequestId } from "@map-migration/ops";
 import type {
   PipelineStatusFetchResult,
   PipelineStatusPayload,
 } from "@/features/pipeline/pipeline.types";
-
-function createRequestId(): string {
-  const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 1_000_000);
-  return `pipeline-ui-${String(timestamp)}-${String(random)}`;
-}
 
 function phaseLabel(phase: ParcelSyncPhase): string {
   switch (phase) {
@@ -145,7 +140,7 @@ async function readErrorDetails(response: Response): Promise<unknown> {
 export async function fetchPipelineStatus(
   signal?: AbortSignal
 ): Promise<PipelineStatusFetchResult> {
-  const generatedRequestId = createRequestId();
+  const generatedRequestId = createRequestId("pipeline-ui");
   const headers = new Headers();
   headers.set(ApiHeaders.requestId, generatedRequestId);
   const requestInit: RequestInit = {

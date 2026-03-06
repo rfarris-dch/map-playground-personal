@@ -423,7 +423,7 @@ function applyBasemapVisibility(args: {
   args.map.setLayerVisibility(SATELLITE_LAYER_ID, args.visibility.satellite);
 }
 
-function withUpdatedVisibility(
+export function withBasemapLayerVisibility(
   visibility: BasemapVisibilityState,
   layerId: BasemapLayerId,
   visible: boolean
@@ -469,7 +469,10 @@ function withUpdatedVisibility(
   };
 }
 
-function layerVisible(visibility: BasemapVisibilityState, layerId: BasemapLayerId): boolean {
+export function isBasemapLayerVisible(
+  visibility: BasemapVisibilityState,
+  layerId: BasemapLayerId
+): boolean {
   if (layerId === "boundaries") {
     return visibility.boundaries;
   }
@@ -505,6 +508,10 @@ export function defaultBasemapVisibilityState(): BasemapVisibilityState {
   return DEFAULT_BASEMAP_VISIBILITY_STATE;
 }
 
+export function buildInitialBasemapVisibilityState(): BasemapVisibilityState {
+  return defaultBasemapVisibilityState();
+}
+
 export function mountBasemapLayerVisibility(
   map: IMap,
   options: MountBasemapLayerVisibilityOptions = {}
@@ -530,7 +537,7 @@ export function mountBasemapLayerVisibility(
 
   return {
     setVisible(layerId: BasemapLayerId, nextVisible: boolean): void {
-      visibility = withUpdatedVisibility(visibility, layerId, nextVisible);
+      visibility = withBasemapLayerVisibility(visibility, layerId, nextVisible);
       if (groups === null) {
         return;
       }
@@ -543,7 +550,7 @@ export function mountBasemapLayerVisibility(
       });
     },
     getVisible(layerId: BasemapLayerId): boolean {
-      return layerVisible(visibility, layerId);
+      return isBasemapLayerVisible(visibility, layerId);
     },
     destroy(): void {
       map.off("load", onLoad);

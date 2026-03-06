@@ -3,6 +3,7 @@ import type {
   ParcelsFeatureCollection,
 } from "@map-migration/contracts";
 import type { LngLat } from "@map-migration/map-engine";
+import type { MeasureSelectionSummaryArgs } from "@/features/measure/measure-analysis.service.types";
 import type {
   MeasureParcelSelectionSummary,
   MeasurePerspectiveSelectionSummary,
@@ -11,7 +12,6 @@ import type {
   MeasureSelectedParcel,
   MeasureSelectionSummary,
 } from "@/features/measure/measure-analysis.types";
-import type { MeasureSelectionSummaryArgs } from "./measure-analysis.service.types";
 
 const POINT_ON_SEGMENT_EPSILON = 1e-9;
 

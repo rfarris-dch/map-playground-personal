@@ -1,3 +1,5 @@
+import type { BBox, FacilityPerspective, ParcelGeometryMode } from "@map-migration/contracts";
+
 export interface ParcelEnrichQueryOptions {
   readonly cursor?: string | null;
   readonly includeGeometry: ParcelGeometryModeSql;
@@ -9,27 +11,31 @@ export interface ParcelSqlQuery {
   readonly sql: string;
 }
 
-export interface ParcelBboxFilter {
-  readonly east: number;
-  readonly north: number;
-  readonly south: number;
-  readonly west: number;
+export interface SqlQuerySpec {
+  readonly endpointClass:
+    | "feature-collection"
+    | "administrative-aggregation"
+    | "proximity-enrichment";
+  readonly maxRows: number;
+  readonly sql: string;
 }
 
-export type ParcelGeometryModeSql = "none" | "centroid" | "simplified" | "full";
-
-export interface QuerySpec {
-  endpointClass: "feature-collection" | "administrative-aggregation" | "proximity-enrichment";
-  maxRows: number;
-  name: QueryName;
-  sql: string;
+export interface FacilitiesBboxSqlQueryArgs extends BBox {
+  readonly limit: number;
+  readonly perspective: FacilityPerspective;
 }
 
-export type QueryName =
-  | "facilities_bbox_colocation"
-  | "facilities_bbox_hyperscale"
-  | "facilities_polygon_colocation"
-  | "facilities_polygon_hyperscale"
-  | "facility_detail_colocation"
-  | "facility_detail_hyperscale"
-  | "county_metrics";
+export interface FacilitiesPolygonSqlQueryArgs {
+  readonly geometryGeoJson: string;
+  readonly limit: number;
+  readonly perspective: FacilityPerspective;
+}
+
+export interface FacilityDetailSqlQueryArgs {
+  readonly facilityId: string;
+  readonly perspective: FacilityPerspective;
+}
+
+export type ParcelBboxFilter = BBox;
+
+export type ParcelGeometryModeSql = ParcelGeometryMode;

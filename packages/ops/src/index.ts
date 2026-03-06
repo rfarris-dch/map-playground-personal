@@ -1,6 +1,6 @@
-import type { DiagnosticEvent, DiagnosticSeverity } from "./index.types";
+import type { DiagnosticEvent, DiagnosticSeverity, DiagnosticSourceMode } from "./index.types";
 
-export type { DiagnosticEvent, DiagnosticSeverity } from "./index.types";
+export type { DiagnosticEvent, DiagnosticSeverity, DiagnosticSourceMode } from "./index.types";
 
 export function createRequestId(prefix = "req"): string {
   const rand = Math.random().toString(36).slice(2, 10);
@@ -9,7 +9,7 @@ export function createRequestId(prefix = "req"): string {
 }
 
 export function createDiagnosticEvent(
-  sourceMode: DiagnosticEvent["sourceMode"],
+  sourceMode: DiagnosticSourceMode,
   code: string,
   message: string,
   severity: DiagnosticSeverity = "info"

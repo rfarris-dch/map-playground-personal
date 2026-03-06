@@ -12,6 +12,7 @@
   import { summarizeSpatialAnalysisParcels } from "@/features/spatial-analysis/spatial-analysis-overview.service";
 
   interface ScannerPanelProps {
+    readonly emptyMessage?: string | null;
     readonly isFiltered: boolean;
     readonly isParcelsLoading: boolean;
     readonly parcelsErrorMessage: string | null;
@@ -210,7 +211,10 @@
     </section>
 
     <p v-if="!hasAnyResults" class="mb-3 text-[11px] text-muted-foreground">
-      {{ props.isParcelsLoading ? "Loading parcels in current viewport…" : "No facilities or parcels in this viewport." }}
+      {{ props.emptyMessage ??
+        (props.isParcelsLoading
+          ? "Loading parcels in current viewport…"
+          : "No facilities or parcels in this viewport.") }}
     </p>
   </aside>
 </template>

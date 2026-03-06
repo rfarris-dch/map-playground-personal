@@ -12,6 +12,9 @@
     "lint": "biome check .",
     "dev": "tsc -w -p tsconfig.json"
   },
+  "dependencies": {
+    "@map-migration/contracts": "workspace:*"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

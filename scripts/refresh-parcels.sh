@@ -24,6 +24,14 @@ ACTIVE_STATUS_PATH="${SNAPSHOT_ROOT}/active-run.json"
 STATUS_HEARTBEAT_PID=""
 SYNC_LOCK_DIR="${SNAPSHOT_ROOT}/sync.lock"
 SYNC_LOCK_PID_FILE="${SYNC_LOCK_DIR}/pid"
+RUN_DIR=""
+RUN_SUMMARY_PATH=""
+LOAD_COMPLETE_MARKER_PATH=""
+BUILD_COMPLETE_MARKER_PATH=""
+PUBLISH_COMPLETE_MARKER_PATH=""
+RUN_CONFIG_PATH=""
+TILES_DATASET="${PARCELS_TILE_DATASET:-parcels-draw-v1}"
+TILES_OUT_DIR="${PARCELS_TILES_OUT_DIR:-${ROOT_DIR}/.cache/tiles/${TILES_DATASET}}"
 
 write_active_status() {
   local phase="$1"
@@ -90,6 +98,39 @@ stop_status_heartbeat() {
   fi
 }
 
+write_phase_marker() {
+  local marker_path="$1"
+  local phase="$2"
+  local summary="${3:-__none__}"
+  local extra_json="${4:-__none__}"
+
+  python3 - "${marker_path}" "${RUN_ID}" "${phase}" "${summary}" "${extra_json}" <<'PY'
+import json
+import sys
+from datetime import datetime, timezone
+
+path, run_id, phase, summary, extra_raw = sys.argv[1:6]
+payload = {
+    "runId": run_id,
+    "phase": phase,
+    "completedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+}
+if summary != "__none__":
+    payload["summary"] = summary
+if extra_raw != "__none__":
+    try:
+        extra = json.loads(extra_raw)
+    except Exception:
+        extra = None
+    if isinstance(extra, dict):
+        payload.update(extra)
+
+with open(path, "w", encoding="utf-8") as handle:
+    json.dump(payload, handle, indent=2)
+    handle.write("\n")
+PY
+}
+
 acquire_sync_lock() {
   mkdir -p "${SNAPSHOT_ROOT}"
 
@@ -154,11 +195,15 @@ find_resumable_run_id() {
   mapfile -t sorted_entries < <(printf '%s\n' "${stat_entries[@]}" | sort -t '|' -k1,1nr)
   for run_dir in "${sorted_entries[@]}"; do
     run_dir="${run_dir#*|}"
-    if [[ -f "${run_dir}/run-summary.json" ]]; then
+    if [[ -f "${run_dir}/publish-complete.json" ]]; then
       continue
     fi
 
-    if ls "${run_dir}"/state-*.checkpoint.json >/dev/null 2>&1; then
+    if [[ ! -f "${run_dir}/run-config.json" ]]; then
+      continue
+    fi
+
+    if [[ -f "${run_dir}/run-summary.json" ]] || ls "${run_dir}"/state-*.checkpoint.json >/dev/null 2>&1; then
       basename "${run_dir}"
       return 0
     fi
@@ -192,87 +237,131 @@ if [[ -z "${RUN_ID}" ]]; then
   RUN_ID="$(date -u +%Y%m%dT%H%M%SZ)"
 fi
 
+RUN_DIR="${SNAPSHOT_ROOT}/${RUN_ID}"
+RUN_SUMMARY_PATH="${RUN_DIR}/run-summary.json"
+LOAD_COMPLETE_MARKER_PATH="${RUN_DIR}/load-complete.json"
+BUILD_COMPLETE_MARKER_PATH="${RUN_DIR}/tile-build-complete.json"
+PUBLISH_COMPLETE_MARKER_PATH="${RUN_DIR}/publish-complete.json"
+RUN_CONFIG_PATH="${RUN_DIR}/run-config.json"
+
+if [[ -f "${RUN_CONFIG_PATH}" ]]; then
+  VERIFY_CMD=(
+    bun
+    run
+    "${ROOT_DIR}/scripts/refresh-parcels.ts"
+    "--output-dir=${SNAPSHOT_ROOT}"
+    "--run-id=${RUN_ID}"
+    "--verify-run-config-only"
+  )
+  VERIFY_CMD+=("${EXTRACT_ARGS[@]}")
+  echo "[parcels] verifying saved run config for runId=${RUN_ID}"
+  "${VERIFY_CMD[@]}"
+fi
+
 echo "[parcels] refresh start runId=${RUN_ID}"
 echo "[parcels] snapshot root=${SNAPSHOT_ROOT}"
 echo "[parcels] publish root=${PUBLISH_ROOT}"
 write_active_status "extracting" "1" "__none__" '{"schemaVersion":1,"phase":"extracting"}'
+if [[ -f "${RUN_SUMMARY_PATH}" ]]; then
+  echo "[parcels] extraction already complete for runId=${RUN_ID}; skipping extract phase"
+else
+  EXTRACT_CMD=(
+    bun
+    run
+    "${ROOT_DIR}/scripts/refresh-parcels.ts"
+    "--output-dir=${SNAPSHOT_ROOT}"
+    "--run-id=${RUN_ID}"
+  )
 
-EXTRACT_CMD=(
-  bun
-  run
-  "${ROOT_DIR}/scripts/refresh-parcels.ts"
-  "--output-dir=${SNAPSHOT_ROOT}"
-  "--run-id=${RUN_ID}"
-)
+  if [[ "${PARCEL_SYNC_RESUME:-1}" == "1" ]]; then
+    EXTRACT_CMD+=("--resume")
+  fi
 
-if [[ "${PARCEL_SYNC_RESUME:-1}" == "1" ]]; then
-  EXTRACT_CMD+=("--resume")
+  EXTRACT_CMD+=("${EXTRACT_ARGS[@]}")
+
+  echo "[parcels] extracting snapshot from ArcGIS/Regrid"
+  echo "[parcels] extract cmd: ${EXTRACT_CMD[*]}"
+  "${EXTRACT_CMD[@]}"
 fi
 
-EXTRACT_CMD+=("${EXTRACT_ARGS[@]}")
-
-echo "[parcels] extracting snapshot from ArcGIS/Regrid"
-echo "[parcels] extract cmd: ${EXTRACT_CMD[*]}"
-"${EXTRACT_CMD[@]}"
-
-RUN_DIR="${SNAPSHOT_ROOT}/${RUN_ID}"
 if [[ ! -d "${RUN_DIR}" ]]; then
   echo "[parcels] ERROR: expected run directory not found: ${RUN_DIR}" >&2
   exit 1
 fi
-
-echo "[parcels] loading canonical table and swapping current snapshot"
-write_active_status "loading" "1" "__none__" '{"schemaVersion":1,"phase":"loading"}'
-ACTIVE_STATUS_PATH="${ACTIVE_STATUS_PATH}" \
-  RUN_REASON="${RUN_REASON}" \
-  bash "${ROOT_DIR}/scripts/load-parcels-canonical.sh" "${RUN_DIR}" "${RUN_ID}"
-
-echo "[parcels] building parcels draw PMTiles"
-write_active_status "building" "1" "tiles:building" '{"schemaVersion":1,"phase":"building","tileBuild":{"stage":"build"}}'
-# Faster tile-build defaults for nationwide runs.
-: "${PARCELS_TILES_STAGE_GEOJSON_FILE:=1}"
-: "${PARCELS_TILES_REUSE_GEOJSON_FILE:=1}"
-: "${PARCELS_TILES_KEEP_STAGED_GEOJSON_FILE:=1}"
-: "${PARCELS_TILES_DETECT_SHARED_BORDERS:=0}"
-: "${PARCELS_TILES_MIN_ZOOM:=0}"
-: "${PARCELS_TILES_THIN_DEFAULT_MAX_ZOOM:=15}"
-: "${PARCELS_TILES_BUILD_RETRY_ATTEMPTS:=5}"
-: "${PARCELS_TILES_BUILD_RETRY_DELAY_SECONDS:=8}"
-: "${PARCELS_TILES_TMP_DIR:=${ROOT_DIR}/var/parcels-sync/tippecanoe-tmp}"
-: "${PARCELS_PMTILES_TMP_DIR:=${ROOT_DIR}/var/parcels-sync/pmtiles-tmp}"
-: "${PARCELS_PMTILES_CONVERT_RETRY_ATTEMPTS:=3}"
-: "${PARCELS_PMTILES_CONVERT_RETRY_DELAY_SECONDS:=5}"
-SCHEMA_METADATA_PATH="${PARCELS_TILE_SCHEMA_FILE:-${RUN_DIR}/layer-metadata.json}"
-BUILD_LOG_PATH="${SNAPSHOT_ROOT}/postextract-${RUN_ID}.log"
-echo "[parcels] tile schema metadata=${SCHEMA_METADATA_PATH}"
-echo "[parcels] tile build log path=${BUILD_LOG_PATH}"
-STATUS_HEARTBEAT_PID="$(start_status_heartbeat "building" "tiles:building" "5" '{"schemaVersion":1,"phase":"building","tileBuild":{"stage":"build"}}')"
-set +e
-PARCELS_TILE_SCHEMA_FILE="${SCHEMA_METADATA_PATH}" \
-  bash "${ROOT_DIR}/scripts/build-parcels-draw-pmtiles.sh" "${RUN_ID}" 2>&1 | tee "${BUILD_LOG_PATH}"
-BUILD_EXIT_CODE="${PIPESTATUS[0]}"
-set -e
-stop_status_heartbeat "${STATUS_HEARTBEAT_PID}"
-STATUS_HEARTBEAT_PID=""
-if [[ "${BUILD_EXIT_CODE}" -ne 0 ]]; then
-  echo "[parcels] ERROR: tile build failed with exit code ${BUILD_EXIT_CODE}" >&2
-  exit "${BUILD_EXIT_CODE}"
-fi
-
-PMTILES_PATH="$(sed -n 's/^PMTILES_PATH=//p' "${BUILD_LOG_PATH}" | tail -n 1)"
-
-if [[ -z "${PMTILES_PATH}" || ! -f "${PMTILES_PATH}" ]]; then
-  echo "[parcels] ERROR: expected PMTiles output file not found: ${PMTILES_PATH}" >&2
+if [[ ! -f "${RUN_SUMMARY_PATH}" ]]; then
+  echo "[parcels] ERROR: extraction did not produce run summary: ${RUN_SUMMARY_PATH}" >&2
   exit 1
 fi
 
-echo "[parcels] publishing PMTiles manifest"
-write_active_status "publishing" "1" "__none__" '{"schemaVersion":1,"phase":"publishing"}'
-bun run "${ROOT_DIR}/scripts/publish-parcels-manifest.ts" \
-  "--dataset=parcels-draw-v1" \
-  "--output-root=${PUBLISH_ROOT}" \
-  "--ingestion-run-id=${RUN_ID}" \
-  "--pmtiles-path=${PMTILES_PATH}"
+if [[ -f "${LOAD_COMPLETE_MARKER_PATH}" ]]; then
+  echo "[parcels] load phase already complete for runId=${RUN_ID}; skipping canonical load"
+else
+  echo "[parcels] loading canonical table and swapping current snapshot"
+  write_active_status "loading" "1" "__none__" '{"schemaVersion":1,"phase":"loading"}'
+  ACTIVE_STATUS_PATH="${ACTIVE_STATUS_PATH}" \
+    RUN_REASON="${RUN_REASON}" \
+    bash "${ROOT_DIR}/scripts/load-parcels-canonical.sh" "${RUN_DIR}" "${RUN_ID}"
+  write_phase_marker "${LOAD_COMPLETE_MARKER_PATH}" "loading" "canonical-load-complete"
+fi
+
+PMTILES_PATH="${TILES_OUT_DIR}/${TILES_DATASET}_${RUN_ID}.pmtiles"
+if [[ -f "${BUILD_COMPLETE_MARKER_PATH}" && -f "${PMTILES_PATH}" ]]; then
+  echo "[parcels] tile build already complete for runId=${RUN_ID}; skipping build"
+else
+  echo "[parcels] building parcels draw PMTiles"
+  write_active_status "building" "1" "tiles:building" '{"schemaVersion":1,"phase":"building","tileBuild":{"stage":"build"}}'
+  # Faster tile-build defaults for nationwide runs.
+  : "${PARCELS_TILES_STAGE_GEOJSON_FILE:=1}"
+  : "${PARCELS_TILES_REUSE_GEOJSON_FILE:=1}"
+  : "${PARCELS_TILES_KEEP_STAGED_GEOJSON_FILE:=1}"
+  : "${PARCELS_TILES_DETECT_SHARED_BORDERS:=0}"
+  : "${PARCELS_TILES_MIN_ZOOM:=0}"
+  : "${PARCELS_TILES_THIN_DEFAULT_MAX_ZOOM:=15}"
+  : "${PARCELS_TILES_BUILD_RETRY_ATTEMPTS:=5}"
+  : "${PARCELS_TILES_BUILD_RETRY_DELAY_SECONDS:=8}"
+  : "${PARCELS_TILES_TMP_DIR:=${ROOT_DIR}/var/parcels-sync/tippecanoe-tmp}"
+  : "${PARCELS_PMTILES_TMP_DIR:=${ROOT_DIR}/var/parcels-sync/pmtiles-tmp}"
+  : "${PARCELS_PMTILES_CONVERT_RETRY_ATTEMPTS:=3}"
+  : "${PARCELS_PMTILES_CONVERT_RETRY_DELAY_SECONDS:=5}"
+  SCHEMA_METADATA_PATH="${PARCELS_TILE_SCHEMA_FILE:-${RUN_DIR}/layer-metadata.json}"
+  BUILD_LOG_PATH="${SNAPSHOT_ROOT}/postextract-${RUN_ID}.log"
+  echo "[parcels] tile schema metadata=${SCHEMA_METADATA_PATH}"
+  echo "[parcels] tile build log path=${BUILD_LOG_PATH}"
+  STATUS_HEARTBEAT_PID="$(start_status_heartbeat "building" "tiles:building" "5" '{"schemaVersion":1,"phase":"building","tileBuild":{"stage":"build"}}')"
+  set +e
+  PARCELS_TILE_SCHEMA_FILE="${SCHEMA_METADATA_PATH}" \
+    bash "${ROOT_DIR}/scripts/build-parcels-draw-pmtiles.sh" "${RUN_ID}" 2>&1 | tee "${BUILD_LOG_PATH}"
+  BUILD_EXIT_CODE="${PIPESTATUS[0]}"
+  set -e
+  stop_status_heartbeat "${STATUS_HEARTBEAT_PID}"
+  STATUS_HEARTBEAT_PID=""
+  if [[ "${BUILD_EXIT_CODE}" -ne 0 ]]; then
+    echo "[parcels] ERROR: tile build failed with exit code ${BUILD_EXIT_CODE}" >&2
+    exit "${BUILD_EXIT_CODE}"
+  fi
+  if [[ ! -f "${PMTILES_PATH}" ]]; then
+    echo "[parcels] ERROR: expected PMTiles output file not found: ${PMTILES_PATH}" >&2
+    exit 1
+  fi
+  write_phase_marker \
+    "${BUILD_COMPLETE_MARKER_PATH}" \
+    "building" \
+    "tile-build-complete" \
+    "{\"dataset\":\"${TILES_DATASET}\",\"pmtilesPath\":\"${PMTILES_PATH}\"}"
+fi
+
+if [[ -f "${PUBLISH_COMPLETE_MARKER_PATH}" ]]; then
+  echo "[parcels] publish phase already complete for runId=${RUN_ID}; skipping manifest publish"
+else
+  echo "[parcels] publishing PMTiles manifest"
+  write_active_status "publishing" "1" "__none__" '{"schemaVersion":1,"phase":"publishing"}'
+  bun run "${ROOT_DIR}/scripts/publish-parcels-manifest.ts" \
+    "--dataset=${TILES_DATASET}" \
+    "--output-root=${PUBLISH_ROOT}" \
+    "--ingestion-run-id=${RUN_ID}" \
+    "--run-id=${RUN_ID}"
+  write_phase_marker "${PUBLISH_COMPLETE_MARKER_PATH}" "publishing" "manifest-published"
+fi
 
 echo "[parcels] refresh complete runId=${RUN_ID}"
 write_active_status "completed" "0" "__none__" '{"schemaVersion":1,"phase":"completed"}'

@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import {
   buildTileLatestManifestPath,
   createPublishManifest,
@@ -73,13 +73,24 @@ function main(): void {
     throw new Error("Manifest has no previous entry to rollback to");
   }
 
+  const rollbackTargetPath = join(
+    args.outputRoot,
+    normalizeOutputRelativePath(manifest.previous.url)
+  );
+  if (!existsSync(rollbackTargetPath)) {
+    throw new Error(`Rollback target PMTiles does not exist: ${rollbackTargetPath}`);
+  }
+
   const rolledBackManifest = createPublishManifest(
     args.dataset,
     manifest.previous,
     manifest.current
   );
 
-  writeFileSync(latestPath, `${JSON.stringify(rolledBackManifest, null, 2)}\n`, "utf8");
+  mkdirSync(dirname(latestPath), { recursive: true });
+  const tempPath = `${latestPath}.tmp-${process.pid}-${Date.now()}`;
+  writeFileSync(tempPath, `${JSON.stringify(rolledBackManifest, null, 2)}\n`, "utf8");
+  renameSync(tempPath, latestPath);
 
   console.log("[tiles] rollback complete");
   console.log(`dataset=${args.dataset}`);

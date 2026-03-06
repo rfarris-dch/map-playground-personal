@@ -1,22 +1,40 @@
+import type { FacilityPerspective } from "@map-migration/contracts";
 import type {
+  FacilitiesBboxSqlQueryArgs,
+  FacilitiesPolygonSqlQueryArgs,
+  FacilityDetailSqlQueryArgs,
   ParcelBboxFilter,
   ParcelEnrichQueryOptions,
   ParcelGeometryModeSql,
   ParcelSqlQuery,
-  QueryName,
-  QuerySpec,
+  SqlQuerySpec,
 } from "./index.types";
 
 export type {
+  FacilitiesBboxSqlQueryArgs,
+  FacilitiesPolygonSqlQueryArgs,
+  FacilityDetailSqlQueryArgs,
   ParcelBboxFilter,
   ParcelEnrichQueryOptions,
   ParcelGeometryModeSql,
   ParcelSqlQuery,
-  QueryName,
-  QuerySpec,
+  SqlQuerySpec,
 } from "./index.types";
 
-export const QUERY_SPECS: Record<QueryName, QuerySpec> = {
+type QueryName =
+  | "facilities_bbox_colocation"
+  | "facilities_bbox_hyperscale"
+  | "facilities_polygon_colocation"
+  | "facilities_polygon_hyperscale"
+  | "facility_detail_colocation"
+  | "facility_detail_hyperscale"
+  | "county_metrics";
+
+type RegisteredQuerySpec = SqlQuerySpec & {
+  readonly name: QueryName;
+};
+
+const QUERY_SPECS: Record<QueryName, RegisteredQuerySpec> = {
   facilities_bbox_colocation: {
     name: "facilities_bbox_colocation",
     endpointClass: "feature-collection",
@@ -192,8 +210,81 @@ FROM analytics.county_scores_v1;`,
   },
 };
 
-export function getQuerySpec(name: QueryName): QuerySpec {
+function getQuerySpec(name: QueryName): RegisteredQuerySpec {
   return QUERY_SPECS[name];
+}
+
+function getFacilitiesBboxQueryName(
+  perspective: FacilityPerspective
+): "facilities_bbox_colocation" | "facilities_bbox_hyperscale" {
+  if (perspective === "hyperscale") {
+    return "facilities_bbox_hyperscale";
+  }
+
+  return "facilities_bbox_colocation";
+}
+
+function getFacilitiesPolygonQueryName(
+  perspective: FacilityPerspective
+): "facilities_polygon_colocation" | "facilities_polygon_hyperscale" {
+  if (perspective === "hyperscale") {
+    return "facilities_polygon_hyperscale";
+  }
+
+  return "facilities_polygon_colocation";
+}
+
+function getFacilityDetailQueryName(
+  perspective: FacilityPerspective
+): "facility_detail_colocation" | "facility_detail_hyperscale" {
+  if (perspective === "hyperscale") {
+    return "facility_detail_hyperscale";
+  }
+
+  return "facility_detail_colocation";
+}
+
+export function getFacilitiesBboxQuerySpec(perspective: FacilityPerspective): SqlQuerySpec {
+  return getQuerySpec(getFacilitiesBboxQueryName(perspective));
+}
+
+export function getFacilitiesPolygonQuerySpec(perspective: FacilityPerspective): SqlQuerySpec {
+  return getQuerySpec(getFacilitiesPolygonQueryName(perspective));
+}
+
+export function getFacilityDetailQuerySpec(perspective: FacilityPerspective): SqlQuerySpec {
+  return getQuerySpec(getFacilityDetailQueryName(perspective));
+}
+
+export function getCountyMetricsQuerySpec(): SqlQuerySpec {
+  return getQuerySpec("county_metrics");
+}
+
+export function buildFacilitiesBboxQuery(query: FacilitiesBboxSqlQueryArgs): ParcelSqlQuery {
+  const spec = getFacilitiesBboxQuerySpec(query.perspective);
+
+  return {
+    sql: spec.sql,
+    params: [query.west, query.south, query.east, query.north, query.limit],
+  };
+}
+
+export function buildFacilitiesPolygonQuery(query: FacilitiesPolygonSqlQueryArgs): ParcelSqlQuery {
+  const spec = getFacilitiesPolygonQuerySpec(query.perspective);
+
+  return {
+    sql: spec.sql,
+    params: [query.geometryGeoJson, query.limit],
+  };
+}
+
+export function buildFacilityDetailQuery(query: FacilityDetailSqlQueryArgs): ParcelSqlQuery {
+  const spec = getFacilityDetailQuerySpec(query.perspective);
+
+  return {
+    sql: spec.sql,
+    params: [query.facilityId],
+  };
 }
 
 const PARCELS_CANONICAL_TABLE = "parcel_current.parcels";

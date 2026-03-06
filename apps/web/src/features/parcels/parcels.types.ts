@@ -30,6 +30,7 @@ export type ParcelsStatus =
     }
   | {
       readonly state: "hidden";
+      readonly ingestionRunId?: string;
       readonly predictedTileCount: number;
       readonly reason: ParcelsGuardrailReason;
       readonly viewportWidthKm: number;
@@ -48,7 +49,6 @@ export interface ParcelsLayerOptions {
   readonly maxViewportWidthKm?: number;
   readonly onSelectParcel?: (parcel: SelectedParcelRef | null) => void;
   readonly onStatus?: (status: ParcelsStatus) => void;
-  readonly onStressBlockedChange?: (blocked: boolean) => void;
   readonly sourceLayer?: string;
 }
 
@@ -59,12 +59,14 @@ export interface ParcelsLayerController {
 }
 
 export interface ParcelsLayerState {
+  destroyed: boolean;
   guardrail: ParcelsGuardrailResult | null;
   hoverFeatureId: number | string | null;
   manifest: TilePublishManifest | null;
   ready: boolean;
   selectedFeatureId: number | string | null;
   selectedParcelId: string | null;
+  sourceInitializationAbortController: AbortController | null;
   sourceInitializationPromise: Promise<void> | null;
   sourceInitialized: boolean;
   stressBlocked: boolean;

@@ -1,5 +1,14 @@
+import {
+  assertTileManifestMatchesDataset,
+  type VectorTilesetSchemaContract,
+} from "@map-migration/geo-tiles";
 import type { IMap, MapClickEvent, MapPointerEvent } from "@map-migration/map-engine";
-import { validateLayerOrder } from "@map-migration/map-style";
+import {
+  getFacilitiesStyleLayerIds,
+  getParcelsStyleLayerIds,
+  validateLayerOrder,
+} from "@map-migration/map-style";
+import type { ParcelFeatureTarget } from "@/features/parcels/parcels.layer.types";
 import {
   createPmtilesSourceUrl,
   createStressGovernor,
@@ -7,17 +16,25 @@ import {
   loadParcelsManifest,
 } from "@/features/parcels/parcels.service";
 import type {
+  ParcelsGuardrailReason,
   ParcelsLayerController,
   ParcelsLayerOptions,
   ParcelsLayerState,
   ParcelsStatus,
 } from "@/features/parcels/parcels.types";
-import type { ParcelFeatureTarget } from "./parcels.layer.types";
+
+const PARCELS_DRAW_TILESET_SCHEMA = Object.freeze<VectorTilesetSchemaContract>({
+  dataset: "parcels-draw-v1",
+  featureIdProperty: "pid",
+  sourceLayer: "parcels",
+});
 
 function initialState(): ParcelsLayerState {
   return {
+    destroyed: false,
     ready: false,
     sourceInitialized: false,
+    sourceInitializationAbortController: null,
     sourceInitializationPromise: null,
     visible: false,
     stressBlocked: false,
@@ -63,7 +80,9 @@ function toParcelFeatureTarget(feature: {
     return null;
   }
 
-  const parcelId = readStringProperty(feature.properties, "pid") ?? String(feature.id);
+  const parcelId =
+    readStringProperty(feature.properties, PARCELS_DRAW_TILESET_SCHEMA.featureIdProperty) ??
+    String(feature.id);
   return {
     featureId: feature.id,
     parcelId,
@@ -71,12 +90,8 @@ function toParcelFeatureTarget(feature: {
 }
 
 const FACILITIES_LAYER_IDS: readonly string[] = [
-  "facilities.colocation.clusters",
-  "facilities.colocation.cluster-count",
-  "facilities.colocation.points",
-  "facilities.hyperscale.clusters",
-  "facilities.hyperscale.cluster-count",
-  "facilities.hyperscale.points",
+  ...Object.values(getFacilitiesStyleLayerIds("facilities.colocation")),
+  ...Object.values(getFacilitiesStyleLayerIds("facilities.hyperscale")),
 ];
 
 function resolveBeforeLayerId(map: IMap): string | undefined {
@@ -94,9 +109,10 @@ export function mountParcelsLayer(
   options: ParcelsLayerOptions = {}
 ): ParcelsLayerController {
   const sourceId = "parcels";
-  const sourceLayer = options.sourceLayer ?? "parcels";
-  const fillLayerId = "property.parcels.fill";
-  const outlineLayerId = "property.parcels";
+  const sourceLayer = options.sourceLayer ?? PARCELS_DRAW_TILESET_SCHEMA.sourceLayer;
+  const parcelsStyleLayerIds = getParcelsStyleLayerIds();
+  const fillLayerId = parcelsStyleLayerIds.fillLayerId;
+  const outlineLayerId = parcelsStyleLayerIds.outlineLayerId;
   const manifestPath = options.manifestPath ?? "/tiles/parcels-draw-v1/latest.json";
   const disableGuardrails = options.disableGuardrails ?? false;
   const maxViewportWidthKm = options.maxViewportWidthKm ?? 40;
@@ -110,7 +126,6 @@ export function mountParcelsLayer(
         return;
       }
       state.stressBlocked = blocked;
-      options.onStressBlockedChange?.(blocked);
       applyVisibility();
     },
   });
@@ -226,8 +241,58 @@ export function mountParcelsLayer(
     }
   };
 
+  const buildHiddenStatus = (args: {
+    readonly predictedTileCount: number;
+    readonly reason: ParcelsGuardrailReason;
+    readonly viewportWidthKm: number;
+  }): ParcelsStatus => {
+    const ingestionRunId = state.manifest?.current.ingestionRunId;
+    if (typeof ingestionRunId === "string") {
+      return {
+        state: "hidden",
+        ingestionRunId,
+        reason: args.reason,
+        viewportWidthKm: args.viewportWidthKm,
+        predictedTileCount: args.predictedTileCount,
+      };
+    }
+
+    return {
+      state: "hidden",
+      reason: args.reason,
+      viewportWidthKm: args.viewportWidthKm,
+      predictedTileCount: args.predictedTileCount,
+    };
+  };
+
+  const buildReadyStatus = (args: {
+    readonly manifest: NonNullable<ParcelsLayerState["manifest"]>;
+    readonly predictedTileCount: number;
+    readonly viewportWidthKm: number;
+  }): ParcelsStatus => {
+    const ingestionRunId = args.manifest.current.ingestionRunId;
+    if (typeof ingestionRunId === "string") {
+      return {
+        state: "ready",
+        dataset: args.manifest.dataset,
+        ingestionRunId,
+        version: args.manifest.current.version,
+        viewportWidthKm: args.viewportWidthKm,
+        predictedTileCount: args.predictedTileCount,
+      };
+    }
+
+    return {
+      state: "ready",
+      dataset: args.manifest.dataset,
+      version: args.manifest.current.version,
+      viewportWidthKm: args.viewportWidthKm,
+      predictedTileCount: args.predictedTileCount,
+    };
+  };
+
   const applyVisibility = (): void => {
-    if (!(state.ready && state.sourceInitialized)) {
+    if (state.destroyed || !(state.ready && state.sourceInitialized)) {
       return;
     }
 
@@ -250,12 +315,13 @@ export function mountParcelsLayer(
     if (guardrailResult.blocked && guardrailResult.reason !== null) {
       clearHover();
       setLayersVisible(false);
-      setStatus({
-        state: "hidden",
-        reason: guardrailResult.reason,
-        viewportWidthKm: guardrailResult.viewportWidthKm,
-        predictedTileCount: guardrailResult.predictedTileCount,
-      });
+      setStatus(
+        buildHiddenStatus({
+          reason: guardrailResult.reason,
+          viewportWidthKm: guardrailResult.viewportWidthKm,
+          predictedTileCount: guardrailResult.predictedTileCount,
+        })
+      );
       return;
     }
 
@@ -270,30 +336,142 @@ export function mountParcelsLayer(
       return;
     }
 
-    const nextStatus: {
-      state: "ready";
-      dataset: typeof manifest.dataset;
-      ingestionRunId?: string;
-      predictedTileCount: number;
-      version: string;
-      viewportWidthKm: number;
-    } = {
-      state: "ready",
-      dataset: manifest.dataset,
-      version: manifest.current.version,
-      viewportWidthKm: guardrailResult.viewportWidthKm,
-      predictedTileCount: guardrailResult.predictedTileCount,
-    };
-    const ingestionRunId = manifest.current.ingestionRunId;
-    if (typeof ingestionRunId === "string") {
-      nextStatus.ingestionRunId = ingestionRunId;
+    setStatus(
+      buildReadyStatus({
+        manifest,
+        viewportWidthKm: guardrailResult.viewportWidthKm,
+        predictedTileCount: guardrailResult.predictedTileCount,
+      })
+    );
+  };
+
+  const ensureSource = (manifest: NonNullable<ParcelsLayerState["manifest"]>): void => {
+    if (map.hasSource(sourceId)) {
+      return;
     }
 
-    setStatus(nextStatus);
+    map.addSource(sourceId, {
+      type: "vector",
+      url: createPmtilesSourceUrl(manifest),
+      promoteId: PARCELS_DRAW_TILESET_SCHEMA.featureIdProperty,
+    });
+  };
+
+  const ensureFillLayer = (): void => {
+    if (map.hasLayer(fillLayerId)) {
+      return;
+    }
+
+    const beforeLayerId = resolveBeforeLayerId(map);
+    map.addLayer(
+      {
+        id: fillLayerId,
+        type: "fill",
+        source: sourceId,
+        "source-layer": sourceLayer,
+        paint: {
+          "fill-color": [
+            "case",
+            ["boolean", ["feature-state", "selected"], false],
+            "#f59e0b",
+            ["boolean", ["feature-state", "hover"], false],
+            "#fbbf24",
+            "#fcd34d",
+          ],
+          "fill-opacity": [
+            "case",
+            ["boolean", ["feature-state", "selected"], false],
+            0.24,
+            ["boolean", ["feature-state", "hover"], false],
+            0.16,
+            0.1,
+          ],
+        },
+      },
+      beforeLayerId
+    );
+  };
+
+  const ensureOutlineLayer = (): void => {
+    if (map.hasLayer(outlineLayerId)) {
+      return;
+    }
+
+    const beforeLayerId = resolveBeforeLayerId(map);
+    map.addLayer(
+      {
+        id: outlineLayerId,
+        type: "line",
+        source: sourceId,
+        "source-layer": sourceLayer,
+        paint: {
+          "line-width": [
+            "case",
+            ["boolean", ["feature-state", "selected"], false],
+            1.9,
+            ["boolean", ["feature-state", "hover"], false],
+            1.4,
+            0.8,
+          ],
+          "line-color": [
+            "case",
+            ["boolean", ["feature-state", "selected"], false],
+            "#b45309",
+            ["boolean", ["feature-state", "hover"], false],
+            "#92400e",
+            "#854d0e",
+          ],
+          "line-opacity": 0.95,
+        },
+      },
+      beforeLayerId
+    );
+  };
+
+  const logLayerOrderFailures = (): void => {
+    const layerOrderFailures = validateLayerOrder(
+      (map.getStyle().layers ?? []).map((layer) => layer.id)
+    );
+    if (layerOrderFailures.length === 0) {
+      return;
+    }
+
+    console.error(`[parcels] layer order invariant failures: ${layerOrderFailures.join(" | ")}`);
+  };
+
+  const isSourceInitializationCanceled = (abortController: AbortController): boolean => {
+    return state.destroyed || abortController.signal.aborted;
+  };
+
+  const completeSourceInitialization = (
+    manifest: Awaited<ReturnType<typeof loadParcelsManifest>>,
+    abortController: AbortController
+  ): void => {
+    if (isSourceInitializationCanceled(abortController)) {
+      return;
+    }
+
+    assertTileManifestMatchesDataset(
+      manifest,
+      PARCELS_DRAW_TILESET_SCHEMA.dataset,
+      "parcels layer manifest"
+    );
+    state.manifest = manifest;
+    ensureSource(manifest);
+    ensureFillLayer();
+    ensureOutlineLayer();
+
+    if (isSourceInitializationCanceled(abortController)) {
+      return;
+    }
+
+    logLayerOrderFailures();
+    state.sourceInitialized = true;
+    applyVisibility();
   };
 
   const initializeSource = (): Promise<void> => {
-    if (state.sourceInitialized) {
+    if (state.destroyed || state.sourceInitialized) {
       return Promise.resolve();
     }
 
@@ -302,97 +480,20 @@ export function mountParcelsLayer(
     }
 
     const sourceInitializationPromise = (async (): Promise<void> => {
+      state.sourceInitializationAbortController?.abort();
+      const abortController = new AbortController();
+      state.sourceInitializationAbortController = abortController;
       setStatus({ state: "loading-manifest" });
       const manifest = await loadParcelsManifest({
         manifestPath,
+        signal: abortController.signal,
       });
-      state.manifest = manifest;
-
-      const pmtilesSourceUrl = createPmtilesSourceUrl(manifest);
-      if (!map.hasSource(sourceId)) {
-        map.addSource(sourceId, {
-          type: "vector",
-          url: pmtilesSourceUrl,
-          promoteId: "pid",
-        });
-      }
-
-      if (!map.hasLayer(fillLayerId)) {
-        const beforeLayerId = resolveBeforeLayerId(map);
-        map.addLayer(
-          {
-            id: fillLayerId,
-            type: "fill",
-            source: sourceId,
-            "source-layer": sourceLayer,
-            paint: {
-              "fill-color": [
-                "case",
-                ["boolean", ["feature-state", "selected"], false],
-                "#f59e0b",
-                ["boolean", ["feature-state", "hover"], false],
-                "#fbbf24",
-                "#fcd34d",
-              ],
-              "fill-opacity": [
-                "case",
-                ["boolean", ["feature-state", "selected"], false],
-                0.24,
-                ["boolean", ["feature-state", "hover"], false],
-                0.16,
-                0.1,
-              ],
-            },
-          },
-          beforeLayerId
-        );
-      }
-
-      if (!map.hasLayer(outlineLayerId)) {
-        const beforeLayerId = resolveBeforeLayerId(map);
-        map.addLayer(
-          {
-            id: outlineLayerId,
-            type: "line",
-            source: sourceId,
-            "source-layer": sourceLayer,
-            paint: {
-              "line-width": [
-                "case",
-                ["boolean", ["feature-state", "selected"], false],
-                1.9,
-                ["boolean", ["feature-state", "hover"], false],
-                1.4,
-                0.8,
-              ],
-              "line-color": [
-                "case",
-                ["boolean", ["feature-state", "selected"], false],
-                "#b45309",
-                ["boolean", ["feature-state", "hover"], false],
-                "#92400e",
-                "#854d0e",
-              ],
-              "line-opacity": 0.95,
-            },
-          },
-          beforeLayerId
-        );
-      }
-
-      const layerOrderFailures = validateLayerOrder(
-        (map.getStyle().layers ?? []).map((layer) => layer.id)
-      );
-      if (layerOrderFailures.length > 0) {
-        console.error(
-          `[parcels] layer order invariant failures: ${layerOrderFailures.join(" | ")}`
-        );
-      }
-
-      state.sourceInitialized = true;
-      applyVisibility();
+      completeSourceInitialization(manifest, abortController);
     })()
       .catch((error: unknown) => {
+        if (state.destroyed) {
+          return;
+        }
         setStatus({
           state: "error",
           reason: error instanceof Error ? error.message : String(error),
@@ -400,6 +501,7 @@ export function mountParcelsLayer(
         throw error;
       })
       .finally(() => {
+        state.sourceInitializationAbortController = null;
         state.sourceInitializationPromise = null;
       });
 
@@ -409,6 +511,7 @@ export function mountParcelsLayer(
 
   const onLoad = (): void => {
     state.ready = true;
+    stressGovernor.setEnabled(state.visible);
     if (!state.visible) {
       return;
     }
@@ -485,18 +588,19 @@ export function mountParcelsLayer(
       }
 
       state.visible = visible;
+      stressGovernor.setEnabled(visible);
       if (!visible) {
         clearHover();
-        clearSelection();
         setLayersVisible(false);
         const guardrail = state.guardrail;
         if (guardrail?.blocked && guardrail.reason !== null) {
-          setStatus({
-            state: "hidden",
-            reason: guardrail.reason,
-            viewportWidthKm: guardrail.viewportWidthKm,
-            predictedTileCount: guardrail.predictedTileCount,
-          });
+          setStatus(
+            buildHiddenStatus({
+              reason: guardrail.reason,
+              viewportWidthKm: guardrail.viewportWidthKm,
+              predictedTileCount: guardrail.predictedTileCount,
+            })
+          );
           return;
         }
         setStatus({ state: "idle" });
@@ -516,6 +620,9 @@ export function mountParcelsLayer(
         });
     },
     destroy(): void {
+      state.destroyed = true;
+      state.sourceInitializationAbortController?.abort();
+      state.sourceInitializationAbortController = null;
       clearHover();
       clearSelection();
 

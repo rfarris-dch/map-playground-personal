@@ -1,0 +1,138 @@
+{
+  "version": 1,
+  "sessionId": "bb6d6650-9cf8-442a-b52f-191243c475bf",
+  "status": "running",
+  "startedAt": "2026-03-06T01:32:18.832Z",
+  "updatedAt": "2026-03-06T02:28:44.777Z",
+  "currentIteration": 0,
+  "maxIterations": 100,
+  "tasksCompleted": 0,
+  "isPaused": false,
+  "agentPlugin": "codex",
+  "trackerState": {
+    "plugin": "beads-bv",
+    "epicId": "docs-1",
+    "totalTasks": 19,
+    "tasks": [
+      {
+        "id": "docs-1.29",
+        "title": "US-019: Add final parity and release verification for the docs app",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "docs-1.16",
+        "title": "US-006: Migrate the existing docs corpus into the new app",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "docs-1.15",
+        "title": "US-005: Build the docs content pipeline foundation",
+        "status": "completed",
+        "completedInSession": false
+      },
+      {
+        "id": "docs-1.4",
+        "title": "US-004: Define the repository documentation information architecture",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "docs-1.3",
+        "title": "US-003: Recreate the Tailwind Plus Syntax shell, navigation, and search in Vue",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "docs-1.2",
+        "title": "US-002: Port Tailwind Plus Syntax styling exactly into Vue",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "docs-1.1",
+        "title": "US-001: Bootstrap the docs application workspace",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "docs-1.28",
+        "title": "US-018: Document the docs-authoring workflow and contribution standards",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "docs-1.27",
+        "title": "US-017: Add API, contract, and source-reference documentation patterns",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "docs-1.26",
+        "title": "US-016: Document operational runbooks and troubleshooting",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "docs-1.25",
+        "title": "US-015: Document the parcel and tile scripts",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "docs-1.24",
+        "title": "US-014: Document the shared data and operations packages",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "docs-1.23",
+        "title": "US-013: Document the shared package runtime surfaces",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "docs-1.22",
+        "title": "US-012: Document the pipeline monitor and pipeline tracking flow",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "docs-1.21",
+        "title": "US-011: Document the API geo slices",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "docs-1.20",
+        "title": "US-010: Document the API runtime foundations",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "docs-1.19",
+        "title": "US-009: Document the web feature domains",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "docs-1.18",
+        "title": "US-008: Document the web app entrypoints and runtime foundations",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "docs-1.17",
+        "title": "US-007: Document workspace onboarding and repository architecture",
+        "status": "open",
+        "completedInSession": false
+      }
+    ]
+  },
+  "iterations": [],
+  "skippedTaskIds": [],
+  "cwd": "/Users/robertfarris/map",
+  "activeTaskIds": [],
+  "subagentPanelVisible": false
+}

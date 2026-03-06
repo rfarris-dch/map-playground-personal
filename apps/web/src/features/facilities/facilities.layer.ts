@@ -1,5 +1,6 @@
 import type { FacilitiesFeatureCollection, FacilityPerspective } from "@map-migration/contracts";
 import type { IMap, MapClickEvent } from "@map-migration/map-engine";
+import { getFacilitiesStyleLayerIds } from "@map-migration/map-style";
 import { fetchFacilitiesByBbox } from "@/features/facilities/api";
 import {
   emptyFacilitiesSourceData,
@@ -20,15 +21,26 @@ function defaultPerspective(): FacilityPerspective {
   return "colocation";
 }
 
+function toFacilitiesCatalogLayerId(
+  perspective: FacilityPerspective
+): "facilities.colocation" | "facilities.hyperscale" {
+  if (perspective === "hyperscale") {
+    return "facilities.hyperscale";
+  }
+
+  return "facilities.colocation";
+}
+
 export function mountFacilitiesLayer(
   map: IMap,
   options: FacilitiesLayerOptions = {}
 ): FacilitiesLayerController {
   const perspective = options.perspective ?? defaultPerspective();
-  const sourceId = `facilities.${perspective}`;
-  const clusterLayerId = `${sourceId}.clusters`;
-  const clusterCountLayerId = `${sourceId}.cluster-count`;
-  const pointLayerId = `${sourceId}.points`;
+  const sourceId = toFacilitiesCatalogLayerId(perspective);
+  const styleLayerIds = getFacilitiesStyleLayerIds(sourceId);
+  const clusterLayerId = styleLayerIds.clusterLayerId;
+  const clusterCountLayerId = styleLayerIds.clusterCountLayerId;
+  const pointLayerId = styleLayerIds.pointLayerId;
   const minZoom = options.minZoom ?? 4;
   const limit = options.limit ?? 2000;
   const debounceMs = options.debounceMs ?? 250;

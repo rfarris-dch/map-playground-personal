@@ -2,8 +2,11 @@ import { useQuery } from "@tanstack/vue-query";
 import { computed, type Ref } from "vue";
 import { fetchParcelDetail } from "@/features/parcels/parcel-detail/detail.api";
 import { unwrapParcelDetailResult } from "@/features/parcels/parcel-detail/detail.service";
+import type {
+  ParcelDetailQueryKey,
+  ParcelDetailRequest,
+} from "@/features/parcels/parcel-detail/detail.types";
 import type { SelectedParcelRef } from "@/features/parcels/parcels.types";
-import type { ParcelDetailQueryKey } from "./detail.types";
 
 function buildParcelDetailQueryKey(selectedParcel: SelectedParcelRef | null): ParcelDetailQueryKey {
   if (selectedParcel === null) {
@@ -26,17 +29,21 @@ export function useParcelDetailQuery(selectedParcel: Ref<SelectedParcelRef | nul
         throw new Error("parcel id is required");
       }
 
-      const request: {
-        parcelId: string;
-        expectedIngestionRunId?: string;
-        signal?: AbortSignal;
-      } = {
-        parcelId,
-        signal,
-      };
-      if (typeof expectedIngestionRunId === "string" && expectedIngestionRunId.trim().length > 0) {
-        request.expectedIngestionRunId = expectedIngestionRunId;
-      }
+      const request: ParcelDetailRequest =
+        typeof expectedIngestionRunId === "string" && expectedIngestionRunId.trim().length > 0
+          ? {
+              includeGeometry: "none",
+              parcelId,
+              profile: "analysis_v1",
+              signal,
+              expectedIngestionRunId,
+            }
+          : {
+              includeGeometry: "none",
+              parcelId,
+              profile: "analysis_v1",
+              signal,
+            };
 
       const result = await fetchParcelDetail(request);
       return unwrapParcelDetailResult(result);

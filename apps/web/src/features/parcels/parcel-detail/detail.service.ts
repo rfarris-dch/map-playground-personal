@@ -1,8 +1,8 @@
+import type { ParcelAttributeEntry } from "@/features/parcels/parcel-detail/detail.service.types";
 import type {
   ParcelDetailPayload,
   ParcelDetailResult,
 } from "@/features/parcels/parcel-detail/detail.types";
-import type { ParcelAttributeEntry } from "./detail.service.types";
 
 function formatUnknownValue(value: unknown): string {
   if (value === null || typeof value === "undefined") {

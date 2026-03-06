@@ -5,6 +5,12 @@ export interface TilePublishManifest {
   publishedAt: string;
 }
 
+export interface VectorTilesetSchemaContract {
+  readonly dataset: TileDataset;
+  readonly featureIdProperty: string;
+  readonly sourceLayer: string;
+}
+
 export interface TileManifestEntry {
   checksum: string;
   dataset: TileDataset;

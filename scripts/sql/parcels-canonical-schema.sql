@@ -17,8 +17,15 @@ BEGIN
     AND c.column_name = 'run_id';
 
   IF run_id_data_type = 'uuid' THEN
-    DROP TABLE IF EXISTS parcel_meta.ingestion_checkpoints;
-    DROP TABLE IF EXISTS parcel_meta.ingestion_runs;
+    IF to_regclass('parcel_meta.ingestion_checkpoints') IS NOT NULL THEN
+      ALTER TABLE parcel_meta.ingestion_checkpoints
+        DROP CONSTRAINT IF EXISTS ingestion_checkpoints_run_id_fkey;
+      ALTER TABLE parcel_meta.ingestion_checkpoints
+        ALTER COLUMN run_id TYPE text USING run_id::text;
+    END IF;
+
+    ALTER TABLE parcel_meta.ingestion_runs
+      ALTER COLUMN run_id TYPE text USING run_id::text;
   END IF;
 END
 $$;
@@ -38,7 +45,7 @@ CREATE INDEX IF NOT EXISTS ingestion_runs_data_version_idx
   ON parcel_meta.ingestion_runs (data_version DESC);
 
 CREATE TABLE IF NOT EXISTS parcel_meta.ingestion_checkpoints (
-  run_id text NOT NULL REFERENCES parcel_meta.ingestion_runs(run_id) ON DELETE CASCADE,
+  run_id text NOT NULL,
   state2 char(2) NOT NULL,
   shard_id text NOT NULL,
   last_source_oid bigint,
@@ -49,6 +56,13 @@ CREATE TABLE IF NOT EXISTS parcel_meta.ingestion_checkpoints (
   updated_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (run_id, state2, shard_id)
 );
+
+ALTER TABLE parcel_meta.ingestion_checkpoints
+  DROP CONSTRAINT IF EXISTS ingestion_checkpoints_run_id_fkey;
+
+ALTER TABLE parcel_meta.ingestion_checkpoints
+  ADD CONSTRAINT ingestion_checkpoints_run_id_fkey
+  FOREIGN KEY (run_id) REFERENCES parcel_meta.ingestion_runs(run_id) ON DELETE CASCADE;
 
 CREATE TABLE IF NOT EXISTS parcel_current.parcels (
   parcel_id text NOT NULL,

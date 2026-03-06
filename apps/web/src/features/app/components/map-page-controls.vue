@@ -1,0 +1,129 @@
+<script setup lang="ts">
+  import type { FacilityPerspective } from "@map-migration/contracts";
+  import MapLayerControlsPanel from "@/features/app/components/map-layer-controls-panel.vue";
+  import MapMeasureTools from "@/features/app/components/map-measure-tools.vue";
+  import MapOverlayActions from "@/features/app/components/map-overlay-actions.vue";
+  import type {
+    MapPageControlsEmits,
+    MapPageControlsProps,
+  } from "@/features/app/components/map-page-controls.types";
+  import type { BasemapLayerId } from "@/features/basemap/basemap.types";
+  import type { BoundaryLayerId } from "@/features/boundaries/boundaries.types";
+  import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";
+  import type { FiberLocatorLineId } from "@/features/fiber-locator/fiber-locator.types";
+  import type { MeasureAreaShape, MeasureMode } from "@/features/measure/measure.types";
+  import type { PowerLayerId } from "@/features/power/power.types";
+
+  const props = defineProps<MapPageControlsProps>();
+
+  const emit = defineEmits<MapPageControlsEmits>();
+
+  function forwardBasemapLayerVisible(layerId: BasemapLayerId, visible: boolean): void {
+    emit("update:basemap-layer-visible", layerId, visible);
+  }
+
+  function forwardBoundaryVisible(boundaryId: BoundaryLayerId, visible: boolean): void {
+    emit("update:boundary-visible", boundaryId, visible);
+  }
+
+  function forwardBoundarySelectedRegionIds(
+    boundaryId: BoundaryLayerId,
+    regionIds: readonly string[] | null
+  ): void {
+    emit("update:boundary-selected-region-ids", boundaryId, regionIds);
+  }
+
+  function forwardPerspectiveVisibility(perspective: FacilityPerspective, visible: boolean): void {
+    emit("update:perspective-visibility", perspective, visible);
+  }
+
+  function forwardParcelsVisible(visible: boolean): void {
+    emit("update:parcels-visible", visible);
+  }
+
+  function forwardFiberLayerVisibility(lineId: FiberLocatorLineId, visible: boolean): void {
+    emit("update:fiber-layer-visibility", lineId, visible);
+  }
+
+  function forwardFiberSourceLayer(
+    lineId: FiberLocatorLineId,
+    layerName: string,
+    visible: boolean
+  ): void {
+    emit("toggle-fiber-source-layer", lineId, layerName, visible);
+  }
+
+  function forwardAllFiberSourceLayers(lineId: FiberLocatorLineId, visible: boolean): void {
+    emit("set-all-fiber-source-layers", lineId, visible);
+  }
+
+  function forwardPowerLayerVisible(layerId: PowerLayerId, visible: boolean): void {
+    emit("update:power-layer-visible", layerId, visible);
+  }
+
+  function forwardMeasureMode(mode: MeasureMode): void {
+    emit("set-mode", mode);
+  }
+
+  function forwardMeasureAreaShape(shape: MeasureAreaShape): void {
+    emit("set-area-shape", shape);
+  }
+
+  function forwardSelectedFacility(facility: SelectedFacilityRef): void {
+    emit("select-facility", facility);
+  }
+</script>
+
+<template>
+  <MapLayerControlsPanel
+    :is-open="props.isOpen"
+    :basemap-visibility="props.basemapVisibility"
+    :boundary-visibility="props.boundaryVisibility"
+    :boundary-facet-options="props.boundaryFacetOptions"
+    :boundary-facet-selection="props.boundaryFacetSelection"
+    :visible-perspectives="props.visiblePerspectives"
+    :colocation-status-text="props.colocationStatusText"
+    :hyperscale-status-text="props.hyperscaleStatusText"
+    :parcels-visible="props.parcelsVisible"
+    :parcels-status-text="props.parcelsStatusText"
+    :power-visibility="props.powerVisibility"
+    :visible-fiber-layers="props.visibleFiberLayers"
+    :fiber-status-text="props.fiberStatusText"
+    :fiber-source-layer-options="props.fiberSourceLayerOptions"
+    :selected-fiber-source-layer-names="props.selectedFiberSourceLayerNames"
+    @toggle-panel="emit('toggle-layer-panel')"
+    @update:basemap-layer-visible="forwardBasemapLayerVisible"
+    @update:boundary-visible="forwardBoundaryVisible"
+    @update:boundary-selected-region-ids="forwardBoundarySelectedRegionIds"
+    @update:perspective-visibility="forwardPerspectiveVisibility"
+    @update:parcels-visible="forwardParcelsVisible"
+    @update:fiber-layer-visibility="forwardFiberLayerVisibility"
+    @toggle-fiber-source-layer="forwardFiberSourceLayer"
+    @set-all-fiber-source-layers="forwardAllFiberSourceLayers"
+    @update:power-layer-visible="forwardPowerLayerVisible"
+  />
+
+  <MapOverlayActions
+    :quick-view-active="props.quickViewActive"
+    :quick-view-disabled-reason="props.quickViewDisabledReason"
+    :scanner-active="props.scannerActive"
+    :overlays-blocked-reason="props.overlaysBlockedReason"
+    @toggle-quick-view="emit('toggle-quick-view')"
+    @toggle-scanner="emit('toggle-scanner')"
+  />
+
+  <MapMeasureTools
+    :is-panel-open="props.isPanelOpen"
+    :measure-state="props.measureState"
+    :selection-summary="props.selectionSummary"
+    :selection-error="props.selectionError"
+    :is-loading="props.isLoading"
+    @toggle-panel="emit('toggle-measure-panel')"
+    @set-mode="forwardMeasureMode"
+    @set-area-shape="forwardMeasureAreaShape"
+    @finish="emit('finish')"
+    @clear="emit('clear')"
+    @export="emit('export')"
+    @select-facility="forwardSelectedFacility"
+  />
+</template>

@@ -67,6 +67,9 @@ RUN_NOTES='{}'
 ACTIVE_STATUS_PATH="${ACTIVE_STATUS_PATH:-}"
 RUN_SUMMARY_WRITTEN_TOTAL="0"
 LOAD_STATUS_MARKED_FAILED=0
+MATERIALIZE_ACTIVE_PIDS=()
+MATERIALIZE_ACTIVE_STATES=()
+MATERIALIZE_ACTIVE_EXPECTED=()
 
 update_active_status() {
   local summary="$1"
@@ -193,11 +196,34 @@ mark_load_failed() {
 
 handle_load_error() {
   local exit_code="$?"
+  terminate_materialize_workers
   mark_load_failed "${exit_code}"
   exit "${exit_code}"
 }
 
 trap handle_load_error ERR
+
+terminate_materialize_workers() {
+  local active_pid
+
+  if [[ "${#MATERIALIZE_ACTIVE_PIDS[@]}" -eq 0 ]]; then
+    return
+  fi
+
+  for active_pid in "${MATERIALIZE_ACTIVE_PIDS[@]}"; do
+    if kill -0 "${active_pid}" >/dev/null 2>&1; then
+      kill "${active_pid}" >/dev/null 2>&1 || true
+    fi
+  done
+
+  for active_pid in "${MATERIALIZE_ACTIVE_PIDS[@]}"; do
+    wait "${active_pid}" 2>/dev/null || true
+  done
+
+  MATERIALIZE_ACTIVE_PIDS=()
+  MATERIALIZE_ACTIVE_STATES=()
+  MATERIALIZE_ACTIVE_EXPECTED=()
+}
 
 format_elapsed_label() {
   local total_seconds="$1"
@@ -375,30 +401,6 @@ if [[ "${REUSE_STAGE}" == "1" && -n "${STAGE_MARKER_PATH}" && -f "${STAGE_MARKER
     STAGED_ROW_COUNT="${MARKER_ROW_COUNT}"
     update_active_status "db-load:reusing-staged ${STAGED_ROW_COUNT} rows"
     echo "[parcels] reusing staged rows from ${STAGE_TABLE_FQN} count=${STAGED_ROW_COUNT}"
-  fi
-fi
-
-if [[ "${SHOULD_STAGE}" == "1" && "${REUSE_STAGE}" == "1" ]]; then
-  LEGACY_STAGE_ROW_COUNT="$(
-    psql "$DB_URL" -v ON_ERROR_STOP=1 -Atqc \
-      "SELECT CASE WHEN to_regclass('parcel_build.parcels_stage_raw') IS NULL THEN 0 ELSE (SELECT COUNT(*) FROM parcel_build.parcels_stage_raw) END"
-  )"
-  if [[ "${LEGACY_STAGE_ROW_COUNT}" =~ ^[0-9]+$ && "${LEGACY_STAGE_ROW_COUNT}" -gt 0 ]]; then
-    MIN_REQUIRED_ROWS=0
-    if [[ "${RUN_SUMMARY_WRITTEN_TOTAL}" =~ ^[0-9]+$ && "${RUN_SUMMARY_WRITTEN_TOTAL}" -gt 0 ]]; then
-      MIN_REQUIRED_ROWS="${RUN_SUMMARY_WRITTEN_TOTAL}"
-    fi
-
-    if [[ "${LEGACY_STAGE_ROW_COUNT}" -ge "${MIN_REQUIRED_ROWS}" ]]; then
-      SHOULD_STAGE=0
-      STAGE_TABLE_NAME="parcels_stage_raw"
-      STAGE_TABLE_FQN="parcel_build.parcels_stage_raw"
-      STAGED_ROW_COUNT="${LEGACY_STAGE_ROW_COUNT}"
-      update_active_status "db-load:reusing-legacy-stage ${STAGED_ROW_COUNT} rows"
-      echo "[parcels] reusing legacy staged rows from ${STAGE_TABLE_FQN} count=${STAGED_ROW_COUNT}"
-    else
-      echo "[parcels] legacy stage table is smaller than required rows (${LEGACY_STAGE_ROW_COUNT} < ${MIN_REQUIRED_ROWS}); restaging"
-    fi
   fi
 fi
 
@@ -888,10 +890,6 @@ MATERIALIZE_COMPLETED_STATES=0
 MATERIALIZE_COMPLETED_EXPECTED=0
 MATERIALIZE_FAILED_STATES=0
 MATERIALIZE_FAILED_LABELS=()
-MATERIALIZE_ACTIVE_PIDS=()
-MATERIALIZE_ACTIVE_STATES=()
-MATERIALIZE_ACTIVE_EXPECTED=()
-
 while [[ "${MATERIALIZE_QUEUE_INDEX}" -lt "${MATERIALIZE_TOTAL_STATES}" || "${#MATERIALIZE_ACTIVE_PIDS[@]}" -gt 0 ]]; do
   while [[ "${MATERIALIZE_QUEUE_INDEX}" -lt "${MATERIALIZE_TOTAL_STATES}" && "${#MATERIALIZE_ACTIVE_PIDS[@]}" -lt "${MATERIALIZE_STATE_CONCURRENCY}" ]]; do
     NEXT_STATE="${MATERIALIZE_STATES[${MATERIALIZE_QUEUE_INDEX}]}"
@@ -936,6 +934,7 @@ while [[ "${MATERIALIZE_QUEUE_INDEX}" -lt "${MATERIALIZE_TOTAL_STATES}" || "${#M
 
   render_materialize_status
   if [[ "${MATERIALIZE_FAILED_STATES}" -gt 0 ]]; then
+    terminate_materialize_workers
     break
   fi
   sleep "${MATERIALIZE_PROGRESS_INTERVAL_SECONDS}"
@@ -965,7 +964,7 @@ BEGIN
   END IF;
 
   IF build_count <> stage_count THEN
-    RAISE WARNING 'Row count mismatch after build: stage=% build=% dropped=%',
+    RAISE EXCEPTION 'Row count mismatch after build: stage=% build=% dropped=%',
       stage_count,
       build_count,
       GREATEST(stage_count - build_count, 0);

@@ -42,6 +42,7 @@ export interface BoundaryLayerController extends LayerVisibilityController {
 export interface BoundaryLayerState {
   abortController: AbortController | null;
   allFeatures: readonly BoundaryPowerFeature[];
+  basemapLayersSuppressed: boolean;
   dataLoaded: boolean;
   hoveredFeatureId: number | string | null;
   includedRegionIds: readonly string[] | null;

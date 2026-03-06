@@ -84,4 +84,18 @@ export interface CliArgs {
   readonly runId: string;
   readonly stateConcurrency: number;
   readonly states: readonly string[];
+  readonly verifyRunConfigOnly: boolean;
+}
+
+export interface SyncRunConfig {
+  readonly acreageField: string;
+  readonly featureLayerUrl: string;
+  readonly maxPagesPerState: number | null;
+  readonly metadataObjectIdField: string;
+  readonly minimumAcres: number;
+  readonly pageSize: number;
+  readonly runId: string;
+  readonly stateConcurrency: number;
+  readonly states: readonly string[];
+  readonly tieBreakerField: string | null;
 }

@@ -1,17 +1,21 @@
 import type { IMap } from "@map-migration/map-engine";
+import { getPowerStyleLayerIds, type PowerCatalogLayerId } from "@map-migration/map-style";
 import type { PowerLayerId, PowerLayerVisibilityController } from "@/features/power/power.types";
 import type { MountPowerLayerVisibilityOptions } from "./power.layer.types";
 
 const POWER_SOURCE_ID = "power.infrastructure";
 const POWER_VECTOR_TILE_URL = "https://openinframap.org/map/power/{z}/{x}/{y}.pbf";
-const POWER_STYLE_LAYER_IDS_BY_ID: Readonly<Record<PowerLayerId, readonly string[]>> = {
-  transmission: ["power.transmission"],
-  substations: ["power.substations-area", "power.substations"],
-  plants: ["power.plants-area", "power.plants"],
-};
 
-function powerStyleLayerIds(layerId: PowerLayerId): readonly string[] {
-  return POWER_STYLE_LAYER_IDS_BY_ID[layerId];
+function toPowerCatalogLayerId(layerId: PowerLayerId): PowerCatalogLayerId {
+  if (layerId === "transmission") {
+    return "power.transmission";
+  }
+
+  if (layerId === "substations") {
+    return "power.substations";
+  }
+
+  return "power.plants";
 }
 
 function ensurePowerSource(map: IMap): void {
@@ -193,7 +197,7 @@ export function mountPowerLayerVisibility(
   let visible = true;
 
   function applyVisibility(): void {
-    for (const styleLayerId of powerStyleLayerIds(options.layerId)) {
+    for (const styleLayerId of getPowerStyleLayerIds(toPowerCatalogLayerId(options.layerId))) {
       if (!options.map.hasLayer(styleLayerId)) {
         continue;
       }

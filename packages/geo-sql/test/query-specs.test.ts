@@ -1,5 +1,13 @@
 import { describe, expect, it } from "bun:test";
-import { getQuerySpec, QUERY_SPECS } from "@/index";
+import {
+  buildFacilitiesBboxQuery,
+  buildFacilitiesPolygonQuery,
+  buildFacilityDetailQuery,
+  getCountyMetricsQuerySpec,
+  getFacilitiesBboxQuerySpec,
+  getFacilitiesPolygonQuerySpec,
+  getFacilityDetailQuerySpec,
+} from "@/index";
 
 const ENDPOINT_CLASSES = new Set([
   "feature-collection",
@@ -8,9 +16,18 @@ const ENDPOINT_CLASSES = new Set([
 ]);
 
 describe("geo-sql query specs", () => {
-  it("keeps each query spec internally consistent", () => {
-    for (const [name, spec] of Object.entries(QUERY_SPECS)) {
-      expect(spec.name).toBe(name);
+  it("keeps each public query spec internally consistent", () => {
+    const specs = [
+      getFacilitiesBboxQuerySpec("colocation"),
+      getFacilitiesBboxQuerySpec("hyperscale"),
+      getFacilitiesPolygonQuerySpec("colocation"),
+      getFacilitiesPolygonQuerySpec("hyperscale"),
+      getFacilityDetailQuerySpec("colocation"),
+      getFacilityDetailQuerySpec("hyperscale"),
+      getCountyMetricsQuerySpec(),
+    ];
+
+    for (const spec of specs) {
       expect(Number.isInteger(spec.maxRows)).toBe(true);
       expect(spec.maxRows).toBeGreaterThan(0);
       expect(ENDPOINT_CLASSES.has(spec.endpointClass)).toBe(true);
@@ -18,16 +35,23 @@ describe("geo-sql query specs", () => {
     }
   });
 
-  it("supports lookup for every registered query spec", () => {
-    for (const spec of Object.values(QUERY_SPECS)) {
-      const lookedUp = getQuerySpec(spec.name);
-      expect(lookedUp).toEqual(spec);
-    }
+  it("builds facilities bbox queries without leaking registry names", () => {
+    const query = buildFacilitiesBboxQuery({
+      west: -100,
+      south: 30,
+      east: -90,
+      north: 40,
+      limit: 250,
+      perspective: "colocation",
+    });
+
+    expect(query.params).toEqual([-100, 30, -90, 40, 250]);
+    expect(query.sql).toContain("serve.facility_site");
   });
 
   it("keeps facilities bbox row budgets aligned across perspectives", () => {
-    const colocation = getQuerySpec("facilities_bbox_colocation");
-    const hyperscale = getQuerySpec("facilities_bbox_hyperscale");
+    const colocation = getFacilitiesBboxQuerySpec("colocation");
+    const hyperscale = getFacilitiesBboxQuerySpec("hyperscale");
 
     expect(colocation.endpointClass).toBe("feature-collection");
     expect(hyperscale.endpointClass).toBe("feature-collection");
@@ -35,26 +59,42 @@ describe("geo-sql query specs", () => {
   });
 
   it("keeps facilities polygon row budgets aligned across perspectives", () => {
-    const colocation = getQuerySpec("facilities_polygon_colocation");
-    const hyperscale = getQuerySpec("facilities_polygon_hyperscale");
+    const colocation = getFacilitiesPolygonQuerySpec("colocation");
+    const hyperscale = getFacilitiesPolygonQuerySpec("hyperscale");
 
     expect(colocation.endpointClass).toBe("feature-collection");
     expect(hyperscale.endpointClass).toBe("feature-collection");
     expect(colocation.maxRows).toBe(hyperscale.maxRows);
   });
 
+  it("builds facilities polygon and detail queries without leaking registry names", () => {
+    const polygonQuery = buildFacilitiesPolygonQuery({
+      geometryGeoJson: '{"type":"Polygon","coordinates":[]}',
+      limit: 100,
+      perspective: "hyperscale",
+    });
+    const detailQuery = buildFacilityDetailQuery({
+      facilityId: "facility-123",
+      perspective: "hyperscale",
+    });
+
+    expect(polygonQuery.params).toEqual(['{"type":"Polygon","coordinates":[]}', 100]);
+    expect(polygonQuery.sql).toContain("serve.hyperscale_site");
+    expect(detailQuery.params).toEqual(["facility-123"]);
+    expect(detailQuery.sql).toContain("serve.hyperscale_site");
+  });
+
   it("filters facilities queries to rows with provider ids and safe provider names", () => {
-    const names: Parameters<typeof getQuerySpec>[0][] = [
-      "facilities_bbox_colocation",
-      "facilities_bbox_hyperscale",
-      "facilities_polygon_colocation",
-      "facilities_polygon_hyperscale",
-      "facility_detail_colocation",
-      "facility_detail_hyperscale",
+    const specs = [
+      getFacilitiesBboxQuerySpec("colocation"),
+      getFacilitiesBboxQuerySpec("hyperscale"),
+      getFacilitiesPolygonQuerySpec("colocation"),
+      getFacilitiesPolygonQuerySpec("hyperscale"),
+      getFacilityDetailQuerySpec("colocation"),
+      getFacilityDetailQuerySpec("hyperscale"),
     ];
 
-    for (const name of names) {
-      const spec = getQuerySpec(name);
+    for (const spec of specs) {
       expect(spec.sql).toContain("provider_id IS NOT NULL");
       expect(spec.sql).toContain("COALESCE(NULLIF(BTRIM(");
     }

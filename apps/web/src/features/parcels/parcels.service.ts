@@ -1,12 +1,15 @@
 import { parseTilePublishManifest } from "@map-migration/geo-tiles";
 import type {
+  StressGovernorController,
+  StressGovernorOptions,
+} from "@/features/parcels/parcels.service.types";
+import type {
   EvaluateParcelsGuardrailsArgs,
   LoadParcelsManifestArgs,
   ParcelsGuardrailResult,
   ParcelsStatus,
   TilePublishManifest,
 } from "@/features/parcels/parcels.types";
-import type { StressGovernorController, StressGovernorOptions } from "./parcels.service.types";
 
 function normalizeManifestPath(manifestPath: string): string {
   if (manifestPath.startsWith("http://") || manifestPath.startsWith("https://")) {
@@ -78,6 +81,18 @@ function normalizeEastLongitude(west: number, east: number): number {
   return east + 360;
 }
 
+function isAbortError(error: unknown): boolean {
+  if (error instanceof DOMException) {
+    return error.name === "AbortError";
+  }
+
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+
+  return Reflect.get(error, "name") === "AbortError";
+}
+
 export async function loadParcelsManifest(
   args: LoadParcelsManifestArgs
 ): Promise<TilePublishManifest> {
@@ -92,7 +107,16 @@ export async function loadParcelsManifest(
     requestInit.signal = args.signal;
   }
 
-  const response = await fetch(manifestPath, requestInit);
+  let response: Response;
+  try {
+    response = await fetch(manifestPath, requestInit);
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw error;
+    }
+
+    throw error;
+  }
 
   if (!response.ok) {
     throw new Error(`Failed to load parcels manifest (${response.status} ${response.statusText})`);
@@ -219,12 +243,26 @@ export function formatParcelsStatus(status: ParcelsStatus): string {
     return `error: ${status.reason}`;
   }
   if (status.state === "hidden") {
-    return `${resolveGuardrailReasonLabel(status.reason)} blocked; width=${status.viewportWidthKm.toFixed(1)}km tiles=${String(status.predictedTileCount)}`;
+    const ingestionRunSuffix =
+      typeof status.ingestionRunId === "string" ? ` run=${status.ingestionRunId}` : "";
+    return `${resolveGuardrailReasonLabel(status.reason)} blocked${ingestionRunSuffix}; width=${status.viewportWidthKm.toFixed(1)}km tiles=${String(status.predictedTileCount)}`;
   }
 
   const ingestionRunSuffix =
     typeof status.ingestionRunId === "string" ? ` run=${status.ingestionRunId}` : "";
   return `ready v${status.version}${ingestionRunSuffix}; width=${status.viewportWidthKm.toFixed(1)}km tiles=${String(status.predictedTileCount)}`;
+}
+
+export function readParcelsStatusIngestionRunId(status: ParcelsStatus): string | null {
+  if (
+    (status.state === "ready" || status.state === "hidden") &&
+    typeof status.ingestionRunId === "string" &&
+    status.ingestionRunId.trim().length > 0
+  ) {
+    return status.ingestionRunId;
+  }
+
+  return null;
 }
 
 export function createStressGovernor(
@@ -233,15 +271,30 @@ export function createStressGovernor(
   const frameBudgetMs = options.frameBudgetMs ?? 34;
   const sampleSize = options.sampleSize ?? 90;
   const breachRatio = options.breachRatio ?? 0.35;
+  const minSampleSize = options.minSampleSize ?? Math.min(sampleSize, 24);
   const samples: number[] = [];
   let sampleTotal = 0;
   let previousFrameTime = performance.now();
   let blocked = false;
   let frameHandle = 0;
   let destroyed = false;
+  let enabled = false;
+
+  const resetSamples = (): void => {
+    samples.length = 0;
+    sampleTotal = 0;
+  };
 
   const updateBlockedState = (): void => {
-    const ratio = samples.length === 0 ? 0 : sampleTotal / samples.length;
+    if (samples.length < minSampleSize) {
+      if (blocked) {
+        blocked = false;
+        options.onChange?.(false);
+      }
+      return;
+    }
+
+    const ratio = sampleTotal / samples.length;
     const nextBlocked = ratio >= breachRatio;
     if (nextBlocked === blocked) {
       return;
@@ -256,9 +309,14 @@ export function createStressGovernor(
       return;
     }
 
+    if (!enabled) {
+      previousFrameTime = now;
+      frameHandle = window.requestAnimationFrame(onFrame);
+      return;
+    }
+
     if (document.visibilityState !== "visible") {
-      samples.length = 0;
-      sampleTotal = 0;
+      resetSamples();
       previousFrameTime = now;
       if (blocked) {
         blocked = false;
@@ -297,11 +355,23 @@ export function createStressGovernor(
         blocked = false;
         options.onChange?.(false);
       }
-      samples.length = 0;
-      sampleTotal = 0;
+      resetSamples();
     },
     isBlocked(): boolean {
       return blocked;
+    },
+    setEnabled(nextEnabled: boolean): void {
+      if (enabled === nextEnabled) {
+        return;
+      }
+
+      enabled = nextEnabled;
+      resetSamples();
+      previousFrameTime = performance.now();
+      if (!enabled && blocked) {
+        blocked = false;
+        options.onChange?.(false);
+      }
     },
   };
 }

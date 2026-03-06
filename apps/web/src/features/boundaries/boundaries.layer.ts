@@ -1,4 +1,5 @@
 import type { IMap } from "@map-migration/map-engine";
+import { getBoundaryStyleLayerIds } from "@map-migration/map-style";
 import { fetchBoundaryPower } from "@/features/boundaries/api";
 import {
   boundaryFillColorExpression,
@@ -23,14 +24,17 @@ import {
   toHoverState,
 } from "@/features/boundaries/boundaries-layer.service";
 
+const basemapBoundaryHideCountByMap = new WeakMap<IMap, number>();
+
 export function mountBoundaryLayer(
   map: IMap,
   options: BoundaryLayerOptions
 ): BoundaryLayerController {
   const layerId = options.layerId;
   const sourceId = `boundaries.${layerId}.source`;
-  const fillLayerId = `${layerId}.fill`;
-  const outlineLayerId = layerId;
+  const styleLayerIds = getBoundaryStyleLayerIds(layerId);
+  const fillLayerId = styleLayerIds.fillLayerId;
+  const outlineLayerId = styleLayerIds.outlineLayerId;
   const state = initialBoundaryLayerState();
 
   function readStyleLayerId(layer: unknown): string | null {
@@ -200,9 +204,34 @@ export function mountBoundaryLayer(
   }
 
   function hideBasemapBoundaryLayers(): void {
+    const currentHideCount = basemapBoundaryHideCountByMap.get(map) ?? 0;
+    basemapBoundaryHideCountByMap.set(map, currentHideCount + 1);
+    state.basemapLayersSuppressed = true;
+    if (currentHideCount > 0) {
+      return;
+    }
+
     for (const layerId of BASEMAP_BOUNDARY_LAYER_IDS) {
       map.setLayerVisibility(layerId, false);
     }
+  }
+
+  function restoreBasemapBoundaryLayers(): void {
+    if (!state.basemapLayersSuppressed) {
+      return;
+    }
+
+    state.basemapLayersSuppressed = false;
+    const currentHideCount = basemapBoundaryHideCountByMap.get(map) ?? 0;
+    if (currentHideCount <= 1) {
+      basemapBoundaryHideCountByMap.delete(map);
+      for (const basemapLayerId of BASEMAP_BOUNDARY_LAYER_IDS) {
+        map.setLayerVisibility(basemapLayerId, true);
+      }
+      return;
+    }
+
+    basemapBoundaryHideCountByMap.set(map, currentHideCount - 1);
   }
 
   async function refreshSourceData(): Promise<void> {
@@ -342,6 +371,7 @@ export function mountBoundaryLayer(
       state.abortController?.abort();
       state.abortController = null;
       clearHover();
+      restoreBasemapBoundaryLayers();
       if (map.hasLayer(fillLayerId)) {
         map.removeLayer(fillLayerId);
       }

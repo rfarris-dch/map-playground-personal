@@ -1,4 +1,5 @@
 import { buildFiberLocatorVectorTileRoute } from "@map-migration/contracts";
+import { getFacilitiesStyleLayerIds } from "@map-migration/map-style";
 import { fiberLocatorLineColor } from "@/features/fiber-locator/fiber-locator.service";
 import type {
   FiberLocatorLayerController,
@@ -10,12 +11,8 @@ import type {
 const FIBER_SOURCE_LAYER_ID_RE = /[^a-z0-9._-]+/gi;
 const FIBER_MIN_ZOOM = 4;
 const FACILITIES_LAYER_ANCHORS: readonly string[] = [
-  "facilities.colocation.clusters",
-  "facilities.colocation.cluster-count",
-  "facilities.colocation.points",
-  "facilities.hyperscale.clusters",
-  "facilities.hyperscale.cluster-count",
-  "facilities.hyperscale.points",
+  ...Object.values(getFacilitiesStyleLayerIds("facilities.colocation")),
+  ...Object.values(getFacilitiesStyleLayerIds("facilities.hyperscale")),
 ];
 
 function createSourceId(lineId: FiberLocatorLayerOptions["lineId"]): string {

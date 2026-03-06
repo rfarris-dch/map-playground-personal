@@ -1,4 +1,5 @@
 import {
+  ApiHeaders,
   buildFacilitiesSelectionRoute,
   buildParcelEnrichRoute,
   type FacilitiesSelectionRequest,
@@ -6,16 +7,17 @@ import {
   type ParcelEnrichRequest,
   ParcelsFeatureCollectionSchema,
 } from "@map-migration/contracts";
-import { apiGetJson } from "@/lib/api-client";
 import type {
   FacilitiesSelectionResult,
+  FetchParcelsBySelectionOptions,
   ParcelsSelectionResult,
-} from "./measure-analysis.api.types";
+} from "@/features/measure/measure-analysis.api.types";
+import { apiGetJson } from "@/lib/api-client";
 
 export type {
   FacilitiesSelectionResult,
   ParcelsSelectionResult,
-} from "./measure-analysis.api.types";
+} from "@/features/measure/measure-analysis.api.types";
 
 export function fetchFacilitiesBySelection(
   request: FacilitiesSelectionRequest,
@@ -42,7 +44,8 @@ export function fetchFacilitiesBySelection(
 
 export function fetchParcelsBySelection(
   request: ParcelEnrichRequest,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  options: FetchParcelsBySelectionOptions = {}
 ): Promise<ParcelsSelectionResult> {
   const requestInit: RequestInit = {
     method: "POST",
@@ -54,6 +57,16 @@ export function fetchParcelsBySelection(
 
   if (signal) {
     requestInit.signal = signal;
+  }
+
+  if (
+    typeof options.expectedIngestionRunId === "string" &&
+    options.expectedIngestionRunId.trim().length > 0
+  ) {
+    requestInit.headers = {
+      ...requestInit.headers,
+      [ApiHeaders.parcelIngestionRunId]: options.expectedIngestionRunId.trim(),
+    };
   }
 
   return apiGetJson(buildParcelEnrichRoute(), ParcelsFeatureCollectionSchema, requestInit);

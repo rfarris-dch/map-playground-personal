@@ -9,7 +9,11 @@ if [[ -f "${ROOT_DIR}/apps/api/.env" ]]; then
   set +a
 fi
 
-: "${POSTGRES_URL:?POSTGRES_URL must be set}"
+DB_URL="${DATABASE_URL:-${POSTGRES_URL:-}}"
+if [[ -z "${DB_URL}" ]]; then
+  echo "[parcels] ERROR: missing DATABASE_URL or POSTGRES_URL" >&2
+  exit 1
+fi
 
 SCHEMA_SQL="${ROOT_DIR}/scripts/sql/parcels-canonical-schema.sql"
 if [[ ! -f "${SCHEMA_SQL}" ]]; then
@@ -17,6 +21,6 @@ if [[ ! -f "${SCHEMA_SQL}" ]]; then
   exit 1
 fi
 
-psql "${POSTGRES_URL}" -v ON_ERROR_STOP=1 -f "${SCHEMA_SQL}"
+psql "${DB_URL}" -v ON_ERROR_STOP=1 -f "${SCHEMA_SQL}"
 
 echo "[parcels] canonical schema initialized"

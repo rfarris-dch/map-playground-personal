@@ -1,5 +1,11 @@
 import type { FacilityPerspective, FacilitySortBy } from "@map-migration/contracts";
-import { getQuerySpec } from "@map-migration/geo-sql";
+import {
+  buildFacilitiesBboxQuery,
+  buildFacilitiesPolygonQuery,
+  buildFacilityDetailQuery,
+  getFacilitiesBboxQuerySpec,
+  getFacilitiesPolygonQuerySpec,
+} from "@map-migration/geo-sql";
 import { runQuery } from "@/db/postgres";
 import type {
   FacilitiesBboxQuery,
@@ -26,71 +32,36 @@ function parseCount(value: number | string): number {
   return Math.trunc(numeric);
 }
 
-function getFacilitiesBboxQueryName(
-  perspective: FacilityPerspective
-): "facilities_bbox_colocation" | "facilities_bbox_hyperscale" {
-  if (perspective === "hyperscale") {
-    return "facilities_bbox_hyperscale";
-  }
-
-  return "facilities_bbox_colocation";
-}
-
-function getFacilitiesPolygonQueryName(
-  perspective: FacilityPerspective
-): "facilities_polygon_colocation" | "facilities_polygon_hyperscale" {
-  if (perspective === "hyperscale") {
-    return "facilities_polygon_hyperscale";
-  }
-
-  return "facilities_polygon_colocation";
-}
-
 export function getFacilitiesBboxMaxRows(perspective: FacilityPerspective): number {
-  const spec = getQuerySpec(getFacilitiesBboxQueryName(perspective));
-  return spec.maxRows;
+  return getFacilitiesBboxQuerySpec(perspective).maxRows;
 }
 
 export function getFacilitiesPolygonMaxRows(perspective: FacilityPerspective): number {
-  const spec = getQuerySpec(getFacilitiesPolygonQueryName(perspective));
-  return spec.maxRows;
-}
-
-function getFacilityDetailQueryName(
-  perspective: FacilityPerspective
-): "facility_detail_colocation" | "facility_detail_hyperscale" {
-  if (perspective === "hyperscale") {
-    return "facility_detail_hyperscale";
-  }
-
-  return "facility_detail_colocation";
+  return getFacilitiesPolygonQuerySpec(perspective).maxRows;
 }
 
 export function listFacilitiesByBbox(query: FacilitiesBboxQuery): Promise<FacilitiesBboxRow[]> {
-  const spec = getQuerySpec(getFacilitiesBboxQueryName(query.perspective));
+  const sqlQuery = buildFacilitiesBboxQuery(query);
 
-  return runQuery<FacilitiesBboxRow>(spec.sql, [
-    query.west,
-    query.south,
-    query.east,
-    query.north,
-    query.limit,
-  ]);
+  return runQuery<FacilitiesBboxRow>(sqlQuery.sql, sqlQuery.params);
 }
 
 export function listFacilitiesByPolygon(
   query: FacilitiesPolygonQuery
 ): Promise<FacilitiesBboxRow[]> {
-  const spec = getQuerySpec(getFacilitiesPolygonQueryName(query.perspective));
-  return runQuery<FacilitiesBboxRow>(spec.sql, [query.geometryGeoJson, query.limit]);
+  const sqlQuery = buildFacilitiesPolygonQuery(query);
+  return runQuery<FacilitiesBboxRow>(sqlQuery.sql, sqlQuery.params);
 }
 
 export async function getFacilityById(
   facilityId: string,
   perspective: FacilityPerspective
 ): Promise<FacilityDetailRow | null> {
-  const spec = getQuerySpec(getFacilityDetailQueryName(perspective));
-  const rows = await runQuery<FacilityDetailRow>(spec.sql, [facilityId]);
+  const sqlQuery = buildFacilityDetailQuery({
+    facilityId,
+    perspective,
+  });
+  const rows = await runQuery<FacilityDetailRow>(sqlQuery.sql, sqlQuery.params);
   const firstRow = rows[0];
   if (typeof firstRow === "undefined") {
     return null;

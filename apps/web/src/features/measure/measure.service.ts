@@ -1,6 +1,6 @@
 import type { LngLat } from "@map-migration/map-engine";
+import type { MeasureFeature, MeasureSourceData } from "@/features/measure/measure.service.types";
 import type { MeasureRuntimeState, MeasureState } from "@/features/measure/measure.types";
-import type { MeasureFeature, MeasureSourceData } from "./measure.service.types";
 
 const EARTH_RADIUS_METERS = 6_371_008.8;
 const WEB_MERCATOR_RADIUS_METERS = 6_378_137;

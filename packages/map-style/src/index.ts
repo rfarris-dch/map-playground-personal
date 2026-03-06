@@ -1,7 +1,55 @@
 import { LAYER_ORDER_INVARIANTS } from "@/manifests/layer-order";
-import type { StyleDocument } from "./index.types";
+import type {
+  BoundaryCatalogLayerId,
+  BoundaryStyleLayerIds,
+  FacilitiesCatalogLayerId,
+  FacilitiesStyleLayerIds,
+  ParcelsStyleLayerIds,
+  PowerCatalogLayerId,
+  StaticCatalogLayerId,
+  StyleDocument,
+} from "./index.types";
+import {
+  getBoundaryStyleLayerIds as readBoundaryStyleLayerIds,
+  getCatalogStyleLayerIds as readCatalogStyleLayerIds,
+  getFacilitiesStyleLayerIds as readFacilitiesStyleLayerIds,
+  getParcelsStyleLayerIds as readParcelsStyleLayerIds,
+  getPowerStyleLayerIds as readPowerStyleLayerIds,
+} from "./style-layer-ids";
 
-export type { StyleDocument, StyleLayer } from "./index.types";
+export type {
+  BoundaryCatalogLayerId,
+  BoundaryStyleLayerIds,
+  FacilitiesCatalogLayerId,
+  FacilitiesStyleLayerIds,
+  ParcelsStyleLayerIds,
+  PowerCatalogLayerId,
+  StaticCatalogLayerId,
+  StyleDocument,
+  StyleLayer,
+} from "./index.types";
+
+export function getBoundaryStyleLayerIds(layerId: BoundaryCatalogLayerId): BoundaryStyleLayerIds {
+  return readBoundaryStyleLayerIds(layerId);
+}
+
+export function getFacilitiesStyleLayerIds(
+  layerId: FacilitiesCatalogLayerId
+): FacilitiesStyleLayerIds {
+  return readFacilitiesStyleLayerIds(layerId);
+}
+
+export function getParcelsStyleLayerIds(): ParcelsStyleLayerIds {
+  return readParcelsStyleLayerIds();
+}
+
+export function getPowerStyleLayerIds(layerId: PowerCatalogLayerId): readonly string[] {
+  return readPowerStyleLayerIds(layerId);
+}
+
+export function getCatalogStyleLayerIds(layerId: StaticCatalogLayerId): readonly string[] {
+  return readCatalogStyleLayerIds(layerId);
+}
 
 export function createBaseStyle(name = "Map Platform Core"): StyleDocument {
   return {

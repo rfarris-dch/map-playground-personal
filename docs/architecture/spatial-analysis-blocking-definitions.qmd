@@ -1,0 +1,50 @@
+---
+title: Spatial Analysis Blocking Definitions
+---
+
+## Status
+
+- Updated: March 5, 2026
+- State: blocking
+- Scope: required before scoring/proximity/export implementation proceeds beyond scaffolding
+
+## Blocking Decisions: Market Metrics
+
+| Metric | Canonical Formula | Time Window | Aggregation Grain | Null Handling | Owner | Due Date |
+| --- | --- | --- | --- | --- | --- | --- |
+| `market_size` | `SUM(commissioned_power_mw)` from canonical serving rows | `trailing_12_month` | `market` | `exclude` rows missing commissioned power | `data-platform` | `2026-03-31` |
+| `absorption` | `AVG(absorption)` from approved market panel | `quarterly` | `market` | `exclude` rows missing absorption | `research-analytics` | `2026-03-31` |
+| `vacancy` | `AVG(vacancy)` from approved market panel | `quarterly` | `market` | `exclude` rows missing vacancy | `research-analytics` | `2026-03-31` |
+
+Required outcome:
+
+- One authoritative formula per metric.
+- One approved set of time windows (for example monthly, quarterly, trailing-12).
+- One approved aggregation policy used by API, UI, and exports.
+
+## Blocking Decisions: Pricing and Licensing
+
+| Dataset | Sensitivity Tier | Allowed Query Granularity | Allowed Export Granularity | Minimum K-Anonymity | Cache TTL | Retention Days | Redistribution | Owner | Due Date |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `parcels` | `restricted` | `bbox`, `polygon`, `county`, `tileSet`, `parcel` | `none`, `parcel`, `county` | `5` | `900s` | `365` | `none` | `legal-compliance` | `2026-03-31` |
+| `facilities` | `internal` | `bbox`, `polygon`, `county`, `facility`, `market` | `none`, `facility`, `county`, `market` | `null` | `300s` | `365` | `internal` | `product-geo` | `2026-03-31` |
+| `power` | `internal` | `county`, `state`, `country`, `bbox` | `none`, `county`, `state`, `country` | `null` | `600s` | `365` | `internal` | `grid-intelligence` | `2026-03-31` |
+| `fiber` | `restricted` | `bbox`, `polygon`, `county` | `none`, `county` | `10` | `300s` | `180` | `none` | `partner-operations` | `2026-03-31` |
+| `market_metrics` | `internal` | `market`, `state`, `country` | `none`, `market`, `state`, `country` | `null` | `1800s` | `730` | `internal` | `research-analytics` | `2026-03-31` |
+
+Required outcome:
+
+- Dataset-level policy objects can be generated directly from this table.
+- Export rules are explicit and enforceable in API without fallback behavior.
+
+## Enforcement Targets
+
+- `packages/contracts`: add strict schemas for metric definitions and data licensing policy payloads.
+- `apps/api`: enforce entitlement and export policy checks at route boundaries.
+- `apps/web`: show policy-based UX gating, but never rely on UI-only enforcement.
+
+## Exit Criteria
+
+1. No `UNDEFINED` or `UNASSIGNED` values remain.
+2. Product, data, legal/compliance, and engineering owners sign off.
+3. Contract tests and policy enforcement tests pass against finalized values.

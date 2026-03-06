@@ -25,13 +25,13 @@ export interface MapAdapter {
 }
 
 export interface IMap {
-  addControl(control: IControl, position?: ControlPosition): void;
-  addLayer(layerSpec: AddLayerObject, beforeId?: string): void;
-  addSource(id: string, spec: SourceSpecification): void;
+  addControl(control: MapControl, position?: MapControlPosition): void;
+  addLayer(layerSpec: MapLayerSpecification, beforeId?: string): void;
+  addSource(id: string, spec: MapSourceSpecification): void;
   destroy(): void;
   getBounds(): LngLatBounds;
   getCanvasSize(): { readonly height: number; readonly width: number };
-  getStyle(): StyleSpecification;
+  getStyle(): MapStyleSpecification;
   getZoom(): number;
   hasLayer(layerId: string): boolean;
   hasSource(sourceId: string): boolean;
@@ -45,18 +45,18 @@ export interface IMap {
   onPointerMove(handler: (event: MapPointerEvent) => void): void;
   project(lngLat: LngLat): [number, number];
   queryRenderedFeatures(
-    target: PointLike | [PointLike, PointLike],
-    options?: QueryRenderedFeaturesOptions
-  ): MapGeoJSONFeature[];
-  removeControl(control: IControl): void;
+    target: MapPointLike | [MapPointLike, MapPointLike],
+    options?: MapQueryRenderedFeaturesOptions
+  ): MapRenderedFeature[];
+  removeControl(control: MapControl): void;
   removeLayer(layerId: string): void;
   removeSource(sourceId: string): void;
   setFeatureState(target: FeatureStateTarget, state: Record<string, unknown>): void;
   setGeoJSONSourceData(sourceId: string, data: unknown): void;
   setLayerVisibility(layerId: string, visible: boolean): void;
-  setProjection(projection: ProjectionSpecification): void;
+  setProjection(projection: MapProjectionSpecification): void;
   setStyle(style: StyleInput): void;
-  setTerrain(terrain: TerrainSpecification | null): void;
+  setTerrain(terrain: MapTerrainSpecification | null): void;
 }
 
 export interface MapPointerEvent {
@@ -86,7 +86,7 @@ export interface MapCreateOptions {
   readonly hash?: boolean;
   readonly maxZoom?: number;
   readonly minZoom?: number;
-  readonly projection?: ProjectionSpecification;
+  readonly projection?: MapProjectionSpecification;
   readonly style: StyleInput;
   readonly transformRequest?: MapRequestTransformFunction;
   readonly zoom: number;
@@ -115,14 +115,27 @@ export interface NavigationControlOptions {
 }
 
 export type MapControl = IControl;
+export type MapControlPosition = ControlPosition;
+export type MapLayerSpecification = AddLayerObject;
 
 export type MapExpression = ExpressionSpecification;
+export type MapPointLike = PointLike;
+export type MapProjectionSpecification = ProjectionSpecification;
+export type MapQueryRenderedFeaturesOptions = QueryRenderedFeaturesOptions;
+export type MapRenderedFeature = MapGeoJSONFeature;
+export type MapRequestParameters = RequestParameters;
 
 export type MapRequestTransformFunction = (
   url: string,
-  resourceType?: ResourceType
-) => RequestParameters | undefined;
+  resourceType?: MapResourceType
+) => MapRequestParameters | undefined;
 
-export type StyleInput = StyleSpecification | string;
+export type MapResourceType = ResourceType;
+export type MapSourceSpecification = SourceSpecification;
+export type MapStyleLayer = NonNullable<StyleSpecification["layers"]>[number];
+export type MapStyleSpecification = StyleSpecification;
+export type MapTerrainSpecification = TerrainSpecification;
+
+export type StyleInput = MapStyleSpecification | string;
 
 export type LngLat = [number, number];

@@ -1,6 +1,17 @@
 #!/usr/bin/env bun
-import { createWriteStream, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  createReadStream,
+  createWriteStream,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join, resolve } from "node:path";
+import { createInterface } from "node:readline";
 import type { Writable } from "node:stream";
 import type {
   ArcgisCountResponse,
@@ -13,6 +24,7 @@ import type {
   CliArgs,
   StateProgress,
   StateSyncCounters,
+  SyncRunConfig,
   SyncRunSummary,
   SyncStateArgs,
 } from "./refresh-parcels.types";
@@ -145,6 +157,8 @@ const NUMERIC_ARCGIS_FIELD_TYPES = new Set<string>([
   "esriFieldTypeInteger",
   "esriFieldTypeSmallInteger",
 ]);
+const RUN_CONFIG_FILE_NAME = "run-config.json";
+const STATE_CHECKPOINT_FILE_RE = /^state-[A-Z0-9_]+\.checkpoint\.json$/;
 
 function parseArg(name: string): string | null {
   const prefix = `${name}=`;
@@ -265,6 +279,7 @@ function parseCliArgs(): CliArgs {
     states: parseStates(parseArg("--states") ?? process.env.PARCEL_SYNC_STATES ?? null),
     resume: hasFlag("--resume") || (process.env.PARCEL_SYNC_RESUME ?? "0") === "1",
     runId,
+    verifyRunConfigOnly: hasFlag("--verify-run-config-only"),
   };
 }
 
@@ -297,6 +312,72 @@ function readJsonFile(path: string): unknown | null {
   }
 
   return JSON.parse(raw);
+}
+
+function readRunConfig(path: string): SyncRunConfig | null {
+  const raw = readJsonFile(path);
+  if (!isRecord(raw)) {
+    return null;
+  }
+
+  const runId = Reflect.get(raw, "runId");
+  const featureLayerUrl = Reflect.get(raw, "featureLayerUrl");
+  const minimumAcres = Number(Reflect.get(raw, "minimumAcres"));
+  const pageSize = Number(Reflect.get(raw, "pageSize"));
+  const stateConcurrency = Number(Reflect.get(raw, "stateConcurrency"));
+  const maxPagesPerStateRaw = Reflect.get(raw, "maxPagesPerState");
+  const acreageField = Reflect.get(raw, "acreageField");
+  const metadataObjectIdField = Reflect.get(raw, "metadataObjectIdField");
+  const tieBreakerFieldRaw = Reflect.get(raw, "tieBreakerField");
+  const statesRaw = Reflect.get(raw, "states");
+
+  if (
+    typeof runId !== "string" ||
+    typeof featureLayerUrl !== "string" ||
+    !Number.isFinite(minimumAcres) ||
+    !Number.isFinite(pageSize) ||
+    !Number.isFinite(stateConcurrency) ||
+    typeof acreageField !== "string" ||
+    typeof metadataObjectIdField !== "string" ||
+    !Array.isArray(statesRaw)
+  ) {
+    return null;
+  }
+
+  const states = statesRaw.filter((item): item is string => typeof item === "string");
+  if (states.length !== statesRaw.length) {
+    return null;
+  }
+
+  let maxPagesPerState: number | null = null;
+  if (maxPagesPerStateRaw !== null && typeof maxPagesPerStateRaw !== "undefined") {
+    const parsedMaxPages = Number(maxPagesPerStateRaw);
+    if (!Number.isFinite(parsedMaxPages) || parsedMaxPages <= 0) {
+      return null;
+    }
+    maxPagesPerState = Math.floor(parsedMaxPages);
+  }
+
+  let tieBreakerField: string | null = null;
+  if (tieBreakerFieldRaw !== null && typeof tieBreakerFieldRaw !== "undefined") {
+    if (typeof tieBreakerFieldRaw !== "string") {
+      return null;
+    }
+    tieBreakerField = tieBreakerFieldRaw;
+  }
+
+  return {
+    acreageField,
+    featureLayerUrl,
+    maxPagesPerState,
+    metadataObjectIdField,
+    minimumAcres: Math.floor(minimumAcres * 1_000_000) / 1_000_000,
+    pageSize: Math.floor(pageSize),
+    runId,
+    stateConcurrency: Math.floor(stateConcurrency),
+    states,
+    tieBreakerField,
+  };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -1062,6 +1143,189 @@ function readResumeCounters(
   };
 }
 
+function areSameStates(left: readonly string[], right: readonly string[]): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  for (let index = 0; index < left.length; index += 1) {
+    if (left[index] !== right[index]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function assertRunConfigMatches(
+  expected: SyncRunConfig,
+  existing: SyncRunConfig,
+  runDir: string
+): void {
+  const mismatches: string[] = [];
+
+  if (existing.runId !== expected.runId) {
+    mismatches.push(`runId expected=${expected.runId} actual=${existing.runId}`);
+  }
+  if (existing.featureLayerUrl !== expected.featureLayerUrl) {
+    mismatches.push("featureLayerUrl");
+  }
+  if (existing.minimumAcres !== expected.minimumAcres) {
+    mismatches.push(
+      `minimumAcres expected=${String(expected.minimumAcres)} actual=${String(existing.minimumAcres)}`
+    );
+  }
+  if (existing.pageSize !== expected.pageSize) {
+    mismatches.push(
+      `pageSize expected=${String(expected.pageSize)} actual=${String(existing.pageSize)}`
+    );
+  }
+  if (existing.stateConcurrency !== expected.stateConcurrency) {
+    mismatches.push(
+      `stateConcurrency expected=${String(expected.stateConcurrency)} actual=${String(existing.stateConcurrency)}`
+    );
+  }
+  if (existing.maxPagesPerState !== expected.maxPagesPerState) {
+    mismatches.push(
+      `maxPagesPerState expected=${String(expected.maxPagesPerState)} actual=${String(existing.maxPagesPerState)}`
+    );
+  }
+  if (existing.acreageField !== expected.acreageField) {
+    mismatches.push(
+      `acreageField expected=${expected.acreageField} actual=${existing.acreageField}`
+    );
+  }
+  if (existing.metadataObjectIdField !== expected.metadataObjectIdField) {
+    mismatches.push(
+      `metadataObjectIdField expected=${expected.metadataObjectIdField} actual=${existing.metadataObjectIdField}`
+    );
+  }
+  if (existing.tieBreakerField !== expected.tieBreakerField) {
+    mismatches.push(
+      `tieBreakerField expected=${expected.tieBreakerField ?? "null"} actual=${existing.tieBreakerField ?? "null"}`
+    );
+  }
+  if (!areSameStates(existing.states, expected.states)) {
+    mismatches.push("states");
+  }
+
+  if (mismatches.length > 0) {
+    throw new Error(
+      `[sync] existing run config mismatch for ${runDir}. Refusing to resume with different inputs: ${mismatches.join(", ")}`
+    );
+  }
+}
+
+function assertRuntimeRunConfigMatchesCli(
+  cli: CliArgs,
+  existing: SyncRunConfig,
+  runDir: string
+): void {
+  const mismatches: string[] = [];
+
+  if (existing.runId !== cli.runId) {
+    mismatches.push(`runId expected=${cli.runId} actual=${existing.runId}`);
+  }
+  if (existing.featureLayerUrl !== FEATURE_LAYER_URL) {
+    mismatches.push("featureLayerUrl");
+  }
+  if (existing.minimumAcres !== cli.minimumAcres) {
+    mismatches.push(
+      `minimumAcres expected=${String(cli.minimumAcres)} actual=${String(existing.minimumAcres)}`
+    );
+  }
+  if (existing.pageSize !== cli.pageSize) {
+    mismatches.push(
+      `pageSize expected=${String(cli.pageSize)} actual=${String(existing.pageSize)}`
+    );
+  }
+  if (existing.stateConcurrency !== cli.stateConcurrency) {
+    mismatches.push(
+      `stateConcurrency expected=${String(cli.stateConcurrency)} actual=${String(existing.stateConcurrency)}`
+    );
+  }
+  if (existing.maxPagesPerState !== cli.maxPagesPerState) {
+    mismatches.push(
+      `maxPagesPerState expected=${String(cli.maxPagesPerState)} actual=${String(existing.maxPagesPerState)}`
+    );
+  }
+  if (!areSameStates(existing.states, cli.states)) {
+    mismatches.push("states");
+  }
+
+  if (mismatches.length > 0) {
+    throw new Error(
+      `[sync] existing run config mismatch for ${runDir}. Refusing to resume with different runtime inputs: ${mismatches.join(", ")}`
+    );
+  }
+}
+
+async function reconcileStateDataFile(
+  dataPath: string,
+  expectedLineCount: number,
+  resume: boolean
+): Promise<void> {
+  if (!resume) {
+    if (existsSync(dataPath)) {
+      rmSync(dataPath);
+    }
+    return;
+  }
+
+  if (!existsSync(dataPath)) {
+    if (expectedLineCount === 0) {
+      return;
+    }
+    throw new Error(
+      `[sync] checkpoint expects ${String(expectedLineCount)} rows but data file is missing: ${dataPath}`
+    );
+  }
+
+  const tempPath = `${dataPath}.resume-${process.pid}.tmp`;
+  const reader = createInterface({
+    input: createReadStream(dataPath, { encoding: "utf8" }),
+    crlfDelay: Number.POSITIVE_INFINITY,
+  });
+  const writer = createWriteStream(tempPath, {
+    flags: "w",
+    encoding: "utf8",
+  });
+
+  let seenLineCount = 0;
+  let truncated = false;
+
+  try {
+    for await (const line of reader) {
+      seenLineCount += 1;
+      if (seenLineCount <= expectedLineCount) {
+        await writeLine(writer, `${line}\n`);
+        continue;
+      }
+
+      truncated = true;
+    }
+  } finally {
+    await closeWriter(writer);
+  }
+
+  if (seenLineCount < expectedLineCount) {
+    rmSync(tempPath, { force: true });
+    throw new Error(
+      `[sync] checkpoint expects ${String(expectedLineCount)} rows but file only has ${String(seenLineCount)}: ${dataPath}`
+    );
+  }
+
+  if (!truncated && seenLineCount === expectedLineCount) {
+    rmSync(tempPath, { force: true });
+    return;
+  }
+
+  renameSync(tempPath, dataPath);
+  console.warn(
+    `[sync] reconciled ${dataPath} to checkpoint rows=${String(expectedLineCount)} (removed ${String(Math.max(seenLineCount - expectedLineCount, 0))} trailing rows)`
+  );
+}
+
 function shouldStopPaging(maxPagesPerState: number | null, pagesFetched: number): boolean {
   return maxPagesPerState !== null && pagesFetched >= maxPagesPerState;
 }
@@ -1300,6 +1564,7 @@ async function syncState(args: SyncStateArgs): Promise<StateProgress> {
   const initialExpectedCount = Math.max(0, Math.floor(args.expectedCount));
   let expectedCount = normalizeExpectedCount(initialExpectedCount, counters.writtenCount);
 
+  await reconcileStateDataFile(dataPath, counters.writtenCount, args.resume);
   const writer = openStateWriter(dataPath, args.resume);
   console.log(
     `[sync] state=${args.state2} starting expected=${String(expectedCount)} resume=${args.resume ? "true" : "false"} lastId=${String(counters.lastSourceId ?? "none")} lastTie=${String(counters.lastTieBreakerId ?? "none")} tieBreaker=${args.tieBreakerField ?? "none"} filter=${args.acreageWhereClause}`
@@ -1351,11 +1616,125 @@ async function syncState(args: SyncStateArgs): Promise<StateProgress> {
   return toStateProgress(args.state2, expectedCount, isCompleted, counters);
 }
 
+function persistRunConfig(
+  cli: CliArgs,
+  runConfigPath: string,
+  runConfig: SyncRunConfig,
+  runDir: string
+): void {
+  if (cli.resume) {
+    if (existsSync(runConfigPath)) {
+      const existingRunConfig = readRunConfig(runConfigPath);
+      if (existingRunConfig === null) {
+        throw new Error(`[sync] invalid existing run config: ${runConfigPath}`);
+      }
+
+      assertRunConfigMatches(runConfig, existingRunConfig, runDir);
+    } else {
+      const hasExistingCheckpoint = readdirSync(runDir).some((entry) =>
+        STATE_CHECKPOINT_FILE_RE.test(entry)
+      );
+      if (hasExistingCheckpoint) {
+        throw new Error(
+          `[sync] refusing to resume run without ${RUN_CONFIG_FILE_NAME}: ${runDir}. Start a fresh run or repair the run directory metadata first.`
+        );
+      }
+    }
+  }
+
+  writeJsonFile(runConfigPath, runConfig);
+}
+
+function initializeExpectedStateCheckpoints(args: {
+  readonly cli: CliArgs;
+  readonly fetchedExpectedByState: ReadonlyMap<string, number>;
+  readonly runDir: string;
+}): Map<string, number> {
+  const expectedByState = new Map<string, number>();
+
+  for (const state2 of args.cli.states) {
+    const checkpointPath = join(args.runDir, `state-${state2}.checkpoint.json`);
+    const existingCheckpoint = readCheckpoint(checkpointPath);
+    const shouldResumeExisting = args.cli.resume && existingCheckpoint !== null;
+    const counters: StateSyncCounters = shouldResumeExisting
+      ? {
+          lastSourceId: existingCheckpoint.lastSourceId,
+          lastTieBreakerId: existingCheckpoint.lastTieBreakerId,
+          pagesFetched: existingCheckpoint.pagesFetched,
+          writtenCount: existingCheckpoint.writtenCount,
+        }
+      : {
+          lastSourceId: null,
+          lastTieBreakerId: null,
+          pagesFetched: 0,
+          writtenCount: 0,
+        };
+    const expectedFromFetch = args.fetchedExpectedByState.get(state2) ?? 0;
+    const expectedFromCheckpoint = shouldResumeExisting ? existingCheckpoint.expectedCount : 0;
+    const normalizedExpected = normalizeExpectedCount(
+      Math.max(expectedFromFetch, expectedFromCheckpoint),
+      counters.writtenCount
+    );
+    const isCompleted =
+      args.cli.resume &&
+      args.cli.maxPagesPerState === null &&
+      existingCheckpoint !== null &&
+      existingCheckpoint.isCompleted;
+
+    expectedByState.set(state2, normalizedExpected);
+    writeStateCheckpoint(checkpointPath, state2, normalizedExpected, counters, isCompleted);
+  }
+
+  return expectedByState;
+}
+
+function partitionStateWork(args: { readonly cli: CliArgs; readonly runDir: string }): {
+  readonly pendingStates: string[];
+  readonly completedStates: StateProgress[];
+} {
+  const completedStates: StateProgress[] = [];
+  const pendingStates: string[] = [];
+
+  for (const state2 of args.cli.states) {
+    if (!args.cli.resume || args.cli.maxPagesPerState !== null) {
+      pendingStates.push(state2);
+      continue;
+    }
+
+    const checkpointPath = join(args.runDir, `state-${state2}.checkpoint.json`);
+    const checkpoint = readCheckpoint(checkpointPath);
+    if (checkpoint?.isCompleted) {
+      completedStates.push(checkpoint);
+      console.log(`[sync] state=${state2} already completed from checkpoint; skipping`);
+      continue;
+    }
+
+    pendingStates.push(state2);
+  }
+
+  return {
+    pendingStates,
+    completedStates,
+  };
+}
+
 async function main(): Promise<void> {
   const cli = parseCliArgs();
   const runId = cli.runId;
   const runDir = join(cli.outputDir, runId);
   ensureDirectory(runDir);
+  const runConfigPath = join(runDir, RUN_CONFIG_FILE_NAME);
+
+  if (cli.verifyRunConfigOnly) {
+    const existingRunConfig = readRunConfig(runConfigPath);
+    if (existingRunConfig === null) {
+      throw new Error(`[sync] missing or invalid run config: ${runConfigPath}`);
+    }
+
+    assertRuntimeRunConfigMatchesCli(cli, existingRunConfig, runDir);
+    console.log(`[sync] run config verified: ${runId}`);
+    return;
+  }
 
   const clientId = requireEnv("ARCGIS_PARCEL_CLIENT_ID");
   const clientSecret = requireEnv("ARCGIS_PARCEL_CLIENT_SECRET");
@@ -1372,6 +1751,19 @@ async function main(): Promise<void> {
     tieBreakerField === null ? null : validateObjectIdField(tieBreakerField);
   const acreageField = validateObjectIdField(selectAcreageField(metadata));
   const acreageWhereClause = buildAcreageWhereClause(acreageField, cli.minimumAcres);
+  const runConfig: SyncRunConfig = {
+    acreageField,
+    featureLayerUrl: FEATURE_LAYER_URL,
+    maxPagesPerState: cli.maxPagesPerState,
+    metadataObjectIdField: objectIdField,
+    minimumAcres: cli.minimumAcres,
+    pageSize: cli.pageSize,
+    runId,
+    stateConcurrency: cli.stateConcurrency,
+    states: cli.states,
+    tieBreakerField: validatedTieBreakerField,
+  };
+  persistRunConfig(cli, runConfigPath, runConfig, runDir);
 
   console.log(
     `[sync] acreage filter enabled field=${acreageField} minimumAcres=${formatWhereNumberLiteral(cli.minimumAcres)}`
@@ -1386,59 +1778,14 @@ async function main(): Promise<void> {
     acreageWhereClause,
     states: cli.states,
   });
-
-  const expectedByState = new Map<string, number>();
-  for (const state2 of cli.states) {
-    const checkpointPath = join(runDir, `state-${state2}.checkpoint.json`);
-    const existingCheckpoint = readCheckpoint(checkpointPath);
-    const shouldResumeExisting = cli.resume && existingCheckpoint !== null;
-    const counters: StateSyncCounters = shouldResumeExisting
-      ? {
-          lastSourceId: existingCheckpoint.lastSourceId,
-          lastTieBreakerId: existingCheckpoint.lastTieBreakerId,
-          pagesFetched: existingCheckpoint.pagesFetched,
-          writtenCount: existingCheckpoint.writtenCount,
-        }
-      : {
-          lastSourceId: null,
-          lastTieBreakerId: null,
-          pagesFetched: 0,
-          writtenCount: 0,
-        };
-    const expectedFromFetch = fetchedExpectedByState.get(state2) ?? 0;
-    const expectedFromCheckpoint = shouldResumeExisting ? existingCheckpoint.expectedCount : 0;
-    const normalizedExpected = normalizeExpectedCount(
-      Math.max(expectedFromFetch, expectedFromCheckpoint),
-      counters.writtenCount
-    );
-    const isCompleted =
-      cli.resume &&
-      cli.maxPagesPerState === null &&
-      existingCheckpoint !== null &&
-      existingCheckpoint.isCompleted;
-
-    expectedByState.set(state2, normalizedExpected);
-    writeStateCheckpoint(checkpointPath, state2, normalizedExpected, counters, isCompleted);
-  }
-
-  const stateProgressList: StateProgress[] = [];
-  const pendingStates: string[] = [];
-  for (const state2 of cli.states) {
-    if (!cli.resume || cli.maxPagesPerState !== null) {
-      pendingStates.push(state2);
-      continue;
-    }
-
-    const checkpointPath = join(runDir, `state-${state2}.checkpoint.json`);
-    const checkpoint = readCheckpoint(checkpointPath);
-    if (checkpoint?.isCompleted) {
-      stateProgressList.push(checkpoint);
-      console.log(`[sync] state=${state2} already completed from checkpoint; skipping`);
-      continue;
-    }
-
-    pendingStates.push(state2);
-  }
+  const expectedByState = initializeExpectedStateCheckpoints({
+    cli,
+    fetchedExpectedByState,
+    runDir,
+  });
+  const partitionedStateWork = partitionStateWork({ cli, runDir });
+  const stateProgressList: StateProgress[] = [...partitionedStateWork.completedStates];
+  const pendingStates = [...partitionedStateWork.pendingStates];
   const workerCount = Math.min(Math.max(1, cli.stateConcurrency), pendingStates.length);
 
   function readExpectedCountForState(state2: string): number {
@@ -1580,6 +1927,7 @@ async function main(): Promise<void> {
     updatedAt: completedAt,
     summaryPath: join(runDir, "run-summary.json"),
     metadataPath: join(runDir, "layer-metadata.json"),
+    configPath: runConfigPath,
   };
   writeJsonFile(join(cli.outputDir, "latest.json"), latestPointer);
 
