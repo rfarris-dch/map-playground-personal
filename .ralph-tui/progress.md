@@ -22,6 +22,19 @@ after each iteration and included in agent prompts for context.
 - Reference-oriented docs are more usable when page-level `sources` frontmatter is rendered by the shared page shell: readers can see the authored-doc source separately from the authoritative runtime files or imported artifacts, and companion docs links can be derived from those same paths.
 - Support-package docs are stronger when they explicitly state that a package currently has no direct `apps/*` or `scripts/*` consumers; for packages like `bench` and `fixtures`, that absence is concrete repo information and keeps the page honest about present-day runtime impact.
 - Docs-authoring guidance stays trustworthy when every documented Markdown affordance is backed by `markdown.service.ts`; if contributors are told to use a syntax like `:::note`, the renderer and shared prose styles need to implement it centrally instead of leaving the convention as aspirational prose.
+- Operational runbook pages work best when the imported artifact stays preserved as source material, while the authored `operations` page becomes the current decision tree with live route names, command entrypoints, marker files, and explicit exit criteria; that lets the docs correct stale operational paths without mutating the legacy artifact.
+
+## 2026-03-06 - docs-1.26
+- Expanded `Runbooks And Troubleshooting` from a thin routing note into a full operator-facing runbook page that mirrors the preserved spatial-analysis artifact while updating the current parcel sync status route, incident surfaces, and decision flow for stalled extraction, failed canonical load, failed tile build, coherency mismatch, and drift-related incidents.
+- Added source references, search terms, incident routing tables, required-input checklists, command snippets, stop conditions, and cross-links to the parcel workflow, parcel/API sync slice, pipeline monitor, sync architecture, and the preserved runbook artifact so operators can move from quick triage to source-of-truth detail without leaving the docs app.
+- Files changed:
+  - `apps/docs/src/content/operations/runbooks-and-troubleshooting.md`
+  - `.ralph-tui/progress.md`
+- **Learnings:**
+  - The preserved `docs/runbooks/spatial-analysis-ops.md` artifact is useful as historical source material, but the authored operations page needs to document current repo reality such as `/api/geo/parcels/sync/status`; keeping both surfaces lets the docs app stay honest without rewriting imported artifacts.
+  - Drift-related guidance in this repo is intentionally weaker than parcel manifest rollback because there is no single repair script; the docs should say that directly instead of implying a one-command recovery path that does not exist.
+  - Browser verification remains blocked in this sandbox because `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser open http://127.0.0.1:4173` fails with `Daemon failed to start`.
+---
 
 ## 2026-03-06 - docs-1.24
 - Split the shared data-and-operations docs into a real package overview plus five concrete package pages for `geo-sql`, `geo-tiles`, `ops`, `bench`, and `fixtures`, each covering package purpose, exported responsibilities, current consumers, build/test behavior, and links back to the app and operations docs that rely on them.
@@ -409,5 +422,14 @@ lph-tui/progress.md`. I closed the bead with `bd close docs-1.24 --db /Users/rob
 
 **Notes:**
 s/docs typecheck`, `bun --cwd apps/docs build`, `bun x ultracite fix apps/docs docs .ralph-tui/progress.md`, and `bun x ultracite check apps/docs docs .ralph-tui/progress.md`. I closed bead `docs-1.19`. Browser verification is still blocked in this sandbox: `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser open http://127.0.0.1:4173` fails with `Daemon failed to start`, so I could not capture the required desktop/mobile screenshots here.\n\n
+
+---
+## ✓ Iteration 17 - docs-1.21: US-011: Document the API geo slices
+*2026-03-06T04:22:38.767Z (343s)*
+
+**Status:** Completed
+
+**Notes:**
+/docs lint`, `bun --cwd apps/docs typecheck`, `bun --cwd apps/docs build`, `bun x ultracite fix apps/docs docs .ralph-tui/progress.md`, and `bun x ultracite check apps/docs docs .ralph-tui/progress.md`. Browser verification is still blocked in this sandbox: `bun --cwd apps/docs preview --host 127.0.0.1 --port 4173` fails with `listen EPERM`, and `agent-browser open http://127.0.0.1:4173` fails with `Daemon failed to start`, so I could not capture the required desktop/mobile screenshots here.\n\n
 
 ---
