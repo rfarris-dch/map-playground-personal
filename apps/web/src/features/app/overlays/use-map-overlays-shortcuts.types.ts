@@ -1,10 +1,13 @@
 import type { ComputedRef, ShallowRef } from "vue";
-import type { MeasureMode, MeasureState } from "@/features/measure/measure.types";
+import type {
+  SketchMeasureMode,
+  SketchMeasureState,
+} from "@/features/sketch-measure/sketch-measure.types";
 
 export interface UseMapOverlaysShortcutsOptions {
-  readonly clearMeasure: () => void;
-  readonly finishMeasureSelection: () => void;
-  readonly measureState: ShallowRef<MeasureState>;
+  readonly clearSketchMeasure: () => void;
+  readonly finishSketchMeasureArea: () => void;
   readonly quickViewDisabledReason: ComputedRef<string | null>;
-  readonly setMeasureMode: (mode: MeasureMode) => void;
+  readonly setSketchMeasureMode: (mode: SketchMeasureMode) => void;
+  readonly sketchMeasureState: ShallowRef<SketchMeasureState>;
 }

@@ -42,25 +42,64 @@ const QUERY_SPECS: Record<QueryName, RegisteredQuerySpec> = {
     sql: `
 WITH bounds AS (
   SELECT ST_Transform(ST_MakeEnvelope($1, $2, $3, $4, 4326), 3857) AS bbox_3857
+),
+candidates AS (
+  SELECT
+    s.facility_id,
+    s.facility_name,
+    s.provider_id,
+    s.county_fips,
+    s.state_abbrev,
+    s.commissioned_power_mw,
+    s.planned_power_mw,
+    s.under_construction_power_mw,
+    s.available_power_mw,
+    s.commissioned_semantic,
+    s.geom,
+    s.source_row_ids
+  FROM serve.facility_site AS s, bounds
+  WHERE s.geom_3857 && bounds.bbox_3857
+    AND ST_Intersects(s.geom_3857, bounds.bbox_3857)
+    AND s.provider_id IS NOT NULL
+  LIMIT $5
 )
 SELECT
-  s.facility_id,
-  s.facility_name,
-  s.provider_id,
-  COALESCE(NULLIF(BTRIM(p."NAME"), ''), s.provider_id::text) AS provider_name,
-  COALESCE(s.county_fips, ''::text) AS county_fips,
-  s.commissioned_power_mw,
-  s.commissioned_semantic,
+  c.facility_id,
+  c.facility_name,
+  c.provider_id,
+  COALESCE(NULLIF(BTRIM(p."NAME"), ''), c.provider_id::text) AS provider_name,
+  COALESCE(c.county_fips, ''::text) AS county_fips,
+  COALESCE(NULLIF(BTRIM(c.state_abbrev), ''), NULLIF(BTRIM(l."STATE"), '')) AS state_abbrev,
+  c.commissioned_power_mw,
+  c.planned_power_mw,
+  c.under_construction_power_mw,
+  c.available_power_mw,
+  psi."SQUARE_FOOTAGE"::numeric AS square_footage,
+  c.commissioned_semantic,
   NULL::text AS lease_or_own,
-  ST_AsGeoJSON(s.geom)::jsonb AS geom_json
-FROM serve.facility_site AS s
+  lc."SECONDARY_CLASSIFICATION"::text AS status_label,
+  l."ADDRESS_LINE1"::text AS address,
+  l."CITY"::text AS city,
+  l."STATE"::text AS state,
+  ST_AsGeoJSON(c.geom)::jsonb AS geom_json
+FROM candidates AS c
 LEFT JOIN mirror."HAWK_PROVIDER_PROFILE" AS p
-  ON p."PROVIDER_PROFILE_ID"::text = s.provider_id::text
-, bounds
-WHERE s.geom_3857 && bounds.bbox_3857
-  AND ST_Intersects(s.geom_3857, bounds.bbox_3857)
-  AND s.provider_id IS NOT NULL
-LIMIT $5;`,
+  ON p."PROVIDER_PROFILE_ID"::text = c.provider_id::text
+LEFT JOIN LATERAL (
+  SELECT
+    MAX(entry->>'facility_location_id') FILTER (WHERE entry ? 'facility_location_id')
+      AS facility_location_id,
+    MAX(entry->>'power_space_info_id') FILTER (WHERE entry ? 'power_space_info_id')
+      AS power_space_info_id,
+    MAX(entry->>'product_id') FILTER (WHERE entry ? 'product_id') AS product_id
+  FROM jsonb_array_elements(COALESCE(c.source_row_ids, '[]'::jsonb)) AS entry
+) AS src ON TRUE
+LEFT JOIN mirror."HAWK_FACILITY_LOCATION" AS l
+  ON l."FACILITY_LOCATION_ID"::text = src.facility_location_id
+LEFT JOIN mirror."HAWK_POWER_SPACE_INFO" AS psi
+  ON psi."POWER_SPACE_INFO_ID"::text = src.power_space_info_id
+LEFT JOIN mirror."HAWK_LISTING_COLO" AS lc
+  ON lc."PRODUCT_ID"::text = src.product_id;`,
   },
   facilities_bbox_hyperscale: {
     name: "facilities_bbox_hyperscale",
@@ -69,25 +108,58 @@ LIMIT $5;`,
     sql: `
 WITH bounds AS (
   SELECT ST_Transform(ST_MakeEnvelope($1, $2, $3, $4, 4326), 3857) AS bbox_3857
+),
+candidates AS (
+  SELECT
+    s.hyperscale_id,
+    s.facility_name,
+    s.provider_id,
+    s.county_fips,
+    s.state_abbrev,
+    s.commissioned_power_mw,
+    s.commissioned_semantic,
+    s.planned_power_mw,
+    s.under_construction_power_mw,
+    s.lease_or_own,
+    s.geom,
+    s.source_row_ids
+  FROM serve.hyperscale_site AS s, bounds
+  WHERE s.geom_3857 && bounds.bbox_3857
+    AND ST_Intersects(s.geom_3857, bounds.bbox_3857)
+    AND s.provider_id IS NOT NULL
+  LIMIT $5
 )
 SELECT
-  s.hyperscale_id AS facility_id,
-  s.facility_name,
-  s.provider_id,
-  COALESCE(NULLIF(BTRIM(p."NAME"), ''), s.provider_id::text) AS provider_name,
-  COALESCE(s.county_fips, ''::text) AS county_fips,
-  s.commissioned_power_mw,
-  s.commissioned_semantic,
-  s.lease_or_own,
-  ST_AsGeoJSON(s.geom)::jsonb AS geom_json
-FROM serve.hyperscale_site AS s
+  c.hyperscale_id AS facility_id,
+  c.facility_name,
+  c.provider_id,
+  COALESCE(NULLIF(BTRIM(p."NAME"), ''), c.provider_id::text) AS provider_name,
+  COALESCE(c.county_fips, ''::text) AS county_fips,
+  COALESCE(NULLIF(BTRIM(c.state_abbrev), ''), NULLIF(BTRIM(hf."STATE"), '')) AS state_abbrev,
+  c.commissioned_power_mw,
+  c.planned_power_mw,
+  c.under_construction_power_mw,
+  NULL::numeric AS available_power_mw,
+  hf."BUILDING_SQUARE_FOOTAGE"::numeric AS square_footage,
+  c.commissioned_semantic,
+  c.lease_or_own,
+  hf."FACILITY_STATUS"::text AS status_label,
+  hf."ADDRESS"::text AS address,
+  hf."CITY"::text AS city,
+  hf."STATE"::text AS state,
+  ST_AsGeoJSON(c.geom)::jsonb AS geom_json
+FROM candidates AS c
 LEFT JOIN mirror."HAWK_PROVIDER_PROFILE" AS p
-  ON p."PROVIDER_PROFILE_ID"::text = s.provider_id::text
-, bounds
-WHERE s.geom_3857 && bounds.bbox_3857
-  AND ST_Intersects(s.geom_3857, bounds.bbox_3857)
-  AND s.provider_id IS NOT NULL
-LIMIT $5;`,
+  ON p."PROVIDER_PROFILE_ID"::text = c.provider_id::text
+LEFT JOIN LATERAL (
+  SELECT (entry->>'id')::bigint AS mirror_id
+  FROM jsonb_array_elements(c.source_row_ids) AS entry
+  WHERE entry->>'table' = 'HYPERSCALE_FACILITY'
+    AND entry ? 'id'
+  LIMIT 1
+) AS src ON TRUE
+LEFT JOIN mirror."HYPERSCALE_FACILITY" AS hf
+  ON hf."ID" = src.mirror_id;`,
   },
   facilities_polygon_colocation: {
     name: "facilities_polygon_colocation",
@@ -103,13 +175,37 @@ SELECT
   f.provider_id,
   COALESCE(NULLIF(BTRIM(p."NAME"), ''), f.provider_id::text) AS provider_name,
   COALESCE(f.county_fips, ''::text) AS county_fips,
+  COALESCE(NULLIF(BTRIM(f.state_abbrev), ''), NULLIF(BTRIM(l."STATE"), '')) AS state_abbrev,
   f.commissioned_power_mw,
+  f.planned_power_mw,
+  f.under_construction_power_mw,
+  f.available_power_mw,
+  psi."SQUARE_FOOTAGE"::numeric AS square_footage,
   f.commissioned_semantic,
   NULL::text AS lease_or_own,
+  lc."SECONDARY_CLASSIFICATION"::text AS status_label,
+  l."ADDRESS_LINE1"::text AS address,
+  l."CITY"::text AS city,
+  l."STATE"::text AS state,
   ST_AsGeoJSON(f.geom)::jsonb AS geom_json
 FROM serve.facility_site AS f
 LEFT JOIN mirror."HAWK_PROVIDER_PROFILE" AS p
   ON p."PROVIDER_PROFILE_ID"::text = f.provider_id::text
+LEFT JOIN LATERAL (
+  SELECT
+    MAX(entry->>'facility_location_id') FILTER (WHERE entry ? 'facility_location_id')
+      AS facility_location_id,
+    MAX(entry->>'power_space_info_id') FILTER (WHERE entry ? 'power_space_info_id')
+      AS power_space_info_id,
+    MAX(entry->>'product_id') FILTER (WHERE entry ? 'product_id') AS product_id
+  FROM jsonb_array_elements(COALESCE(f.source_row_ids, '[]'::jsonb)) AS entry
+) AS src ON TRUE
+LEFT JOIN mirror."HAWK_FACILITY_LOCATION" AS l
+  ON l."FACILITY_LOCATION_ID"::text = src.facility_location_id
+LEFT JOIN mirror."HAWK_POWER_SPACE_INFO" AS psi
+  ON psi."POWER_SPACE_INFO_ID"::text = src.power_space_info_id
+LEFT JOIN mirror."HAWK_LISTING_COLO" AS lc
+  ON lc."PRODUCT_ID"::text = src.product_id
 , aoi
 WHERE f.geom_3857 && aoi.geom_3857
   AND ST_Intersects(f.geom_3857, aoi.geom_3857)
@@ -130,13 +226,31 @@ SELECT
   h.provider_id,
   COALESCE(NULLIF(BTRIM(p."NAME"), ''), h.provider_id::text) AS provider_name,
   COALESCE(h.county_fips, ''::text) AS county_fips,
+  COALESCE(NULLIF(BTRIM(h.state_abbrev), ''), NULLIF(BTRIM(hf."STATE"), '')) AS state_abbrev,
   h.commissioned_power_mw,
+  h.planned_power_mw,
+  h.under_construction_power_mw,
+  NULL::numeric AS available_power_mw,
+  hf."BUILDING_SQUARE_FOOTAGE"::numeric AS square_footage,
   h.commissioned_semantic,
   h.lease_or_own,
+  hf."FACILITY_STATUS"::text AS status_label,
+  hf."ADDRESS"::text AS address,
+  hf."CITY"::text AS city,
+  hf."STATE"::text AS state,
   ST_AsGeoJSON(h.geom)::jsonb AS geom_json
 FROM serve.hyperscale_site AS h
 LEFT JOIN mirror."HAWK_PROVIDER_PROFILE" AS p
   ON p."PROVIDER_PROFILE_ID"::text = h.provider_id::text
+LEFT JOIN LATERAL (
+  SELECT (entry->>'id')::bigint AS mirror_id
+  FROM jsonb_array_elements(h.source_row_ids) AS entry
+  WHERE entry->>'table' = 'HYPERSCALE_FACILITY'
+    AND entry ? 'id'
+  LIMIT 1
+) AS src ON TRUE
+LEFT JOIN mirror."HYPERSCALE_FACILITY" AS hf
+  ON hf."ID" = src.mirror_id
 , aoi
 WHERE h.geom_3857 && aoi.geom_3857
   AND ST_Intersects(h.geom_3857, aoi.geom_3857)
@@ -154,16 +268,37 @@ SELECT
   s.provider_id,
   COALESCE(NULLIF(BTRIM(p."NAME"), ''), s.provider_id::text) AS provider_name,
   COALESCE(s.county_fips, ''::text) AS county_fips,
+  COALESCE(NULLIF(BTRIM(s.state_abbrev), ''), NULLIF(BTRIM(l."STATE"), '')) AS state_abbrev,
   s.commissioned_power_mw,
   s.planned_power_mw,
   s.under_construction_power_mw,
   s.available_power_mw,
+  psi."SQUARE_FOOTAGE"::numeric AS square_footage,
   s.commissioned_semantic,
   NULL::text AS lease_or_own,
+  lc."SECONDARY_CLASSIFICATION"::text AS status_label,
+  l."ADDRESS_LINE1"::text AS address,
+  l."CITY"::text AS city,
+  l."STATE"::text AS state,
   ST_AsGeoJSON(s.geom)::jsonb AS geom_json
 FROM serve.facility_site AS s
 LEFT JOIN mirror."HAWK_PROVIDER_PROFILE" AS p
   ON p."PROVIDER_PROFILE_ID"::text = s.provider_id::text
+LEFT JOIN LATERAL (
+  SELECT
+    MAX(entry->>'facility_location_id') FILTER (WHERE entry ? 'facility_location_id')
+      AS facility_location_id,
+    MAX(entry->>'power_space_info_id') FILTER (WHERE entry ? 'power_space_info_id')
+      AS power_space_info_id,
+    MAX(entry->>'product_id') FILTER (WHERE entry ? 'product_id') AS product_id
+  FROM jsonb_array_elements(COALESCE(s.source_row_ids, '[]'::jsonb)) AS entry
+) AS src ON TRUE
+LEFT JOIN mirror."HAWK_FACILITY_LOCATION" AS l
+  ON l."FACILITY_LOCATION_ID"::text = src.facility_location_id
+LEFT JOIN mirror."HAWK_POWER_SPACE_INFO" AS psi
+  ON psi."POWER_SPACE_INFO_ID"::text = src.power_space_info_id
+LEFT JOIN mirror."HAWK_LISTING_COLO" AS lc
+  ON lc."PRODUCT_ID"::text = src.product_id
 WHERE s.facility_id = $1
   AND s.geom IS NOT NULL
   AND s.provider_id IS NOT NULL
@@ -180,16 +315,31 @@ SELECT
   s.provider_id,
   COALESCE(NULLIF(BTRIM(p."NAME"), ''), s.provider_id::text) AS provider_name,
   COALESCE(s.county_fips, ''::text) AS county_fips,
+  COALESCE(NULLIF(BTRIM(s.state_abbrev), ''), NULLIF(BTRIM(hf."STATE"), '')) AS state_abbrev,
   s.commissioned_power_mw,
   s.planned_power_mw,
   s.under_construction_power_mw,
   NULL::numeric AS available_power_mw,
+  hf."BUILDING_SQUARE_FOOTAGE"::numeric AS square_footage,
   s.commissioned_semantic,
   s.lease_or_own,
+  hf."FACILITY_STATUS"::text AS status_label,
+  hf."ADDRESS"::text AS address,
+  hf."CITY"::text AS city,
+  hf."STATE"::text AS state,
   ST_AsGeoJSON(s.geom)::jsonb AS geom_json
 FROM serve.hyperscale_site AS s
 LEFT JOIN mirror."HAWK_PROVIDER_PROFILE" AS p
   ON p."PROVIDER_PROFILE_ID"::text = s.provider_id::text
+LEFT JOIN LATERAL (
+  SELECT (entry->>'id')::bigint AS mirror_id
+  FROM jsonb_array_elements(s.source_row_ids) AS entry
+  WHERE entry->>'table' = 'HYPERSCALE_FACILITY'
+    AND entry ? 'id'
+  LIMIT 1
+) AS src ON TRUE
+LEFT JOIN mirror."HYPERSCALE_FACILITY" AS hf
+  ON hf."ID" = src.mirror_id
 WHERE s.hyperscale_id = $1
   AND s.geom IS NOT NULL
   AND s.provider_id IS NOT NULL

@@ -27,12 +27,12 @@ export function useMapOverlaysDisplay(
       )
   );
   const isSelectionSummaryVisible = computed(
-    () => options.args.measureState.value.selectionRing !== null
+    () => options.args.sketchMeasureState.value.completedAreaGeometry !== null
   );
   const isMeasureDrawing = computed(
     () =>
-      options.args.measureState.value.mode === "area" &&
-      !options.args.measureState.value.isSelectionComplete
+      options.args.sketchMeasureState.value.mode === "area" &&
+      !options.args.sketchMeasureState.value.isAreaComplete
   );
   const isQuickViewVisible = computed(
     () =>

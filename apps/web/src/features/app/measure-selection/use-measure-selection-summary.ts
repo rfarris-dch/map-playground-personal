@@ -14,6 +14,16 @@ export function useMeasureSelectionSummary(options: UseAppShellMeasureSelectionO
   let measureSelectionRequestSequence = 0;
 
   async function refreshMeasureSelectionSummary(): Promise<void> {
+    if (options.outputMode.value !== "analysis") {
+      measureSelectionAbortController?.abort();
+      measureSelectionAbortController = null;
+      measureSelectionRequestSequence += 1;
+      isMeasureSelectionLoading.value = false;
+      measureSelectionError.value = null;
+      measureSelectionSummary.value = null;
+      return;
+    }
+
     const selectionRing = options.measureState.value.selectionRing;
     if (selectionRing === null) {
       measureSelectionAbortController?.abort();
@@ -58,6 +68,7 @@ export function useMeasureSelectionSummary(options: UseAppShellMeasureSelectionO
     [
       () => options.measureState.value.selectionRing,
       () => options.expectedParcelsIngestionRunId.value,
+      () => options.outputMode.value,
       () => options.visiblePerspectives.value.colocation,
       () => options.visiblePerspectives.value.hyperscale,
     ],

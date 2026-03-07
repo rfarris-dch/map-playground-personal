@@ -2,24 +2,31 @@ import type {
   MapLayerControlsPanelEmits,
   MapLayerControlsPanelProps,
 } from "@/features/app/components/map-layer-controls-panel.types";
+import type { MapOverlayActionsEmits } from "@/features/app/components/map-overlay-actions.types";
 import type {
-  MapMeasureToolsEmits,
-  MapMeasureToolsProps,
-} from "@/features/app/components/map-measure-tools.types";
+  MapSelectionToolsEmits,
+  MapSelectionToolsProps,
+} from "@/features/app/components/map-selection-tools.types";
 import type {
-  MapOverlayActionsEmits,
-  MapOverlayActionsProps,
-} from "@/features/app/components/map-overlay-actions.types";
+  MapSketchMeasureToolsEmits,
+  MapSketchMeasureToolsProps,
+} from "@/features/app/components/map-sketch-measure-tools.types";
 
 export interface MapPageControlsProps
   extends MapLayerControlsPanelProps,
-    MapMeasureToolsProps,
-    MapOverlayActionsProps {}
+    MapSelectionToolsProps,
+    MapSketchMeasureToolsProps {
+  readonly overlaysBlockedReason: string | null;
+  readonly quickViewActive: boolean;
+  readonly quickViewDisabledReason: string | null;
+  readonly scannerActive: boolean;
+  readonly selectionDisabledReason: string | null;
+}
 
 export interface MapPageControlsEmits
   extends Omit<MapLayerControlsPanelEmits, "toggle-panel">,
-    Omit<MapMeasureToolsEmits, "toggle-panel">,
+    MapSelectionToolsEmits,
+    MapSketchMeasureToolsEmits,
     MapOverlayActionsEmits {
   "toggle-layer-panel": [];
-  "toggle-measure-panel": [];
 }

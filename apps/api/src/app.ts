@@ -29,6 +29,23 @@ const DEFAULT_REQUEST_BODY_LIMIT_BYTES = parsePositiveIntFlag(
   1024 * 1024
 );
 const DEFAULT_REQUEST_TIMEOUT_MS = parsePositiveIntFlag(process.env.API_REQUEST_TIMEOUT_MS, 30_000);
+const DEFAULT_SELECTION_REQUEST_TIMEOUT_MS = parsePositiveIntFlag(
+  process.env.API_SELECTION_REQUEST_TIMEOUT_MS,
+  180_000
+);
+const DEFAULT_PARCELS_REQUEST_TIMEOUT_MS = parsePositiveIntFlag(
+  process.env.API_PARCELS_REQUEST_TIMEOUT_MS,
+  180_000
+);
+
+const SELECTION_TIMEOUT_ROUTES = new Set<string>([
+  ApiRoutes.facilitiesSelection,
+  ApiRoutes.marketsSelection,
+]);
+const PARCELS_TIMEOUT_ROUTES = new Set<string>([
+  `${ApiRoutes.parcels}/enrich`,
+  `${ApiRoutes.parcels}/lookup`,
+]);
 
 function resolvePositiveIntOverride(value: number | undefined, fallback: number): number {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
@@ -48,7 +65,27 @@ function resolveApiAppOptions(options: CreateApiAppOptions): ApiAppOptions {
       options.requestTimeoutMs,
       DEFAULT_REQUEST_TIMEOUT_MS
     ),
+    selectionRequestTimeoutMs: resolvePositiveIntOverride(
+      options.selectionRequestTimeoutMs,
+      DEFAULT_SELECTION_REQUEST_TIMEOUT_MS
+    ),
+    parcelsRequestTimeoutMs: resolvePositiveIntOverride(
+      options.parcelsRequestTimeoutMs,
+      DEFAULT_PARCELS_REQUEST_TIMEOUT_MS
+    ),
   };
+}
+
+function resolveRequestTimeoutMsForPath(path: string, options: ApiAppOptions): number {
+  if (PARCELS_TIMEOUT_ROUTES.has(path)) {
+    return options.parcelsRequestTimeoutMs;
+  }
+
+  if (SELECTION_TIMEOUT_ROUTES.has(path)) {
+    return options.selectionRequestTimeoutMs;
+  }
+
+  return options.requestTimeoutMs;
 }
 
 function resolveInboundRequestId(c: Context): string {
@@ -98,16 +135,18 @@ export function createApiApp(options: CreateApiAppOptions = {}): Hono {
     })
   );
 
-  app.use(
-    "/api/*",
-    timeout(
-      resolvedOptions.requestTimeoutMs,
+  app.use("/api/*", (c, next) => {
+    const requestTimeoutMs = resolveRequestTimeoutMsForPath(c.req.path, resolvedOptions);
+    const timeoutMiddleware = timeout(
+      requestTimeoutMs,
       () =>
         new HTTPException(408, {
           message: "request timeout",
         })
-    )
-  );
+    );
+
+    return timeoutMiddleware(c, next);
+  });
 
   app.onError((error, c) => {
     const requestIdValue = getOrCreateRequestId(c, "api");

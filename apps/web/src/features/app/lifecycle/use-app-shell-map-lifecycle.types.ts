@@ -1,4 +1,4 @@
-import type { FacilitiesFeatureCollection } from "@map-migration/contracts";
+import type { FacilitiesFeatureCollection, MapContextTransfer } from "@map-migration/contracts";
 import type { IMap, MapControl } from "@map-migration/map-engine";
 import type { ComputedRef, ShallowRef } from "vue";
 import type {
@@ -21,7 +21,6 @@ import type {
   FacilityHoverState,
 } from "@/features/facilities/hover.types";
 import type { LayerRuntimeController } from "@/features/layers/layer-runtime.types";
-import type { MeasureLayerController, MeasureState } from "@/features/measure/measure.types";
 import type {
   ParcelsLayerController,
   ParcelsStatus,
@@ -29,6 +28,10 @@ import type {
 } from "@/features/parcels/parcels.types";
 import type { PowerLayerVisibilityController } from "@/features/power/power.types";
 import type { PowerHoverController, PowerHoverState } from "@/features/power/power-hover.types";
+import type {
+  SketchMeasureLayerController,
+  SketchMeasureState,
+} from "@/features/sketch-measure/sketch-measure.types";
 import type { WaterLayerVisibilityController } from "@/features/water/water.types";
 
 export interface AppShellFiberLifecycleController {
@@ -56,10 +59,10 @@ export interface AppShellMapLifecycleLayerRefs {
   readonly boundaryControllers: ShallowRef<BoundaryControllerState>;
   readonly facilitiesControllers: ShallowRef<readonly FacilitiesLayerController[]>;
   readonly facilitiesHoverController: ShallowRef<FacilitiesHoverController | null>;
-  readonly measureController: ShallowRef<MeasureLayerController | null>;
   readonly parcelsController: ShallowRef<ParcelsLayerController | null>;
   readonly powerControllers: ShallowRef<readonly PowerLayerVisibilityController[]>;
   readonly powerHoverController: ShallowRef<PowerHoverController | null>;
+  readonly sketchMeasureController: ShallowRef<SketchMeasureLayerController | null>;
   readonly waterController: ShallowRef<WaterLayerVisibilityController | null>;
 }
 
@@ -73,10 +76,10 @@ export interface AppShellMapLifecycleStateRefs {
   readonly hoveredFacility: ShallowRef<FacilityHoverState | null>;
   readonly hoveredPower: ShallowRef<PowerHoverState | null>;
   readonly hyperscaleViewportFeatures: ShallowRef<FacilitiesFeatureCollection["features"]>;
-  readonly measureState: ShallowRef<MeasureState>;
   readonly parcelsStatus: ShallowRef<ParcelsStatus>;
   readonly selectedFacility: ShallowRef<SelectedFacilityRef | null>;
   readonly selectedParcel: ShallowRef<SelectedParcelRef | null>;
+  readonly sketchMeasureState: ShallowRef<SketchMeasureState>;
 }
 
 export interface AppShellMapLifecycleSelectionActions {
@@ -90,6 +93,7 @@ export interface UseAppShellMapLifecycleOptions {
   readonly actions: AppShellMapLifecycleSelectionActions;
   readonly areFacilityInteractionsEnabled: ComputedRef<boolean>;
   readonly fiber: AppShellFiberLifecycleController;
+  readonly initialViewport?: MapContextTransfer["viewport"];
   readonly layers: AppShellMapLifecycleLayerRefs;
   readonly runtime: AppShellMapLifecycleRuntimeRefs;
   readonly state: AppShellMapLifecycleStateRefs;

@@ -1,5 +1,6 @@
 import type { FacilityPerspective } from "@map-migration/contracts";
 import type {
+  AppShellToolPanel,
   BoundaryFacetOptionsState,
   BoundaryFacetSelectionState,
   BoundaryVisibilityState,
@@ -19,9 +20,9 @@ import {
 } from "@/features/app/visibility/app-shell-visibility.service";
 import type { BasemapVisibilityState } from "@/features/basemap/basemap.types";
 import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";
-import type { MeasureState } from "@/features/measure/measure.types";
 import type { ParcelsStatus } from "@/features/parcels/parcels.types";
 import type { PowerVisibilityState } from "@/features/power/power.types";
+import type { SketchMeasureState } from "@/features/sketch-measure/sketch-measure.types";
 
 export function initialParcelsStatus(): ParcelsStatus {
   return {
@@ -29,17 +30,22 @@ export function initialParcelsStatus(): ParcelsStatus {
   };
 }
 
-export function initialMeasureState(): MeasureState {
+export function initialSketchMeasureState(): SketchMeasureState {
   return {
     areaShape: "freeform",
     mode: "off",
     vertexCount: 0,
     distanceKm: null,
     areaSqKm: null,
-    canFinishSelection: false,
-    isSelectionComplete: false,
-    selectionRing: null,
+    canFinishArea: false,
+    completedAreaGeometry: null,
+    draftAreaGeometry: null,
+    isAreaComplete: false,
   };
+}
+
+export function initialActiveToolPanel(): AppShellToolPanel {
+  return null;
 }
 
 export function initialPerspectiveStatusState(): PerspectiveStatusState {

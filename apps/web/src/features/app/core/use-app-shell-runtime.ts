@@ -1,17 +1,26 @@
+import type { MapContextTransfer } from "@map-migration/contracts";
 import { computed } from "vue";
 import { useAppShellFiber } from "@/features/app/fiber/use-app-shell-fiber";
 import { useAppShellMapLifecycle } from "@/features/app/lifecycle/use-app-shell-map-lifecycle";
-import { useAppShellMeasureSelection } from "@/features/app/measure-selection/use-app-shell-measure-selection";
 import { useMapOverlays } from "@/features/app/overlays/use-map-overlays";
 import { useAppShellSelection } from "@/features/app/selection/use-app-shell-selection";
+import { useAppShellSelectionAnalysis } from "@/features/app/selection/use-app-shell-selection-analysis";
 import { useAppShellVisibility } from "@/features/app/visibility/use-app-shell-visibility";
 import type { UseAppShellRuntimeResult } from "./use-app-shell.types";
 import { useAppShellState } from "./use-app-shell-state";
 import { useAppShellStatus } from "./use-app-shell-status";
 
-export function useAppShellRuntime(): UseAppShellRuntimeResult {
+interface UseAppShellRuntimeOptions {
+  readonly initialViewport?: MapContextTransfer["viewport"];
+}
+
+export function useAppShellRuntime(
+  options: UseAppShellRuntimeOptions = {}
+): UseAppShellRuntimeResult {
   const state = useAppShellState();
-  const areFacilityInteractionsEnabled = computed(() => state.measureState.value.mode === "off");
+  const areFacilityInteractionsEnabled = computed(
+    () => state.sketchMeasureState.value.mode === "off"
+  );
 
   const status = useAppShellStatus({
     facilitiesStatus: state.facilitiesStatus,
@@ -44,20 +53,20 @@ export function useAppShellRuntime(): UseAppShellRuntimeResult {
 
   const mapOverlays = useMapOverlays({
     map: state.map,
-    measureState: state.measureState,
     expectedParcelsIngestionRunId: status.expectedParcelsIngestionRunId,
     facilitiesStatus: state.facilitiesStatus,
     visiblePerspectives: visibility.visiblePerspectives,
     colocationViewportFeatures: state.colocationViewportFeatures,
     hyperscaleViewportFeatures: state.hyperscaleViewportFeatures,
-    clearMeasure: state.clearMeasure,
-    finishMeasureSelection: state.finishMeasureSelection,
-    setMeasureMode: state.setMeasureMode,
+    clearSketchMeasure: state.clearSketchMeasure,
+    finishSketchMeasureArea: state.finishSketchMeasureArea,
+    setSketchMeasureMode: state.setSketchMeasureMode,
+    sketchMeasureState: state.sketchMeasureState,
   });
 
-  const measureSelection = useAppShellMeasureSelection({
+  const selectionAnalysis = useAppShellSelectionAnalysis({
     expectedParcelsIngestionRunId: status.expectedParcelsIngestionRunId,
-    measureState: state.measureState,
+    selectionGeometry: state.selectionGeometry,
     visiblePerspectives: visibility.visiblePerspectives,
   });
 
@@ -70,14 +79,15 @@ export function useAppShellRuntime(): UseAppShellRuntimeResult {
     },
     areFacilityInteractionsEnabled,
     fiber,
+    initialViewport: options.initialViewport,
     layers: {
       boundaryControllers: state.boundaryControllers,
       facilitiesControllers: state.facilitiesControllers,
       facilitiesHoverController: state.facilitiesHoverController,
-      measureController: state.measureController,
       parcelsController: state.parcelsController,
       powerControllers: state.powerControllers,
       powerHoverController: state.powerHoverController,
+      sketchMeasureController: state.sketchMeasureController,
       waterController: state.waterController,
     },
     runtime: {
@@ -99,10 +109,10 @@ export function useAppShellRuntime(): UseAppShellRuntimeResult {
       hoveredFacility: state.hoveredFacility,
       hoveredPower: state.hoveredPower,
       hyperscaleViewportFeatures: state.hyperscaleViewportFeatures,
-      measureState: state.measureState,
       parcelsStatus: state.parcelsStatus,
       selectedFacility: selection.selectedFacility,
       selectedParcel: selection.selectedParcel,
+      sketchMeasureState: state.sketchMeasureState,
     },
     visibility,
   });
@@ -114,7 +124,7 @@ export function useAppShellRuntime(): UseAppShellRuntimeResult {
     visibility,
     fiber,
     mapOverlays,
-    measureSelection,
+    selectionAnalysis,
     mapLifecycle,
   };
 }

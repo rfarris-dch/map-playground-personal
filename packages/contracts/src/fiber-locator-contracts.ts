@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ResponseMetaSchema } from "@/shared-contracts";
+import { ResponseMetaSchema } from "./shared-contracts";
 
 export type {
   FiberLocatorCatalogResponse,

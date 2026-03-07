@@ -5,6 +5,8 @@ import type {
   FiberLocatorStatus,
 } from "@/features/fiber-locator/fiber-locator.types";
 
+export type AppShellToolPanel = "layers" | "selection" | "sketch-measure" | null;
+
 export interface PerspectiveStatusState {
   readonly colocation: FacilitiesStatus;
   readonly hyperscale: FacilitiesStatus;

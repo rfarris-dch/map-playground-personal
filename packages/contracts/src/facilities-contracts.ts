@@ -6,7 +6,7 @@ import {
   PointGeometrySchema,
   PolygonGeometrySchema,
   ResponseMetaSchema,
-} from "@/shared-contracts";
+} from "./shared-contracts";
 
 export type {
   FacilitiesDetailFeature,
@@ -24,9 +24,18 @@ export const FacilitiesPropertiesSchema = z.object({
   providerId: z.string(),
   providerName: z.string(),
   countyFips: z.string(),
+  stateAbbrev: z.string().nullable(),
   commissionedPowerMw: z.number().nullable(),
+  plannedPowerMw: z.number().nullable(),
+  underConstructionPowerMw: z.number().nullable(),
+  availablePowerMw: z.number().nullable(),
+  squareFootage: z.number().nullable(),
   commissionedSemantic: CommissionedSemanticSchema,
   leaseOrOwn: LeaseOrOwnSchema.nullable(),
+  statusLabel: z.string().nullable(),
+  address: z.string().nullable(),
+  city: z.string().nullable(),
+  state: z.string().nullable(),
 });
 
 export const FacilitiesFeatureSchema = z.object({
@@ -79,12 +88,18 @@ export const FacilitiesDetailPropertiesSchema = z.object({
   providerId: z.string(),
   providerName: z.string(),
   countyFips: z.string(),
+  stateAbbrev: z.string().nullable(),
   commissionedSemantic: CommissionedSemanticSchema,
   leaseOrOwn: LeaseOrOwnSchema.nullable(),
   commissionedPowerMw: z.number().nullable(),
   plannedPowerMw: z.number().nullable(),
   underConstructionPowerMw: z.number().nullable(),
   availablePowerMw: z.number().nullable(),
+  squareFootage: z.number().nullable(),
+  statusLabel: z.string().nullable(),
+  address: z.string().nullable(),
+  city: z.string().nullable(),
+  state: z.string().nullable(),
 });
 
 export const FacilitiesDetailFeatureSchema = z.object({

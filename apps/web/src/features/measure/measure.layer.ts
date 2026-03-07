@@ -79,7 +79,6 @@ export function mountMeasureLayer(
   options: MeasureLayerOptions = {}
 ): MeasureLayerController {
   const sourceId = "measure.overlay";
-  const polygonLayerId = "measure.overlay.area";
   const lineLayerId = "measure.overlay.line";
   const vertexLayerId = "measure.overlay.vertices";
 
@@ -161,17 +160,6 @@ export function mountMeasureLayer(
     map.addSource(sourceId, {
       type: "geojson",
       data: emptyMeasureSourceData(),
-    });
-
-    map.addLayer({
-      id: polygonLayerId,
-      type: "fill",
-      source: sourceId,
-      filter: ["==", ["get", "kind"], "area"],
-      paint: {
-        "fill-color": "#0891b2",
-        "fill-opacity": 0.14,
-      },
     });
 
     map.addLayer({

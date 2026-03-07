@@ -1,6 +1,6 @@
 import type { FacilitiesFeatureCollection, FacilityPerspective } from "@map-migration/contracts";
 import type { IMap, MapControl } from "@map-migration/map-engine";
-import { shallowRef, useTemplateRef } from "vue";
+import { computed, shallowRef, useTemplateRef } from "vue";
 import {
   initialBoundaryControllerState,
   initialBoundaryHoverByLayerState,
@@ -10,13 +10,15 @@ import type {
   BoundaryHoverByLayerState,
 } from "@/features/app/boundary/app-shell-boundary.types";
 import {
+  initialActiveToolPanel,
   initialBoundaryFacetOptionsState,
   initialBoundaryFacetSelectionState,
-  initialMeasureState,
   initialParcelsStatus,
   initialPerspectiveStatusState,
+  initialSketchMeasureState,
 } from "@/features/app/core/app-shell.defaults";
 import type {
+  AppShellToolPanel,
   BoundaryFacetOptionsState,
   BoundaryFacetSelectionState,
   PerspectiveStatusState,
@@ -29,15 +31,16 @@ import type {
   FacilityHoverState,
 } from "@/features/facilities/hover.types";
 import type { LayerRuntimeController } from "@/features/layers/layer-runtime.types";
-import type {
-  MeasureAreaShape,
-  MeasureLayerController,
-  MeasureMode,
-  MeasureState,
-} from "@/features/measure/measure.types";
 import type { ParcelsLayerController, ParcelsStatus } from "@/features/parcels/parcels.types";
 import type { PowerLayerVisibilityController } from "@/features/power/power.types";
 import type { PowerHoverController, PowerHoverState } from "@/features/power/power-hover.types";
+import type {
+  SketchAreaGeometry,
+  SketchMeasureAreaShape,
+  SketchMeasureLayerController,
+  SketchMeasureMode,
+  SketchMeasureState,
+} from "@/features/sketch-measure/sketch-measure.types";
 import type { WaterLayerVisibilityController } from "@/features/water/water.types";
 import type { UseAppShellStateResult } from "./use-app-shell-state.types";
 
@@ -57,7 +60,7 @@ export function useAppShellState(): UseAppShellStateResult {
   const layerRuntime = shallowRef<LayerRuntimeController | null>(null);
   const facilitiesHoverController = shallowRef<FacilitiesHoverController | null>(null);
   const powerHoverController = shallowRef<PowerHoverController | null>(null);
-  const measureController = shallowRef<MeasureLayerController | null>(null);
+  const sketchMeasureController = shallowRef<SketchMeasureLayerController | null>(null);
   const basemapLayerController = shallowRef<BasemapLayerVisibilityController | null>(null);
   const waterController = shallowRef<WaterLayerVisibilityController | null>(null);
   const disposePmtilesProtocol = shallowRef<(() => void) | null>(null);
@@ -71,11 +74,15 @@ export function useAppShellState(): UseAppShellStateResult {
   const boundaryFacetSelection = shallowRef<BoundaryFacetSelectionState>(
     initialBoundaryFacetSelectionState()
   );
-  const measureState = shallowRef<MeasureState>(initialMeasureState());
+  const sketchMeasureState = shallowRef<SketchMeasureState>(initialSketchMeasureState());
+  const selectionGeometry = shallowRef<SketchAreaGeometry | null>(null);
   const colocationViewportFeatures = shallowRef<FacilitiesFeatureCollection["features"]>([]);
   const hyperscaleViewportFeatures = shallowRef<FacilitiesFeatureCollection["features"]>([]);
-  const isLayerPanelOpen = shallowRef<boolean>(false);
-  const isMeasurePanelOpen = shallowRef<boolean>(false);
+  const activeToolPanel = shallowRef<AppShellToolPanel>(initialActiveToolPanel());
+
+  const isLayerPanelOpen = computed(() => activeToolPanel.value === "layers");
+  const isSketchMeasurePanelOpen = computed(() => activeToolPanel.value === "sketch-measure");
+  const isSelectionPanelOpen = computed(() => activeToolPanel.value === "selection");
 
   function setViewportFacilities(
     perspective: FacilityPerspective,
@@ -89,43 +96,61 @@ export function useAppShellState(): UseAppShellStateResult {
     hyperscaleViewportFeatures.value = features;
   }
 
-  function setMeasureMode(mode: MeasureMode): void {
-    measureController.value?.setMode(mode);
+  function togglePanel(panel: "layers" | "selection" | "sketch-measure"): void {
+    activeToolPanel.value = activeToolPanel.value === panel ? null : panel;
   }
 
-  function setMeasureAreaShape(shape: MeasureAreaShape): void {
-    measureController.value?.setAreaShape(shape);
+  function setSketchMeasureMode(mode: SketchMeasureMode): void {
+    sketchMeasureController.value?.setMode(mode);
   }
 
-  function finishMeasureSelection(): void {
-    measureController.value?.finishSelection();
+  function setSketchMeasureAreaShape(shape: SketchMeasureAreaShape): void {
+    sketchMeasureController.value?.setAreaShape(shape);
   }
 
-  function clearMeasure(): void {
-    measureController.value?.clear();
+  function finishSketchMeasureArea(): void {
+    sketchMeasureController.value?.finishArea();
+  }
+
+  function clearSketchMeasure(): void {
+    sketchMeasureController.value?.clear();
+  }
+
+  function useCompletedSketchAsSelection(): void {
+    const completedGeometry = sketchMeasureState.value.completedAreaGeometry;
+    if (completedGeometry === null) {
+      return;
+    }
+
+    selectionGeometry.value = completedGeometry;
+    activeToolPanel.value = "selection";
+  }
+
+  function clearSelectionGeometry(): void {
+    selectionGeometry.value = null;
+    if (activeToolPanel.value === "selection") {
+      activeToolPanel.value = null;
+    }
   }
 
   function toggleLayerPanel(): void {
-    const nextLayerPanelOpen = !isLayerPanelOpen.value;
-
-    isLayerPanelOpen.value = nextLayerPanelOpen;
-
-    if (nextLayerPanelOpen) {
-      isMeasurePanelOpen.value = false;
-    }
+    togglePanel("layers");
   }
 
-  function toggleMeasurePanel(): void {
-    const nextMeasurePanelOpen = !isMeasurePanelOpen.value;
+  function toggleSketchMeasurePanel(): void {
+    togglePanel("sketch-measure");
+  }
 
-    isMeasurePanelOpen.value = nextMeasurePanelOpen;
-
-    if (nextMeasurePanelOpen) {
-      isLayerPanelOpen.value = false;
+  function toggleSelectionPanel(): void {
+    if (selectionGeometry.value === null) {
+      return;
     }
+
+    togglePanel("selection");
   }
 
   return {
+    activeToolPanel,
     mapContainer,
     map,
     hoveredFacility,
@@ -139,7 +164,7 @@ export function useAppShellState(): UseAppShellStateResult {
     layerRuntime,
     facilitiesHoverController,
     powerHoverController,
-    measureController,
+    sketchMeasureController,
     basemapLayerController,
     waterController,
     disposePmtilesProtocol,
@@ -149,17 +174,22 @@ export function useAppShellState(): UseAppShellStateResult {
     parcelsStatus,
     boundaryFacetOptions,
     boundaryFacetSelection,
-    measureState,
+    sketchMeasureState,
+    selectionGeometry,
     colocationViewportFeatures,
     hyperscaleViewportFeatures,
     isLayerPanelOpen,
-    isMeasurePanelOpen,
+    isSketchMeasurePanelOpen,
+    isSelectionPanelOpen,
     setViewportFacilities,
-    setMeasureMode,
-    setMeasureAreaShape,
-    finishMeasureSelection,
-    clearMeasure,
+    setSketchMeasureMode,
+    setSketchMeasureAreaShape,
+    finishSketchMeasureArea,
+    clearSketchMeasure,
+    useCompletedSketchAsSelection,
+    clearSelectionGeometry,
     toggleLayerPanel,
-    toggleMeasurePanel,
+    toggleSketchMeasurePanel,
+    toggleSelectionPanel,
   };
 }

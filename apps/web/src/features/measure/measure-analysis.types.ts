@@ -9,12 +9,17 @@ export interface MeasureSelectedFacility extends SpatialAnalysisFacilityRecord {
 }
 
 export interface MeasurePerspectiveSelectionSummary {
+  readonly availablePowerMw: number;
   readonly commissionedPowerMw: number;
   readonly count: number;
   readonly leasedCount: number;
   readonly operationalCount: number;
+  readonly pipelinePowerMw: number;
   readonly plannedCount: number;
+  readonly plannedPowerMw: number;
+  readonly squareFootage: number;
   readonly underConstructionCount: number;
+  readonly underConstructionPowerMw: number;
   readonly unknownCount: number;
 }
 

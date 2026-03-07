@@ -16,7 +16,6 @@ import {
 import { buildFacilitiesRouteMeta } from "@/geo/facilities/route/facilities-route-meta.service";
 import {
   FACILITIES_SELECTION_MAX_POLYGON_JSON_CHARS,
-  facilitiesSelectionBboxExceedsLimits,
   resolveFacilitiesSelectionGeometry,
 } from "@/geo/facilities/route/facilities-route-policy.service";
 import { queryFacilitiesByPolygon } from "@/geo/facilities/route/facilities-route-query.service";
@@ -62,15 +61,6 @@ export function registerFacilitiesSelectionRoute<E extends Env>(app: Hono<E>): v
         httpStatus: 422,
         code: "POLICY_REJECTED",
         message: "selection polygon AOI payload is too large",
-      });
-    }
-
-    if (facilitiesSelectionBboxExceedsLimits(geometry.bbox)) {
-      return jsonError(c, {
-        requestId,
-        httpStatus: 422,
-        code: "POLICY_REJECTED",
-        message: "selection polygon AOI exceeds configured bbox limits",
       });
     }
 

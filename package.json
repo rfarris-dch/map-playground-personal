@@ -7,9 +7,9 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "turbo run dev --filter=@map-migration/api --filter=@map-migration/web",
-    "dev:all": "turbo run dev",
-    "dev:api": "turbo run dev --filter=@map-migration/api",
+    "dev": "bash ./scripts/stop-api-dev-port.sh api web && turbo run dev --filter=@map-migration/api --filter=@map-migration/web",
+    "dev:all": "bash ./scripts/stop-api-dev-port.sh all && turbo run dev --concurrency=20",
+    "dev:api": "bash ./scripts/stop-api-dev-port.sh api && turbo run dev --filter=@map-migration/api",
     "dev:api:sync-worker": "bun run --cwd apps/api dev:sync-worker",
     "dev:docs": "turbo run dev --filter=@map-migration/docs",
     "dev:web": "turbo run dev --filter=@map-migration/web",
@@ -32,6 +32,8 @@
     "check": "biome check .",
     "ci:contracts": "turbo run typecheck --filter=@map-migration/contracts --filter=@map-migration/api --filter=@map-migration/web && turbo run test --filter=@map-migration/contracts --filter=@map-migration/api",
     "sync:hyperscale": "bash ./scripts/refresh-hyperscale.sh",
+    "init:market-boundaries-schema": "bash ./scripts/init-market-boundaries-schema.sh",
+    "sync:market-boundaries": "bash ./scripts/refresh-market-boundaries.sh",
     "init:parcels-schema": "bash ./scripts/init-parcels-schema.sh",
     "load:parcels-canonical": "bash ./scripts/load-parcels-canonical.sh",
     "tiles:build:parcels": "bash ./scripts/build-parcels-draw-pmtiles.sh",

@@ -17,7 +17,7 @@ export function useAppShellMapLifecycle(options: UseAppShellMapLifecycleOptions)
   }
 
   watch(
-    () => options.state.measureState.value.mode,
+    () => options.state.sketchMeasureState.value.mode,
     (mode) => {
       if (mode === "off") {
         return;

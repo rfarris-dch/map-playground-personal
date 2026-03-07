@@ -15,7 +15,9 @@ export interface FacilityTableRow {
 }
 
 export interface FacilityDetailRow {
+  readonly address: string | null | undefined;
   readonly available_power_mw: number | string | null | undefined;
+  readonly city: string | null | undefined;
   readonly commissioned_power_mw: number | string | null | undefined;
   readonly commissioned_semantic: string | null | undefined;
   readonly county_fips: string;
@@ -26,10 +28,17 @@ export interface FacilityDetailRow {
   readonly planned_power_mw: number | string | null | undefined;
   readonly provider_id: string | null | undefined;
   readonly provider_name: string | null | undefined;
+  readonly square_footage: number | string | null | undefined;
+  readonly state: string | null | undefined;
+  readonly state_abbrev: string | null | undefined;
+  readonly status_label: string | null | undefined;
   readonly under_construction_power_mw: number | string | null | undefined;
 }
 
 export interface FacilitiesBboxRow {
+  readonly address: string | null | undefined;
+  readonly available_power_mw: number | string | null | undefined;
+  readonly city: string | null | undefined;
   readonly commissioned_power_mw: number | string | null | undefined;
   readonly commissioned_semantic: string | null | undefined;
   readonly county_fips: string;
@@ -37,8 +46,14 @@ export interface FacilitiesBboxRow {
   readonly facility_name: string | null | undefined;
   readonly geom_json: unknown;
   readonly lease_or_own: string | null | undefined;
+  readonly planned_power_mw: number | string | null | undefined;
   readonly provider_id: string | null | undefined;
   readonly provider_name: string | null | undefined;
+  readonly square_footage: number | string | null | undefined;
+  readonly state: string | null | undefined;
+  readonly state_abbrev: string | null | undefined;
+  readonly status_label: string | null | undefined;
+  readonly under_construction_power_mw: number | string | null | undefined;
 }
 
 export interface FacilityTableCountRow {

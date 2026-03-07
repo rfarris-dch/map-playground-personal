@@ -1,8 +1,8 @@
 import type { z } from "zod";
-import type { ParcelGeometryMode, ParcelProfile } from "@/parcels-contracts";
-import type { BBox, FacilityPerspective, SourceMode } from "@/shared-contracts";
-import type { SortDirection } from "@/table-contracts";
 import type { HealthSchema } from "./api-contracts";
+import type { ParcelGeometryMode, ParcelProfile } from "./parcels-contracts";
+import type { BBox, FacilityPerspective, SourceMode } from "./shared-contracts";
+import type { SortDirection } from "./table-contracts";
 
 export interface DataVersionResolveOptions {
   readonly env?: Readonly<Record<string, string | undefined>>;
@@ -46,6 +46,7 @@ export interface ApiRoutesTable {
   readonly fiberLocatorVectorTile: string;
   readonly health: string;
   readonly markets: string;
+  readonly marketsSelection: string;
   readonly parcels: string;
   readonly parcelsSyncStatus: string;
   readonly providers: string;

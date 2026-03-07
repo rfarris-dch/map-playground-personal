@@ -11,6 +11,7 @@
   interface SpatialAnalysisFacilitiesTableProps {
     readonly facilities: readonly SpatialAnalysisFacilityRecord[];
     readonly formatPower: (powerMw: number | null) => string;
+    readonly interactive?: boolean;
     readonly leaseSemantic?: boolean;
     readonly perspectiveDisplay?: "badge" | "dot";
     readonly powerHeading?: string;
@@ -23,6 +24,7 @@
   }>();
 
   const useBadgePerspective = computed(() => props.perspectiveDisplay === "badge");
+  const isInteractive = computed(() => props.interactive !== false);
   const useSemanticLease = computed(() => props.leaseSemantic !== false);
   const displayCoordinates = computed(() => props.showCoordinates === true);
 
@@ -36,6 +38,41 @@
     }
 
     return toSpatialAnalysisSemanticLabel(value);
+  }
+
+  function locationText(facility: SpatialAnalysisFacilityRecord): string {
+    const parts = [facility.city, facility.state ?? facility.stateAbbrev].filter(
+      (value): value is string => typeof value === "string" && value.trim().length > 0
+    );
+    if (parts.length > 0) {
+      return parts.join(", ");
+    }
+
+    if (typeof facility.address === "string" && facility.address.trim().length > 0) {
+      return facility.address;
+    }
+
+    return "-";
+  }
+
+  function pipelinePowerMw(facility: SpatialAnalysisFacilityRecord): number {
+    return (facility.plannedPowerMw ?? 0) + (facility.underConstructionPowerMw ?? 0);
+  }
+
+  function squareFootageText(value: number | null): string {
+    if (value === null || !Number.isFinite(value) || value <= 0) {
+      return "-";
+    }
+
+    return Math.round(value).toLocaleString();
+  }
+
+  function statusText(facility: SpatialAnalysisFacilityRecord): string {
+    if (typeof facility.statusLabel === "string" && facility.statusLabel.trim().length > 0) {
+      return facility.statusLabel;
+    }
+
+    return toSpatialAnalysisSemanticLabel(facility.commissionedSemantic);
   }
 
   function selectFacility(facility: SpatialAnalysisFacilityRecord): void {
@@ -55,7 +92,10 @@
         <th class="px-2 py-1.5">{{ useBadgePerspective ? "Perspective" : "" }}</th>
         <th class="px-2 py-1.5">Facility</th>
         <th class="px-2 py-1.5">Provider</th>
+        <th class="px-2 py-1.5">Location</th>
         <th class="px-2 py-1.5 text-right">{{ props.powerHeading ?? "Commissioned" }}</th>
+        <th class="px-2 py-1.5 text-right">Pipeline</th>
+        <th class="px-2 py-1.5 text-right">Square Ft</th>
         <th class="px-2 py-1.5">Status</th>
         <th class="px-2 py-1.5">Lease/Own</th>
         <th v-if="displayCoordinates" class="px-2 py-1.5 text-right">Lng</th>
@@ -66,8 +106,9 @@
       <tr
         v-for="facility in props.facilities"
         :key="`${facility.perspective}:${facility.facilityId}`"
-        class="cursor-pointer border-b border-border/40 align-top transition hover:bg-muted/20"
-        @click="selectFacility(facility)"
+        class="border-b border-border/40 align-top transition"
+        :class="isInteractive ? 'cursor-pointer hover:bg-muted/20' : ''"
+        @click="isInteractive ? selectFacility(facility) : undefined"
       >
         <td class="px-2 py-1.5">
           <span
@@ -89,8 +130,10 @@
         <td class="max-w-[18rem] px-2 py-1.5">
           <button
             type="button"
-            class="w-full truncate text-left font-medium text-foreground/90 underline-offset-2 transition hover:text-foreground hover:underline"
-            @click.stop="selectFacility(facility)"
+            class="w-full truncate text-left font-medium text-foreground/90"
+            :class="isInteractive ? 'underline-offset-2 transition hover:text-foreground hover:underline' : 'cursor-default'"
+            :disabled="!isInteractive"
+            @click.stop="isInteractive ? selectFacility(facility) : undefined"
           >
             {{ facility.facilityName }}
           </button>
@@ -98,12 +141,19 @@
         <td class="max-w-[14rem] px-2 py-1.5">
           <div class="truncate">{{ facility.providerName }}</div>
         </td>
+        <td class="max-w-[14rem] px-2 py-1.5">
+          <div class="truncate">{{ locationText(facility) }}</div>
+        </td>
         <td class="px-2 py-1.5 text-right font-medium">
           {{ props.formatPower(facility.commissionedPowerMw) }}
         </td>
-        <td class="px-2 py-1.5">
-          {{ toSpatialAnalysisSemanticLabel(facility.commissionedSemantic) }}
+        <td class="px-2 py-1.5 text-right font-medium">
+          {{ props.formatPower(pipelinePowerMw(facility)) }}
         </td>
+        <td class="px-2 py-1.5 text-right font-medium">
+          {{ squareFootageText(facility.squareFootage) }}
+        </td>
+        <td class="px-2 py-1.5">{{ statusText(facility) }}</td>
         <td class="px-2 py-1.5">{{ leaseOrOwnText(facility.leaseOrOwn) }}</td>
         <td v-if="displayCoordinates" class="px-2 py-1.5 text-right font-mono">
           {{ toSpatialAnalysisCoordinateText(facility.coordinates[0]) }}

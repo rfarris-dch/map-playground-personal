@@ -40,6 +40,9 @@ function toScannerFacility(
   }
 
   return {
+    address: feature.properties.address,
+    availablePowerMw: feature.properties.availablePowerMw,
+    city: feature.properties.city,
     perspective: feature.properties.perspective,
     facilityId: feature.properties.facilityId,
     facilityName: feature.properties.facilityName,
@@ -47,7 +50,13 @@ function toScannerFacility(
     commissionedPowerMw: feature.properties.commissionedPowerMw,
     commissionedSemantic: feature.properties.commissionedSemantic,
     leaseOrOwn: feature.properties.leaseOrOwn,
+    plannedPowerMw: feature.properties.plannedPowerMw,
     coordinates,
+    squareFootage: feature.properties.squareFootage,
+    state: feature.properties.state,
+    stateAbbrev: feature.properties.stateAbbrev,
+    statusLabel: feature.properties.statusLabel,
+    underConstructionPowerMw: feature.properties.underConstructionPowerMw,
   };
 }
 
@@ -68,12 +77,17 @@ function toScannerParcel(feature: ParcelsFeatureCollection["features"][number]):
 
 function initialPerspectiveSummary(): ScannerPerspectiveSummary {
   return {
+    availablePowerMw: 0,
     commissionedPowerMw: 0,
     count: 0,
     leasedCount: 0,
     operationalCount: 0,
+    pipelinePowerMw: 0,
     plannedCount: 0,
+    plannedPowerMw: 0,
+    squareFootage: 0,
     underConstructionCount: 0,
+    underConstructionPowerMw: 0,
     unknownCount: 0,
   };
 }
@@ -82,16 +96,28 @@ function buildPerspectiveSummary(
   facilities: readonly ScannerFacility[]
 ): ScannerPerspectiveSummary {
   return facilities.reduce<ScannerPerspectiveSummary>((summary, facility) => {
+    const availablePowerMw =
+      typeof facility.availablePowerMw === "number" ? facility.availablePowerMw : 0;
     const commissionedPowerMw =
       typeof facility.commissionedPowerMw === "number" ? facility.commissionedPowerMw : 0;
+    const plannedPowerMw =
+      typeof facility.plannedPowerMw === "number" ? facility.plannedPowerMw : 0;
+    const squareFootage = typeof facility.squareFootage === "number" ? facility.squareFootage : 0;
+    const underConstructionPowerMw =
+      typeof facility.underConstructionPowerMw === "number" ? facility.underConstructionPowerMw : 0;
 
     const nextSummary: ScannerPerspectiveSummary = {
+      availablePowerMw: summary.availablePowerMw + availablePowerMw,
       commissionedPowerMw: summary.commissionedPowerMw + commissionedPowerMw,
       count: summary.count + 1,
       leasedCount: summary.leasedCount,
       operationalCount: summary.operationalCount,
+      pipelinePowerMw: summary.pipelinePowerMw + plannedPowerMw + underConstructionPowerMw,
       plannedCount: summary.plannedCount,
+      plannedPowerMw: summary.plannedPowerMw + plannedPowerMw,
+      squareFootage: summary.squareFootage + squareFootage,
       underConstructionCount: summary.underConstructionCount,
+      underConstructionPowerMw: summary.underConstructionPowerMw + underConstructionPowerMw,
       unknownCount: summary.unknownCount,
     };
 
@@ -246,8 +272,17 @@ export function buildScannerCsv(summary: ScannerSummary): string {
     "Perspective",
     "Facility",
     "Provider",
+    "State",
+    "City",
+    "Address",
     "Commissioned Power (MW)",
+    "Planned Power (MW)",
+    "Under Construction Power (MW)",
+    "Pipeline Power (MW)",
+    "Available Power (MW)",
+    "Square Footage",
     "Commissioned Semantic",
+    "Status",
     "Lease Or Own",
     "Longitude",
     "Latitude",
@@ -257,8 +292,17 @@ export function buildScannerCsv(summary: ScannerSummary): string {
     facility.perspective,
     facility.facilityName,
     facility.providerName,
+    facility.state ?? facility.stateAbbrev ?? "",
+    facility.city ?? "",
+    facility.address ?? "",
     facility.commissionedPowerMw,
+    facility.plannedPowerMw,
+    facility.underConstructionPowerMw,
+    (facility.plannedPowerMw ?? 0) + (facility.underConstructionPowerMw ?? 0),
+    facility.availablePowerMw,
+    facility.squareFootage,
     facility.commissionedSemantic,
+    facility.statusLabel ?? "",
     facility.leaseOrOwn ?? "",
     facility.coordinates[0],
     facility.coordinates[1],

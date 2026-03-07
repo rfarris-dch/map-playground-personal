@@ -12,8 +12,8 @@ export type UseAppShellMapLifecycleResult = ReturnType<
   typeof import("@/features/app/lifecycle/use-app-shell-map-lifecycle").useAppShellMapLifecycle
 >;
 
-export type UseAppShellMeasureSelectionResult = ReturnType<
-  typeof import("@/features/app/measure-selection/use-app-shell-measure-selection").useAppShellMeasureSelection
+export type UseAppShellSelectionAnalysisResult = ReturnType<
+  typeof import("@/features/app/selection/use-app-shell-selection-analysis").useAppShellSelectionAnalysis
 >;
 
 export type UseMapOverlaysResult = ReturnType<
@@ -32,8 +32,8 @@ export interface UseAppShellRuntimeResult {
   readonly fiber: UseAppShellFiberResult;
   readonly mapLifecycle: UseAppShellMapLifecycleResult;
   readonly mapOverlays: UseMapOverlaysResult;
-  readonly measureSelection: UseAppShellMeasureSelectionResult;
   readonly selection: UseAppShellSelectionResult;
+  readonly selectionAnalysis: UseAppShellSelectionAnalysisResult;
   readonly state: UseAppShellStateResult;
   readonly status: UseAppShellStatusResult;
   readonly visibility: UseAppShellVisibilityResult;

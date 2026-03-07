@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { ApiHeaders, buildParcelLookupRoute } from "@map-migration/contracts";
+import { ApiHeaders, ApiRoutes, buildParcelLookupRoute } from "@map-migration/contracts";
 import { createApiApp } from "@/app";
 
 describe("api hardening middleware", () => {
@@ -58,6 +58,63 @@ describe("api hardening middleware", () => {
     expect(response.status).toBe(408);
     expect(payload.error.code).toBe("REQUEST_TIMEOUT");
     expect(response.headers.get(ApiHeaders.requestId)).toBe(payload.requestId);
+  });
+
+  it("allows longer timeouts for spatial selection routes", async () => {
+    const app = createApiApp({
+      requestTimeoutMs: 1,
+      selectionRequestTimeoutMs: 50,
+    });
+
+    app.use(ApiRoutes.facilitiesSelection, async (_c, next) => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      await next();
+    });
+
+    const response = await app.request(ApiRoutes.facilitiesSelection, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        geometry: {
+          type: "Polygon",
+          coordinates: [],
+        },
+        limitPerPerspective: 10,
+        perspectives: ["colocation"],
+      }),
+    });
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload.error.code).toBe("INVALID_SELECTION_REQUEST");
+  });
+
+  it("allows longer timeouts for parcels lookup routes", async () => {
+    const app = createApiApp({
+      requestTimeoutMs: 1,
+      parcelsRequestTimeoutMs: 50,
+    });
+
+    app.use(`${ApiRoutes.parcels}/lookup`, async (_c, next) => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      await next();
+    });
+
+    const response = await app.request(`${ApiRoutes.parcels}/lookup`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        parcelIds: [],
+      }),
+    });
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload.error.code).toBe("BAD_REQUEST");
   });
 
   it("rejects JSON payloads without content-type", async () => {

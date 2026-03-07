@@ -20,7 +20,9 @@ export function initializeMapLifecycleRuntime(options: UseAppShellMapLifecycleOp
     return;
   }
 
-  const mapSetup = initializeAppShellMap(container);
+  const mapSetup = initializeAppShellMap(container, {
+    initialViewport: options.initialViewport,
+  });
   options.runtime.disposePmtilesProtocol.value = mapSetup.disposePmtilesProtocol;
   options.runtime.map.value = mapSetup.map;
   options.runtime.layerRuntime.value = createLayerRuntime(mapSetup.map);

@@ -24,10 +24,16 @@ export interface MapAdapter {
   createMap(container: HTMLElement, options: MapCreateOptions): IMap;
 }
 
+export interface MapCaptureImageOptions {
+  readonly quality?: number;
+  readonly type?: "image/jpeg" | "image/png";
+}
+
 export interface IMap {
   addControl(control: MapControl, position?: MapControlPosition): void;
   addLayer(layerSpec: MapLayerSpecification, beforeId?: string): void;
   addSource(id: string, spec: MapSourceSpecification): void;
+  captureImage(options?: MapCaptureImageOptions): Promise<Blob>;
   destroy(): void;
   getBounds(): LngLatBounds;
   getCanvasSize(): { readonly height: number; readonly width: number };
@@ -87,6 +93,7 @@ export interface MapCreateOptions {
   readonly hash?: boolean;
   readonly maxZoom?: number;
   readonly minZoom?: number;
+  readonly preserveDrawingBuffer?: boolean;
   readonly projection?: MapProjectionSpecification;
   readonly style: StyleInput;
   readonly transformRequest?: MapRequestTransformFunction;

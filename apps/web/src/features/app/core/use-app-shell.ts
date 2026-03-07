@@ -1,108 +1,105 @@
 import { computed } from "vue";
-import { useAppShellState } from "@/features/app/core/use-app-shell-state";
-import { useAppShellStatus } from "@/features/app/core/use-app-shell-status";
-import { useAppShellFiber } from "@/features/app/fiber/use-app-shell-fiber";
-import { useAppShellMapLifecycle } from "@/features/app/lifecycle/use-app-shell-map-lifecycle";
-import { useAppShellMeasureSelection } from "@/features/app/measure-selection/use-app-shell-measure-selection";
-import { useMapOverlays } from "@/features/app/overlays/use-map-overlays";
-import { useAppShellSelection } from "@/features/app/selection/use-app-shell-selection";
-import { useAppShellVisibility } from "@/features/app/visibility/use-app-shell-visibility";
+import { useRoute, useRouter } from "vue-router";
+import {
+  applyMapContextTransferToAppShell,
+  buildMapContextTransferFromAppShell,
+  inferMapContextSurfaceFromRoute,
+  readMapContextTransferFromRoute,
+} from "@/features/map-context-transfer/map-context-transfer.service";
+import { saveSpatialAnalysisDashboardState } from "@/features/spatial-analysis/spatial-analysis-dashboard.service";
+import { useAppShellRuntime } from "./use-app-shell-runtime";
 
 export function useAppShell() {
-  const state = useAppShellState();
-
-  const areFacilityInteractionsEnabled = computed(() => state.measureState.value.mode === "off");
-  const status = useAppShellStatus({
-    facilitiesStatus: state.facilitiesStatus,
-    parcelsStatus: state.parcelsStatus,
+  const route = useRoute();
+  const router = useRouter();
+  const initialMapContext = readMapContextTransferFromRoute({ route });
+  const currentSurface = inferMapContextSurfaceFromRoute(route) ?? "global-map";
+  const runtime = useAppShellRuntime({
+    initialViewport: initialMapContext?.viewport,
   });
-
-  const selection = useAppShellSelection({
-    facilitiesControllers: state.facilitiesControllers,
-    parcelsController: state.parcelsController,
-  });
-
-  const visibility = useAppShellVisibility({
-    basemapLayerController: state.basemapLayerController,
-    boundaryControllers: state.boundaryControllers,
-    boundaryFacetSelection: state.boundaryFacetSelection,
-    clearPowerHover: () => {
-      state.powerHoverController.value?.clear();
-      state.hoveredPower.value = null;
-    },
-    clearSelectedParcel: selection.clearSelectedParcel,
-    layerRuntime: state.layerRuntime,
-    setViewportFacilities: state.setViewportFacilities,
-  });
-
-  const fiber = useAppShellFiber({
-    map: state.map,
-    layerRuntime: state.layerRuntime,
-    isInteractionEnabled: () => areFacilityInteractionsEnabled.value,
-  });
-  const mapOverlays = useMapOverlays({
-    map: state.map,
-    measureState: state.measureState,
-    expectedParcelsIngestionRunId: status.expectedParcelsIngestionRunId,
-    facilitiesStatus: state.facilitiesStatus,
-    visiblePerspectives: visibility.visiblePerspectives,
-    colocationViewportFeatures: state.colocationViewportFeatures,
-    hyperscaleViewportFeatures: state.hyperscaleViewportFeatures,
-    clearMeasure: state.clearMeasure,
-    finishMeasureSelection: state.finishMeasureSelection,
-    setMeasureMode: state.setMeasureMode,
-  });
-  const measureSelection = useAppShellMeasureSelection({
-    expectedParcelsIngestionRunId: status.expectedParcelsIngestionRunId,
-    measureState: state.measureState,
-    visiblePerspectives: visibility.visiblePerspectives,
-  });
-
-  const mapLifecycle = useAppShellMapLifecycle({
-    actions: {
-      clearSelectedFacility: selection.clearSelectedFacility,
-      clearSelectedParcel: selection.clearSelectedParcel,
-      setSelectedFacility: selection.setSelectedFacility,
-      setSelectedParcel: selection.setSelectedParcel,
-    },
-    areFacilityInteractionsEnabled,
-    fiber,
-    layers: {
-      boundaryControllers: state.boundaryControllers,
-      facilitiesControllers: state.facilitiesControllers,
-      facilitiesHoverController: state.facilitiesHoverController,
-      measureController: state.measureController,
-      parcelsController: state.parcelsController,
-      powerControllers: state.powerControllers,
-      powerHoverController: state.powerHoverController,
-      waterController: state.waterController,
-    },
-    runtime: {
-      basemapLayerController: state.basemapLayerController,
-      disposePmtilesProtocol: state.disposePmtilesProtocol,
-      layerRuntime: state.layerRuntime,
-      map: state.map,
-      mapContainer: state.mapContainer,
-      mapControls: state.mapControls,
-      restoreConsoleWarn: state.restoreConsoleWarn,
-    },
-    state: {
-      boundaryFacetOptions: state.boundaryFacetOptions,
-      boundaryFacetSelection: state.boundaryFacetSelection,
-      boundaryHoverByLayer: state.boundaryHoverByLayer,
-      colocationViewportFeatures: state.colocationViewportFeatures,
-      facilitiesStatus: state.facilitiesStatus,
-      hoveredBoundary: state.hoveredBoundary,
-      hoveredFacility: state.hoveredFacility,
-      hoveredPower: state.hoveredPower,
-      hyperscaleViewportFeatures: state.hyperscaleViewportFeatures,
-      measureState: state.measureState,
-      parcelsStatus: state.parcelsStatus,
-      selectedFacility: selection.selectedFacility,
-      selectedParcel: selection.selectedParcel,
-    },
+  const {
+    state,
+    status,
+    selection,
     visibility,
+    fiber,
+    mapOverlays,
+    selectionAnalysis,
+    mapLifecycle,
+  } = runtime;
+
+  applyMapContextTransferToAppShell({
+    context: initialMapContext,
+    setBoundarySelectedRegionIds(boundaryId, selectedRegionIds) {
+      state.boundaryFacetSelection.value = {
+        ...state.boundaryFacetSelection.value,
+        [boundaryId]: selectedRegionIds,
+      };
+    },
+    setBoundaryVisible: visibility.setBoundaryVisible,
+    setPerspectiveVisibility: visibility.setPerspectiveVisibility,
   });
+
+  const selectionDisabledReason = computed(() =>
+    state.selectionGeometry.value === null ? "Commit a sketch as a selection first." : null
+  );
+
+  async function openSelectionDashboard(): Promise<void> {
+    const summary = selectionAnalysis.selectionSummary.value;
+    if (summary === null) {
+      return;
+    }
+
+    const hasResults =
+      summary.totalCount > 0 ||
+      summary.parcelSelection.count > 0 ||
+      summary.marketSelection.matchCount > 0;
+    if (!hasResults) {
+      return;
+    }
+
+    saveSpatialAnalysisDashboardState({
+      createdAt: new Date().toISOString(),
+      isFiltered: false,
+      mapContext: buildMapContextTransferFromAppShell({
+        boundaryFacetSelection: state.boundaryFacetSelection.value,
+        map: state.map.value,
+        sourceSurface: currentSurface,
+        targetSurface: "global-map",
+        visiblePerspectives: visibility.visiblePerspectives.value,
+      }),
+      source: "selection",
+      summary,
+      title: "Selection Dashboard",
+    });
+
+    await router.push({ name: "spatial-analysis-dashboard" });
+  }
+
+  async function openScannerDashboard(): Promise<void> {
+    const summary = mapOverlays.scannerSummary.value;
+    const hasResults = summary.totalCount > 0 || summary.parcelSelection.count > 0;
+    if (!hasResults) {
+      return;
+    }
+
+    saveSpatialAnalysisDashboardState({
+      createdAt: new Date().toISOString(),
+      isFiltered: mapOverlays.scannerIsFiltered.value,
+      mapContext: buildMapContextTransferFromAppShell({
+        boundaryFacetSelection: state.boundaryFacetSelection.value,
+        map: state.map.value,
+        sourceSurface: currentSurface,
+        targetSurface: "global-map",
+        visiblePerspectives: visibility.visiblePerspectives.value,
+      }),
+      source: "scanner",
+      summary,
+      title: "Scanner Dashboard",
+    });
+
+    await router.push({ name: "spatial-analysis-dashboard" });
+  }
 
   return {
     mapContainer: state.mapContainer,
@@ -128,10 +125,12 @@ export function useAppShell() {
     fiberStatusText: fiber.fiberStatusText,
     fiberSourceLayerOptions: fiber.fiberSourceLayerOptions,
     selectedFiberSourceLayerNames: fiber.selectedFiberSourceLayerNames,
-    measureState: state.measureState,
-    measureSelectionSummary: measureSelection.measureSelectionSummary,
-    measureSelectionError: measureSelection.measureSelectionError,
-    isMeasureSelectionLoading: measureSelection.isMeasureSelectionLoading,
+    sketchMeasureState: state.sketchMeasureState,
+    selectionGeometry: state.selectionGeometry,
+    selectionSummary: selectionAnalysis.selectionSummary,
+    selectionError: selectionAnalysis.selectionError,
+    isSelectionLoading: selectionAnalysis.isSelectionLoading,
+    selectionDisabledReason,
     quickViewActive: mapOverlays.quickViewActive,
     scannerActive: mapOverlays.scannerActive,
     scannerSummary: mapOverlays.scannerSummary,
@@ -149,7 +148,8 @@ export function useAppShell() {
     isQuickViewDensityOk: mapOverlays.isQuickViewDensityOk,
     quickViewObjectCount: mapOverlays.quickViewObjectCount,
     isLayerPanelOpen: state.isLayerPanelOpen,
-    isMeasurePanelOpen: state.isMeasurePanelOpen,
+    isSketchMeasurePanelOpen: state.isSketchMeasurePanelOpen,
+    isSelectionPanelOpen: state.isSelectionPanelOpen,
     facilityDetailQuery: selection.facilityDetailQuery,
     parcelDetailQuery: selection.parcelDetailQuery,
     setPerspectiveVisibility: visibility.setPerspectiveVisibility,
@@ -162,12 +162,17 @@ export function useAppShell() {
     setFiberLayerVisibility: fiber.setFiberLayerVisibility,
     setFiberSourceLayerVisible: fiber.setFiberSourceLayerVisible,
     setAllFiberSourceLayers: fiber.setAllFiberSourceLayers,
-    setMeasureMode: state.setMeasureMode,
-    setMeasureAreaShape: state.setMeasureAreaShape,
-    finishMeasureSelection: state.finishMeasureSelection,
-    exportMeasureSelection: measureSelection.exportMeasureSelection,
+    setSketchMeasureMode: state.setSketchMeasureMode,
+    setSketchMeasureAreaShape: state.setSketchMeasureAreaShape,
+    finishSketchMeasureArea: state.finishSketchMeasureArea,
+    exportSelection: selectionAnalysis.exportSelection,
+    openSelectionDashboard,
     exportScannerSelection: mapOverlays.exportScannerSelection,
-    clearMeasure: state.clearMeasure,
+    openScannerDashboard,
+    clearSketchMeasure: state.clearSketchMeasure,
+    useCompletedSketchAsSelection: state.useCompletedSketchAsSelection,
+    clearSelection: state.clearSelectionGeometry,
+    clearSelectionGeometry: state.clearSelectionGeometry,
     clearSelectedFacility: selection.clearSelectedFacility,
     selectFacilityFromAnalysis: selection.selectFacilityFromAnalysis,
     clearSelectedParcel: selection.clearSelectedParcel,
@@ -177,6 +182,7 @@ export function useAppShell() {
     toggleScanner: mapOverlays.toggleScanner,
     setQuickViewObjectCount: mapOverlays.setQuickViewObjectCount,
     toggleLayerPanel: state.toggleLayerPanel,
-    toggleMeasurePanel: state.toggleMeasurePanel,
+    toggleSketchMeasurePanel: state.toggleSketchMeasurePanel,
+    toggleSelectionPanel: state.toggleSelectionPanel,
   };
 }

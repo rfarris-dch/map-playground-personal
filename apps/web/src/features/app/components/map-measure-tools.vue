@@ -1,5 +1,4 @@
 <script setup lang="ts">
-  import { PanelLeftClose, PanelLeftOpen } from "lucide-vue-next";
   import type {
     MapMeasureToolsEmits,
     MapMeasureToolsProps,
@@ -12,36 +11,30 @@
 </script>
 
 <template>
-  <button
-    type="button"
-    class="pointer-events-auto absolute bottom-4 left-4 z-40 inline-flex items-center gap-2 rounded-md border border-border/90 bg-card/95 px-3 py-2 text-xs font-semibold shadow-lg backdrop-blur-sm transition hover:bg-card"
-    :aria-expanded="props.isPanelOpen"
-    aria-controls="measure-tools-panel"
-    :aria-label="props.isPanelOpen ? 'Close measurement tools panel' : 'Open measurement tools panel'"
-    @click="emit('toggle-panel')"
-  >
-    <PanelLeftClose v-if="props.isPanelOpen" class="h-4 w-4" aria-hidden="true" />
-    <PanelLeftOpen v-else class="h-4 w-4" aria-hidden="true" />
-    Measure
-  </button>
-
   <MeasureToolbar
     v-if="props.isPanelOpen"
     id="measure-tools-panel"
+    :image-subject="props.measureSelectionImageSubject"
     :state="props.measureState"
+    :output-mode="props.measureSelectionOutputMode"
     @set-mode="emit('set-mode', $event)"
     @set-area-shape="emit('set-area-shape', $event)"
+    @set-image-subject="emit('set-image-subject', $event)"
+    @set-output-mode="emit('set-output-mode', $event)"
     @finish="emit('finish')"
     @clear="emit('clear')"
   />
 
   <MeasureAnalysisPanel
-    v-if="props.measureState.selectionRing !== null"
+    v-if="
+      props.measureSelectionOutputMode === 'analysis' && props.measureState.selectionRing !== null
+    "
     :summary="props.selectionSummary"
     :error-message="props.selectionError"
     :is-loading="props.isLoading"
     @clear="emit('clear')"
     @export="emit('export')"
+    @open-dashboard="emit('open-dashboard')"
     @select-facility="emit('select-facility', $event)"
   />
 </template>

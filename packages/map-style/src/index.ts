@@ -1,4 +1,3 @@
-import { LAYER_ORDER_INVARIANTS } from "@/manifests/layer-order";
 import type {
   BoundaryCatalogLayerId,
   BoundaryStyleLayerIds,
@@ -9,6 +8,7 @@ import type {
   StaticCatalogLayerId,
   StyleDocument,
 } from "./index.types";
+import { LAYER_ORDER_INVARIANTS } from "./manifests/layer-order";
 import {
   getBoundaryStyleLayerIds as readBoundaryStyleLayerIds,
   getCatalogStyleLayerIds as readCatalogStyleLayerIds,

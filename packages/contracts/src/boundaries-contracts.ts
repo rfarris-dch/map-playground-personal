@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { GeometrySchema, ResponseMetaSchema } from "@/shared-contracts";
 import type { BoundaryPowerLevel } from "./boundaries-contracts.types";
+import { GeometrySchema, ResponseMetaSchema } from "./shared-contracts";
 
 export type {
   BoundaryPowerFeature,

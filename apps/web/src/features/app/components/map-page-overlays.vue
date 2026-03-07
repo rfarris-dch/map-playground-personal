@@ -46,6 +46,7 @@
     :empty-message="props.scannerEmptyMessage"
     @close="emit('close-scanner')"
     @export="emit('export-scanner-selection')"
+    @open-dashboard="emit('open-scanner-dashboard')"
     @select-facility="forwardSelectedFacility"
   />
 

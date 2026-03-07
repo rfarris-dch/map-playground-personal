@@ -4,7 +4,7 @@ import {
   GeometrySchema,
   PolygonGeometrySchema,
   ResponseMetaSchema,
-} from "@/shared-contracts";
+} from "./shared-contracts";
 
 export type {
   ParcelAoi,

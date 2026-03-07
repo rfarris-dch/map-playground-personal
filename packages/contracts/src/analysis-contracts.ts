@@ -1,11 +1,11 @@
 import { z } from "zod";
-import { ParcelAoiSchema, ParcelFeatureSchema } from "@/parcels-contracts";
+import { ParcelAoiSchema, ParcelFeatureSchema } from "./parcels-contracts";
 import {
   ApiErrorResponseSchema,
   FacilityPerspectiveSchema,
   GeometrySchema,
   ResponseMetaSchema,
-} from "@/shared-contracts";
+} from "./shared-contracts";
 
 export type {
   AnalysisErrorResponse,

@@ -3,19 +3,25 @@
   import { useRoute } from "vue-router";
   import Separator from "@/components/ui/separator/separator.vue";
   import { appNavigationItems } from "@/features/navigation/navigation.service";
+  import type { AppNavigationId } from "@/features/navigation/navigation.types";
 
   const route = useRoute();
 
-  const activeRouteNames = computed(() => {
+  const activeNavigationIds = computed(() => {
     return new Set(
       route.matched
-        .map((item) => item.name)
-        .filter((name): name is string => typeof name === "string")
+        .map((item) => item.meta.navigationId)
+        .filter((navigationId): navigationId is AppNavigationId => typeof navigationId === "string")
     );
   });
 
-  function isNavItemActive(routeName: string): boolean {
-    return activeRouteNames.value.has(routeName);
+  const routerViewKey = computed(() => {
+    const activeNavigationId = route.meta.navigationId;
+    return activeNavigationId === "map" ? route.fullPath : String(route.name ?? route.path);
+  });
+
+  function isNavItemActive(navigationId: AppNavigationId): boolean {
+    return activeNavigationIds.value.has(navigationId);
   }
 </script>
 
@@ -36,7 +42,7 @@
                 :href="href"
                 class="inline-flex h-9 items-center rounded-md px-3 text-sm font-medium transition-colors"
                 :class="
-                  isNavItemActive(item.routeName)
+                  isNavItemActive(item.navigationId)
                     ? 'bg-primary text-primary-foreground'
                     : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                 "
@@ -50,6 +56,10 @@
       </div>
     </header>
 
-    <main class="min-h-0 flex-1"><RouterView /></main>
+    <main class="min-h-0 flex-1">
+      <RouterView v-slot="{ Component }">
+        <component :is="Component" :key="routerViewKey" />
+      </RouterView>
+    </main>
   </div>
 </template>

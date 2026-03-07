@@ -52,28 +52,28 @@ export function useMapOverlaysShortcuts(options: UseMapOverlaysShortcutsOptions)
   }
 
   function handleEnterShortcut(event: KeyboardEvent): void {
-    const measureState = options.measureState.value;
+    const sketchMeasureState = options.sketchMeasureState.value;
     if (
-      measureState.mode === "area" &&
-      measureState.canFinishSelection &&
-      !measureState.isSelectionComplete
+      sketchMeasureState.mode === "area" &&
+      sketchMeasureState.canFinishArea &&
+      !sketchMeasureState.isAreaComplete
     ) {
       event.preventDefault();
-      options.finishMeasureSelection();
+      options.finishSketchMeasureArea();
     }
   }
 
   function handleEscapeShortcut(event: KeyboardEvent): void {
     event.preventDefault();
-    const measureState = options.measureState.value;
+    const sketchMeasureState = options.sketchMeasureState.value;
 
-    if (measureState.mode === "area" && measureState.isSelectionComplete) {
-      options.clearMeasure();
+    if (sketchMeasureState.mode === "area" && sketchMeasureState.isAreaComplete) {
+      options.clearSketchMeasure();
       return;
     }
 
-    if (measureState.mode !== "off") {
-      options.setMeasureMode("off");
+    if (sketchMeasureState.mode !== "off") {
+      options.setSketchMeasureMode("off");
       return;
     }
 

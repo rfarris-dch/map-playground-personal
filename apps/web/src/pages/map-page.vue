@@ -28,10 +28,12 @@
     fiberStatusText,
     fiberSourceLayerOptions,
     selectedFiberSourceLayerNames,
-    measureState,
-    measureSelectionSummary,
-    measureSelectionError,
-    isMeasureSelectionLoading,
+    sketchMeasureState,
+    selectionGeometry,
+    selectionSummary,
+    selectionError,
+    isSelectionLoading,
+    selectionDisabledReason,
     quickViewActive,
     scannerActive,
     scannerSummary,
@@ -46,7 +48,8 @@
     isQuickViewVisible,
     isScannerVisible,
     isLayerPanelOpen,
-    isMeasurePanelOpen,
+    isSketchMeasurePanelOpen,
+    isSelectionPanelOpen,
     facilityDetailQuery,
     parcelDetailQuery,
     setPerspectiveVisibility,
@@ -59,12 +62,16 @@
     setFiberLayerVisibility,
     setFiberSourceLayerVisible,
     setAllFiberSourceLayers,
-    setMeasureMode,
-    setMeasureAreaShape,
-    finishMeasureSelection,
-    exportMeasureSelection,
+    setSketchMeasureMode,
+    setSketchMeasureAreaShape,
+    finishSketchMeasureArea,
+    useCompletedSketchAsSelection,
+    exportSelection,
     exportScannerSelection,
-    clearMeasure,
+    openSelectionDashboard,
+    openScannerDashboard,
+    clearSketchMeasure,
+    clearSelectionGeometry,
     clearSelectedFacility,
     selectFacilityFromAnalysis,
     clearSelectedParcel,
@@ -73,7 +80,8 @@
     setScannerActive,
     setQuickViewObjectCount,
     toggleLayerPanel,
-    toggleMeasurePanel,
+    toggleSketchMeasurePanel,
+    toggleSelectionPanel,
   } = useAppShell();
 
   const facilityDetail = computed(() => facilityDetailQuery.data.value ?? null);
@@ -93,7 +101,8 @@
     >
       <MapPageControls
         :is-open="isLayerPanelOpen"
-        :is-panel-open="isMeasurePanelOpen"
+        :is-sketch-measure-panel-open="isSketchMeasurePanelOpen"
+        :is-selection-panel-open="isSelectionPanelOpen"
         :basemap-visibility="basemapVisibility"
         :boundary-visibility="boundaryVisibility"
         :boundary-facet-options="boundaryFacetOptions"
@@ -109,16 +118,19 @@
         :fiber-status-text="fiberStatusText"
         :fiber-source-layer-options="fiberSourceLayerOptions"
         :selected-fiber-source-layer-names="selectedFiberSourceLayerNames"
-        :measure-state="measureState"
-        :selection-summary="measureSelectionSummary"
-        :selection-error="measureSelectionError"
-        :is-loading="isMeasureSelectionLoading"
+        :sketch-measure-state="sketchMeasureState"
+        :selection-geometry="selectionGeometry"
+        :selection-summary="selectionSummary"
+        :selection-error="selectionError"
+        :is-loading="isSelectionLoading"
+        :selection-disabled-reason="selectionDisabledReason"
         :quick-view-active="quickViewActive"
         :quick-view-disabled-reason="quickViewDisabledReason"
         :scanner-active="scannerActive"
         :overlays-blocked-reason="overlaysBlockedReason"
         @toggle-layer-panel="toggleLayerPanel"
-        @toggle-measure-panel="toggleMeasurePanel"
+        @toggle-sketch-measure-panel="toggleSketchMeasurePanel"
+        @toggle-selection-panel="toggleSelectionPanel"
         @update:basemap-layer-visible="setBasemapLayerVisible"
         @update:boundary-visible="setBoundaryVisible"
         @update:boundary-selected-region-ids="setBoundarySelectedRegionIds"
@@ -131,11 +143,14 @@
         @update:power-layer-visible="setPowerLayerVisible"
         @toggle-quick-view="toggleQuickView"
         @toggle-scanner="toggleScanner"
-        @set-mode="setMeasureMode"
-        @set-area-shape="setMeasureAreaShape"
-        @finish="finishMeasureSelection"
-        @clear="clearMeasure"
-        @export="exportMeasureSelection"
+        @set-mode="setSketchMeasureMode"
+        @set-area-shape="setSketchMeasureAreaShape"
+        @finish="finishSketchMeasureArea"
+        @clear="clearSketchMeasure"
+        @use-as-selection="useCompletedSketchAsSelection"
+        @clear-selection="clearSelectionGeometry"
+        @export="exportSelection"
+        @open-dashboard="openSelectionDashboard"
         @select-facility="selectFacilityFromAnalysis"
       />
 
@@ -165,6 +180,7 @@
         @quick-view-object-count="setQuickViewObjectCount"
         @close-scanner="setScannerActive(false)"
         @export-scanner-selection="exportScannerSelection"
+        @open-scanner-dashboard="openScannerDashboard"
         @select-facility="selectFacilityFromAnalysis"
         @close-facility-detail="clearSelectedFacility"
         @close-parcel-detail="clearSelectedParcel"

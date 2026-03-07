@@ -17,6 +17,7 @@ import type {
   LngLat,
   LngLatBounds,
   MapAdapter,
+  MapCaptureImageOptions,
   MapClickEvent,
   MapControl,
   MapControlPosition,
@@ -43,6 +44,7 @@ export type {
   LngLat,
   LngLatBounds,
   MapAdapter,
+  MapCaptureImageOptions,
   MapClickEvent,
   MapControl,
   MapControlPosition,
@@ -154,6 +156,26 @@ class MapLibreEngine implements IMap {
 
   addLayer(layerSpec: MapLayerSpecification, beforeId?: string): void {
     this.map.addLayer(layerSpec, beforeId);
+  }
+
+  captureImage(options: MapCaptureImageOptions = {}): Promise<Blob> {
+    const imageType = options.type ?? "image/jpeg";
+    const imageQuality = imageType === "image/jpeg" ? (options.quality ?? 0.92) : undefined;
+
+    return new Promise((resolve, reject) => {
+      this.map.getCanvas().toBlob(
+        (blob) => {
+          if (blob === null) {
+            reject(new Error("[map-engine] Failed to capture map image."));
+            return;
+          }
+
+          resolve(blob);
+        },
+        imageType,
+        imageQuality
+      );
+    });
   }
 
   hasSource(sourceId: string): boolean {
@@ -501,7 +523,17 @@ export function createMap(
 export function createMapLibreAdapter(): MapAdapter {
   return {
     createMap(container: HTMLElement, options: MapCreateOptions): IMap {
-      const { center, zoom, minZoom, maxZoom, projection, style, hash, transformRequest } = options;
+      const {
+        center,
+        zoom,
+        minZoom,
+        maxZoom,
+        preserveDrawingBuffer,
+        projection,
+        style,
+        hash,
+        transformRequest,
+      } = options;
       const mapOptions: MapOptions = {
         container,
         center,
@@ -513,6 +545,11 @@ export function createMapLibreAdapter(): MapAdapter {
       }
       if (typeof maxZoom === "number") {
         mapOptions.maxZoom = maxZoom;
+      }
+      if (typeof preserveDrawingBuffer === "boolean") {
+        mapOptions.canvasContextAttributes = {
+          preserveDrawingBuffer,
+        };
       }
       if (typeof hash !== "undefined") {
         mapOptions.hash = hash;

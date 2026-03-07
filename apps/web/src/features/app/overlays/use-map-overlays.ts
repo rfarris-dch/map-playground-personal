@@ -14,9 +14,12 @@ export function useMapOverlays(args: UseMapOverlaysArgs) {
       facilitiesStatus: args.facilitiesStatus.value,
     })
   );
-  const isSelectionSummaryVisible = computed(() => args.measureState.value.selectionRing !== null);
+  const isSelectionSummaryVisible = computed(
+    () => args.sketchMeasureState.value.completedAreaGeometry !== null
+  );
   const isMeasureDrawing = computed(
-    () => args.measureState.value.mode === "area" && !args.measureState.value.isSelectionComplete
+    () =>
+      args.sketchMeasureState.value.mode === "area" && !args.sketchMeasureState.value.isAreaComplete
   );
   const quickViewDisabledReason = computed(() =>
     resolveQuickViewDisabledReason({
@@ -27,11 +30,11 @@ export function useMapOverlays(args: UseMapOverlaysArgs) {
     })
   );
   const overlayShortcuts = useMapOverlaysShortcuts({
-    clearMeasure: args.clearMeasure,
-    finishMeasureSelection: args.finishMeasureSelection,
-    measureState: args.measureState,
+    clearSketchMeasure: args.clearSketchMeasure,
+    finishSketchMeasureArea: args.finishSketchMeasureArea,
     quickViewDisabledReason,
-    setMeasureMode: args.setMeasureMode,
+    setSketchMeasureMode: args.setSketchMeasureMode,
+    sketchMeasureState: args.sketchMeasureState,
   });
   const scannerParcels = useMapOverlaysScannerParcels({
     colocationViewportFeatures: args.colocationViewportFeatures,

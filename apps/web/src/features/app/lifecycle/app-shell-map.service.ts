@@ -1,3 +1,4 @@
+import type { MapContextTransfer } from "@map-migration/contracts";
 import {
   createFullscreenControl,
   createMap,
@@ -15,7 +16,7 @@ import {
 import type { BasemapLayerVisibilityController } from "@/features/basemap/basemap.types";
 
 const OPENFREEMAP_GLYPHS_PREFIX = "https://tiles.openfreemap.org/fonts/";
-const OPENMAPTILES_GLYPHS_PREFIX = "https://fonts.openmaptiles.org/";
+const MAPLIBRE_DEMOTILES_GLYPHS_PREFIX = "https://demotiles.maplibre.org/font/";
 
 export interface AppShellMapSetup {
   readonly basemapLayerController: BasemapLayerVisibilityController;
@@ -24,12 +25,16 @@ export interface AppShellMapSetup {
   readonly map: IMap;
 }
 
+interface AppShellMapInitializeOptions {
+  readonly initialViewport?: MapContextTransfer["viewport"];
+}
+
 function rewriteGlyphRequestUrl(url: string): string {
   if (!url.startsWith(OPENFREEMAP_GLYPHS_PREFIX)) {
     return url;
   }
 
-  return `${OPENMAPTILES_GLYPHS_PREFIX}${url.slice(OPENFREEMAP_GLYPHS_PREFIX.length)}`;
+  return `${MAPLIBRE_DEMOTILES_GLYPHS_PREFIX}${url.slice(OPENFREEMAP_GLYPHS_PREFIX.length)}`;
 }
 
 function mountMapControls(nextMap: IMap): readonly MapControl[] {
@@ -49,12 +54,46 @@ function mountMapControls(nextMap: IMap): readonly MapControl[] {
   return controls;
 }
 
-export function initializeAppShellMap(container: HTMLDivElement): AppShellMapSetup {
+function resolveInitialMapCenter(
+  initialViewport: MapContextTransfer["viewport"] | undefined
+): [number, number] {
+  if (typeof initialViewport === "undefined") {
+    return [-98.5795, 39.8283];
+  }
+
+  if (initialViewport.type === "center") {
+    return initialViewport.center;
+  }
+
+  const longitudeSpan = initialViewport.bounds.east - initialViewport.bounds.west;
+  const latitudeSpan = initialViewport.bounds.north - initialViewport.bounds.south;
+
+  return [
+    initialViewport.bounds.west + longitudeSpan / 2,
+    initialViewport.bounds.south + latitudeSpan / 2,
+  ];
+}
+
+function resolveInitialMapZoom(
+  initialViewport: MapContextTransfer["viewport"] | undefined
+): number {
+  if (typeof initialViewport === "undefined" || initialViewport.type !== "center") {
+    return 3.2;
+  }
+
+  return initialViewport.zoom;
+}
+
+export function initializeAppShellMap(
+  container: HTMLDivElement,
+  options: AppShellMapInitializeOptions = {}
+): AppShellMapSetup {
   const disposePmtilesProtocol = registerPmtilesProtocol();
   const map = createMap(createMapLibreAdapter(), container, {
     style: defaultBasemapStyleUrl(),
-    center: [-98.5795, 39.8283],
-    zoom: 3.2,
+    center: resolveInitialMapCenter(options.initialViewport),
+    preserveDrawingBuffer: true,
+    zoom: resolveInitialMapZoom(options.initialViewport),
     projection: { type: "mercator" },
     transformRequest: (url) => {
       const rewrittenUrl = rewriteGlyphRequestUrl(url);

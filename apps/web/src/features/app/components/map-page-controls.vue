@@ -1,18 +1,22 @@
 <script setup lang="ts">
   import type { FacilityPerspective } from "@map-migration/contracts";
   import MapLayerControlsPanel from "@/features/app/components/map-layer-controls-panel.vue";
-  import MapMeasureTools from "@/features/app/components/map-measure-tools.vue";
   import MapOverlayActions from "@/features/app/components/map-overlay-actions.vue";
   import type {
     MapPageControlsEmits,
     MapPageControlsProps,
   } from "@/features/app/components/map-page-controls.types";
+  import MapSelectionTools from "@/features/app/components/map-selection-tools.vue";
+  import MapSketchMeasureTools from "@/features/app/components/map-sketch-measure-tools.vue";
   import type { BasemapLayerId } from "@/features/basemap/basemap.types";
   import type { BoundaryLayerId } from "@/features/boundaries/boundaries.types";
   import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";
   import type { FiberLocatorLineId } from "@/features/fiber-locator/fiber-locator.types";
-  import type { MeasureAreaShape, MeasureMode } from "@/features/measure/measure.types";
   import type { PowerLayerId } from "@/features/power/power.types";
+  import type {
+    SketchMeasureAreaShape,
+    SketchMeasureMode,
+  } from "@/features/sketch-measure/sketch-measure.types";
 
   const props = defineProps<MapPageControlsProps>();
 
@@ -65,16 +69,25 @@
     emit("update:power-layer-visible", layerId, visible);
   }
 
-  function forwardMeasureMode(mode: MeasureMode): void {
+  function forwardSketchMeasureMode(mode: SketchMeasureMode): void {
     emit("set-mode", mode);
   }
 
-  function forwardMeasureAreaShape(shape: MeasureAreaShape): void {
+  function forwardSketchMeasureAreaShape(shape: SketchMeasureAreaShape): void {
     emit("set-area-shape", shape);
   }
 
   function forwardSelectedFacility(facility: SelectedFacilityRef): void {
     emit("select-facility", facility);
+  }
+
+  function handleToggleSketchMeasurePanel(): void {
+    if (!props.isSketchMeasurePanelOpen && props.sketchMeasureState.mode === "off") {
+      emit("set-mode", "area");
+      emit("set-area-shape", "freeform");
+    }
+
+    emit("toggle-sketch-measure-panel");
   }
 </script>
 
@@ -110,26 +123,38 @@
   />
 
   <MapOverlayActions
+    :sketch-measure-active="props.isSketchMeasurePanelOpen || props.sketchMeasureState.mode !== 'off'"
+    :selection-active="props.isSelectionPanelOpen"
+    :selection-disabled-reason="props.selectionDisabledReason"
     :quick-view-active="props.quickViewActive"
     :quick-view-disabled-reason="props.quickViewDisabledReason"
     :scanner-active="props.scannerActive"
     :overlays-blocked-reason="props.overlaysBlockedReason"
     @toggle-quick-view="emit('toggle-quick-view')"
     @toggle-scanner="emit('toggle-scanner')"
+    @toggle-sketch-measure-panel="handleToggleSketchMeasurePanel"
+    @toggle-selection-panel="emit('toggle-selection-panel')"
   />
 
-  <MapMeasureTools
-    :is-panel-open="props.isPanelOpen"
-    :measure-state="props.measureState"
+  <MapSketchMeasureTools
+    :is-sketch-measure-panel-open="props.isSketchMeasurePanelOpen"
+    :sketch-measure-state="props.sketchMeasureState"
+    @set-mode="forwardSketchMeasureMode"
+    @set-area-shape="forwardSketchMeasureAreaShape"
+    @finish="emit('finish')"
+    @clear="emit('clear')"
+    @use-as-selection="emit('use-as-selection')"
+  />
+
+  <MapSelectionTools
+    :is-selection-panel-open="props.isSelectionPanelOpen"
+    :selection-geometry="props.selectionGeometry"
     :selection-summary="props.selectionSummary"
     :selection-error="props.selectionError"
     :is-loading="props.isLoading"
-    @toggle-panel="emit('toggle-measure-panel')"
-    @set-mode="forwardMeasureMode"
-    @set-area-shape="forwardMeasureAreaShape"
-    @finish="emit('finish')"
-    @clear="emit('clear')"
+    @clear="emit('clear-selection')"
     @export="emit('export')"
+    @open-dashboard="emit('open-dashboard')"
     @select-facility="forwardSelectedFacility"
   />
 </template>

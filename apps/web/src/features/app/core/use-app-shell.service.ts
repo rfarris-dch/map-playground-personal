@@ -25,9 +25,11 @@ function buildAppShellLayerViewModel(args: UseAppShellRuntimeResult) {
   const {
     boundaryFacetOptions,
     boundaryFacetSelection,
-    measureState,
     isLayerPanelOpen,
-    isMeasurePanelOpen,
+    isSelectionPanelOpen,
+    isSketchMeasurePanelOpen,
+    selectionGeometry,
+    sketchMeasureState,
   } = state;
   const { colocationStatusText, hyperscaleStatusText, parcelsStatusText } = status;
   const {
@@ -61,14 +63,18 @@ function buildAppShellLayerViewModel(args: UseAppShellRuntimeResult) {
     fiberStatusText,
     fiberSourceLayerOptions,
     selectedFiberSourceLayerNames,
-    measureState,
+    sketchMeasureState,
+    selectionGeometry,
     isLayerPanelOpen,
-    isMeasurePanelOpen,
+    isSketchMeasurePanelOpen,
+    isSelectionPanelOpen,
+    selectionDisabledReason:
+      selectionGeometry.value === null ? "Commit a completed sketch first." : null,
   };
 }
 
 function buildAppShellOverlayViewModel(args: UseAppShellRuntimeResult) {
-  const { mapOverlays, measureSelection } = args;
+  const { mapOverlays, selectionAnalysis } = args;
   const {
     quickViewActive,
     scannerActive,
@@ -87,13 +93,12 @@ function buildAppShellOverlayViewModel(args: UseAppShellRuntimeResult) {
     isQuickViewDensityOk,
     quickViewObjectCount,
   } = mapOverlays;
-  const { measureSelectionSummary, measureSelectionError, isMeasureSelectionLoading } =
-    measureSelection;
+  const { selectionSummary, selectionError, isSelectionLoading } = selectionAnalysis;
 
   return {
-    measureSelectionSummary,
-    measureSelectionError,
-    isMeasureSelectionLoading,
+    selectionSummary,
+    selectionError,
+    isSelectionLoading,
     quickViewActive,
     scannerActive,
     scannerSummary,
@@ -148,24 +153,30 @@ function buildAppShellLayerActions(args: UseAppShellRuntimeResult) {
   };
 }
 
-function buildAppShellMeasureActions(args: UseAppShellRuntimeResult) {
-  const { state, measureSelection } = args;
+function buildAppShellSketchMeasureActions(args: UseAppShellRuntimeResult) {
+  const { state, selectionAnalysis } = args;
   const {
-    setMeasureMode,
-    setMeasureAreaShape,
-    finishMeasureSelection,
-    clearMeasure,
-    toggleMeasurePanel,
+    setSketchMeasureMode,
+    setSketchMeasureAreaShape,
+    finishSketchMeasureArea,
+    useCompletedSketchAsSelection,
+    clearSketchMeasure,
+    clearSelectionGeometry,
+    toggleSketchMeasurePanel,
+    toggleSelectionPanel,
   } = state;
-  const { exportMeasureSelection } = measureSelection;
+  const { exportSelection } = selectionAnalysis;
 
   return {
-    setMeasureMode,
-    setMeasureAreaShape,
-    finishMeasureSelection,
-    exportMeasureSelection,
-    clearMeasure,
-    toggleMeasurePanel,
+    setSketchMeasureMode,
+    setSketchMeasureAreaShape,
+    finishSketchMeasureArea,
+    useCompletedSketchAsSelection,
+    exportSelection,
+    clearSketchMeasure,
+    clearSelectionGeometry,
+    toggleSketchMeasurePanel,
+    toggleSelectionPanel,
   };
 }
 
@@ -199,7 +210,7 @@ function buildAppShellOverlayActions(args: UseAppShellRuntimeResult) {
 function buildAppShellActions(args: UseAppShellRuntimeResult) {
   return {
     ...buildAppShellLayerActions(args),
-    ...buildAppShellMeasureActions(args),
+    ...buildAppShellSketchMeasureActions(args),
     ...buildAppShellOverlayActions(args),
   };
 }

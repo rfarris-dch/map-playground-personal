@@ -39,6 +39,7 @@ export interface MapPageOverlaysEmits {
   "close-parcel-detail": [];
   "close-scanner": [];
   "export-scanner-selection": [];
+  "open-scanner-dashboard": [];
   "quick-view-object-count": [count: number];
   "select-facility": [facility: SelectedFacilityRef];
 }

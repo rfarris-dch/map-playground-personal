@@ -3,7 +3,7 @@ import {
   CommissionedSemanticSchema,
   FacilityPerspectiveSchema,
   LeaseOrOwnSchema,
-} from "@/shared-contracts";
+} from "./shared-contracts";
 
 export type {
   FacilitiesTableResponse,

@@ -13,28 +13,14 @@ import type {
 import { fetchFacilitiesBySelection } from "@/features/measure/measure-analysis.api";
 import { buildMeasureSelectionSummary } from "@/features/measure/measure-analysis.service";
 import type { MeasureSelectionSummary } from "@/features/measure/measure-analysis.types";
+import {
+  formatSelectionApiFailure,
+  selectionAoiFromRing,
+  selectionGeometryFromRing,
+} from "@/features/selection/selection-analysis-request.service";
 import { fetchSpatialAnalysisParcelsPages } from "@/features/spatial-analysis/spatial-analysis-parcels-query.service";
 
 const MEASURE_PARCELS_PAGE_SIZE = 20_000;
-
-function selectionGeometryFromRing(
-  ring: readonly [number, number][]
-): FacilitiesSelectionRequest["geometry"] {
-  return {
-    type: "Polygon",
-    coordinates: [ring.map((vertex) => [vertex[0], vertex[1]])],
-  };
-}
-
-function selectionAoiFromRing(ring: readonly [number, number][]): ParcelEnrichRequest["aoi"] {
-  return {
-    type: "polygon",
-    geometry: {
-      type: "Polygon",
-      coordinates: [ring.map((vertex) => [vertex[0], vertex[1]])],
-    },
-  };
-}
 
 function facilitiesForPerspective(
   features: FacilitiesFeatureCollection["features"],
@@ -122,7 +108,7 @@ export async function queryMeasureSelectionSummary(
       colocationFeatures = facilitiesForPerspective(facilitiesResult.data.features, "colocation");
       hyperscaleFeatures = facilitiesForPerspective(facilitiesResult.data.features, "hyperscale");
     } else {
-      errorMessages.push(`Facilities query failed (${facilitiesResult.reason}).`);
+      errorMessages.push(formatSelectionApiFailure("Facilities", facilitiesResult));
     }
   }
 
@@ -134,7 +120,7 @@ export async function queryMeasureSelectionSummary(
     parcelTruncated = parcelsResult.truncated;
     parcelNextCursor = parcelsResult.nextCursor;
   } else {
-    errorMessages.push(`Parcels query failed (${parcelsResult.reason}).`);
+    errorMessages.push(formatSelectionApiFailure("Parcels", parcelsResult));
   }
 
   return {

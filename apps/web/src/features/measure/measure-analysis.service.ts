@@ -133,6 +133,9 @@ function toSelectedFacility(
   const facilityId = properties.facilityId;
   const providerId = properties.providerId;
   return {
+    address: properties.address,
+    availablePowerMw: properties.availablePowerMw,
+    city: properties.city,
     commissionedPowerMw: properties.commissionedPowerMw,
     commissionedSemantic: properties.commissionedSemantic,
     coordinates,
@@ -140,9 +143,15 @@ function toSelectedFacility(
     facilityId,
     facilityName: resolveDisplayName(properties.facilityName, "Unknown facility"),
     leaseOrOwn: properties.leaseOrOwn,
+    plannedPowerMw: properties.plannedPowerMw,
     perspective: properties.perspective,
     providerId,
     providerName: resolveDisplayName(properties.providerName, "Unknown provider"),
+    squareFootage: properties.squareFootage,
+    state: properties.state,
+    stateAbbrev: properties.stateAbbrev,
+    statusLabel: properties.statusLabel,
+    underConstructionPowerMw: properties.underConstructionPowerMw,
   };
 }
 
@@ -184,12 +193,17 @@ function filterSelection(
 
 function initialPerspectiveSummary(): MeasurePerspectiveSelectionSummary {
   return {
+    availablePowerMw: 0,
     commissionedPowerMw: 0,
     count: 0,
     leasedCount: 0,
     operationalCount: 0,
+    pipelinePowerMw: 0,
     plannedCount: 0,
+    plannedPowerMw: 0,
+    squareFootage: 0,
     underConstructionCount: 0,
+    underConstructionPowerMw: 0,
     unknownCount: 0,
   };
 }
@@ -198,16 +212,28 @@ function buildPerspectiveSummary(
   facilities: readonly MeasureSelectedFacility[]
 ): MeasurePerspectiveSelectionSummary {
   return facilities.reduce<MeasurePerspectiveSelectionSummary>((summary, facility) => {
+    const availablePowerMw =
+      typeof facility.availablePowerMw === "number" ? facility.availablePowerMw : 0;
     const commissionedPowerMw =
       typeof facility.commissionedPowerMw === "number" ? facility.commissionedPowerMw : 0;
+    const plannedPowerMw =
+      typeof facility.plannedPowerMw === "number" ? facility.plannedPowerMw : 0;
+    const squareFootage = typeof facility.squareFootage === "number" ? facility.squareFootage : 0;
+    const underConstructionPowerMw =
+      typeof facility.underConstructionPowerMw === "number" ? facility.underConstructionPowerMw : 0;
 
     const nextSummary: MeasurePerspectiveSelectionSummary = {
+      availablePowerMw: summary.availablePowerMw + availablePowerMw,
       commissionedPowerMw: summary.commissionedPowerMw + commissionedPowerMw,
       count: summary.count + 1,
       leasedCount: summary.leasedCount,
       operationalCount: summary.operationalCount,
+      pipelinePowerMw: summary.pipelinePowerMw + plannedPowerMw + underConstructionPowerMw,
       plannedCount: summary.plannedCount,
+      plannedPowerMw: summary.plannedPowerMw + plannedPowerMw,
+      squareFootage: summary.squareFootage + squareFootage,
       underConstructionCount: summary.underConstructionCount,
+      underConstructionPowerMw: summary.underConstructionPowerMw + underConstructionPowerMw,
       unknownCount: summary.unknownCount,
     };
 
@@ -354,9 +380,18 @@ export function buildMeasureSelectionCsv(summary: MeasureSelectionSummary): stri
     "Facility Name",
     "Provider ID",
     "Provider Name",
+    "State",
+    "City",
+    "Address",
     "County FIPS",
     "Commissioned Power (MW)",
+    "Planned Power (MW)",
+    "Under Construction Power (MW)",
+    "Pipeline Power (MW)",
+    "Available Power (MW)",
+    "Square Footage",
     "Commissioned Semantic",
+    "Status",
     "Lease Or Own",
     "Longitude",
     "Latitude",
@@ -368,9 +403,18 @@ export function buildMeasureSelectionCsv(summary: MeasureSelectionSummary): stri
     facility.facilityName,
     facility.providerId,
     facility.providerName,
+    facility.state ?? facility.stateAbbrev ?? "",
+    facility.city ?? "",
+    facility.address ?? "",
     facility.countyFips,
     facility.commissionedPowerMw,
+    facility.plannedPowerMw,
+    facility.underConstructionPowerMw,
+    (facility.plannedPowerMw ?? 0) + (facility.underConstructionPowerMw ?? 0),
+    facility.availablePowerMw,
+    facility.squareFootage,
     facility.commissionedSemantic,
+    facility.statusLabel ?? "",
     facility.leaseOrOwn ?? "",
     facility.coordinates[0],
     facility.coordinates[1],

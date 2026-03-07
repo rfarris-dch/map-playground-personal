@@ -1,12 +1,4 @@
 import { z } from "zod";
-import type { BoundaryPowerLevel } from "@/boundaries-contracts";
-import { type BBox, type FacilityPerspective, formatBboxParam } from "@/shared-contracts";
-import type {
-  FacilitySortBy,
-  MarketSortBy,
-  ProviderSortBy,
-  SortDirection,
-} from "@/table-contracts";
 import type {
   ApiDefaultsTable,
   ApiHeadersTable,
@@ -19,6 +11,14 @@ import type {
   ParcelDetailRouteOptions,
   SortedPaginatedRouteArgs,
 } from "./api-contracts.types";
+import type { BoundaryPowerLevel } from "./boundaries-contracts";
+import { type BBox, type FacilityPerspective, formatBboxParam } from "./shared-contracts";
+import type {
+  FacilitySortBy,
+  MarketSortBy,
+  ProviderSortBy,
+  SortDirection,
+} from "./table-contracts";
 
 export type {
   ApiDefaultsTable,
@@ -51,6 +51,7 @@ export const ApiRoutes = Object.freeze<ApiRoutesTable>({
   facilitiesSelection: "/api/geo/facilities/selection",
   facilitiesTable: "/api/geo/facilities/table",
   markets: "/api/geo/markets",
+  marketsSelection: "/api/geo/markets/selection",
   providers: "/api/geo/providers",
   parcels: "/api/geo/parcels",
   parcelsSyncStatus: "/api/geo/parcels/sync/status",
@@ -157,6 +158,10 @@ export function buildMarketsRoute(args: SortedPaginatedRouteArgs<MarketSortBy>):
     sortBy: args.sortBy,
     sortOrder: args.sortOrder,
   });
+}
+
+export function buildMarketsSelectionRoute(): string {
+  return ApiRoutes.marketsSelection;
 }
 
 export function buildProvidersRoute(args: SortedPaginatedRouteArgs<ProviderSortBy>): string {

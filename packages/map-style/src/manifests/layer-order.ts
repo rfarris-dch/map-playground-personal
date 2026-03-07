@@ -1,4 +1,4 @@
-import { getFacilitiesStyleLayerIds, getParcelsStyleLayerIds } from "@/style-layer-ids";
+import { getFacilitiesStyleLayerIds, getParcelsStyleLayerIds } from "../style-layer-ids";
 import type { LayerOrderInvariants } from "./layer-order.types";
 
 export const LAYER_ORDER_INVARIANTS: LayerOrderInvariants = {
