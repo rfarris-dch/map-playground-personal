@@ -5,9 +5,13 @@ import {
   exportSelectionToolSummary,
   querySelectionToolSummary,
 } from "@/features/selection-tool/selection-tool.service";
-import type { SelectionToolSummary } from "@/features/selection-tool/selection-tool.types";
+import type {
+  SelectionToolProgress,
+  SelectionToolSummary,
+} from "@/features/selection-tool/selection-tool.types";
 
 export function useAppShellSelectionAnalysis(options: UseAppShellSelectionAnalysisOptions) {
+  const selectionProgress = shallowRef<SelectionToolProgress | null>(null);
   const selectionSummary = shallowRef<SelectionToolSummary | null>(null);
   const selectionError = shallowRef<string | null>(null);
   const isSelectionLoading = shallowRef<boolean>(false);
@@ -22,6 +26,7 @@ export function useAppShellSelectionAnalysis(options: UseAppShellSelectionAnalys
       selectionRequestSequence += 1;
       isSelectionLoading.value = false;
       selectionError.value = null;
+      selectionProgress.value = null;
       selectionSummary.value = null;
       return;
     }
@@ -33,10 +38,18 @@ export function useAppShellSelectionAnalysis(options: UseAppShellSelectionAnalys
     selectionAbortController = abortController;
     isSelectionLoading.value = true;
     selectionError.value = null;
+    selectionProgress.value = null;
     selectionSummary.value = buildEmptySelectionToolSummary(selectionGeometry.ring);
 
     const queryResult = await querySelectionToolSummary({
       expectedParcelsIngestionRunId: options.expectedParcelsIngestionRunId.value,
+      onProgress(progress) {
+        if (requestSequence !== selectionRequestSequence) {
+          return;
+        }
+
+        selectionProgress.value = progress;
+      },
       selectionRing: selectionGeometry.ring,
       visiblePerspectives: options.visiblePerspectives.value,
       signal: abortController.signal,
@@ -48,6 +61,7 @@ export function useAppShellSelectionAnalysis(options: UseAppShellSelectionAnalys
 
     isSelectionLoading.value = false;
     if (!queryResult.ok) {
+      selectionProgress.value = null;
       return;
     }
 
@@ -75,6 +89,7 @@ export function useAppShellSelectionAnalysis(options: UseAppShellSelectionAnalys
     selectionAbortController = null;
     isSelectionLoading.value = false;
     selectionError.value = null;
+    selectionProgress.value = null;
   });
 
   function exportSelection(): void {
@@ -82,6 +97,7 @@ export function useAppShellSelectionAnalysis(options: UseAppShellSelectionAnalys
   }
 
   return {
+    selectionProgress,
     selectionSummary,
     selectionError,
     isSelectionLoading,

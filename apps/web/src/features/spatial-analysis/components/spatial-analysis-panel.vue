@@ -157,6 +157,21 @@
       value: panelSummary.value.parcelSelection.count,
     },
   ]);
+  const visibleProgressStages = computed(() =>
+    (props.progress?.stages ?? []).filter((stage) => stage.status !== "skipped")
+  );
+  const progressPercentText = computed(() => `${props.progress?.percent ?? 0}%`);
+  const progressBarStyle = computed(() => ({
+    width: `${props.progress?.percent ?? 0}%`,
+  }));
+  const progressStatusText = computed(() => {
+    const progress = props.progress ?? null;
+    if (progress === null) {
+      return "Preparing analysis…";
+    }
+
+    return `${progress.completedStageCount} of ${progress.totalStageCount} stages finished`;
+  });
 
   function formatOverlapPercent(value: number): string {
     if (!Number.isFinite(value) || value <= 0) {
@@ -188,6 +203,38 @@
     }
 
     return "text-muted-foreground hover:bg-background/70 hover:text-foreground";
+  }
+
+  function progressStageDotClass(status: string): string {
+    if (status === "complete") {
+      return "bg-emerald-500";
+    }
+
+    if (status === "error") {
+      return "bg-red-500";
+    }
+
+    if (status === "running") {
+      return "bg-cyan-500";
+    }
+
+    return "bg-muted-foreground/50";
+  }
+
+  function progressStageStatusLabel(status: string): string {
+    if (status === "complete") {
+      return "Done";
+    }
+
+    if (status === "error") {
+      return "Failed";
+    }
+
+    if (status === "running") {
+      return "Running";
+    }
+
+    return "Pending";
   }
 
   watch(
@@ -222,7 +269,7 @@
             v-if="props.isLoading || props.isParcelsLoading"
             class="inline-flex items-center rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
           >
-            Refreshing
+            {{ props.progress === null ? "Refreshing" : `Refreshing · ${progressPercentText}` }}
           </span>
         </div>
         <p class="m-0 text-[11px] text-muted-foreground">{{ props.subtitle }}</p>
@@ -280,7 +327,53 @@
       class="flex-1 overflow-auto rounded-lg border border-border/60 bg-muted/10 p-3"
       :aria-label="`${props.title} loading`"
     >
-      <div class="animate-pulse space-y-2" role="status" aria-live="polite" aria-busy="true">
+      <div
+        v-if="props.progress !== null"
+        class="space-y-3"
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between gap-3 text-[11px] font-medium">
+            <span>Selection analysis</span>
+            <span>{{ progressPercentText }}</span>
+          </div>
+          <div class="h-2 overflow-hidden rounded-full bg-muted/80">
+            <div
+              class="h-full rounded-full bg-cyan-500 transition-[width] duration-300"
+              :style="progressBarStyle"
+            />
+          </div>
+          <p class="m-0 text-[10px] text-muted-foreground">{{ progressStatusText }}</p>
+        </div>
+
+        <div class="space-y-2">
+          <div
+            v-for="stage in visibleProgressStages"
+            :key="stage.key"
+            class="rounded-md border border-border/60 bg-background/60 px-3 py-2"
+          >
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <span
+                  class="inline-block h-2 w-2 rounded-full"
+                  :class="progressStageDotClass(stage.status)"
+                />
+                <span class="text-[11px] font-medium">{{ stage.label }}</span>
+              </div>
+              <span class="text-[10px] uppercase tracking-wide text-muted-foreground">
+                {{ progressStageStatusLabel(stage.status) }}
+              </span>
+            </div>
+            <p class="mt-1 mb-0 text-[10px] text-muted-foreground">
+              {{ stage.detail ?? "Waiting to start…" }}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div v-else class="animate-pulse space-y-2" role="status" aria-live="polite" aria-busy="true">
         <div class="h-3 w-40 rounded bg-muted" />
         <div class="h-3 w-56 rounded bg-muted" />
         <div class="h-3 w-48 rounded bg-muted" />

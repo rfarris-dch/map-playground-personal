@@ -13,6 +13,7 @@
   <SelectionPanel
     v-if="props.isSelectionPanelOpen && props.selectionGeometry !== null"
     :selection-geometry="props.selectionGeometry"
+    :progress="props.selectionProgress"
     :summary="props.selectionSummary"
     :error-message="props.selectionError"
     :is-loading="props.isLoading"

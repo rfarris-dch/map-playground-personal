@@ -23,6 +23,7 @@ export async function fetchSpatialAnalysisParcelsPages(
   let dataVersion = "";
   let sourceMode = "";
   let ingestionRunId: string | null = null;
+  let pageCount = 0;
   const warnings = new Map<string, Warning>();
 
   function appendWarnings(nextWarnings: readonly Warning[]): void {
@@ -65,8 +66,15 @@ export async function fetchSpatialAnalysisParcelsPages(
       parcelsById.set(feature.properties.parcelId, feature);
     }
 
+    pageCount += 1;
     const pageNextCursor = pageResult.data.meta.nextCursor ?? null;
     const hasMore = pageResult.data.meta.truncated && pageNextCursor !== null;
+    args.onPage?.({
+      pageCount,
+      parcelCount: parcelsById.size,
+      truncated: hasMore,
+    });
+
     if (!hasMore) {
       truncated = false;
       nextCursor = null;

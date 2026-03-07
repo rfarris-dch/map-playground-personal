@@ -127,6 +127,7 @@ export function useAppShell() {
     selectedFiberSourceLayerNames: fiber.selectedFiberSourceLayerNames,
     sketchMeasureState: state.sketchMeasureState,
     selectionGeometry: state.selectionGeometry,
+    selectionProgress: selectionAnalysis.selectionProgress,
     selectionSummary: selectionAnalysis.selectionSummary,
     selectionError: selectionAnalysis.selectionError,
     isSelectionLoading: selectionAnalysis.isSelectionLoading,

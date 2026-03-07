@@ -6,6 +6,7 @@ import {
   querySelectionToolSummary,
 } from "@/features/selection-tool/selection-tool.service";
 import type {
+  SelectionToolProgress,
   SelectionToolSummary,
   UseSelectionToolOptions,
 } from "@/features/selection-tool/selection-tool.types";
@@ -15,6 +16,7 @@ function buildSelectionRingKey(selectionRing: readonly [number, number][]): stri
 }
 
 export function useSelectionTool(options: UseSelectionToolOptions) {
+  const selectionProgress = shallowRef<SelectionToolProgress | null>(null);
   const selectionSummary = shallowRef<SelectionToolSummary | null>(null);
   const selectionError = shallowRef<string | null>(null);
   const isSelectionLoading = shallowRef<boolean>(false);
@@ -57,11 +59,19 @@ export function useSelectionTool(options: UseSelectionToolOptions) {
     selectionAbortController = abortController;
     isSelectionLoading.value = true;
     selectionError.value = null;
+    selectionProgress.value = null;
     selectionGeometry.value = nextSelectionRing;
     selectionSummary.value = buildEmptySelectionToolSummary(nextSelectionRing);
 
     const queryResult = await querySelectionToolSummary({
       expectedParcelsIngestionRunId: options.expectedParcelsIngestionRunId.value,
+      onProgress(progress) {
+        if (requestSequence !== selectionRequestSequence) {
+          return;
+        }
+
+        selectionProgress.value = progress;
+      },
       selectionRing: nextSelectionRing,
       signal: abortController.signal,
       visiblePerspectives: options.visiblePerspectives.value,
@@ -73,6 +83,7 @@ export function useSelectionTool(options: UseSelectionToolOptions) {
 
     isSelectionLoading.value = false;
     if (!queryResult.ok) {
+      selectionProgress.value = null;
       return;
     }
 
@@ -87,6 +98,7 @@ export function useSelectionTool(options: UseSelectionToolOptions) {
     isSelectionLoading.value = false;
     selectionError.value = null;
     selectionGeometry.value = null;
+    selectionProgress.value = null;
     selectionSummary.value = null;
   }
 
@@ -99,10 +111,12 @@ export function useSelectionTool(options: UseSelectionToolOptions) {
     selectionAbortController = null;
     isSelectionLoading.value = false;
     selectionError.value = null;
+    selectionProgress.value = null;
   });
 
   return {
     selectionGeometry,
+    selectionProgress,
     selectionSummary,
     selectionError,
     isSelectionLoading,

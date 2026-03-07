@@ -1,4 +1,5 @@
 import type { MarketSelectionMatch } from "@map-migration/contracts";
+import type { SelectionToolProgress } from "@/features/selection-tool/selection-tool.types";
 import type { SpatialAnalysisFacilityRecord } from "@/features/spatial-analysis/spatial-analysis-facilities.types";
 import type { SpatialAnalysisParcelRecord } from "@/features/spatial-analysis/spatial-analysis-parcels.types";
 import type { SpatialAnalysisProviderSummaryItem } from "@/features/spatial-analysis/spatial-analysis-provider-summary.types";
@@ -61,6 +62,7 @@ export interface SpatialAnalysisPanelProps {
   readonly isParcelsLoading?: boolean;
   readonly leaseSemantic?: boolean;
   readonly perspectivePowerLabel?: string;
+  readonly progress?: SelectionToolProgress | null;
   readonly showCoordinates?: boolean;
   readonly subtitle: string;
   readonly summary: SpatialAnalysisPanelSummary | null;

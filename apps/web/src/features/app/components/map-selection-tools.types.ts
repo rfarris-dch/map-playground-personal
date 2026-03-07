@@ -1,5 +1,8 @@
 import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";
-import type { SelectionToolSummary } from "@/features/selection-tool/selection-tool.types";
+import type {
+  SelectionToolProgress,
+  SelectionToolSummary,
+} from "@/features/selection-tool/selection-tool.types";
 import type { SketchAreaGeometry } from "@/features/sketch-measure/sketch-measure.types";
 
 export interface MapSelectionToolsProps {
@@ -7,6 +10,7 @@ export interface MapSelectionToolsProps {
   readonly isSelectionPanelOpen: boolean;
   readonly selectionError: string | null;
   readonly selectionGeometry: SketchAreaGeometry | null;
+  readonly selectionProgress: SelectionToolProgress | null;
   readonly selectionSummary: SelectionToolSummary | null;
 }
 

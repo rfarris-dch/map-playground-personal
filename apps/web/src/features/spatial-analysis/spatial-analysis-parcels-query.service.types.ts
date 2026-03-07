@@ -8,6 +8,11 @@ import type { ParcelsSelectionResult } from "@/features/measure/measure-analysis
 export interface FetchSpatialAnalysisParcelsPagesArgs {
   readonly cursorRepeatLogContext: string;
   readonly expectedIngestionRunId: string | null;
+  readonly onPage?: (args: {
+    readonly pageCount: number;
+    readonly parcelCount: number;
+    readonly truncated: boolean;
+  }) => void;
   readonly request: ParcelEnrichRequest;
   readonly signal: AbortSignal;
 }

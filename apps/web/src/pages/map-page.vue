@@ -30,6 +30,7 @@
     selectedFiberSourceLayerNames,
     sketchMeasureState,
     selectionGeometry,
+    selectionProgress,
     selectionSummary,
     selectionError,
     isSelectionLoading,
@@ -120,6 +121,7 @@
         :selected-fiber-source-layer-names="selectedFiberSourceLayerNames"
         :sketch-measure-state="sketchMeasureState"
         :selection-geometry="selectionGeometry"
+        :selection-progress="selectionProgress"
         :selection-summary="selectionSummary"
         :selection-error="selectionError"
         :is-loading="isSelectionLoading"

@@ -93,9 +93,11 @@ function buildAppShellOverlayViewModel(args: UseAppShellRuntimeResult) {
     isQuickViewDensityOk,
     quickViewObjectCount,
   } = mapOverlays;
-  const { selectionSummary, selectionError, isSelectionLoading } = selectionAnalysis;
+  const { selectionProgress, selectionSummary, selectionError, isSelectionLoading } =
+    selectionAnalysis;
 
   return {
+    selectionProgress,
     selectionSummary,
     selectionError,
     isSelectionLoading,

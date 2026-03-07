@@ -149,6 +149,7 @@
   <MapSelectionTools
     :is-selection-panel-open="props.isSelectionPanelOpen"
     :selection-geometry="props.selectionGeometry"
+    :selection-progress="props.selectionProgress"
     :selection-summary="props.selectionSummary"
     :selection-error="props.selectionError"
     :is-loading="props.isLoading"
