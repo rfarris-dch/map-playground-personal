@@ -1,7 +1,6 @@
 import { MapContextTransferSchema } from "@map-migration/contracts";
-import type { ScannerSummary } from "@/features/scanner/scanner.types";
-import type { SelectionToolSummary } from "@/features/selection-tool/selection-tool.types";
 import type { SpatialAnalysisDashboardState } from "@/features/spatial-analysis/spatial-analysis-dashboard.types";
+import type { SpatialAnalysisSummaryModel } from "@/features/spatial-analysis/spatial-analysis-summary.types";
 
 const SPATIAL_ANALYSIS_DASHBOARD_STORAGE_KEY = "map.spatial-analysis-dashboard";
 
@@ -14,13 +13,7 @@ function hasCommonSummaryShape(value: unknown): boolean {
     return false;
   }
 
-  return (
-    typeof value.totalCount === "number" &&
-    Array.isArray(value.facilities) &&
-    isRecord(value.colocation) &&
-    isRecord(value.hyperscale) &&
-    isRecord(value.parcelSelection)
-  );
+  return isRecord(value.area) && isRecord(value.countyIntelligence) && isRecord(value.summary);
 }
 
 function isSpatialAnalysisDashboardState(value: unknown): value is SpatialAnalysisDashboardState {
@@ -56,7 +49,7 @@ export function saveSpatialAnalysisDashboardState(nextState: SpatialAnalysisDash
   window.sessionStorage.setItem(SPATIAL_ANALYSIS_DASHBOARD_STORAGE_KEY, JSON.stringify(nextState));
 }
 
-export function saveMeasureAnalysisDashboard(summary: SelectionToolSummary): void {
+export function saveMeasureAnalysisDashboard(summary: SpatialAnalysisSummaryModel): void {
   saveSpatialAnalysisDashboardState({
     isFiltered: false,
     title: "Selection Dashboard",
@@ -66,7 +59,7 @@ export function saveMeasureAnalysisDashboard(summary: SelectionToolSummary): voi
   });
 }
 
-export function saveScannerAnalysisDashboard(summary: ScannerSummary): void {
+export function saveScannerAnalysisDashboard(summary: SpatialAnalysisSummaryModel): void {
   saveSpatialAnalysisDashboardState({
     isFiltered: false,
     title: "Scanner Dashboard",

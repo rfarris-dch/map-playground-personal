@@ -352,6 +352,7 @@ LIMIT 1;`,
     sql: `
 SELECT
   county_fips,
+  data_version,
   composite_score,
   demand_score,
   generation_score,

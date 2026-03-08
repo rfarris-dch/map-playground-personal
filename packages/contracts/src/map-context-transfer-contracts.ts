@@ -1,13 +1,6 @@
 import { z } from "zod";
 import { BBoxSchema, FacilityPerspectiveSchema } from "./shared-contracts";
 
-export type {
-  MapContextHighlightTarget,
-  MapContextSurface,
-  MapContextTransfer,
-  MapContextViewport,
-} from "./map-context-transfer-contracts.types";
-
 export const MAP_CONTEXT_TRANSFER_SCHEMA_VERSION = 1;
 
 export const MapContextSurfaceSchema = z.enum([
@@ -57,3 +50,8 @@ export const MapContextTransferSchema = z.object({
   highlightTarget: MapContextHighlightTargetSchema.optional(),
   contextToken: z.string().min(1).optional(),
 });
+
+export type MapContextSurface = z.infer<typeof MapContextSurfaceSchema>;
+export type MapContextHighlightTarget = z.infer<typeof MapContextHighlightTargetSchema>;
+export type MapContextViewport = z.infer<typeof MapContextViewportSchema>;
+export type MapContextTransfer = z.infer<typeof MapContextTransferSchema>;

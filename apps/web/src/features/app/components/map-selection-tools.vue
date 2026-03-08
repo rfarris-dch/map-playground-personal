@@ -12,6 +12,7 @@
 <template>
   <SelectionPanel
     v-if="props.isSelectionPanelOpen && props.selectionGeometry !== null"
+    :county-ids="props.countyIds"
     :selection-geometry="props.selectionGeometry"
     :progress="props.selectionProgress"
     :summary="props.selectionSummary"

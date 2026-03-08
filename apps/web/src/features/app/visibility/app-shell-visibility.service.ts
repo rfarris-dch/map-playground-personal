@@ -1,7 +1,10 @@
 import { DEFAULT_LAYER_CATALOG, type LayerCatalog } from "@map-migration/map-layer-catalog";
 import {
+  FLOOD_100_LAYER_ID,
+  FLOOD_500_LAYER_ID,
   facilitiesLayerId,
   fiberLayerId,
+  HYDRO_BASINS_LAYER_ID,
   PARCELS_LAYER_ID,
   powerLayerId,
   WATER_FEATURES_LAYER_ID,
@@ -9,6 +12,7 @@ import {
 import type {
   BoundaryVisibilityState,
   FiberVisibilityState,
+  FloodVisibilityState,
   PerspectiveVisibilityState,
 } from "@/features/app/core/app-shell.types";
 import { defaultBasemapVisibilityState } from "@/features/basemap/basemap.service";
@@ -55,6 +59,15 @@ export function buildInitialBoundaryVisibilityState(
   };
 }
 
+export function buildInitialFloodVisibilityState(
+  catalog: LayerCatalog = DEFAULT_LAYER_CATALOG
+): FloodVisibilityState {
+  return {
+    flood100: readCatalogDefaultVisible(FLOOD_100_LAYER_ID, catalog),
+    flood500: readCatalogDefaultVisible(FLOOD_500_LAYER_ID, catalog),
+  };
+}
+
 export function buildInitialFiberVisibilityState(
   catalog: LayerCatalog = DEFAULT_LAYER_CATALOG
 ): FiberVisibilityState {
@@ -80,6 +93,12 @@ export function buildInitialParcelsVisible(catalog: LayerCatalog = DEFAULT_LAYER
 
 export function buildInitialWaterVisible(catalog: LayerCatalog = DEFAULT_LAYER_CATALOG): boolean {
   return readCatalogDefaultVisible(WATER_FEATURES_LAYER_ID, catalog);
+}
+
+export function buildInitialHydroBasinsVisible(
+  catalog: LayerCatalog = DEFAULT_LAYER_CATALOG
+): boolean {
+  return readCatalogDefaultVisible(HYDRO_BASINS_LAYER_ID, catalog);
 }
 
 export function buildInitialBasemapVisibilityState(): BasemapVisibilityState {
@@ -112,6 +131,16 @@ export function syncBoundaryVisibilityState(args: {
     county: readRuntimeUserVisible(args.runtime, "county", args.fallback.county),
     state: readRuntimeUserVisible(args.runtime, "state", args.fallback.state),
     country: readRuntimeUserVisible(args.runtime, "country", args.fallback.country),
+  };
+}
+
+export function syncFloodVisibilityState(args: {
+  readonly fallback: FloodVisibilityState;
+  readonly runtime: LayerRuntimeController | null;
+}): FloodVisibilityState {
+  return {
+    flood100: readRuntimeUserVisible(args.runtime, FLOOD_100_LAYER_ID, args.fallback.flood100),
+    flood500: readRuntimeUserVisible(args.runtime, FLOOD_500_LAYER_ID, args.fallback.flood500),
   };
 }
 
@@ -148,6 +177,13 @@ export function syncWaterVisible(args: {
   return readRuntimeUserVisible(args.runtime, WATER_FEATURES_LAYER_ID, args.fallback);
 }
 
+export function syncHydroBasinsVisible(args: {
+  readonly fallback: boolean;
+  readonly runtime: LayerRuntimeController | null;
+}): boolean {
+  return readRuntimeUserVisible(args.runtime, HYDRO_BASINS_LAYER_ID, args.fallback);
+}
+
 export function withPerspectiveVisibility(args: {
   readonly perspective: keyof PerspectiveVisibilityState;
   readonly state: PerspectiveVisibilityState;
@@ -167,6 +203,17 @@ export function withBoundaryVisibility(args: {
   return {
     ...args.state,
     [args.boundaryId]: args.visible,
+  };
+}
+
+export function withFloodVisibility(args: {
+  readonly layerId: keyof FloodVisibilityState;
+  readonly state: FloodVisibilityState;
+  readonly visible: boolean;
+}): FloodVisibilityState {
+  return {
+    ...args.state,
+    [args.layerId]: args.visible,
   };
 }
 

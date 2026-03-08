@@ -6,8 +6,8 @@ import {
   querySelectionToolSummary,
 } from "@/features/selection-tool/selection-tool.service";
 import type {
+  SelectionToolAnalysisSummary,
   SelectionToolProgress,
-  SelectionToolSummary,
   UseSelectionToolOptions,
 } from "@/features/selection-tool/selection-tool.types";
 
@@ -17,7 +17,7 @@ function buildSelectionRingKey(selectionRing: readonly [number, number][]): stri
 
 export function useSelectionTool(options: UseSelectionToolOptions) {
   const selectionProgress = shallowRef<SelectionToolProgress | null>(null);
-  const selectionSummary = shallowRef<SelectionToolSummary | null>(null);
+  const selectionSummary = shallowRef<SelectionToolAnalysisSummary | null>(null);
   const selectionError = shallowRef<string | null>(null);
   const isSelectionLoading = shallowRef<boolean>(false);
   const selectionGeometry = shallowRef<readonly [number, number][] | null>(null);
@@ -65,6 +65,7 @@ export function useSelectionTool(options: UseSelectionToolOptions) {
 
     const queryResult = await querySelectionToolSummary({
       expectedParcelsIngestionRunId: options.expectedParcelsIngestionRunId.value,
+      includeParcels: true,
       onProgress(progress) {
         if (requestSequence !== selectionRequestSequence) {
           return;

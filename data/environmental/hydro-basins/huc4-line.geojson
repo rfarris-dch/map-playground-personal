@@ -1,0 +1,26 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Central Plains",
+        "huc": "1001",
+        "areasqkm": 54000,
+        "label_rank": 54000,
+        "states": "KS,NE",
+        "data_version": "sample-20260307"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [-99.3, 39.3],
+          [-97.8, 39.3],
+          [-97.8, 40.3],
+          [-99.3, 40.3],
+          [-99.3, 39.3]
+        ]
+      }
+    }
+  ]
+}

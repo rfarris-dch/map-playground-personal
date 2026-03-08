@@ -6,6 +6,7 @@ import type {
   FiberSourceLayerOptionsState,
   FiberSourceLayerSelectionState,
   FiberVisibilityState,
+  FloodVisibilityState,
   PerspectiveVisibilityState,
 } from "@/features/app/core/app-shell.types";
 import type { BasemapLayerId, BasemapVisibilityState } from "@/features/basemap/basemap.types";
@@ -21,12 +22,17 @@ export interface MapLayerControlsPanelProps {
   readonly colocationStatusText: string;
   readonly fiberSourceLayerOptions: FiberSourceLayerOptionsState;
   readonly fiberStatusText: string;
+  readonly floodVisibility: FloodVisibilityState;
+  readonly hydroBasinsVisible: boolean;
   readonly hyperscaleStatusText: string;
   readonly isOpen: boolean;
   readonly parcelsStatusText: string;
   readonly parcelsVisible: boolean;
   readonly powerVisibility: PowerVisibilityState;
   readonly selectedFiberSourceLayerNames: FiberSourceLayerSelectionState;
+  readonly showFlood100ZoomHint: boolean;
+  readonly showFlood500ZoomHint: boolean;
+  readonly showHydroBasinsZoomHint: boolean;
   readonly visibleFiberLayers: FiberVisibilityState;
   readonly visiblePerspectives: PerspectiveVisibilityState;
   readonly waterVisible: boolean;
@@ -43,6 +49,8 @@ export interface MapLayerControlsPanelEmits {
   ];
   "update:boundary-visible": [boundaryId: BoundaryLayerId, visible: boolean];
   "update:fiber-layer-visibility": [lineId: FiberLocatorLineId, visible: boolean];
+  "update:flood-layer-visible": [layerId: keyof FloodVisibilityState, visible: boolean];
+  "update:hydro-basins-visible": [visible: boolean];
   "update:parcels-visible": [visible: boolean];
   "update:perspective-visibility": [perspective: FacilityPerspective, visible: boolean];
   "update:power-layer-visible": [layerId: PowerLayerId, visible: boolean];

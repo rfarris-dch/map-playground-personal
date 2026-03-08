@@ -1,15 +1,15 @@
 import {
   buildMarketsSelectionRoute,
+  type MarketsSelectionRequest,
   MarketsSelectionResponseSchema,
 } from "@map-migration/contracts";
-import type {
-  MarketsSelectionRequestInput,
-  MarketsSelectionResult,
-} from "@/features/selection-tool/selection-tool.types";
+import type { ApiResult } from "@/lib/api-client";
 import { apiGetJson } from "@/lib/api-client";
 
+type MarketsSelectionResult = ApiResult<typeof MarketsSelectionResponseSchema._type>;
+
 export function fetchMarketsBySelection(
-  request: MarketsSelectionRequestInput,
+  request: MarketsSelectionRequest,
   signal?: AbortSignal
 ): Promise<MarketsSelectionResult> {
   const requestInit: RequestInit = {

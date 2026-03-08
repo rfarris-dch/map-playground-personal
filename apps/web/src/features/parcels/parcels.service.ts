@@ -1,4 +1,16 @@
-import { parseTilePublishManifest } from "@map-migration/geo-tiles";
+import { createPmtilesSourceUrl as createPmtilesSourceUrlFromManifest } from "@map-migration/geo-tiles";
+import { loadTilePublishManifestEffect } from "@map-migration/geo-tiles/effect";
+import {
+  RequestAbortedError,
+  RequestHttpError,
+  RequestJsonParseError,
+  RequestNetworkError,
+  RequestSchemaError,
+} from "@map-migration/ops/effect";
+import { Effect, Either } from "effect";
+import {
+  createAbortError,
+} from "@/features/app/runtime-effect/errors";
 import type {
   StressGovernorController,
   StressGovernorOptions,
@@ -10,27 +22,6 @@ import type {
   ParcelsStatus,
   TilePublishManifest,
 } from "@/features/parcels/parcels.types";
-
-function normalizeManifestPath(manifestPath: string): string {
-  if (manifestPath.startsWith("http://") || manifestPath.startsWith("https://")) {
-    return manifestPath;
-  }
-
-  if (manifestPath.startsWith("/")) {
-    return manifestPath;
-  }
-
-  return `/${manifestPath}`;
-}
-
-function normalizePmtilesAssetUrl(assetUrl: string): string {
-  if (assetUrl.startsWith("http://") || assetUrl.startsWith("https://")) {
-    return assetUrl;
-  }
-
-  const normalizedPath = assetUrl.startsWith("/") ? assetUrl : `/${assetUrl}`;
-  return `${window.location.origin}${normalizedPath}`;
-}
 
 function toRadians(value: number): number {
   return (value * Math.PI) / 180;
@@ -81,60 +72,41 @@ function normalizeEastLongitude(west: number, east: number): number {
   return east + 360;
 }
 
-function isAbortError(error: unknown): boolean {
-  if (error instanceof DOMException) {
-    return error.name === "AbortError";
-  }
-
-  if (typeof error !== "object" || error === null) {
-    return false;
-  }
-
-  return Reflect.get(error, "name") === "AbortError";
-}
-
 export async function loadParcelsManifest(
   args: LoadParcelsManifestArgs
 ): Promise<TilePublishManifest> {
-  const manifestPath = normalizeManifestPath(args.manifestPath);
-  const requestInit: RequestInit = {
-    method: "GET",
-    headers: {
-      accept: "application/json",
-    },
-  };
-  if (args.signal) {
-    requestInit.signal = args.signal;
+  const result = await Effect.runPromise(
+    Effect.either(
+      loadTilePublishManifestEffect({
+        manifestPath: args.manifestPath,
+        ...(typeof args.signal === "undefined" ? {} : { signal: args.signal }),
+      })
+    )
+  );
+
+  if (Either.isRight(result)) {
+    return result.right.data;
   }
 
-  let response: Response;
-  try {
-    response = await fetch(manifestPath, requestInit);
-  } catch (error) {
-    if (isAbortError(error)) {
-      throw error;
-    }
-
-    throw error;
+  const error = result.left;
+  if (error instanceof RequestAbortedError) {
+    throw createAbortError();
   }
-
-  if (!response.ok) {
-    throw new Error(`Failed to load parcels manifest (${response.status} ${response.statusText})`);
+  if (error instanceof RequestNetworkError) {
+    throw error.cause;
   }
-
-  let payload: unknown = null;
-  try {
-    payload = await response.json();
-  } catch {
+  if (error instanceof RequestHttpError) {
+    throw new Error(`Failed to load parcels manifest (${error.status} ${error.statusText})`);
+  }
+  if (error instanceof RequestJsonParseError || error instanceof RequestSchemaError) {
     throw new Error("Failed to parse parcels manifest JSON");
   }
 
-  return parseTilePublishManifest(payload);
+  throw error;
 }
 
 export function createPmtilesSourceUrl(manifest: TilePublishManifest): string {
-  const absoluteAssetUrl = normalizePmtilesAssetUrl(manifest.current.url);
-  return `pmtiles://${absoluteAssetUrl}`;
+  return createPmtilesSourceUrlFromManifest(manifest);
 }
 
 function estimateViewportWidthKm(bounds: {

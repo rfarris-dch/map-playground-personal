@@ -1,6 +1,6 @@
-import type { PipelineLiveSample, PipelineStatusPayload } from "@/features/pipeline/pipeline.types";
-import { parseIsoToTimestamp } from "@/features/pipeline/pipeline-tracking/pipeline-tracking-time.service";
+import type { PipelineLiveSample, PipelineStatusPayload } from "../pipeline.types";
 import type { ParsedBuildSummary } from "./pipeline-tracking-live-sample.service.types";
+import { parseIsoToTimestamp } from "./pipeline-tracking-time.service";
 
 const BUILD_PERCENT_RE = /([0-9]+(?:\.[0-9]+)?)%/;
 const BUILD_READ_RE = /\bread=([0-9]+)\/([0-9]+)\b/;

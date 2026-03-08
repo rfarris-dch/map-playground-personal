@@ -1,0 +1,20 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Upper Prairie Fork",
+        "huc": "100101",
+        "areasqkm": 26000,
+        "label_rank": 26000,
+        "states": "KS,NE",
+        "data_version": "sample-20260307"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-98.55, 39.78]
+      }
+    }
+  ]
+}

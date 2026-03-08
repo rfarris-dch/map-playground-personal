@@ -14,7 +14,7 @@ export interface FetchSpatialAnalysisParcelsPagesArgs {
     readonly truncated: boolean;
   }) => void;
   readonly request: ParcelEnrichRequest;
-  readonly signal: AbortSignal;
+  readonly signal?: AbortSignal;
 }
 
 export type SpatialAnalysisParcelsPagesResult =

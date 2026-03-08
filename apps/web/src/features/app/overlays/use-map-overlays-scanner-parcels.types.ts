@@ -17,9 +17,7 @@ export interface UseMapOverlaysScannerParcelsOptions {
 }
 
 export interface ScannerParcelsRefreshScope {
-  readonly abortController: AbortController;
   readonly mapBounds: MapBounds;
-  readonly requestSequence: number;
 }
 
 export interface ScannerParcelsSelection {
@@ -37,7 +35,5 @@ export interface ScannerAnchorSelectionAccumulator {
 export interface ScannerAnchorSelectionArgs {
   readonly anchorRequests: readonly ParcelEnrichRequest[];
   readonly nextCursor: string | null;
-  readonly requestSequence: number;
   readonly selection: ScannerParcelsSelection;
-  readonly signal: AbortSignal;
 }

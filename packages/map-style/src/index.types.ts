@@ -7,10 +7,17 @@ export type StyleLayer = MapStyleLayer;
 
 export type BoundaryCatalogLayerId = Extract<LayerId, "county" | "state" | "country">;
 
+export type FloodCatalogLayerId = Extract<
+  LayerId,
+  "environmental.flood-100" | "environmental.flood-500"
+>;
+
 export type FacilitiesCatalogLayerId = Extract<
   LayerId,
   "facilities.colocation" | "facilities.hyperscale"
 >;
+
+export type HydroBasinsCatalogLayerId = Extract<LayerId, "environmental.hydro-basins">;
 
 export type PowerCatalogLayerId = Extract<
   LayerId,
@@ -27,10 +34,21 @@ export interface BoundaryStyleLayerIds {
   readonly outlineLayerId: string;
 }
 
+export interface FloodStyleLayerIds {
+  readonly fill100LayerId: string;
+  readonly fill500LayerId: string;
+  readonly outline100LayerId: string;
+}
+
 export interface FacilitiesStyleLayerIds {
   readonly clusterCountLayerId: string;
   readonly clusterLayerId: string;
   readonly pointLayerId: string;
+}
+
+export interface HydroBasinsStyleLayerIds {
+  readonly labelLayerIds: readonly string[];
+  readonly lineLayerIds: readonly string[];
 }
 
 export interface ParcelsStyleLayerIds {

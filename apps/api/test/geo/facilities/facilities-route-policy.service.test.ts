@@ -1,10 +1,13 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, mock } from "bun:test";
 import type { FacilitiesSelectionRequest } from "@map-migration/contracts";
-import {
+
+mock.restore();
+
+const {
   FACILITIES_SELECTION_MAX_POLYGON_JSON_CHARS,
   facilitiesSelectionBboxExceedsLimits,
   resolveFacilitiesSelectionGeometry,
-} from "@/geo/facilities/route/facilities-route-policy.service";
+} = await import("@/geo/facilities/route/facilities-route-policy.service");
 
 function buildGeometry(
   coordinates: FacilitiesSelectionRequest["geometry"]["coordinates"]

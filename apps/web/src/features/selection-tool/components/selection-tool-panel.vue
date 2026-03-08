@@ -59,9 +59,9 @@
 
   const selectionMetrics = computed(() => ({
     areaText: formatArea(props.measureState.areaSqKm),
-    marketCount: props.selectionSummary?.marketSelection.matchCount ?? 0,
-    parcelCount: props.selectionSummary?.parcelSelection.count ?? 0,
-    facilityCount: props.selectionSummary?.totalCount ?? 0,
+    marketCount: props.selectionSummary?.summary.marketSelection?.matchCount ?? 0,
+    parcelCount: props.selectionSummary?.summary.parcelSelection.count ?? 0,
+    facilityCount: props.selectionSummary?.summary.totalCount ?? 0,
   }));
 </script>
 

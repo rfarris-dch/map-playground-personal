@@ -13,6 +13,7 @@ export interface MapOverlaysScannerParcelState {
   readonly isScannerParcelsLoading: ShallowRef<boolean>;
   readonly scannerParcelFeatures: ShallowRef<ParcelsFeatureCollection["features"]>;
   readonly scannerParcelNextCursor: ShallowRef<string | null>;
+  readonly scannerParcelsBlockedReason: ShallowRef<string | null>;
   readonly scannerParcelTruncated: ShallowRef<boolean>;
 }
 
@@ -21,6 +22,7 @@ export interface UseMapOverlaysDisplayOptions {
   readonly overlayShortcuts: MapOverlaysShortcutState;
   readonly overlaysBlockedReason: ComputedRef<string | null>;
   readonly scannerParcels: MapOverlaysScannerParcelState;
+  readonly scannerParcelsBlockedReason: ComputedRef<string | null>;
 }
 
 export interface UseMapOverlaysDisplayResult {

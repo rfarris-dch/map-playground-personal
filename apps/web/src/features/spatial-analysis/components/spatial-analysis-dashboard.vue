@@ -18,7 +18,7 @@
 
   const props = defineProps<SpatialAnalysisDashboardProps>();
 
-  const summary = computed(() => props.state?.summary ?? null);
+  const summary = computed(() => props.state?.summary.summary ?? null);
   const metrics = computed(() =>
     summary.value === null ? null : buildSpatialAnalysisOverviewMetrics(summary.value)
   );

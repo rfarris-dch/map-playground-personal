@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 import type { MarketTableRow } from "@map-migration/contracts";
 
 const countMarketsMock = mock<() => Promise<number>>();
@@ -24,6 +24,10 @@ mock.module("../../../src/geo/markets/markets.mapper", () => ({
 }));
 
 const { queryMarketsTable } = await import("@/geo/markets/markets-query.service");
+
+afterAll(() => {
+  mock.restore();
+});
 
 describe("queryMarketsTable", () => {
   beforeEach(() => {

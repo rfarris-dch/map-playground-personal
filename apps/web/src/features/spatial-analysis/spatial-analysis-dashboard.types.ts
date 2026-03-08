@@ -1,6 +1,5 @@
 import type { MapContextTransfer } from "@map-migration/contracts";
-import type { ScannerSummary } from "@/features/scanner/scanner.types";
-import type { SelectionToolSummary } from "@/features/selection-tool/selection-tool.types";
+import type { SpatialAnalysisSummaryModel } from "@/features/spatial-analysis/spatial-analysis-summary.types";
 
 export interface SpatialAnalysisDashboardBase {
   readonly createdAt: string;
@@ -11,12 +10,12 @@ export interface SpatialAnalysisDashboardBase {
 
 export interface SpatialAnalysisMeasureDashboardState extends SpatialAnalysisDashboardBase {
   readonly source: "selection";
-  readonly summary: SelectionToolSummary;
+  readonly summary: SpatialAnalysisSummaryModel;
 }
 
 export interface SpatialAnalysisScannerDashboardState extends SpatialAnalysisDashboardBase {
   readonly source: "scanner";
-  readonly summary: ScannerSummary;
+  readonly summary: SpatialAnalysisSummaryModel;
 }
 
 export type SpatialAnalysisDashboardState =

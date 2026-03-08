@@ -5,19 +5,6 @@ import {
   LeaseOrOwnSchema,
 } from "./shared-contracts";
 
-export type {
-  FacilitiesTableResponse,
-  FacilitySortBy,
-  FacilityTableRow,
-  MarketSortBy,
-  MarketsTableResponse,
-  MarketTableRow,
-  ProviderSortBy,
-  ProvidersTableResponse,
-  ProviderTableRow,
-  SortDirection,
-} from "./table-contracts.types";
-
 export const PaginationSchema = z.object({
   page: z.number().int().nonnegative(),
   pageSize: z.number().int().positive(),
@@ -112,3 +99,14 @@ export const FacilitiesTableResponseSchema = z.object({
   rows: z.array(FacilityTableRowSchema),
   pagination: PaginationSchema,
 });
+
+export type SortDirection = z.infer<typeof SortDirectionSchema>;
+export type MarketSortBy = z.infer<typeof MarketSortBySchema>;
+export type MarketTableRow = z.infer<typeof MarketTableRowSchema>;
+export type MarketsTableResponse = z.infer<typeof MarketsTableResponseSchema>;
+export type ProviderSortBy = z.infer<typeof ProviderSortBySchema>;
+export type ProviderTableRow = z.infer<typeof ProviderTableRowSchema>;
+export type ProvidersTableResponse = z.infer<typeof ProvidersTableResponseSchema>;
+export type FacilitySortBy = z.infer<typeof FacilitySortBySchema>;
+export type FacilityTableRow = z.infer<typeof FacilityTableRowSchema>;
+export type FacilitiesTableResponse = z.infer<typeof FacilitiesTableResponseSchema>;

@@ -30,6 +30,23 @@ describe("default layer catalog", () => {
     expect(DEFAULT_LAYER_CATALOG["power.plants"].zoomMin).toBe(0);
   });
 
+  it("keeps environmental flood overlays aligned to a shared vector source at parcel zooms", () => {
+    expect(DEFAULT_LAYER_CATALOG["environmental.flood-100"].sourceId).toBe("environmental-flood");
+    expect(DEFAULT_LAYER_CATALOG["environmental.flood-500"].sourceId).toBe("environmental-flood");
+    expect(DEFAULT_LAYER_CATALOG["environmental.flood-100"].zoomMin).toBe(0);
+    expect(DEFAULT_LAYER_CATALOG["environmental.flood-500"].zoomMin).toBe(0);
+    expect(DEFAULT_LAYER_CATALOG["environmental.flood-100"].sourceType).toBe("vector");
+    expect(DEFAULT_LAYER_CATALOG["environmental.flood-500"].sourceType).toBe("vector");
+  });
+
+  it("keeps hydro basins on a single contextual vector source", () => {
+    expect(DEFAULT_LAYER_CATALOG["environmental.hydro-basins"].sourceId).toBe(
+      "environmental-hydro-basins"
+    );
+    expect(DEFAULT_LAYER_CATALOG["environmental.hydro-basins"].zoomMin).toBe(5);
+    expect(DEFAULT_LAYER_CATALOG["environmental.hydro-basins"].sourceType).toBe("vector");
+  });
+
   it("rejects feature layers that depend on boundary layers", () => {
     const invalidBoundaryDependency: readonly ["county"] = ["county"];
     const invalidCatalog = {

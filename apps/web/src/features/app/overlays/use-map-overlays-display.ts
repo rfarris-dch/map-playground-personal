@@ -56,6 +56,10 @@ export function useMapOverlaysDisplay(
       return options.overlaysBlockedReason.value;
     }
 
+    if (options.scannerParcelsBlockedReason.value !== null) {
+      return options.scannerParcelsBlockedReason.value;
+    }
+
     if (options.scannerParcels.isScannerParcelsLoading.value) {
       return "Loading parcels in current viewport…";
     }

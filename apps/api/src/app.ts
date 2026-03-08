@@ -1,5 +1,6 @@
 import { ApiHeaders, ApiRoutes, type HealthResponse, HealthSchema } from "@map-migration/contracts";
 import { createRequestId } from "@map-migration/ops";
+import { Effect } from "effect";
 import type { Context } from "hono";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
@@ -7,7 +8,9 @@ import { HTTPException } from "hono/http-exception";
 import { requestId } from "hono/request-id";
 import { timeout } from "hono/timeout";
 import { parsePositiveIntFlag } from "@/config/env-parsing.service";
+import { registerAnalysisSummaryRoute } from "@/geo/analysis-summary/analysis-summary.route";
 import { registerBoundariesRoute } from "@/geo/boundaries/boundaries.route";
+import { registerCountyScoresRoute } from "@/geo/county-scores/county-scores.route";
 import { registerFacilitiesRoute } from "@/geo/facilities/facilities.route";
 import { registerFiberLocatorRoute } from "@/geo/fiber-locator/fiber-locator.route";
 import { registerMarketsRoute } from "@/geo/markets/markets.route";
@@ -21,6 +24,7 @@ import {
   REQUEST_ID_MAX_LENGTH,
   toDebugDetails,
 } from "@/http/api-response";
+import { ApiRequestContext, runEffectRoute } from "@/http/effect-route";
 import { registerTilesRoute } from "@/http/tiles.route";
 import type { ApiAppOptions, CreateApiAppOptions } from "./app.types";
 
@@ -39,6 +43,7 @@ const DEFAULT_PARCELS_REQUEST_TIMEOUT_MS = parsePositiveIntFlag(
 );
 
 const SELECTION_TIMEOUT_ROUTES = new Set<string>([
+  ApiRoutes.analysisSummary,
   ApiRoutes.facilitiesSelection,
   ApiRoutes.marketsSelection,
 ]);
@@ -104,6 +109,13 @@ function healthPayload(): HealthResponse {
     service: "@map-migration/api",
     now: new Date().toISOString(),
   };
+}
+
+function healthRouteProgram(): Effect.Effect<Response, never, ApiRequestContext> {
+  return Effect.gen(function* () {
+    const request = yield* ApiRequestContext;
+    return jsonOk(request.honoContext, HealthSchema, healthPayload(), request.requestId);
+  });
 }
 
 export function createApiApp(options: CreateApiAppOptions = {}): Hono {
@@ -179,22 +191,16 @@ export function createApiApp(options: CreateApiAppOptions = {}): Hono {
     });
   });
 
-  app.get("/health", (c) => {
-    const requestIdValue = getOrCreateRequestId(c, "api");
-    const payload = healthPayload();
-    return jsonOk(c, HealthSchema, payload, requestIdValue);
-  });
+  app.get("/health", (c) => runEffectRoute(c, healthRouteProgram()));
 
-  app.get(ApiRoutes.health, (c) => {
-    const requestIdValue = getOrCreateRequestId(c, "api");
-    const payload = healthPayload();
-    return jsonOk(c, HealthSchema, payload, requestIdValue);
-  });
+  app.get(ApiRoutes.health, (c) => runEffectRoute(c, healthRouteProgram()));
 
   registerFacilitiesRoute(app);
+  registerAnalysisSummaryRoute(app);
   registerFiberLocatorRoute(app);
   registerParcelsRoute(app);
   registerBoundariesRoute(app);
+  registerCountyScoresRoute(app);
   registerMarketsRoute(app);
   registerProvidersRoute(app);
   registerTilesRoute(app);

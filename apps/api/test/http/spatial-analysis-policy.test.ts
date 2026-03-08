@@ -8,6 +8,7 @@ import {
 describe("spatial analysis policy service", () => {
   it("exposes configured policies for all analysis datasets", () => {
     const datasets = listSpatialAnalysisPolicies().map((policy) => policy.dataset);
+    expect(datasets).toContain("county_scores");
     expect(datasets).toContain("parcels");
     expect(datasets).toContain("facilities");
     expect(datasets).toContain("power");

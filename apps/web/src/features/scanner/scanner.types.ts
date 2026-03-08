@@ -6,7 +6,9 @@ import type { SpatialAnalysisFacilityRecord } from "@/features/spatial-analysis/
 import type { SpatialAnalysisParcelRecord } from "@/features/spatial-analysis/spatial-analysis-parcels.types";
 import type { SpatialAnalysisProviderSummaryItem } from "@/features/spatial-analysis/spatial-analysis-provider-summary.types";
 
-export interface ScannerFacility extends SpatialAnalysisFacilityRecord {}
+export interface ScannerFacility extends SpatialAnalysisFacilityRecord {
+  readonly countyFips: string;
+}
 
 export interface ScannerPerspectiveSummary {
   readonly availablePowerMw: number;
@@ -36,6 +38,7 @@ export interface ScannerParcelSelectionSummary {
 
 export interface ScannerSummary {
   readonly colocation: ScannerPerspectiveSummary;
+  readonly countyIds: readonly string[];
   readonly facilities: readonly ScannerFacility[];
   readonly hyperscale: ScannerPerspectiveSummary;
   readonly parcelSelection: ScannerParcelSelectionSummary;

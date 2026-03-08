@@ -1,4 +1,4 @@
-import type { TileDataset } from "@/packages/geo-tiles/src/index";
+import type { TileDataset } from "@map-migration/geo-tiles";
 
 export interface CliArgs {
   readonly dataset: TileDataset;

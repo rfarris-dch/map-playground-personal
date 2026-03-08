@@ -9,6 +9,7 @@ import type {
 } from "@/features/app/overlays/map-overlays.service.types";
 import type { MapBounds, MapOverlaysQueryState } from "@/features/app/overlays/map-overlays.types";
 import type { FacilitiesStatus } from "@/features/facilities/facilities.types";
+import type { ParcelsStatus } from "@/features/parcels/parcels.types";
 
 function clampNumber(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
@@ -52,6 +53,12 @@ function isZoomHiddenStatus(
   return status.state === "hidden";
 }
 
+function isParcelsHiddenStatus(
+  status: ParcelsStatus
+): status is Extract<ParcelsStatus, { state: "hidden" }> {
+  return status.state === "hidden";
+}
+
 export function resolveMapOverlaysBlockedReason(args: {
   readonly facilitiesStatus: PerspectiveStatusState;
   readonly visiblePerspectives: PerspectiveVisibilityState;
@@ -79,6 +86,18 @@ export function resolveMapOverlaysBlockedReason(args: {
   }, 0);
 
   return `Zoom in to at least ${requiredMinZoom.toFixed(1)} to load facilities.`;
+}
+
+export function resolveScannerParcelsBlockedReason(status: ParcelsStatus): string | null {
+  if (!isParcelsHiddenStatus(status)) {
+    return null;
+  }
+
+  if (status.reason === "stress") {
+    return "Parcels are temporarily blocked in the current viewport.";
+  }
+
+  return "Zoom in to load parcels in the current viewport.";
 }
 
 export function readMapOverlaysQueryState(): MapOverlaysQueryState {

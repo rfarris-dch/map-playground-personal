@@ -4,7 +4,15 @@ import {
   type ParcelSyncPhase,
   ParcelsSyncStatusResponseSchema,
 } from "@map-migration/contracts";
-import { createRequestId } from "@map-migration/ops";
+import {
+  fetchJsonEffect,
+  RequestAbortedError,
+  RequestHttpError,
+  RequestJsonParseError,
+  RequestNetworkError,
+  RequestSchemaError,
+} from "@map-migration/ops/effect";
+import { Effect, Either } from "effect";
 import type {
   PipelineStatusFetchResult,
   PipelineStatusPayload,
@@ -29,19 +37,6 @@ function phaseLabel(phase: ParcelSyncPhase): string {
     default:
       return "Unknown";
   }
-}
-
-function toTrimmedText(value: unknown): string | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const normalized = value.trim();
-  if (normalized.length === 0) {
-    return null;
-  }
-
-  return normalized;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -110,124 +105,100 @@ function applyRawStateCompletionFlags(
   };
 }
 
-function isAbortError(error: unknown): boolean {
-  if (error instanceof DOMException) {
-    return error.name === "AbortError";
-  }
-
-  if (typeof error !== "object" || error === null) {
-    return false;
-  }
-
-  return Reflect.get(error, "name") === "AbortError";
-}
-
-async function readErrorDetails(response: Response): Promise<unknown> {
-  try {
-    const json = await response.clone().json();
-    return json;
-  } catch {
-    try {
-      const text = await response.text();
-      const normalized = toTrimmedText(text);
-      return normalized ?? undefined;
-    } catch {
-      return undefined;
-    }
-  }
-}
-
-export async function fetchPipelineStatus(
+export function createFetchPipelineStatusEffect(
   signal?: AbortSignal
-): Promise<PipelineStatusFetchResult> {
-  const generatedRequestId = createRequestId("pipeline-ui");
-  const headers = new Headers();
-  headers.set(ApiHeaders.requestId, generatedRequestId);
-  const requestInit: RequestInit = {
-    method: "GET",
-    headers,
-  };
-  if (signal) {
-    requestInit.signal = signal;
-  }
+): Effect.Effect<PipelineStatusFetchResult, never> {
+  return Effect.gen(function* () {
+    const result = yield* Effect.either(
+      fetchJsonEffect({
+        init: {
+          method: "GET",
+          ...(typeof signal === "undefined" ? {} : { signal }),
+        },
+        requestIdHeaderName: ApiHeaders.requestId,
+        requestIdPrefix: "pipeline-ui",
+        schema: ParcelsSyncStatusResponseSchema,
+        url: buildParcelsSyncStatusRoute(),
+      })
+    );
 
-  let response: Response;
-  try {
-    response = await fetch(buildParcelsSyncStatusRoute(), requestInit);
-  } catch (error) {
-    if (isAbortError(error)) {
+    if (Either.isLeft(result)) {
+      const error = result.left;
+      if (error instanceof RequestAbortedError) {
+        return {
+          ok: false,
+          error: {
+            reason: "aborted",
+            requestId: error.requestId,
+            message: "Request aborted",
+            details: error.cause,
+          },
+        };
+      }
+
+      if (error instanceof RequestNetworkError) {
+        return {
+          ok: false,
+          error: {
+            reason: "network",
+            requestId: error.requestId,
+            message: "Network request failed",
+            details: error.cause,
+          },
+        };
+      }
+
+      if (error instanceof RequestHttpError) {
+        return {
+          ok: false,
+          error: {
+            reason: "http",
+            requestId: error.requestId,
+            status: error.status,
+            message: `HTTP ${String(error.status)} ${error.statusText}`,
+            details: error.details,
+          },
+        };
+      }
+
+      if (error instanceof RequestJsonParseError || error instanceof RequestSchemaError) {
+        return {
+          ok: false,
+          error: {
+            reason: "schema",
+            requestId: error.requestId,
+            message:
+              error instanceof RequestJsonParseError
+                ? "Response JSON parsing failed"
+                : "Response schema validation failed",
+            details: error.cause,
+          },
+        };
+      }
+
       return {
         ok: false,
         error: {
-          reason: "aborted",
-          requestId: generatedRequestId,
-          message: "Request aborted",
+          reason: "network",
+          requestId: "unknown",
+          message: "Network request failed",
           details: error,
         },
       };
     }
 
     return {
-      ok: false,
-      error: {
-        reason: "network",
-        requestId: generatedRequestId,
-        message: "Network request failed",
-        details: error,
+      ok: true,
+      payload: {
+        requestId: result.right.requestId,
+        response: applyRawStateCompletionFlags(result.right.data, result.right.rawBody),
       },
     };
-  }
+  });
+}
 
-  const requestId = response.headers.get(ApiHeaders.requestId) ?? generatedRequestId;
-  if (!response.ok) {
-    const details = await readErrorDetails(response);
-    return {
-      ok: false,
-      error: {
-        reason: "http",
-        requestId,
-        status: response.status,
-        message: `HTTP ${String(response.status)} ${response.statusText}`,
-        details,
-      },
-    };
-  }
-
-  let body: unknown;
-  try {
-    body = await response.json();
-  } catch (error) {
-    return {
-      ok: false,
-      error: {
-        reason: "schema",
-        requestId,
-        message: "Response JSON parsing failed",
-        details: error,
-      },
-    };
-  }
-
-  const parsed = ParcelsSyncStatusResponseSchema.safeParse(body);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      error: {
-        reason: "schema",
-        requestId,
-        message: "Response schema validation failed",
-        details: parsed.error,
-      },
-    };
-  }
-
-  return {
-    ok: true,
-    payload: {
-      requestId,
-      response: applyRawStateCompletionFlags(parsed.data, body),
-    },
-  };
+export function fetchPipelineStatus(signal?: AbortSignal): Promise<PipelineStatusFetchResult> {
+  return Effect.runPromise(createFetchPipelineStatusEffect(signal));
 }
 
 export function formatPhaseLabel(phase: ParcelSyncPhase): string {

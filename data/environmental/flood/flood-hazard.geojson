@@ -1,0 +1,86 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "FLD_ZONE": "X",
+        "ZONE_SUBTY": "0.2 PCT ANNUAL CHANCE FLOOD HAZARD",
+        "SFHA_TF": "F",
+        "DFIRM_ID": "SAMPLE-DFIRM-001",
+        "SOURCE_CIT": "FEMA effective NFHL sample 2026-03-07",
+        "is_flood_100": 0,
+        "is_flood_500": 1,
+        "flood_band": "flood-500",
+        "legend_key": "flood-500",
+        "data_version": "sample-20260307"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-98.76, 39.7],
+            [-98.38, 39.7],
+            [-98.38, 39.95],
+            [-98.76, 39.95],
+            [-98.76, 39.7]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "FLD_ZONE": "AE",
+        "ZONE_SUBTY": "1 PCT ANNUAL CHANCE FLOOD HAZARD",
+        "SFHA_TF": "T",
+        "DFIRM_ID": "SAMPLE-DFIRM-001",
+        "SOURCE_CIT": "FEMA effective NFHL sample 2026-03-07",
+        "is_flood_100": 1,
+        "is_flood_500": 0,
+        "flood_band": "flood-100",
+        "legend_key": "flood-100",
+        "data_version": "sample-20260307"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-98.67, 39.76],
+            [-98.5, 39.76],
+            [-98.5, 39.88],
+            [-98.67, 39.88],
+            [-98.67, 39.76]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "FLD_ZONE": "AE",
+        "ZONE_SUBTY": "1 PCT ANNUAL CHANCE FLOOD HAZARD",
+        "SFHA_TF": "T",
+        "DFIRM_ID": "SAMPLE-DFIRM-002",
+        "SOURCE_CIT": "FEMA effective NFHL sample 2026-03-07",
+        "is_flood_100": 1,
+        "is_flood_500": 0,
+        "flood_band": "flood-100",
+        "legend_key": "flood-100",
+        "data_version": "sample-20260307"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-98.6, 39.8],
+            [-98.54, 39.8],
+            [-98.54, 39.84],
+            [-98.6, 39.84],
+            [-98.6, 39.8]
+          ]
+        ]
+      }
+    }
+  ]
+}

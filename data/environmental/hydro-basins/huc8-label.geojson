@@ -1,0 +1,20 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Prairie Creek Basin",
+        "huc": "10010102",
+        "areasqkm": 12000,
+        "label_rank": 12000,
+        "states": "KS",
+        "data_version": "sample-20260307"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-98.54, 39.78]
+      }
+    }
+  ]
+}

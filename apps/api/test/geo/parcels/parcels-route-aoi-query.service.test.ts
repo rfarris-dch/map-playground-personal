@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 import type { ParcelAoi, ParcelGeometryMode } from "@map-migration/contracts";
 import { Hono } from "hono";
 
@@ -18,6 +18,10 @@ mock.module("../../../src/geo/parcels/parcels.repo", () => ({
 const { queryEnrichRowsByAoi } = await import(
   "@/geo/parcels/route/parcels-route-aoi-query.service"
 );
+
+afterAll(() => {
+  mock.restore();
+});
 
 function callAoiQuery(aoi: ParcelAoi): Promise<Response> {
   const app = new Hono();

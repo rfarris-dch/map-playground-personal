@@ -10,6 +10,8 @@
   import BoundariesControls from "@/features/boundaries/components/boundaries-controls.vue";
   import FacilitiesControls from "@/features/facilities/components/facilities-controls.vue";
   import FiberLocatorControls from "@/features/fiber-locator/components/fiber-locator-controls.vue";
+  import FloodControls from "@/features/flood/components/flood-controls.vue";
+  import HydroBasinsControls from "@/features/hydro-basins/components/hydro-basins-controls.vue";
   import ParcelsControls from "@/features/parcels/components/parcels-controls.vue";
   import PowerControls from "@/features/power/components/power-controls.vue";
   import WaterControls from "@/features/water/components/water-controls.vue";
@@ -114,11 +116,57 @@
       </MapLayerSection>
 
       <MapLayerSection title="Environmental" value="environmental">
-        <WaterControls
-          :embedded="true"
-          :visible="props.waterVisible"
-          @update:visible="emit('update:water-visible', $event)"
-        />
+        <div class="grid gap-3">
+          <section class="grid gap-2">
+            <header class="flex items-center justify-between">
+              <h3
+                class="m-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+              >
+                Water
+              </h3>
+            </header>
+            <WaterControls
+              :embedded="true"
+              :visible="props.waterVisible"
+              @update:visible="emit('update:water-visible', $event)"
+            />
+          </section>
+
+          <section class="grid gap-2">
+            <header class="flex items-center justify-between">
+              <h3
+                class="m-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+              >
+                Flood risk
+              </h3>
+            </header>
+            <FloodControls
+              :embedded="true"
+              :flood100-visible="props.floodVisibility.flood100"
+              :flood500-visible="props.floodVisibility.flood500"
+              :show-flood100-zoom-hint="props.showFlood100ZoomHint"
+              :show-flood500-zoom-hint="props.showFlood500ZoomHint"
+              @update:flood100-visible="emit('update:flood-layer-visible', 'flood100', $event)"
+              @update:flood500-visible="emit('update:flood-layer-visible', 'flood500', $event)"
+            />
+          </section>
+
+          <section class="grid gap-2">
+            <header class="flex items-center justify-between">
+              <h3
+                class="m-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+              >
+                Hydro basins
+              </h3>
+            </header>
+            <HydroBasinsControls
+              :embedded="true"
+              :visible="props.hydroBasinsVisible"
+              :show-zoom-hint="props.showHydroBasinsZoomHint"
+              @update:visible="emit('update:hydro-basins-visible', $event)"
+            />
+          </section>
+        </div>
       </MapLayerSection>
 
       <MapLayerSection title="Fiber Locator" value="fiber-locator">

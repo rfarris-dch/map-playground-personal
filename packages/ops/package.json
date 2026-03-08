@@ -8,14 +8,42 @@
   "scripts": {
     "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "echo 'ops tests not implemented yet'",
+    "test": "bun test",
     "lint": "biome check .",
     "dev": "tsc -w -p tsconfig.json"
+  },
+  "dependencies": {
+    "@effect/platform": "^0.94.5",
+    "@effect/platform-bun": "^0.87.1",
+    "effect": "^3.19.19"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2"
   },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./effect": {
+      "types": "./dist/effect.d.ts",
+      "default": "./dist/effect.js"
+    },
+    "./etl/atomic-file-store": {
+      "types": "./dist/etl/atomic-file-store.d.ts",
+      "default": "./dist/etl/atomic-file-store.js"
+    },
+    "./etl/cli-config": {
+      "types": "./dist/etl/cli-config.d.ts",
+      "default": "./dist/etl/cli-config.js"
+    },
+    "./etl/command-runner": {
+      "types": "./dist/etl/command-runner.d.ts",
+      "default": "./dist/etl/command-runner.js"
+    },
+    "./etl/project-paths": {
+      "types": "./dist/etl/project-paths.d.ts",
+      "default": "./dist/etl/project-paths.js"
     }
   },
   "files": [

@@ -1,9 +1,13 @@
 import { computed } from "vue";
-import { resolveMapOverlaysBlockedReason } from "@/features/app/overlays/map-overlays.service";
+import {
+  resolveMapOverlaysBlockedReason,
+  resolveScannerParcelsBlockedReason,
+} from "@/features/app/overlays/map-overlays.service";
 import type { UseMapOverlaysArgs } from "@/features/app/overlays/map-overlays.types";
 import { resolveQuickViewDisabledReason } from "@/features/app/overlays/map-overlays-availability.service";
 import { exportScannerSummary } from "@/features/app/overlays/map-overlays-export.service";
 import { useMapOverlaysDisplay } from "@/features/app/overlays/use-map-overlays-display";
+import { useMapOverlaysScannerMarkets } from "@/features/app/overlays/use-map-overlays-scanner-markets";
 import { useMapOverlaysScannerParcels } from "@/features/app/overlays/use-map-overlays-scanner-parcels";
 import { useMapOverlaysShortcuts } from "@/features/app/overlays/use-map-overlays-shortcuts";
 
@@ -46,14 +50,30 @@ export function useMapOverlays(args: UseMapOverlaysArgs) {
       () =>
         overlayShortcuts.scannerActive.value &&
         overlaysBlockedReason.value === null &&
+        resolveScannerParcelsBlockedReason(args.parcelsStatus.value) === null &&
         !isSelectionSummaryVisible.value &&
         !isMeasureDrawing.value
     ),
   });
+  const scannerMarkets = useMapOverlaysScannerMarkets({
+    map: args.map,
+    scannerFetchEnabled: computed(
+      () =>
+        overlayShortcuts.scannerActive.value &&
+        !isSelectionSummaryVisible.value &&
+        !isMeasureDrawing.value
+    ),
+  });
+  const scannerParcelsBlockedReason = computed(
+    () =>
+      scannerParcels.scannerParcelsBlockedReason.value ??
+      resolveScannerParcelsBlockedReason(args.parcelsStatus.value)
+  );
   const overlayDisplay = useMapOverlaysDisplay({
     args,
     overlayShortcuts,
     overlaysBlockedReason,
+    scannerParcelsBlockedReason,
     scannerParcels,
   });
 
@@ -65,6 +85,7 @@ export function useMapOverlays(args: UseMapOverlaysArgs) {
     quickViewActive: overlayShortcuts.quickViewActive,
     scannerActive: overlayShortcuts.scannerActive,
     scannerSummary: overlayDisplay.scannerSummary,
+    scannerMarketSelection: scannerMarkets.scannerMarketSelection,
     scannerFacilities: overlayDisplay.scannerFacilities,
     scannerTotalCount: overlayDisplay.scannerTotalCount,
     scannerIsFiltered: overlayDisplay.scannerIsFiltered,

@@ -1,18 +1,12 @@
 import { z } from "zod";
-import type {
-  ApiDefaultsTable,
-  ApiHeadersTable,
-  ApiQueryDefaultsTable,
-  ApiRoutesTable,
-  DataVersionResolveOptions,
-  FacilitiesBboxRouteArgs,
-  FacilityDetailRouteOptions,
-  PaginatedRouteArgs,
-  ParcelDetailRouteOptions,
-  SortedPaginatedRouteArgs,
-} from "./api-contracts.types";
 import type { BoundaryPowerLevel } from "./boundaries-contracts";
-import { type BBox, type FacilityPerspective, formatBboxParam } from "./shared-contracts";
+import type { ParcelGeometryMode, ParcelProfile } from "./parcels-contracts";
+import {
+  type BBox,
+  type FacilityPerspective,
+  formatBboxParam,
+  type SourceMode,
+} from "./shared-contracts";
 import type {
   FacilitySortBy,
   MarketSortBy,
@@ -20,19 +14,84 @@ import type {
   SortDirection,
 } from "./table-contracts";
 
-export type {
-  ApiDefaultsTable,
-  ApiHeadersTable,
-  ApiQueryDefaultsTable,
-  ApiRoutesTable,
-  DataVersionResolveOptions,
-  FacilitiesBboxRouteArgs,
-  FacilityDetailRouteOptions,
-  HealthResponse,
-  PaginatedRouteArgs,
-  ParcelDetailRouteOptions,
-  SortedPaginatedRouteArgs,
-} from "./api-contracts.types";
+export interface DataVersionResolveOptions {
+  readonly env?: Readonly<Record<string, string | undefined>>;
+  readonly fallback?: string;
+  readonly override?: string | undefined;
+}
+
+export interface PaginatedRouteArgs {
+  readonly page: number;
+  readonly pageSize: number;
+}
+
+export interface SortedPaginatedRouteArgs<TSortBy extends string> extends PaginatedRouteArgs {
+  readonly sortBy: TSortBy;
+  readonly sortOrder: SortDirection;
+}
+
+export interface FacilitiesBboxRouteArgs {
+  readonly bbox: BBox;
+  readonly limit?: number | undefined;
+  readonly perspective?: FacilityPerspective | undefined;
+}
+
+export interface FacilityDetailRouteOptions {
+  readonly perspective?: FacilityPerspective | undefined;
+}
+
+export interface ParcelDetailRouteOptions {
+  readonly includeGeometry?: ParcelGeometryMode | undefined;
+  readonly profile?: ParcelProfile | undefined;
+}
+
+export interface CountyScoresRouteArgs {
+  readonly countyIds: readonly string[];
+}
+
+export interface ApiRoutesTable {
+  readonly analysisSummary: string;
+  readonly boundariesPower: string;
+  readonly countyScores: string;
+  readonly countyScoresStatus: string;
+  readonly facilities: string;
+  readonly facilitiesSelection: string;
+  readonly facilitiesTable: string;
+  readonly fiberLocatorLayers: string;
+  readonly fiberLocatorLayersInView: string;
+  readonly fiberLocatorTile: string;
+  readonly fiberLocatorVectorTile: string;
+  readonly health: string;
+  readonly markets: string;
+  readonly marketsSelection: string;
+  readonly parcels: string;
+  readonly parcelsSyncStatus: string;
+  readonly providers: string;
+}
+
+export interface ApiHeadersTable {
+  readonly parcelIngestionRunId: string;
+  readonly requestId: string;
+}
+
+export interface ApiDefaultsTable {
+  readonly boundariesSourceMode: SourceMode;
+  readonly dataVersion: string;
+  readonly facilitiesSourceMode: SourceMode;
+  readonly fiberLocatorSourceMode: SourceMode;
+  readonly parcelsSourceMode: SourceMode;
+}
+
+export interface ApiQueryDefaultsTable {
+  readonly facilities: {
+    readonly bboxLimit: number;
+    readonly perspective: FacilityPerspective;
+  };
+  readonly parcelDetail: {
+    readonly includeGeometry: ParcelGeometryMode;
+    readonly profile: ParcelProfile;
+  };
+}
 
 export const HealthSchema = z.object({
   status: z.literal("ok"),
@@ -40,9 +99,14 @@ export const HealthSchema = z.object({
   now: z.string().datetime(),
 });
 
+export type HealthResponse = z.infer<typeof HealthSchema>;
+
 export const ApiRoutes = Object.freeze<ApiRoutesTable>({
   health: "/api/health",
+  analysisSummary: "/api/geo/analysis/summary",
   boundariesPower: "/api/geo/boundaries/power",
+  countyScores: "/api/geo/counties/scores",
+  countyScoresStatus: "/api/geo/counties/scores/status",
   fiberLocatorLayers: "/api/geo/fiber-locator/layers",
   fiberLocatorLayersInView: "/api/geo/fiber-locator/layers/inview",
   fiberLocatorTile: "/api/geo/fiber-locator/tile",
@@ -108,10 +172,24 @@ export function buildFacilitiesSelectionRoute(): string {
   return ApiRoutes.facilitiesSelection;
 }
 
+export function buildSpatialAnalysisSummaryRoute(): string {
+  return ApiRoutes.analysisSummary;
+}
+
 export function buildBoundaryPowerRoute(level: BoundaryPowerLevel): string {
   const params = new URLSearchParams();
   params.set("level", level);
   return `${ApiRoutes.boundariesPower}?${params.toString()}`;
+}
+
+export function buildCountyScoresRoute(args: CountyScoresRouteArgs): string {
+  return appendQueryToRoute(ApiRoutes.countyScores, [
+    ["countyIds", args.countyIds.length > 0 ? args.countyIds.join(",") : undefined],
+  ]);
+}
+
+export function buildCountyScoresStatusRoute(): string {
+  return ApiRoutes.countyScoresStatus;
 }
 
 export function buildParcelDetailRoute(

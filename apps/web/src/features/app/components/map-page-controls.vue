@@ -49,6 +49,14 @@
     emit("update:water-visible", visible);
   }
 
+  function forwardFloodLayerVisible(layerId: "flood100" | "flood500", visible: boolean): void {
+    emit("update:flood-layer-visible", layerId, visible);
+  }
+
+  function forwardHydroBasinsVisible(visible: boolean): void {
+    emit("update:hydro-basins-visible", visible);
+  }
+
   function forwardFiberLayerVisibility(lineId: FiberLocatorLineId, visible: boolean): void {
     emit("update:fiber-layer-visibility", lineId, visible);
   }
@@ -104,6 +112,11 @@
     :parcels-visible="props.parcelsVisible"
     :parcels-status-text="props.parcelsStatusText"
     :power-visibility="props.powerVisibility"
+    :flood-visibility="props.floodVisibility"
+    :show-flood100-zoom-hint="props.showFlood100ZoomHint"
+    :show-flood500-zoom-hint="props.showFlood500ZoomHint"
+    :hydro-basins-visible="props.hydroBasinsVisible"
+    :show-hydro-basins-zoom-hint="props.showHydroBasinsZoomHint"
     :water-visible="props.waterVisible"
     :visible-fiber-layers="props.visibleFiberLayers"
     :fiber-status-text="props.fiberStatusText"
@@ -116,6 +129,8 @@
     @update:perspective-visibility="forwardPerspectiveVisibility"
     @update:parcels-visible="forwardParcelsVisible"
     @update:water-visible="forwardWaterVisible"
+    @update:flood-layer-visible="forwardFloodLayerVisible"
+    @update:hydro-basins-visible="forwardHydroBasinsVisible"
     @update:fiber-layer-visibility="forwardFiberLayerVisibility"
     @toggle-fiber-source-layer="forwardFiberSourceLayer"
     @set-all-fiber-source-layers="forwardAllFiberSourceLayers"
@@ -147,6 +162,7 @@
   />
 
   <MapSelectionTools
+    :county-ids="props.countyIds"
     :is-selection-panel-open="props.isSelectionPanelOpen"
     :selection-geometry="props.selectionGeometry"
     :selection-progress="props.selectionProgress"

@@ -7,33 +7,6 @@ import {
   ResponseMetaSchema,
 } from "./shared-contracts";
 
-export type {
-  AnalysisErrorResponse,
-  DatasetLicensingPolicy,
-  ExportGranularity,
-  MarketMetricDefinition,
-  MarketMetricDefinitions,
-  MarketMetricKey,
-  MetricAggregationGrain,
-  MetricNullHandling,
-  MetricTimeWindow,
-  ParcelScoreComponent,
-  ParcelScoreConstraint,
-  ParcelScoreRequest,
-  ParcelScoreResponse,
-  PolicyDataset,
-  PolicySensitivityTier,
-  ProximityNeighbor,
-  ProximityNeighborType,
-  ProximityRequest,
-  ProximityResponse,
-  ProximityTarget,
-  QueryGranularity,
-  RedistributionPolicy,
-  ScoredParcel,
-  SpatialAnalysisPolicy,
-} from "./analysis-contracts.types";
-
 export const ParcelScoreConstraintSchema = z.object({
   key: z.string().min(1),
   passed: z.boolean(),
@@ -152,6 +125,7 @@ export const MarketMetricDefinitionsSchema = z.object({
 });
 
 export const PolicyDatasetSchema = z.enum([
+  "county_scores",
   "parcels",
   "facilities",
   "power",
@@ -198,3 +172,28 @@ export const SpatialAnalysisPolicySchema = z.object({
   marketMetrics: MarketMetricDefinitionsSchema,
   licensing: z.array(DatasetLicensingPolicySchema).min(1),
 });
+
+export type ParcelScoreConstraint = z.infer<typeof ParcelScoreConstraintSchema>;
+export type ParcelScoreComponent = z.infer<typeof ParcelScoreComponentSchema>;
+export type ScoredParcel = z.infer<typeof ScoredParcelSchema>;
+export type ParcelScoreRequest = z.infer<typeof ParcelScoreRequestSchema>;
+export type ParcelScoreResponse = z.infer<typeof ParcelScoreResponseSchema>;
+export type ProximityTarget = z.infer<typeof ProximityTargetSchema>;
+export type ProximityNeighborType = z.infer<typeof ProximityNeighborTypeSchema>;
+export type ProximityRequest = z.infer<typeof ProximityRequestSchema>;
+export type ProximityNeighbor = z.infer<typeof ProximityNeighborSchema>;
+export type ProximityResponse = z.infer<typeof ProximityResponseSchema>;
+export type AnalysisErrorResponse = z.infer<typeof AnalysisErrorResponseSchema>;
+export type MarketMetricKey = z.infer<typeof MarketMetricKeySchema>;
+export type MetricTimeWindow = z.infer<typeof MetricTimeWindowSchema>;
+export type MetricAggregationGrain = z.infer<typeof MetricAggregationGrainSchema>;
+export type MetricNullHandling = z.infer<typeof MetricNullHandlingSchema>;
+export type MarketMetricDefinition = z.infer<typeof MarketMetricDefinitionSchema>;
+export type MarketMetricDefinitions = z.infer<typeof MarketMetricDefinitionsSchema>;
+export type PolicyDataset = z.infer<typeof PolicyDatasetSchema>;
+export type PolicySensitivityTier = z.infer<typeof PolicySensitivityTierSchema>;
+export type QueryGranularity = z.infer<typeof QueryGranularitySchema>;
+export type ExportGranularity = z.infer<typeof ExportGranularitySchema>;
+export type RedistributionPolicy = z.infer<typeof RedistributionPolicySchema>;
+export type DatasetLicensingPolicy = z.infer<typeof DatasetLicensingPolicySchema>;
+export type SpatialAnalysisPolicy = z.infer<typeof SpatialAnalysisPolicySchema>;

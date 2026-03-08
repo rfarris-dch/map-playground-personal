@@ -38,6 +38,7 @@ export interface MeasureParcelSelectionSummary {
 
 export interface MeasureSelectionSummary {
   readonly colocation: MeasurePerspectiveSelectionSummary;
+  readonly countyIds: readonly string[];
   readonly facilities: readonly MeasureSelectedFacility[];
   readonly hyperscale: MeasurePerspectiveSelectionSummary;
   readonly parcelSelection: MeasureParcelSelectionSummary;

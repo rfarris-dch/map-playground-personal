@@ -14,6 +14,8 @@ import type {
 } from "@/features/measure/measure-analysis.types";
 
 const POINT_ON_SEGMENT_EPSILON = 1e-9;
+const COUNTY_FIPS_PATTERN = /^[0-9]{5}$/;
+const COUNTY_GEOID_PREFIX_PATTERN = /^([0-9]{5})/;
 
 function resolveDisplayName(name: string, fallback: string): string {
   const normalizedName = name.trim();
@@ -320,6 +322,43 @@ function buildTopProviders(
     .slice(0, 5);
 }
 
+function normalizeCountyFips(value: string | null | undefined): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim();
+  if (COUNTY_FIPS_PATTERN.test(normalized)) {
+    return normalized;
+  }
+
+  const geoidMatch = normalized.match(COUNTY_GEOID_PREFIX_PATTERN);
+  return geoidMatch?.[1] ?? null;
+}
+
+function buildCountyIds(args: {
+  readonly facilities: readonly MeasureSelectedFacility[];
+  readonly parcels: readonly MeasureSelectedParcel[];
+}): readonly string[] {
+  const countyIds = new Set<string>();
+
+  for (const facility of args.facilities) {
+    const countyFips = normalizeCountyFips(facility.countyFips);
+    if (countyFips !== null) {
+      countyIds.add(countyFips);
+    }
+  }
+
+  for (const parcel of args.parcels) {
+    const countyFips = normalizeCountyFips(parcel.geoid);
+    if (countyFips !== null) {
+      countyIds.add(countyFips);
+    }
+  }
+
+  return [...countyIds].sort((left, right) => left.localeCompare(right));
+}
+
 function csvCell(value: string | number | null): string {
   if (value === null) {
     return "";
@@ -364,6 +403,10 @@ export function buildMeasureSelectionSummary(
   return {
     ring: args.ring.map((vertex) => [vertex[0], vertex[1]]),
     totalCount: facilities.length,
+    countyIds: buildCountyIds({
+      facilities,
+      parcels: selectedParcels,
+    }),
     facilities,
     parcelSelection,
     colocation: buildPerspectiveSummary(colocationFacilities),

@@ -13,6 +13,7 @@ import type {
   ParcelsSelectionResult,
 } from "@/features/measure/measure-analysis.api.types";
 import { apiGetJson } from "@/lib/api-client";
+import { apiGetJsonEffect } from "@/lib/api-client-effect";
 
 export type {
   FacilitiesSelectionResult,
@@ -36,6 +37,29 @@ export function fetchFacilitiesBySelection(
   }
 
   return apiGetJson(
+    buildFacilitiesSelectionRoute(),
+    FacilitiesSelectionResponseSchema,
+    requestInit
+  );
+}
+
+export function fetchFacilitiesBySelectionEffect(
+  request: FacilitiesSelectionRequest,
+  signal?: AbortSignal
+) {
+  const requestInit: RequestInit = {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(request),
+  };
+
+  if (typeof signal !== "undefined") {
+    requestInit.signal = signal;
+  }
+
+  return apiGetJsonEffect(
     buildFacilitiesSelectionRoute(),
     FacilitiesSelectionResponseSchema,
     requestInit
@@ -70,4 +94,34 @@ export function fetchParcelsBySelection(
   }
 
   return apiGetJson(buildParcelEnrichRoute(), ParcelsFeatureCollectionSchema, requestInit);
+}
+
+export function fetchParcelsBySelectionEffect(
+  request: ParcelEnrichRequest,
+  signal?: AbortSignal,
+  options: FetchParcelsBySelectionOptions = {}
+) {
+  const requestInit: RequestInit = {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(request),
+  };
+
+  if (typeof signal !== "undefined") {
+    requestInit.signal = signal;
+  }
+
+  if (
+    typeof options.expectedIngestionRunId === "string" &&
+    options.expectedIngestionRunId.trim().length > 0
+  ) {
+    requestInit.headers = {
+      ...requestInit.headers,
+      [ApiHeaders.parcelIngestionRunId]: options.expectedIngestionRunId.trim(),
+    };
+  }
+
+  return apiGetJsonEffect(buildParcelEnrichRoute(), ParcelsFeatureCollectionSchema, requestInit);
 }

@@ -39,6 +39,7 @@
 
   <ScannerPanel
     v-if="props.isScannerVisible"
+    :county-ids="props.countyIds"
     :summary="props.scannerSummary"
     :is-filtered="props.scannerIsFiltered"
     :is-parcels-loading="props.isScannerParcelsLoading"

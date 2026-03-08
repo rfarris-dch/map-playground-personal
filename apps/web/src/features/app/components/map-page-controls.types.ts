@@ -15,8 +15,9 @@ import type { SelectionToolProgress } from "@/features/selection-tool/selection-
 
 export interface MapPageControlsProps
   extends MapLayerControlsPanelProps,
-    MapSelectionToolsProps,
+    Omit<MapSelectionToolsProps, "countyIds">,
     MapSketchMeasureToolsProps {
+  readonly countyIds: readonly string[];
   readonly overlaysBlockedReason: string | null;
   readonly quickViewActive: boolean;
   readonly quickViewDisabledReason: string | null;

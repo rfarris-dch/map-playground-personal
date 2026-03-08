@@ -39,6 +39,18 @@ const spatialAnalysisPolicyConfig: SpatialAnalysisPolicy = SpatialAnalysisPolicy
   },
   licensing: [
     {
+      dataset: "county_scores",
+      sensitivityTier: "internal",
+      allowedQueryGranularities: ["county"],
+      allowedExportGranularities: ["none", "county"],
+      minimumKAnonymity: null,
+      cacheTtlSeconds: 1800,
+      retentionDays: 365,
+      redistribution: "internal",
+      owner: "research-analytics",
+      dueDate: "2026-03-31",
+    },
+    {
       dataset: "parcels",
       sensitivityTier: "restricted",
       allowedQueryGranularities: ["bbox", "polygon", "county", "tileSet", "parcel"],

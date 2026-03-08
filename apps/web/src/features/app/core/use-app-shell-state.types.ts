@@ -11,6 +11,7 @@ import type {
   BoundaryFacetSelectionState,
   PerspectiveStatusState,
 } from "@/features/app/core/app-shell.types";
+import type { EnvironmentalStressController } from "@/features/app/lifecycle/use-app-shell-map-lifecycle.types";
 import type { BasemapLayerVisibilityController } from "@/features/basemap/basemap.types";
 import type { BoundaryHoverState } from "@/features/boundaries/boundaries.types";
 import type { FacilitiesLayerController } from "@/features/facilities/facilities.types";
@@ -18,7 +19,12 @@ import type {
   FacilitiesHoverController,
   FacilityHoverState,
 } from "@/features/facilities/hover.types";
-import type { LayerRuntimeController } from "@/features/layers/layer-runtime.types";
+import type { FloodLayerMountResult } from "@/features/flood/flood-layer.types";
+import type { HydroBasinsVisibilityController } from "@/features/hydro-basins/hydro-basins.types";
+import type {
+  LayerRuntimeController,
+  LayerRuntimeSnapshot,
+} from "@/features/layers/layer-runtime.types";
 import type { ParcelsLayerController, ParcelsStatus } from "@/features/parcels/parcels.types";
 import type { PowerLayerVisibilityController } from "@/features/power/power.types";
 import type { PowerHoverController, PowerHoverState } from "@/features/power/power-hover.types";
@@ -42,18 +48,22 @@ export interface UseAppShellStateResult {
   readonly clearSketchMeasure: () => void;
   readonly colocationViewportFeatures: ShallowRef<FacilitiesFeatureCollection["features"]>;
   readonly disposePmtilesProtocol: ShallowRef<(() => void) | null>;
+  readonly environmentalStressController: ShallowRef<EnvironmentalStressController | null>;
   readonly facilitiesControllers: ShallowRef<readonly FacilitiesLayerController[]>;
   readonly facilitiesHoverController: ShallowRef<FacilitiesHoverController | null>;
   readonly facilitiesStatus: ShallowRef<PerspectiveStatusState>;
   readonly finishSketchMeasureArea: () => void;
+  readonly floodLayersController: ShallowRef<FloodLayerMountResult | null>;
   readonly hoveredBoundary: ShallowRef<BoundaryHoverState | null>;
   readonly hoveredFacility: ShallowRef<FacilityHoverState | null>;
   readonly hoveredPower: ShallowRef<PowerHoverState | null>;
+  readonly hydroBasinsController: ShallowRef<HydroBasinsVisibilityController | null>;
   readonly hyperscaleViewportFeatures: ShallowRef<FacilitiesFeatureCollection["features"]>;
   readonly isLayerPanelOpen: ComputedRef<boolean>;
   readonly isSelectionPanelOpen: ComputedRef<boolean>;
   readonly isSketchMeasurePanelOpen: ComputedRef<boolean>;
   readonly layerRuntime: ShallowRef<LayerRuntimeController | null>;
+  readonly layerRuntimeSnapshot: ShallowRef<LayerRuntimeSnapshot | null>;
   readonly map: ShallowRef<IMap | null>;
   readonly mapContainer: Readonly<ShallowRef<HTMLDivElement | null>>;
   readonly mapControls: ShallowRef<readonly MapControl[]>;

@@ -23,10 +23,11 @@
     "open-dashboard": [];
     "select-facility": [facility: SelectedFacilityRef];
   }>();
+  const analysisSummary = computed(() => props.summary?.summary ?? null);
 
   const title = computed(() => {
-    const facilityCount = props.summary?.totalCount ?? 0;
-    const marketCount = props.summary?.marketSelection.matchCount ?? 0;
+    const facilityCount = analysisSummary.value?.totalCount ?? 0;
+    const marketCount = analysisSummary.value?.marketSelection?.matchCount ?? 0;
     if (facilityCount <= 0 && marketCount <= 0) {
       return "Selection Summary";
     }
@@ -39,9 +40,9 @@
       return "Loading facility, market, and parcel summaries for the selected geometry…";
     }
 
-    const facilityCount = props.summary?.totalCount ?? 0;
-    const marketCount = props.summary?.marketSelection.matchCount ?? 0;
-    const parcelCount = props.summary?.parcelSelection.count ?? 0;
+    const facilityCount = analysisSummary.value?.totalCount ?? 0;
+    const marketCount = analysisSummary.value?.marketSelection?.matchCount ?? 0;
+    const parcelCount = analysisSummary.value?.parcelSelection.count ?? 0;
     return `${facilityCount} facilities, ${marketCount} markets, ${parcelCount} parcels in selected geometry`;
   });
 
@@ -75,12 +76,12 @@
     dashboard-label="Open Dashboard"
     :dashboard-disabled="props.isLoading
       || (
-        (props.summary?.totalCount ?? 0) === 0
-        && (props.summary?.parcelSelection.count ?? 0) === 0
-        && (props.summary?.marketSelection.matchCount ?? 0) === 0
+        (analysisSummary?.totalCount ?? 0) === 0
+        && (analysisSummary?.parcelSelection.count ?? 0) === 0
+        && (analysisSummary?.marketSelection?.matchCount ?? 0) === 0
       )"
     export-label="Export Facilities"
-    :export-disabled="props.isLoading || (props.summary?.totalCount ?? 0) === 0"
+    :export-disabled="props.isLoading || (analysisSummary?.totalCount ?? 0) === 0"
     :format-power="formatMeasurePowerMw"
     :format-facility-power="formatFacilityPower"
     facilities-power-heading="Comm/Own (MW)"

@@ -2,13 +2,6 @@ import { z } from "zod";
 import { PointGeometrySchema, PolygonGeometrySchema, ResponseMetaSchema } from "./shared-contracts";
 import { MarketTableRowSchema } from "./table-contracts";
 
-export type {
-  MarketSelectionMatch,
-  MarketSelectionResponse,
-  MarketsSelectionRequest,
-  MarketsSelectionSummary,
-} from "./markets-selection-contracts.types";
-
 export const MarketSelectionMatchSchema = MarketTableRowSchema.extend({
   intersectionAreaSqKm: z.number().nonnegative(),
   isPrimary: z.boolean(),
@@ -36,3 +29,8 @@ export const MarketsSelectionResponseSchema = z.object({
   primaryMarket: MarketSelectionMatchSchema.nullable(),
   selection: MarketsSelectionSummarySchema,
 });
+
+export type MarketSelectionMatch = z.infer<typeof MarketSelectionMatchSchema>;
+export type MarketsSelectionRequest = z.infer<typeof MarketsSelectionRequestSchema>;
+export type MarketsSelectionSummary = z.infer<typeof MarketsSelectionSummarySchema>;
+export type MarketSelectionResponse = z.infer<typeof MarketsSelectionResponseSchema>;

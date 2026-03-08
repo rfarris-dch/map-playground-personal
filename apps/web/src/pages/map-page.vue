@@ -20,6 +20,11 @@
     visiblePerspectives,
     colocationStatusText,
     hyperscaleStatusText,
+    floodVisibility,
+    showFlood100ZoomHint,
+    showFlood500ZoomHint,
+    hydroBasinsVisible,
+    showHydroBasinsZoomHint,
     parcelsVisible,
     parcelsStatusText,
     powerVisibility,
@@ -38,6 +43,7 @@
     quickViewActive,
     scannerActive,
     scannerSummary,
+    scannerAnalysisSummary,
     scannerFacilities,
     scannerIsFiltered,
     overlaysBlockedReason,
@@ -57,6 +63,8 @@
     setBoundaryVisible,
     setBoundarySelectedRegionIds,
     setBasemapLayerVisible,
+    setFloodLayerVisible,
+    setHydroBasinsVisible,
     setParcelsVisible,
     setPowerLayerVisible,
     setWaterVisible,
@@ -104,6 +112,7 @@
         :is-open="isLayerPanelOpen"
         :is-sketch-measure-panel-open="isSketchMeasurePanelOpen"
         :is-selection-panel-open="isSelectionPanelOpen"
+        :county-ids="selectionSummary?.area.countyIds ?? []"
         :basemap-visibility="basemapVisibility"
         :boundary-visibility="boundaryVisibility"
         :boundary-facet-options="boundaryFacetOptions"
@@ -111,6 +120,11 @@
         :visible-perspectives="visiblePerspectives"
         :colocation-status-text="colocationStatusText"
         :hyperscale-status-text="hyperscaleStatusText"
+        :flood-visibility="floodVisibility"
+        :show-flood100-zoom-hint="showFlood100ZoomHint"
+        :show-flood500-zoom-hint="showFlood500ZoomHint"
+        :hydro-basins-visible="hydroBasinsVisible"
+        :show-hydro-basins-zoom-hint="showHydroBasinsZoomHint"
         :parcels-visible="parcelsVisible"
         :parcels-status-text="parcelsStatusText"
         :power-visibility="powerVisibility"
@@ -137,6 +151,8 @@
         @update:boundary-visible="setBoundaryVisible"
         @update:boundary-selected-region-ids="setBoundarySelectedRegionIds"
         @update:perspective-visibility="setPerspectiveVisibility"
+        @update:flood-layer-visible="setFloodLayerVisible"
+        @update:hydro-basins-visible="setHydroBasinsVisible"
         @update:parcels-visible="setParcelsVisible"
         @update:water-visible="setWaterVisible"
         @update:fiber-layer-visibility="setFiberLayerVisibility"
@@ -157,6 +173,7 @@
       />
 
       <MapPageOverlays
+        :county-ids="scannerAnalysisSummary.area.countyIds"
         :map="map"
         :hovered-facility="hoveredFacility"
         :hovered-boundary="hoveredBoundary"
@@ -174,7 +191,7 @@
         :is-quick-view-visible="isQuickViewVisible"
         :is-scanner-visible="isScannerVisible"
         :scanner-facilities="scannerFacilities"
-        :scanner-summary="scannerSummary"
+        :scanner-summary="scannerAnalysisSummary"
         :scanner-is-filtered="scannerIsFiltered"
         :is-scanner-parcels-loading="isScannerParcelsLoading"
         :scanner-parcels-error="scannerParcelsError"

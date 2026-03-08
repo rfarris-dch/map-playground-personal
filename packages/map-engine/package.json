@@ -8,7 +8,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "echo 'map-engine tests not implemented yet'",
+    "test": "bun test",
     "lint": "biome check .",
     "dev": "tsc -w -p tsconfig.json"
   },
@@ -16,12 +16,17 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./effect": {
+      "types": "./dist/effect.d.ts",
+      "default": "./dist/effect.js"
     }
   },
   "peerDependencies": {
     "maplibre-gl": "5.19.0"
   },
   "dependencies": {
+    "effect": "^3.19.19",
     "pmtiles": "4.4.0"
   },
   "devDependencies": {

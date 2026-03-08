@@ -1,17 +1,43 @@
-import type { TileDataset, TileManifestEntry, TilePublishManifest } from "./index.types";
+import type {
+  TileDataset,
+  TileDecodeResult,
+  TileManifestEntry,
+  TilePublishManifest,
+} from "./index.types";
 
 export type {
   TileDataset,
+  TileDecodeFailure,
+  TileDecodeResult,
+  TileDecodeSuccess,
   TileManifestEntry,
   TilePublishManifest,
   VectorTilesetSchemaContract,
 } from "./index.types";
 
-export function parseTileDataset(value: string): TileDataset | null {
+function decodeSuccess<T>(value: T): TileDecodeResult<T> {
+  return { ok: true, value };
+}
+
+function decodeFailure(message: string): TileDecodeResult<never> {
+  return { message, ok: false };
+}
+
+function unwrapTileDecodeResult<T>(result: TileDecodeResult<T>): T {
+  if (result.ok) {
+    return result.value;
+  }
+
+  throw new Error(result.message);
+}
+
+export function decodeTileDataset(value: string): TileDataset | null {
   switch (value) {
     case "parcels":
     case "parcels-draw-v1":
     case "parcels-analysis-v1":
+    case "environmental-flood":
+    case "environmental-hydro-basins":
     case "infrastructure":
     case "power":
     case "telecom":
@@ -19,6 +45,10 @@ export function parseTileDataset(value: string): TileDataset | null {
     default:
       return null;
   }
+}
+
+export function parseTileDataset(value: string): TileDataset | null {
+  return decodeTileDataset(value);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -51,59 +81,104 @@ function readOptionalTrimmedString(
   return trimmed;
 }
 
-export function parseTileManifestEntry(value: unknown): TileManifestEntry {
+export function decodeTileManifestEntry(value: unknown): TileDecodeResult<TileManifestEntry> {
   if (!isRecord(value)) {
-    throw new Error("Invalid tile manifest entry: expected object");
+    return decodeFailure("Invalid tile manifest entry: expected object");
   }
 
-  const rawDataset = readRequiredString(value, "dataset", "tile manifest entry");
-  const dataset = parseTileDataset(rawDataset);
+  let rawDataset: string;
+  try {
+    rawDataset = readRequiredString(value, "dataset", "tile manifest entry");
+  } catch (error) {
+    return decodeFailure(error instanceof Error ? error.message : String(error));
+  }
+
+  const dataset = decodeTileDataset(rawDataset);
   if (dataset === null) {
-    throw new Error(`Invalid tile manifest entry: unsupported dataset "${rawDataset}"`);
+    return decodeFailure(`Invalid tile manifest entry: unsupported dataset "${rawDataset}"`);
   }
 
-  const entry: TileManifestEntry = {
-    dataset,
-    version: readRequiredString(value, "version", "tile manifest entry"),
-    checksum: readRequiredString(value, "checksum", "tile manifest entry"),
-    url: readRequiredString(value, "url", "tile manifest entry"),
-  };
+  let entry: TileManifestEntry;
+  try {
+    entry = {
+      dataset,
+      version: readRequiredString(value, "version", "tile manifest entry"),
+      checksum: readRequiredString(value, "checksum", "tile manifest entry"),
+      url: readRequiredString(value, "url", "tile manifest entry"),
+    };
+  } catch (error) {
+    return decodeFailure(error instanceof Error ? error.message : String(error));
+  }
 
   const ingestionRunId = readOptionalTrimmedString(value, "ingestionRunId");
   if (typeof ingestionRunId === "string") {
     entry.ingestionRunId = ingestionRunId;
   }
 
-  return entry;
+  return decodeSuccess(entry);
 }
 
-export function parseTilePublishManifest(value: unknown): TilePublishManifest {
+export function parseTileManifestEntry(value: unknown): TileManifestEntry {
+  return unwrapTileDecodeResult(decodeTileManifestEntry(value));
+}
+
+export function decodeTilePublishManifest(value: unknown): TileDecodeResult<TilePublishManifest> {
   if (!isRecord(value)) {
-    throw new Error("Invalid tile publish manifest: expected object");
+    return decodeFailure("Invalid tile publish manifest: expected object");
   }
 
-  const rawDataset = readRequiredString(value, "dataset", "tile publish manifest");
-  const dataset = parseTileDataset(rawDataset);
+  let rawDataset: string;
+  try {
+    rawDataset = readRequiredString(value, "dataset", "tile publish manifest");
+  } catch (error) {
+    return decodeFailure(error instanceof Error ? error.message : String(error));
+  }
+
+  const dataset = decodeTileDataset(rawDataset);
   if (dataset === null) {
-    throw new Error(`Invalid tile publish manifest: unsupported dataset "${rawDataset}"`);
+    return decodeFailure(`Invalid tile publish manifest: unsupported dataset "${rawDataset}"`);
   }
 
   const previousRaw = Reflect.get(value, "previous");
   let previous: TileManifestEntry | null = null;
   if (previousRaw !== null && typeof previousRaw !== "undefined") {
-    previous = parseTileManifestEntry(previousRaw);
+    const decodedPrevious = decodeTileManifestEntry(previousRaw);
+    if (!decodedPrevious.ok) {
+      return decodedPrevious;
+    }
+
+    previous = decodedPrevious.value;
+  }
+
+  let publishedAt: string;
+  try {
+    publishedAt = readRequiredString(value, "publishedAt", "tile publish manifest");
+  } catch (error) {
+    return decodeFailure(error instanceof Error ? error.message : String(error));
+  }
+
+  const decodedCurrent = decodeTileManifestEntry(Reflect.get(value, "current"));
+  if (!decodedCurrent.ok) {
+    return decodedCurrent;
   }
 
   const manifest: TilePublishManifest = {
     dataset,
-    publishedAt: readRequiredString(value, "publishedAt", "tile publish manifest"),
-    current: parseTileManifestEntry(Reflect.get(value, "current")),
+    publishedAt,
+    current: decodedCurrent.value,
     previous,
   };
 
-  assertTileManifestMatchesDataset(manifest, manifest.dataset, "tile publish manifest");
+  try {
+    assertTileManifestMatchesDataset(manifest, manifest.dataset, "tile publish manifest");
+    return decodeSuccess(manifest);
+  } catch (error) {
+    return decodeFailure(error instanceof Error ? error.message : String(error));
+  }
+}
 
-  return manifest;
+export function parseTilePublishManifest(value: unknown): TilePublishManifest {
+  return unwrapTileDecodeResult(decodeTilePublishManifest(value));
 }
 
 export function assertTileManifestMatchesDataset(
@@ -144,6 +219,43 @@ export function buildPmtilesPath(dataset: TileDataset, version: string): string 
 
 export function buildTileLatestManifestPath(dataset: TileDataset): string {
   return `/tiles/${dataset}/latest.json`;
+}
+
+export function normalizeManifestPath(manifestPath: string): string {
+  if (manifestPath.startsWith("http://") || manifestPath.startsWith("https://")) {
+    return manifestPath;
+  }
+
+  if (manifestPath.startsWith("/")) {
+    return manifestPath;
+  }
+
+  return `/${manifestPath}`;
+}
+
+function resolveLocationOrigin(locationOrigin: string | undefined): string {
+  if (typeof locationOrigin === "string") {
+    return locationOrigin;
+  }
+
+  return window.location.origin;
+}
+
+export function normalizePmtilesAssetUrl(assetUrl: string, locationOrigin?: string): string {
+  if (assetUrl.startsWith("http://") || assetUrl.startsWith("https://")) {
+    return assetUrl;
+  }
+
+  const normalizedPath = assetUrl.startsWith("/") ? assetUrl : `/${assetUrl}`;
+  return `${resolveLocationOrigin(locationOrigin)}${normalizedPath}`;
+}
+
+export function createPmtilesSourceUrl(
+  manifest: TilePublishManifest,
+  locationOrigin?: string
+): string {
+  const absoluteAssetUrl = normalizePmtilesAssetUrl(manifest.current.url, locationOrigin);
+  return `pmtiles://${absoluteAssetUrl}`;
 }
 
 export function createManifestEntry(

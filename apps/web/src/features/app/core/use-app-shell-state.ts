@@ -23,6 +23,7 @@ import type {
   BoundaryFacetSelectionState,
   PerspectiveStatusState,
 } from "@/features/app/core/app-shell.types";
+import type { EnvironmentalStressController } from "@/features/app/lifecycle/use-app-shell-map-lifecycle.types";
 import type { BasemapLayerVisibilityController } from "@/features/basemap/basemap.types";
 import type { BoundaryHoverState } from "@/features/boundaries/boundaries.types";
 import type { FacilitiesLayerController } from "@/features/facilities/facilities.types";
@@ -30,7 +31,12 @@ import type {
   FacilitiesHoverController,
   FacilityHoverState,
 } from "@/features/facilities/hover.types";
-import type { LayerRuntimeController } from "@/features/layers/layer-runtime.types";
+import type { FloodLayerMountResult } from "@/features/flood/flood-layer.types";
+import type { HydroBasinsVisibilityController } from "@/features/hydro-basins/hydro-basins.types";
+import type {
+  LayerRuntimeController,
+  LayerRuntimeSnapshot,
+} from "@/features/layers/layer-runtime.types";
 import type { ParcelsLayerController, ParcelsStatus } from "@/features/parcels/parcels.types";
 import type { PowerLayerVisibilityController } from "@/features/power/power.types";
 import type { PowerHoverController, PowerHoverState } from "@/features/power/power-hover.types";
@@ -55,9 +61,13 @@ export function useAppShellState(): UseAppShellStateResult {
   const hoveredPower = shallowRef<PowerHoverState | null>(null);
   const boundaryControllers = shallowRef<BoundaryControllerState>(initialBoundaryControllerState());
   const facilitiesControllers = shallowRef<readonly FacilitiesLayerController[]>([]);
+  const floodLayersController = shallowRef<FloodLayerMountResult | null>(null);
+  const hydroBasinsController = shallowRef<HydroBasinsVisibilityController | null>(null);
   const powerControllers = shallowRef<readonly PowerLayerVisibilityController[]>([]);
   const parcelsController = shallowRef<ParcelsLayerController | null>(null);
   const layerRuntime = shallowRef<LayerRuntimeController | null>(null);
+  const layerRuntimeSnapshot = shallowRef<LayerRuntimeSnapshot | null>(null);
+  const environmentalStressController = shallowRef<EnvironmentalStressController | null>(null);
   const facilitiesHoverController = shallowRef<FacilitiesHoverController | null>(null);
   const powerHoverController = shallowRef<PowerHoverController | null>(null);
   const sketchMeasureController = shallowRef<SketchMeasureLayerController | null>(null);
@@ -159,9 +169,12 @@ export function useAppShellState(): UseAppShellStateResult {
     hoveredPower,
     boundaryControllers,
     facilitiesControllers,
+    floodLayersController,
+    hydroBasinsController,
     powerControllers,
     parcelsController,
     layerRuntime,
+    layerRuntimeSnapshot,
     facilitiesHoverController,
     powerHoverController,
     sketchMeasureController,
@@ -181,6 +194,7 @@ export function useAppShellState(): UseAppShellStateResult {
     isLayerPanelOpen,
     isSketchMeasurePanelOpen,
     isSelectionPanelOpen,
+    environmentalStressController,
     setViewportFacilities,
     setSketchMeasureMode,
     setSketchMeasureAreaShape,

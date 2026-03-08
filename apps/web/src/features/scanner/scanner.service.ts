@@ -12,6 +12,9 @@ import type {
   ScannerSummary,
 } from "@/features/scanner/scanner.types";
 
+const COUNTY_FIPS_PATTERN = /^[0-9]{5}$/;
+const COUNTY_GEOID_PREFIX_PATTERN = /^([0-9]{5})/;
+
 function readPointCoordinates(value: unknown): [number, number] | null {
   if (!Array.isArray(value) || value.length !== 2) {
     return null;
@@ -43,9 +46,11 @@ function toScannerFacility(
     address: feature.properties.address,
     availablePowerMw: feature.properties.availablePowerMw,
     city: feature.properties.city,
+    countyFips: feature.properties.countyFips,
     perspective: feature.properties.perspective,
     facilityId: feature.properties.facilityId,
     facilityName: feature.properties.facilityName,
+    providerId: feature.properties.providerId,
     providerName: feature.properties.providerName,
     commissionedPowerMw: feature.properties.commissionedPowerMw,
     commissionedSemantic: feature.properties.commissionedSemantic,
@@ -199,6 +204,43 @@ function buildTopProviders(
     .slice(0, 5);
 }
 
+function normalizeCountyFips(value: string | null | undefined): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim();
+  if (COUNTY_FIPS_PATTERN.test(normalized)) {
+    return normalized;
+  }
+
+  const geoidMatch = normalized.match(COUNTY_GEOID_PREFIX_PATTERN);
+  return geoidMatch?.[1] ?? null;
+}
+
+function buildCountyIds(args: {
+  readonly facilities: readonly ScannerFacility[];
+  readonly parcels: readonly ScannerParcel[];
+}): readonly string[] {
+  const countyIds = new Set<string>();
+
+  for (const facility of args.facilities) {
+    const countyFips = normalizeCountyFips(facility.countyFips);
+    if (countyFips !== null) {
+      countyIds.add(countyFips);
+    }
+  }
+
+  for (const parcel of args.parcels) {
+    const countyFips = normalizeCountyFips(parcel.geoid);
+    if (countyFips !== null) {
+      countyIds.add(countyFips);
+    }
+  }
+
+  return [...countyIds].sort((left, right) => left.localeCompare(right));
+}
+
 function csvCell(value: string | number | null): string {
   if (value === null) {
     return "";
@@ -258,6 +300,10 @@ export function buildScannerSummary(input: ScannerInput): ScannerSummary {
 
   return {
     totalCount: facilities.length,
+    countyIds: buildCountyIds({
+      facilities,
+      parcels,
+    }),
     facilities,
     colocation: buildPerspectiveSummary(colocationFacilities),
     hyperscale: buildPerspectiveSummary(hyperscaleFacilities),

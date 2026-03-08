@@ -1,15 +1,8 @@
 import { z } from "zod";
-import type { BoundaryPowerLevel } from "./boundaries-contracts.types";
 import { GeometrySchema, ResponseMetaSchema } from "./shared-contracts";
 
-export type {
-  BoundaryPowerFeature,
-  BoundaryPowerFeatureCollection,
-  BoundaryPowerLevel,
-  BoundaryPowerProperties,
-} from "./boundaries-contracts.types";
-
 export const BoundaryPowerLevelSchema = z.enum(["county", "state", "country"]);
+export type BoundaryPowerLevel = z.infer<typeof BoundaryPowerLevelSchema>;
 
 export function parseBoundaryPowerLevelParam(value: string | undefined): BoundaryPowerLevel | null {
   if (typeof value === "undefined") {
@@ -44,3 +37,7 @@ export const BoundaryPowerFeatureCollectionSchema = z.object({
   features: z.array(BoundaryPowerFeatureSchema),
   meta: ResponseMetaSchema,
 });
+
+export type BoundaryPowerProperties = z.infer<typeof BoundaryPowerPropertiesSchema>;
+export type BoundaryPowerFeature = z.infer<typeof BoundaryPowerFeatureSchema>;
+export type BoundaryPowerFeatureCollection = z.infer<typeof BoundaryPowerFeatureCollectionSchema>;

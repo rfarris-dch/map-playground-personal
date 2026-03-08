@@ -1,36 +1,9 @@
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { parseBooleanFlag, parseIntervalMilliseconds } from "@map-migration/ops/etl/cli-config";
+import {
+  resolveParcelsSyncRuntimePaths,
+  resolveProjectRootFromFileUrl,
+} from "@map-migration/ops/etl/project-paths";
 import type { ParcelsSyncConfig, ParcelsSyncMode } from "@/sync/parcels-sync.types";
-
-function parseBooleanFlag(value: string | undefined, defaultValue: boolean): boolean {
-  if (!value) {
-    return defaultValue;
-  }
-
-  const normalized = value.trim().toLowerCase();
-  if (normalized === "0" || normalized === "false" || normalized === "off" || normalized === "no") {
-    return false;
-  }
-
-  if (normalized === "1" || normalized === "true" || normalized === "on" || normalized === "yes") {
-    return true;
-  }
-
-  return defaultValue;
-}
-
-function parseIntervalMilliseconds(value: string | undefined, defaultSeconds: number): number {
-  if (!value) {
-    return defaultSeconds * 1000;
-  }
-
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return defaultSeconds * 1000;
-  }
-
-  return Math.floor(parsed * 1000);
-}
 
 function defaultSyncMode(): ParcelsSyncMode {
   return process.env.NODE_ENV === "production" ? "external" : "in-process";
@@ -58,21 +31,9 @@ function parseSyncMode(value: string | undefined, enabled: boolean): ParcelsSync
   );
 }
 
-function parseSnapshotRoot(projectRoot: string): string {
-  const rawSnapshotRoot = process.env.PARCEL_SYNC_OUTPUT_DIR;
-  if (typeof rawSnapshotRoot !== "string" || rawSnapshotRoot.trim().length === 0) {
-    return resolve(projectRoot, "var/parcels-sync");
-  }
-
-  return resolve(projectRoot, rawSnapshotRoot.trim());
-}
-
 export function buildParcelsSyncConfig(): ParcelsSyncConfig {
-  const serviceFilePath = fileURLToPath(import.meta.url);
-  const serviceDirectory = dirname(serviceFilePath);
-  const projectRoot = resolve(serviceDirectory, "../../../../../");
-  const syncScriptPath = resolve(projectRoot, "scripts/refresh-parcels.sh");
-  const snapshotRoot = parseSnapshotRoot(projectRoot);
+  const projectRoot = resolveProjectRootFromFileUrl(import.meta.url, 5);
+  const runtimePaths = resolveParcelsSyncRuntimePaths(projectRoot);
   const enabled = parseBooleanFlag(process.env.AUTO_PARCELS_SYNC, false);
 
   return {
@@ -81,7 +42,7 @@ export function buildParcelsSyncConfig(): ParcelsSyncConfig {
     mode: parseSyncMode(process.env.AUTO_PARCELS_SYNC_MODE, enabled),
     requireStartupSuccess: parseBooleanFlag(process.env.AUTO_PARCELS_SYNC_STARTUP_REQUIRED, true),
     projectRoot,
-    snapshotRoot,
-    syncScriptPath,
+    snapshotRoot: runtimePaths.snapshotRoot,
+    syncScriptPath: runtimePaths.syncScriptPath,
   };
 }

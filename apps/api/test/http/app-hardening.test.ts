@@ -3,6 +3,24 @@ import { ApiHeaders, ApiRoutes, buildParcelLookupRoute } from "@map-migration/co
 import { createApiApp } from "@/app";
 
 describe("api hardening middleware", () => {
+  it("keeps the health endpoint contract stable under the effect adapter", async () => {
+    const app = createApiApp();
+    const requestId = "health-123";
+
+    const response = await app.request(ApiRoutes.health, {
+      headers: {
+        [ApiHeaders.requestId]: requestId,
+      },
+    });
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get(ApiHeaders.requestId)).toBe(requestId);
+    expect(payload.status).toBe("ok");
+    expect(payload.service).toBe("@map-migration/api");
+    expect(payload.requestId).toBeUndefined();
+  });
+
   it("propagates inbound request ids to response headers and envelopes", async () => {
     const app = createApiApp();
     const requestId = "req-123";

@@ -6,26 +6,6 @@ import {
   ResponseMetaSchema,
 } from "./shared-contracts";
 
-export type {
-  ParcelAoi,
-  ParcelDetailResponse,
-  ParcelEnrichRequest,
-  ParcelFeature,
-  ParcelGeometryMode,
-  ParcelLookupRequest,
-  ParcelProfile,
-  ParcelResponseMeta,
-  ParcelSyncDbLoadProgress,
-  ParcelSyncPhase,
-  ParcelSyncProgress,
-  ParcelSyncRunReason,
-  ParcelSyncRunStatus,
-  ParcelSyncStateProgress,
-  ParcelSyncTileBuildProgress,
-  ParcelsFeatureCollection,
-  ParcelsSyncStatusResponse,
-} from "./parcels-contracts.types";
-
 export const ParcelGeometryModeSchema = z.enum(["none", "centroid", "simplified", "full"]);
 // Profile currently represents caller intent metadata and does not yet alter payload shaping.
 export const ParcelProfileSchema = z.enum(["analysis_v1", "full_170"]);
@@ -236,3 +216,21 @@ export const ParcelsSyncStatusResponseSchema = z.object({
   latestRunCompletedAt: z.string().datetime().nullable(),
   run: ParcelSyncRunStatusSchema,
 });
+
+export type ParcelGeometryMode = z.infer<typeof ParcelGeometryModeSchema>;
+export type ParcelProfile = z.infer<typeof ParcelProfileSchema>;
+export type ParcelAoi = z.infer<typeof ParcelAoiSchema>;
+export type ParcelResponseMeta = z.infer<typeof ParcelResponseMetaSchema>;
+export type ParcelFeature = z.infer<typeof ParcelFeatureSchema>;
+export type ParcelDetailResponse = z.infer<typeof ParcelDetailResponseSchema>;
+export type ParcelsFeatureCollection = z.infer<typeof ParcelsFeatureCollectionSchema>;
+export type ParcelLookupRequest = z.infer<typeof ParcelLookupRequestSchema>;
+export type ParcelEnrichRequest = z.infer<typeof ParcelEnrichRequestSchema>;
+export type ParcelSyncPhase = z.infer<typeof ParcelSyncPhaseSchema>;
+export type ParcelSyncRunReason = z.infer<typeof ParcelSyncRunReasonSchema>;
+export type ParcelSyncStateProgress = z.infer<typeof ParcelSyncStateProgressSchema>;
+export type ParcelSyncDbLoadProgress = z.infer<typeof ParcelSyncDbLoadProgressSchema>;
+export type ParcelSyncTileBuildProgress = z.infer<typeof ParcelSyncTileBuildProgressSchema>;
+export type ParcelSyncProgress = z.infer<typeof ParcelSyncProgressSchema>;
+export type ParcelSyncRunStatus = z.infer<typeof ParcelSyncRunStatusSchema>;
+export type ParcelsSyncStatusResponse = z.infer<typeof ParcelsSyncStatusResponseSchema>;

@@ -1,27 +1,17 @@
 #!/usr/bin/env bun
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import {
   buildTileLatestManifestPath,
   createPublishManifest,
   parseTileDataset,
   parseTilePublishManifest,
   type TileDataset,
-} from "@/packages/geo-tiles/src/index";
+} from "@map-migration/geo-tiles";
+import { fileExists, readJson, writeJsonAtomic } from "@map-migration/ops/etl/atomic-file-store";
+import { findCliArgValue } from "@map-migration/ops/etl/cli-config";
 import type { CliArgs } from "./rollback-parcels-manifest.types";
 
 const LEADING_SLASHES_RE = /^[/\\]+/;
-
-function parseArg(name: string): string | null {
-  const prefix = `${name}=`;
-  for (const raw of process.argv.slice(2)) {
-    if (raw.startsWith(prefix)) {
-      return raw.slice(prefix.length);
-    }
-  }
-
-  return null;
-}
 
 function parseDataset(raw: string | null): TileDataset {
   if (typeof raw === "string") {
@@ -32,13 +22,14 @@ function parseDataset(raw: string | null): TileDataset {
   }
 
   throw new Error(
-    "Missing or invalid --dataset. Expected one of: parcels, parcels-draw-v1, parcels-analysis-v1, infrastructure, power, telecom"
+    "Missing or invalid --dataset. Expected one of: parcels, parcels-draw-v1, parcels-analysis-v1, environmental-flood, environmental-hydro-basins, infrastructure, power, telecom"
   );
 }
 
 function parseArgs(): CliArgs {
-  const dataset = parseDataset(parseArg("--dataset"));
-  const outputRoot = parseArg("--output-root") ?? "apps/web/public";
+  const argv = process.argv.slice(2);
+  const dataset = parseDataset(findCliArgValue(argv, "dataset"));
+  const outputRoot = findCliArgValue(argv, "output-root") ?? "apps/web/public";
 
   return {
     dataset,
@@ -62,13 +53,11 @@ function main(): void {
     args.outputRoot,
     normalizeOutputRelativePath(buildTileLatestManifestPath(args.dataset))
   );
-  if (!existsSync(latestPath)) {
+  if (!fileExists(latestPath)) {
     throw new Error(`Latest manifest does not exist: ${latestPath}`);
   }
 
-  const raw = readFileSync(latestPath, "utf8");
-  const parsed = JSON.parse(raw);
-  const manifest = parseTilePublishManifest(parsed);
+  const manifest = readJson(latestPath, parseTilePublishManifest);
   if (manifest.previous === null) {
     throw new Error("Manifest has no previous entry to rollback to");
   }
@@ -77,7 +66,7 @@ function main(): void {
     args.outputRoot,
     normalizeOutputRelativePath(manifest.previous.url)
   );
-  if (!existsSync(rollbackTargetPath)) {
+  if (!fileExists(rollbackTargetPath)) {
     throw new Error(`Rollback target PMTiles does not exist: ${rollbackTargetPath}`);
   }
 
@@ -86,11 +75,7 @@ function main(): void {
     manifest.previous,
     manifest.current
   );
-
-  mkdirSync(dirname(latestPath), { recursive: true });
-  const tempPath = `${latestPath}.tmp-${process.pid}-${Date.now()}`;
-  writeFileSync(tempPath, `${JSON.stringify(rolledBackManifest, null, 2)}\n`, "utf8");
-  renameSync(tempPath, latestPath);
+  writeJsonAtomic(latestPath, rolledBackManifest);
 
   console.log("[tiles] rollback complete");
   console.log(`dataset=${args.dataset}`);

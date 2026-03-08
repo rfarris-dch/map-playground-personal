@@ -7,6 +7,7 @@ import type {
   FiberSourceLayerOptionsState,
   FiberSourceLayerSelectionState,
   FiberVisibilityState,
+  FloodVisibilityState,
   PerspectiveStatusState,
   PerspectiveVisibilityState,
 } from "@/features/app/core/app-shell.types";
@@ -14,9 +15,12 @@ import {
   buildInitialBasemapVisibilityState,
   buildInitialBoundaryVisibilityState,
   buildInitialFiberVisibilityState,
+  buildInitialFloodVisibilityState,
+  buildInitialHydroBasinsVisible,
   buildInitialParcelsVisible,
   buildInitialPerspectiveVisibilityState,
   buildInitialPowerVisibilityState,
+  buildInitialWaterVisible,
 } from "@/features/app/visibility/app-shell-visibility.service";
 import type { BasemapVisibilityState } from "@/features/basemap/basemap.types";
 import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";
@@ -63,6 +67,10 @@ export function initialBoundaryVisibilityState(): BoundaryVisibilityState {
   return buildInitialBoundaryVisibilityState();
 }
 
+export function initialFloodVisibilityState(): FloodVisibilityState {
+  return buildInitialFloodVisibilityState();
+}
+
 export function initialBoundaryFacetOptionsState(): BoundaryFacetOptionsState {
   return {
     county: [],
@@ -103,6 +111,14 @@ export function initialPowerVisibilityState(): PowerVisibilityState {
 
 export function initialParcelsVisible(): boolean {
   return buildInitialParcelsVisible();
+}
+
+export function initialHydroBasinsVisible(): boolean {
+  return buildInitialHydroBasinsVisible();
+}
+
+export function initialWaterVisible(): boolean {
+  return buildInitialWaterVisible();
 }
 
 export function initialBasemapVisibilityState(): BasemapVisibilityState {

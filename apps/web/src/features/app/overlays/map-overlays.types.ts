@@ -5,6 +5,7 @@ import type {
   PerspectiveStatusState,
   PerspectiveVisibilityState,
 } from "@/features/app/core/app-shell.types";
+import type { ParcelsStatus } from "@/features/parcels/parcels.types";
 import type {
   SketchMeasureMode,
   SketchMeasureState,
@@ -25,6 +26,7 @@ export interface UseMapOverlaysArgs {
   readonly finishSketchMeasureArea: () => void;
   readonly hyperscaleViewportFeatures: ShallowRef<FacilitiesFeatureCollection["features"]>;
   readonly map: ShallowRef<IMap | null>;
+  readonly parcelsStatus: ShallowRef<ParcelsStatus>;
   readonly setSketchMeasureMode: (mode: SketchMeasureMode) => void;
   readonly sketchMeasureState: ShallowRef<SketchMeasureState>;
   readonly visiblePerspectives: ShallowRef<PerspectiveVisibilityState>;

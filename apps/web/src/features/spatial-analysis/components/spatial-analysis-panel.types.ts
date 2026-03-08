@@ -3,6 +3,7 @@ import type { SelectionToolProgress } from "@/features/selection-tool/selection-
 import type { SpatialAnalysisFacilityRecord } from "@/features/spatial-analysis/spatial-analysis-facilities.types";
 import type { SpatialAnalysisParcelRecord } from "@/features/spatial-analysis/spatial-analysis-parcels.types";
 import type { SpatialAnalysisProviderSummaryItem } from "@/features/spatial-analysis/spatial-analysis-provider-summary.types";
+import type { SpatialAnalysisSummaryModel } from "@/features/spatial-analysis/spatial-analysis-summary.types";
 
 export interface SpatialAnalysisPanelPerspectiveSummary {
   readonly availablePowerMw: number;
@@ -42,7 +43,7 @@ export interface SpatialAnalysisPanelSummary {
   readonly totalCount: number;
 }
 
-export type SpatialAnalysisPanelTab = "facilities" | "overview" | "parcels";
+export type SpatialAnalysisPanelTab = "counties" | "facilities" | "overview" | "parcels";
 
 export interface SpatialAnalysisPanelProps {
   readonly compactWidthClass?: string;
@@ -65,6 +66,6 @@ export interface SpatialAnalysisPanelProps {
   readonly progress?: SelectionToolProgress | null;
   readonly showCoordinates?: boolean;
   readonly subtitle: string;
-  readonly summary: SpatialAnalysisPanelSummary | null;
+  readonly summary: SpatialAnalysisSummaryModel | null;
   readonly title: string;
 }

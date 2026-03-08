@@ -1,7 +1,16 @@
+import { initializeEnvironmentalStressRuntime } from "@/features/app/lifecycle/app-shell-environmental-runtime.service";
 import {
   destroyFacilitiesRuntime,
   initializeFacilitiesRuntime,
 } from "@/features/app/lifecycle/app-shell-facilities-runtime.service";
+import {
+  destroyFloodRuntime,
+  initializeFloodRuntime,
+} from "@/features/app/lifecycle/app-shell-flood-runtime.service";
+import {
+  destroyHydroBasinsRuntime,
+  initializeHydroBasinsRuntime,
+} from "@/features/app/lifecycle/app-shell-hydro-basins-runtime.service";
 import {
   destroyMeasureRuntime,
   initializeMeasureRuntime,
@@ -28,13 +37,19 @@ export function initializeMapLayerRuntime(options: UseAppShellMapLifecycleOption
 
   initializeFacilitiesRuntime(options);
   initializeParcelsRuntime(options);
+  initializeFloodRuntime(options);
+  initializeHydroBasinsRuntime(options);
   options.fiber.initialize(currentMap);
   initializePowerRuntime(options);
   initializeWaterRuntime(options);
   initializeMeasureRuntime(options);
+  options.layers.environmentalStressController.value =
+    initializeEnvironmentalStressRuntime(options);
 }
 
 export function destroyMapLayerRuntime(options: UseAppShellMapLifecycleOptions): void {
+  options.layers.environmentalStressController.value?.destroy();
+  options.layers.environmentalStressController.value = null;
   destroyMeasureRuntime(options);
   destroyWaterRuntime(options);
   destroyPowerRuntime(options);
@@ -42,4 +57,6 @@ export function destroyMapLayerRuntime(options: UseAppShellMapLifecycleOptions):
   options.fiber.destroy(currentMap);
   destroyParcelsRuntime(options);
   destroyFacilitiesRuntime(options);
+  destroyHydroBasinsRuntime(options);
+  destroyFloodRuntime(options);
 }

@@ -1,24 +1,15 @@
 import { z } from "zod";
-import type {
-  BBox,
-  CommissionedSemantic,
-  FacilityPerspective,
-  LeaseOrOwn,
-} from "./shared-contracts.types";
 
-export type {
-  ApiError,
-  ApiErrorResponse,
-  BBox,
-  CommissionedSemantic,
-  FacilityPerspective,
-  FeatureCollection,
-  LeaseOrOwn,
-  ResponseMeta,
-  SafeParseSchema,
-  SourceMode,
-  Warning,
-} from "./shared-contracts.types";
+export interface BBox {
+  readonly east: number;
+  readonly north: number;
+  readonly south: number;
+  readonly west: number;
+}
+
+export interface SafeParseSchema<T> {
+  safeParse(input: unknown): { success: true; data: T } | { success: false; error: unknown };
+}
 
 export const SourceModeSchema = z.enum(["pmtiles", "postgis", "arcgis-proxy", "external-xyz"]);
 export const FacilityPerspectiveSchema = z.enum(["colocation", "hyperscale"]);
@@ -30,6 +21,10 @@ export const CommissionedSemanticSchema = z.enum([
   "unknown",
 ]);
 export const LeaseOrOwnSchema = z.enum(["lease", "own", "unknown"]);
+export type SourceMode = z.infer<typeof SourceModeSchema>;
+export type FacilityPerspective = z.infer<typeof FacilityPerspectiveSchema>;
+export type CommissionedSemantic = z.infer<typeof CommissionedSemanticSchema>;
+export type LeaseOrOwn = z.infer<typeof LeaseOrOwnSchema>;
 
 export const WarningSchema = z.object({
   code: z.string(),
@@ -230,3 +225,9 @@ export const PointGeometrySchema = z.object({
   type: z.literal("Point"),
   coordinates: z.tuple([LongitudeSchema, LatitudeSchema]),
 });
+
+export type Warning = z.infer<typeof WarningSchema>;
+export type ResponseMeta = z.infer<typeof ResponseMetaSchema>;
+export type ApiError = z.infer<typeof ApiErrorSchema>;
+export type ApiErrorResponse = z.infer<typeof ApiErrorResponseSchema>;
+export type FeatureCollection = z.infer<typeof FeatureCollectionSchema>;

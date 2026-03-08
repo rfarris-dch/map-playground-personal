@@ -3,6 +3,7 @@
   import { computed, shallowRef, watch } from "vue";
   import Button from "@/components/ui/button/button.vue";
   import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";
+  import SpatialAnalysisCountyScoresSection from "@/features/spatial-analysis/components/spatial-analysis-county-scores-section.vue";
   import SpatialAnalysisFacilitiesTable from "@/features/spatial-analysis/components/spatial-analysis-facilities-table.vue";
   import type {
     SpatialAnalysisPanelProps,
@@ -77,7 +78,7 @@
     };
   }
 
-  const panelSummary = computed(() => props.summary ?? createEmptySummary());
+  const panelSummary = computed(() => props.summary?.summary ?? createEmptySummary());
 
   const hasFacilities = computed(() => panelSummary.value.totalCount > 0);
   const hasMarkets = computed(() => (panelSummary.value.marketSelection?.matchCount ?? 0) > 0);
@@ -85,7 +86,30 @@
     () => panelSummary.value.marketSelection?.unavailableReason ?? null
   );
   const hasParcels = computed(() => panelSummary.value.parcelSelection.count > 0);
-  const hasAnyResults = computed(() => hasFacilities.value || hasMarkets.value || hasParcels.value);
+  const countySelectionCount = computed(() => props.summary?.area.countyIds.length ?? 0);
+  const countyScores = computed(() => props.summary?.countyIntelligence.scores ?? null);
+  const countyScoresError = computed(() => props.summary?.countyIntelligence.scoresError ?? null);
+  const countyScoresStatus = computed(() => props.summary?.countyIntelligence.status ?? null);
+  const countyScoresStatusError = computed(
+    () => props.summary?.countyIntelligence.statusError ?? null
+  );
+  const hasCountyScores = computed(() => {
+    if (
+      countySelectionCount.value > 0 ||
+      countyScoresError.value ||
+      countyScoresStatusError.value
+    ) {
+      return true;
+    }
+
+    return (
+      (countyScores.value?.summary.requestedCountyIds.length ?? 0) > 0 ||
+      countyScoresStatus.value !== null
+    );
+  });
+  const hasAnyResults = computed(
+    () => hasFacilities.value || hasMarkets.value || hasParcels.value || hasCountyScores.value
+  );
   const hasColocation = computed(() => panelSummary.value.colocation.count > 0);
   const hasHyperscale = computed(() => panelSummary.value.hyperscale.count > 0);
 
@@ -122,6 +146,12 @@
       label: "Overview",
     },
     {
+      count: countySelectionCount.value,
+      disabled: !hasCountyScores.value,
+      id: "counties",
+      label: "Counties",
+    },
+    {
       count: panelSummary.value.totalCount,
       disabled: !hasFacilities.value,
       id: "facilities",
@@ -135,28 +165,40 @@
     },
   ]);
 
-  const summaryChips = computed(() => [
-    {
-      label: "Colocation",
-      toneClass: "border-cyan-500/20 bg-cyan-500/10 text-cyan-800",
-      value: panelSummary.value.colocation.count,
-    },
-    {
-      label: "Hyperscale",
-      toneClass: "border-amber-500/20 bg-amber-500/10 text-amber-800",
-      value: panelSummary.value.hyperscale.count,
-    },
-    {
-      label: "Markets",
-      toneClass: "border-violet-500/20 bg-violet-500/10 text-violet-800",
-      value: panelSummary.value.marketSelection?.matchCount ?? 0,
-    },
-    {
-      label: "Parcels",
-      toneClass: "border-emerald-500/20 bg-emerald-500/10 text-emerald-800",
-      value: panelSummary.value.parcelSelection.count,
-    },
-  ]);
+  const summaryChips = computed(() =>
+    [
+      {
+        label: "Colocation",
+        toneClass: "border-cyan-500/20 bg-cyan-500/10 text-cyan-800",
+        value: panelSummary.value.colocation.count,
+        visible: true,
+      },
+      {
+        label: "Hyperscale",
+        toneClass: "border-amber-500/20 bg-amber-500/10 text-amber-800",
+        value: panelSummary.value.hyperscale.count,
+        visible: true,
+      },
+      {
+        label: "Markets",
+        toneClass: "border-violet-500/20 bg-violet-500/10 text-violet-800",
+        value: panelSummary.value.marketSelection?.matchCount ?? 0,
+        visible: true,
+      },
+      {
+        label: "Parcels",
+        toneClass: "border-emerald-500/20 bg-emerald-500/10 text-emerald-800",
+        value: panelSummary.value.parcelSelection.count,
+        visible: true,
+      },
+      {
+        label: "Counties",
+        toneClass: "border-indigo-500/20 bg-indigo-500/10 text-indigo-800",
+        value: countyScores.value?.summary.requestedCountyIds.length ?? countySelectionCount.value,
+        visible: hasCountyScores.value,
+      },
+    ].filter((chip) => chip.visible)
+  );
   const visibleProgressStages = computed(() =>
     (props.progress?.stages ?? []).filter((stage) => stage.status !== "skipped")
   );
@@ -246,6 +288,11 @@
       }
 
       if (!nextHasParcels && activeTab.value === "parcels") {
+        activeTab.value = "overview";
+        return;
+      }
+
+      if (!hasCountyScores.value && activeTab.value === "counties") {
         activeTab.value = "overview";
       }
     },
@@ -543,6 +590,18 @@
           </article>
         </div>
       </div>
+    </section>
+
+    <section
+      v-else-if="hasCountyScores && activeTab === 'counties'"
+      class="flex-1 overflow-auto rounded-lg border border-border/60 bg-muted/10 p-2"
+    >
+      <SpatialAnalysisCountyScoresSection
+        :county-scores="countyScores"
+        :error-message="countyScoresError"
+        :county-scores-status="countyScoresStatus"
+        :status-error-message="countyScoresStatusError"
+      />
     </section>
 
     <section

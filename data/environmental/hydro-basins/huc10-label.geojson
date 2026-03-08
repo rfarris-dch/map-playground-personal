@@ -1,0 +1,20 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "North Willow Reach",
+        "huc": "1001010203",
+        "areasqkm": 5400,
+        "label_rank": 5400,
+        "states": "KS",
+        "data_version": "sample-20260307"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-98.55, 39.78]
+      }
+    }
+  ]
+}

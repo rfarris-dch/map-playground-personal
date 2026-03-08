@@ -5,6 +5,7 @@
   import Button from "@/components/ui/button/button.vue";
   import { formatMeasurePowerMw } from "@/features/measure/measure-analysis.service";
   import { formatScannerPowerMw } from "@/features/scanner/scanner.service";
+  import SpatialAnalysisCountyScoresSection from "@/features/spatial-analysis/components/spatial-analysis-county-scores-section.vue";
   import SpatialAnalysisFacilitiesTable from "@/features/spatial-analysis/components/spatial-analysis-facilities-table.vue";
   import SpatialAnalysisParcelTable from "@/features/spatial-analysis/components/spatial-analysis-parcel-table.vue";
   import SpatialAnalysisPerspectiveCard from "@/features/spatial-analysis/components/spatial-analysis-perspective-card.vue";
@@ -17,7 +18,7 @@
   import { compareSpatialAnalysisFacilities } from "@/features/spatial-analysis/spatial-analysis-facilities.service";
   import { summarizeSpatialAnalysisParcels } from "@/features/spatial-analysis/spatial-analysis-overview.service";
 
-  type DashboardTab = "facilities" | "overview" | "parcels";
+  type DashboardTab = "counties" | "facilities" | "overview" | "parcels";
 
   function createEmptyDashboardSummary() {
     return {
@@ -67,8 +68,8 @@
     loadSpatialAnalysisDashboardState()
   );
   const activeTab = shallowRef<DashboardTab>("overview");
-
-  const summary = computed(() => dashboardState.value?.summary ?? null);
+  const selectedCountyIds = computed(() => dashboardState.value?.summary.area.countyIds ?? []);
+  const summary = computed(() => dashboardState.value?.summary.summary ?? null);
   const dashboardSummary = computed(() => summary.value ?? createEmptyDashboardSummary());
   const facilities = computed(() => {
     const summaryValue = summary.value;
@@ -90,10 +91,14 @@
       return 0;
     }
 
-    return state.summary.marketSelection.matchCount;
+    return state.summary.summary.marketSelection?.matchCount ?? 0;
   });
   const hasMarkets = computed(() => selectionMarketCount.value > 0);
-  const hasAnyResults = computed(() => hasFacilities.value || hasParcels.value || hasMarkets.value);
+  const hasCountySelections = computed(() => selectedCountyIds.value.length > 0);
+  const hasCountyTab = computed(() => hasCountySelections.value || stateHasCountyIntelligence());
+  const hasAnyResults = computed(
+    () => hasFacilities.value || hasParcels.value || hasMarkets.value || hasCountyTab.value
+  );
   const isSelectionDashboard = computed(() => dashboardState.value?.source === "selection");
   const formatPower = computed(() =>
     isSelectionDashboard.value ? formatMeasurePowerMw : formatScannerPowerMw
@@ -107,11 +112,11 @@
       return "No saved spatial analysis state is available.";
     }
 
-    const summaryValue = state.summary;
+    const summaryValue = state.summary.summary;
     const createdAtText = new Date(state.createdAt).toLocaleString();
 
     if (state.source === "selection") {
-      return `${summaryValue.totalCount} facilities · ${state.summary.marketSelection.matchCount} markets · ${summaryValue.parcelSelection.count} parcels · saved ${createdAtText}`;
+      return `${summaryValue.totalCount} facilities · ${summaryValue.marketSelection?.matchCount ?? 0} markets · ${summaryValue.parcelSelection.count} parcels · saved ${createdAtText}`;
     }
 
     return `${summaryValue.totalCount} facilities · ${summaryValue.parcelSelection.count} parcels · saved ${createdAtText}`;
@@ -124,6 +129,21 @@
   function clearSavedDashboard(): void {
     clearSpatialAnalysisDashboardState();
     dashboardState.value = null;
+  }
+
+  function stateHasCountyIntelligence(): boolean {
+    const state = dashboardState.value;
+    if (state === null) {
+      return false;
+    }
+
+    return (
+      state.summary.countyIntelligence.requestedCountyIds.length > 0 ||
+      state.summary.countyIntelligence.scores !== null ||
+      state.summary.countyIntelligence.status !== null ||
+      state.summary.countyIntelligence.scoresError !== null ||
+      state.summary.countyIntelligence.statusError !== null
+    );
   }
 </script>
 
@@ -178,6 +198,15 @@
             @click="activeTab = 'overview'"
           >
             Overview
+          </Button>
+          <Button
+            size="sm"
+            :variant="activeTab === 'counties' ? 'default' : 'ghost'"
+            class="h-8 rounded-lg px-3"
+            :disabled="!hasCountyTab"
+            @click="activeTab = 'counties'"
+          >
+            Counties ({{ selectedCountyIds.length }})
           </Button>
           <Button
             size="sm"
@@ -253,6 +282,15 @@
               </dl>
             </article>
           </div>
+        </section>
+
+        <section v-if="hasCountyTab && activeTab === 'counties'" class="space-y-4">
+          <SpatialAnalysisCountyScoresSection
+            :county-scores="dashboardState.summary.countyIntelligence.scores"
+            :county-scores-status="dashboardState.summary.countyIntelligence.status"
+            :error-message="dashboardState.summary.countyIntelligence.scoresError"
+            :status-error-message="dashboardState.summary.countyIntelligence.statusError"
+          />
         </section>
 
         <section

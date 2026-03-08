@@ -25,7 +25,11 @@ export function initializeMapLifecycleRuntime(options: UseAppShellMapLifecycleOp
   });
   options.runtime.disposePmtilesProtocol.value = mapSetup.disposePmtilesProtocol;
   options.runtime.map.value = mapSetup.map;
-  options.runtime.layerRuntime.value = createLayerRuntime(mapSetup.map);
+  options.runtime.layerRuntime.value = createLayerRuntime(mapSetup.map, {
+    onSnapshot: (snapshot) => {
+      options.state.layerRuntimeSnapshot.value = snapshot;
+    },
+  });
   options.runtime.basemapLayerController.value = mapSetup.basemapLayerController;
   options.runtime.mapControls.value = mapSetup.controls;
   options.visibility.applyBasemapVisibility();
@@ -57,6 +61,7 @@ export function destroyMapLifecycleRuntime(options: UseAppShellMapLifecycleOptio
 
   options.runtime.layerRuntime.value?.destroy();
   options.runtime.layerRuntime.value = null;
+  options.state.layerRuntimeSnapshot.value = null;
 
   if (currentMap !== null) {
     options.runtime.mapControls.value.reduce((_, control) => {

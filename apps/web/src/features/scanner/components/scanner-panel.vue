@@ -2,15 +2,16 @@
   import { computed } from "vue";
   import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";
   import { formatScannerPowerMw } from "@/features/scanner/scanner.service";
-  import type { ScannerSummary } from "@/features/scanner/scanner.types";
   import SpatialAnalysisPanel from "@/features/spatial-analysis/components/spatial-analysis-panel.vue";
+  import type { SpatialAnalysisSummaryModel } from "@/features/spatial-analysis/spatial-analysis-summary.types";
 
   interface ScannerPanelProps {
+    readonly countyIds: readonly string[];
     readonly emptyMessage?: string | null;
     readonly isFiltered: boolean;
     readonly isParcelsLoading: boolean;
     readonly parcelsErrorMessage: string | null;
-    readonly summary: ScannerSummary;
+    readonly summary: SpatialAnalysisSummaryModel;
   }
 
   const props = defineProps<ScannerPanelProps>();
@@ -21,17 +22,18 @@
     "open-dashboard": [];
     "select-facility": [facility: SelectedFacilityRef];
   }>();
+  const analysisSummary = computed(() => props.summary.summary);
 
   const subtitle = computed(() => {
     const filteredSuffix = props.isFiltered ? " · filtered" : "";
-    return `${props.summary.totalCount} facilities, ${props.summary.parcelSelection.count} parcels in current viewport${filteredSuffix}`;
+    return `${analysisSummary.value.totalCount} facilities, ${analysisSummary.value.parcelSelection.count} parcels in current viewport${filteredSuffix}`;
   });
   const title = computed(() => {
-    if (props.summary.totalCount <= 0) {
+    if (analysisSummary.value.totalCount <= 0) {
       return "Scanner";
     }
 
-    return `Scanner · ${props.summary.totalCount} Facilities`;
+    return `Scanner · ${analysisSummary.value.totalCount} Facilities`;
   });
 
   const resolvedEmptyMessage = computed(() => {
@@ -62,9 +64,11 @@
     :empty-message="resolvedEmptyMessage"
     dismiss-label="Close"
     dashboard-label="Open Dashboard"
-    :dashboard-disabled="props.summary.totalCount === 0 && props.summary.parcelSelection.count === 0"
+    :dashboard-disabled="analysisSummary.totalCount === 0
+      && analysisSummary.parcelSelection.count === 0
+      && (props.summary.area.countyIds.length || props.countyIds.length) === 0"
     export-label="Export Facilities"
-    :export-disabled="props.summary.totalCount === 0"
+    :export-disabled="analysisSummary.totalCount === 0"
     :format-power="formatScannerPowerMw"
     :format-facility-power="formatFacilityPower"
     facilities-perspective-display="badge"

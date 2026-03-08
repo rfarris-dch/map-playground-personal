@@ -2,7 +2,7 @@ import type {
   PipelineFetchFailure,
   PipelineLiveEvent,
   PipelineLiveSample,
-} from "@/features/pipeline/pipeline.types";
+} from "../pipeline.types";
 
 function buildEventToneFromPhase(phase: PipelineLiveSample["phase"]): PipelineLiveEvent["tone"] {
   if (phase === "failed") {

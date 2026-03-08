@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 import type { FacilitiesBboxRow } from "@/geo/facilities/facilities.repo";
 
 const listFacilitiesByBboxMock =
@@ -41,6 +41,10 @@ mock.module("../../../src/geo/facilities/facilities.repo", () => ({
 const { queryFacilitiesByBbox, queryFacilityDetail } = await import(
   "@/geo/facilities/route/facilities-route-query.service"
 );
+
+afterAll(() => {
+  mock.restore();
+});
 
 function buildBboxRow(id: string): FacilitiesBboxRow {
   return {

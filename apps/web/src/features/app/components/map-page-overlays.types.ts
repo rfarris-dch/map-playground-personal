@@ -7,9 +7,11 @@ import type { FiberLocatorHoverState } from "@/features/fiber-locator/hover.type
 import type { ParcelDetailPayload } from "@/features/parcels/parcel-detail/detail.types";
 import type { SelectedParcelRef } from "@/features/parcels/parcels.types";
 import type { PowerHoverState } from "@/features/power/power-hover.types";
-import type { ScannerFacility, ScannerSummary } from "@/features/scanner/scanner.types";
+import type { ScannerFacility } from "@/features/scanner/scanner.types";
+import type { SpatialAnalysisSummaryModel } from "@/features/spatial-analysis/spatial-analysis-summary.types";
 
 export interface MapPageOverlaysProps {
+  readonly countyIds: readonly string[];
   readonly facilityDetail: FacilityDetailPayload | null;
   readonly hoveredBoundary: BoundaryHoverState | null;
   readonly hoveredFacility: FacilityHoverState | null;
@@ -29,7 +31,7 @@ export interface MapPageOverlaysProps {
   readonly scannerFacilities: readonly ScannerFacility[];
   readonly scannerIsFiltered: boolean;
   readonly scannerParcelsError: string | null;
-  readonly scannerSummary: ScannerSummary;
+  readonly scannerSummary: SpatialAnalysisSummaryModel;
   readonly selectedFacility: SelectedFacilityRef | null;
   readonly selectedParcel: SelectedParcelRef | null;
 }

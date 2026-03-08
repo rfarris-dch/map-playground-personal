@@ -1,4 +1,4 @@
-import type { PipelineLiveEvent, PipelineLiveSample } from "@/features/pipeline/pipeline.types";
+import type { PipelineLiveEvent, PipelineLiveSample } from "../pipeline.types";
 
 const LIVE_SAMPLE_LIMIT = 240;
 const LIVE_EVENT_LIMIT = 300;

@@ -1,0 +1,47 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Willow Tributary East",
+        "huc": "100101020301",
+        "areasqkm": 2100,
+        "label_rank": 2100,
+        "states": "KS",
+        "data_version": "sample-20260307"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [-98.64, 39.72],
+          [-98.46, 39.72],
+          [-98.46, 39.86],
+          [-98.64, 39.86],
+          [-98.64, 39.72]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Willow Tributary West",
+        "huc": "100101020302",
+        "areasqkm": 1900,
+        "label_rank": 1900,
+        "states": "KS",
+        "data_version": "sample-20260307"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [-98.58, 39.74],
+          [-98.5, 39.74],
+          [-98.5, 39.84],
+          [-98.58, 39.84],
+          [-98.58, 39.74]
+        ]
+      }
+    }
+  ]
+}

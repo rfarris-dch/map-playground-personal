@@ -20,7 +20,12 @@ import type {
   FacilitiesHoverController,
   FacilityHoverState,
 } from "@/features/facilities/hover.types";
-import type { LayerRuntimeController } from "@/features/layers/layer-runtime.types";
+import type { FloodLayerMountResult } from "@/features/flood/flood-layer.types";
+import type { HydroBasinsVisibilityController } from "@/features/hydro-basins/hydro-basins.types";
+import type {
+  LayerRuntimeController,
+  LayerRuntimeSnapshot,
+} from "@/features/layers/layer-runtime.types";
 import type {
   ParcelsLayerController,
   ParcelsStatus,
@@ -45,6 +50,10 @@ export interface AppShellVisibilityLifecycleController {
   syncRuntimeVisibility(): void;
 }
 
+export interface EnvironmentalStressController {
+  destroy(): void;
+}
+
 export interface AppShellMapLifecycleRuntimeRefs {
   readonly basemapLayerController: ShallowRef<BasemapLayerVisibilityController | null>;
   readonly disposePmtilesProtocol: ShallowRef<(() => void) | null>;
@@ -57,8 +66,11 @@ export interface AppShellMapLifecycleRuntimeRefs {
 
 export interface AppShellMapLifecycleLayerRefs {
   readonly boundaryControllers: ShallowRef<BoundaryControllerState>;
+  readonly environmentalStressController: ShallowRef<EnvironmentalStressController | null>;
   readonly facilitiesControllers: ShallowRef<readonly FacilitiesLayerController[]>;
   readonly facilitiesHoverController: ShallowRef<FacilitiesHoverController | null>;
+  readonly floodLayersController: ShallowRef<FloodLayerMountResult | null>;
+  readonly hydroBasinsController: ShallowRef<HydroBasinsVisibilityController | null>;
   readonly parcelsController: ShallowRef<ParcelsLayerController | null>;
   readonly powerControllers: ShallowRef<readonly PowerLayerVisibilityController[]>;
   readonly powerHoverController: ShallowRef<PowerHoverController | null>;
@@ -76,6 +88,7 @@ export interface AppShellMapLifecycleStateRefs {
   readonly hoveredFacility: ShallowRef<FacilityHoverState | null>;
   readonly hoveredPower: ShallowRef<PowerHoverState | null>;
   readonly hyperscaleViewportFeatures: ShallowRef<FacilitiesFeatureCollection["features"]>;
+  readonly layerRuntimeSnapshot: ShallowRef<LayerRuntimeSnapshot | null>;
   readonly parcelsStatus: ShallowRef<ParcelsStatus>;
   readonly selectedFacility: ShallowRef<SelectedFacilityRef | null>;
   readonly selectedParcel: ShallowRef<SelectedParcelRef | null>;

@@ -8,15 +8,6 @@ import {
   ResponseMetaSchema,
 } from "./shared-contracts";
 
-export type {
-  FacilitiesDetailFeature,
-  FacilitiesDetailResponse,
-  FacilitiesFeature,
-  FacilitiesFeatureCollection,
-  FacilitiesSelectionRequest,
-  FacilitiesSelectionResponse,
-} from "./facilities-contracts.types";
-
 export const FacilitiesPropertiesSchema = z.object({
   perspective: FacilityPerspectiveSchema,
   facilityId: z.string(),
@@ -113,3 +104,10 @@ export const FacilitiesDetailResponseSchema = z.object({
   feature: FacilitiesDetailFeatureSchema,
   meta: ResponseMetaSchema,
 });
+
+export type FacilitiesFeature = z.infer<typeof FacilitiesFeatureSchema>;
+export type FacilitiesFeatureCollection = z.infer<typeof FacilitiesFeatureCollectionSchema>;
+export type FacilitiesSelectionRequest = z.infer<typeof FacilitiesSelectionRequestSchema>;
+export type FacilitiesSelectionResponse = z.infer<typeof FacilitiesSelectionResponseSchema>;
+export type FacilitiesDetailFeature = z.infer<typeof FacilitiesDetailFeatureSchema>;
+export type FacilitiesDetailResponse = z.infer<typeof FacilitiesDetailResponseSchema>;

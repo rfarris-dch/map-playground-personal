@@ -4,12 +4,14 @@ import {
   ApiHeaders,
   type SafeParseSchema,
 } from "@map-migration/contracts";
-import { createRequestId } from "@map-migration/ops";
+import {
+  createRequestId,
+  normalizeRequestIdHeader,
+  REQUEST_ID_MAX_LENGTH,
+} from "@map-migration/ops";
 import type { Context } from "hono";
 import type { ErrorEnvelopeArgs, JsonErrorArgs } from "./api-response.types";
-
-export const REQUEST_ID_MAX_LENGTH = 128;
-const REQUEST_ID_PATTERN = /^[A-Za-z0-9._-]+$/;
+export { normalizeRequestIdHeader, REQUEST_ID_MAX_LENGTH } from "@map-migration/ops";
 
 function buildErrorEnvelope(args: ErrorEnvelopeArgs): ApiErrorResponse {
   const candidate: ApiErrorResponse = {
@@ -38,23 +40,6 @@ function buildErrorEnvelope(args: ErrorEnvelopeArgs): ApiErrorResponse {
       message: "internal server error",
     },
   };
-}
-
-export function normalizeRequestIdHeader(value: string | undefined): string | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const normalized = value.trim();
-  if (normalized.length === 0 || normalized.length > REQUEST_ID_MAX_LENGTH) {
-    return null;
-  }
-
-  if (!REQUEST_ID_PATTERN.test(normalized)) {
-    return null;
-  }
-
-  return normalized;
 }
 
 export function getOrCreateRequestId(c: Context, prefix = "api"): string {

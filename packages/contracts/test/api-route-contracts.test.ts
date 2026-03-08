@@ -1,9 +1,12 @@
 import { describe, expect, it } from "bun:test";
 import {
   ApiQueryDefaults,
+  buildCountyScoresRoute,
+  buildCountyScoresStatusRoute,
   buildFacilitiesBboxRoute,
   buildFacilityDetailRoute,
   buildParcelDetailRoute,
+  buildSpatialAnalysisSummaryRoute,
 } from "@/index";
 
 describe("api route contracts", () => {
@@ -45,5 +48,25 @@ describe("api route contracts", () => {
     });
 
     expect(route).toBe("/api/geo/parcels/parcel-123?profile=analysis_v1&includeGeometry=centroid");
+  });
+
+  it("builds county score routes with explicit county ids", () => {
+    const route = buildCountyScoresRoute({
+      countyIds: ["06085", "48113"],
+    });
+
+    expect(route).toBe("/api/geo/counties/scores?countyIds=06085%2C48113");
+  });
+
+  it("builds county score status routes", () => {
+    const route = buildCountyScoresStatusRoute();
+
+    expect(route).toBe("/api/geo/counties/scores/status");
+  });
+
+  it("builds spatial analysis summary routes", () => {
+    const route = buildSpatialAnalysisSummaryRoute();
+
+    expect(route).toBe("/api/geo/analysis/summary");
   });
 });

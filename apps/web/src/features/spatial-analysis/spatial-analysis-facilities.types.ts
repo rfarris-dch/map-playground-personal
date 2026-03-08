@@ -12,11 +12,13 @@ export interface SpatialAnalysisFacilityRecord {
   readonly commissionedPowerMw: number | null;
   readonly commissionedSemantic: CommissionedSemantic;
   readonly coordinates: LngLat;
+  readonly countyFips: string;
   readonly facilityId: string;
   readonly facilityName: string;
   readonly leaseOrOwn: LeaseOrOwn | null;
   readonly perspective: FacilityPerspective;
   readonly plannedPowerMw: number | null;
+  readonly providerId: string;
   readonly providerName: string;
   readonly squareFootage: number | null;
   readonly state: string | null;

@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { computed } from "vue";
   import Button from "@/components/ui/button/button.vue";
+  import { classifyParcelFloodAttributes } from "@/features/flood/flood-zone-classification.service";
   import { toParcelAttributeEntries } from "@/features/parcels/parcel-detail/detail.service";
   import type { ParcelDetailPayload } from "@/features/parcels/parcel-detail/detail.types";
   import type { SelectedParcelRef } from "@/features/parcels/parcels.types";
@@ -25,6 +26,14 @@
     }
 
     return toParcelAttributeEntries(detail.response.feature.properties.attrs);
+  });
+  const floodClassification = computed(() => {
+    const detail = props.detail;
+    if (detail === null) {
+      return null;
+    }
+
+    return classifyParcelFloodAttributes(detail.response.feature.properties.attrs);
   });
 
   function onClose(): void {
@@ -70,6 +79,24 @@
         <dt class="text-muted-foreground">Ingestion run</dt>
         <dd class="m-0 font-mono">{{ detail.response.feature.lineage.ingestionRunId ?? "n/a" }}</dd>
       </dl>
+
+      <section class="mb-3 rounded-md border border-border/70 bg-muted/20 p-3">
+        <h3 class="mb-2 mt-0 text-xs font-semibold tracking-wide">Flood context</h3>
+        <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-xs">
+          <dt class="text-muted-foreground">Classification</dt>
+          <dd class="m-0">{{ floodClassification?.label ?? "Flood zone unavailable" }}</dd>
+
+          <dt class="text-muted-foreground">Zone</dt>
+          <dd class="m-0 font-mono">
+            {{ floodClassification?.normalizedZone ?? detail.response.feature.properties.attrs.fema_flood_zone ?? "n/a" }}
+          </dd>
+
+          <dt class="text-muted-foreground">Subtype</dt>
+          <dd class="m-0 font-mono">
+            {{ floodClassification?.normalizedZoneSubtype ?? detail.response.feature.properties.attrs.fema_flood_zone_subtype ?? "n/a" }}
+          </dd>
+        </dl>
+      </section>
 
       <section>
         <h3 class="mb-2 mt-0 text-xs font-semibold tracking-wide">Full Attributes</h3>

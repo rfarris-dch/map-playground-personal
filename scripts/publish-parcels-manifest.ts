@@ -1,15 +1,7 @@
 #!/usr/bin/env bun
 import { createHash } from "node:crypto";
-import {
-  cpSync,
-  createReadStream,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  renameSync,
-  writeFileSync,
-} from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { createReadStream } from "node:fs";
+import { join, resolve } from "node:path";
 import {
   buildTileLatestManifestPath,
   createManifestEntry,
@@ -18,21 +10,21 @@ import {
   parseTilePublishManifest,
   type TileDataset,
   type TilePublishManifest,
-} from "@/packages/geo-tiles/src/index";
+} from "@map-migration/geo-tiles";
+import {
+  copyFileEnsuringDirectory,
+  fileExists,
+  readJsonOption,
+  writeJsonAtomic,
+} from "@map-migration/ops/etl/atomic-file-store";
+import { findCliArgValue, trimToNull } from "@map-migration/ops/etl/cli-config";
+import {
+  defaultSnapshotRootForDataset,
+  defaultTilesOutDirForDataset,
+} from "@map-migration/ops/etl/project-paths";
 import type { CliArgs } from "./publish-parcels-manifest.types";
 
 const LEADING_SLASHES_RE = /^[/\\]+/;
-
-function parseArg(name: string): string | null {
-  const prefix = `${name}=`;
-  for (const raw of process.argv.slice(2)) {
-    if (raw.startsWith(prefix)) {
-      return raw.slice(prefix.length);
-    }
-  }
-
-  return null;
-}
 
 function parseDataset(raw: string | null): TileDataset {
   if (typeof raw === "string") {
@@ -43,28 +35,21 @@ function parseDataset(raw: string | null): TileDataset {
   }
 
   throw new Error(
-    "Missing or invalid --dataset. Expected one of: parcels, parcels-draw-v1, parcels-analysis-v1, infrastructure, power, telecom"
+    "Missing or invalid --dataset. Expected one of: parcels, parcels-draw-v1, parcels-analysis-v1, environmental-flood, environmental-hydro-basins, infrastructure, power, telecom"
   );
 }
 
 function parseArgs(): CliArgs {
-  const dataset = parseDataset(parseArg("--dataset"));
-
-  const pmtilesPath = parseArg("--pmtiles-path");
-  const outputRoot = parseArg("--output-root") ?? "apps/web/public";
-  const runIdRaw = parseArg("--run-id");
-  const runId = typeof runIdRaw === "string" && runIdRaw.trim().length > 0 ? runIdRaw.trim() : null;
-  const ingestionRunIdRaw = parseArg("--ingestion-run-id");
-  const ingestionRunId =
-    typeof ingestionRunIdRaw === "string" && ingestionRunIdRaw.trim().length > 0
-      ? ingestionRunIdRaw.trim()
-      : null;
+  const argv = process.argv.slice(2);
+  const dataset = parseDataset(findCliArgValue(argv, "dataset"));
+  const pmtilesPath = findCliArgValue(argv, "pmtiles-path");
+  const outputRoot = findCliArgValue(argv, "output-root") ?? "apps/web/public";
+  const runId = trimToNull(findCliArgValue(argv, "run-id"));
+  const ingestionRunId = trimToNull(findCliArgValue(argv, "ingestion-run-id"));
   const snapshotRoot =
-    parseArg("--snapshot-root") ?? process.env.PARCEL_SYNC_OUTPUT_DIR ?? "var/parcels-sync";
+    findCliArgValue(argv, "snapshot-root") ?? defaultSnapshotRootForDataset(dataset);
   const tilesOutDir =
-    parseArg("--tiles-out-dir") ??
-    process.env.PARCELS_TILES_OUT_DIR ??
-    join(".cache", "tiles", dataset);
+    findCliArgValue(argv, "tiles-out-dir") ?? defaultTilesOutDirForDataset(dataset);
 
   return {
     dataset,
@@ -109,44 +94,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function readExistingManifest(path: string): TilePublishManifest | null {
-  if (!existsSync(path)) {
-    return null;
-  }
-
-  const raw = readFileSync(path, "utf8");
-  if (raw.trim().length === 0) {
-    return null;
-  }
-
-  const parsed = JSON.parse(raw);
-  return parseTilePublishManifest(parsed);
+  return readJsonOption(path, parseTilePublishManifest);
 }
 
 function writeManifest(path: string, manifest: TilePublishManifest): void {
-  mkdirSync(dirname(path), { recursive: true });
-  const nextContent = `${JSON.stringify(manifest, null, 2)}\n`;
-  const tempPath = `${path}.tmp-${process.pid}-${Date.now()}`;
-  writeFileSync(tempPath, nextContent, "utf8");
-  renameSync(tempPath, path);
+  writeJsonAtomic(path, manifest);
 }
 
 function copyPmtiles(sourcePath: string, destinationPath: string): void {
-  mkdirSync(dirname(destinationPath), { recursive: true });
-  cpSync(sourcePath, destinationPath);
+  copyFileEnsuringDirectory(sourcePath, destinationPath);
 }
 
 function readLatestRunId(snapshotRoot: string): string | null {
   const latestPath = join(snapshotRoot, "latest.json");
-  if (!existsSync(latestPath)) {
-    return null;
-  }
-
-  const raw = readFileSync(latestPath, "utf8");
-  if (raw.trim().length === 0) {
-    return null;
-  }
-
-  const parsed = JSON.parse(raw);
+  const parsed = readJsonOption(latestPath, (value) => value);
   if (!isRecord(parsed)) {
     return null;
   }
@@ -173,7 +134,7 @@ function resolvePmtilesPath(args: CliArgs): {
   const resolvedRunId = args.runId ?? readLatestRunId(args.snapshotRoot);
   if (resolvedRunId === null) {
     throw new Error(
-      "Missing --pmtiles-path and no latest parcel run found. Provide --pmtiles-path=/path/to/file.pmtiles or --run-id=<run-id>."
+      `Missing --pmtiles-path and no latest run found under ${args.snapshotRoot}. Provide --pmtiles-path=/path/to/file.pmtiles or --run-id=<run-id>.`
     );
   }
 
@@ -200,7 +161,7 @@ async function main(): Promise<void> {
   const args = parseArgs();
   const resolvedInput = resolvePmtilesPath(args);
 
-  if (!existsSync(resolvedInput.pmtilesPath)) {
+  if (!fileExists(resolvedInput.pmtilesPath)) {
     throw new Error(`PMTiles file not found: ${resolvedInput.pmtilesPath}`);
   }
 
@@ -217,7 +178,7 @@ async function main(): Promise<void> {
       args.outputRoot,
       normalizeOutputRelativePath(existingManifest.current.url)
     );
-    if (!existsSync(currentDestinationPath)) {
+    if (!fileExists(currentDestinationPath)) {
       copyPmtiles(resolvedInput.pmtilesPath, currentDestinationPath);
     }
 

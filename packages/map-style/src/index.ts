@@ -3,6 +3,9 @@ import type {
   BoundaryStyleLayerIds,
   FacilitiesCatalogLayerId,
   FacilitiesStyleLayerIds,
+  FloodCatalogLayerId,
+  FloodStyleLayerIds,
+  HydroBasinsStyleLayerIds,
   ParcelsStyleLayerIds,
   PowerCatalogLayerId,
   StaticCatalogLayerId,
@@ -13,6 +16,8 @@ import {
   getBoundaryStyleLayerIds as readBoundaryStyleLayerIds,
   getCatalogStyleLayerIds as readCatalogStyleLayerIds,
   getFacilitiesStyleLayerIds as readFacilitiesStyleLayerIds,
+  getFloodStyleLayerIds as readFloodStyleLayerIds,
+  getHydroBasinsStyleLayerIds as readHydroBasinsStyleLayerIds,
   getParcelsStyleLayerIds as readParcelsStyleLayerIds,
   getPowerStyleLayerIds as readPowerStyleLayerIds,
 } from "./style-layer-ids";
@@ -22,6 +27,9 @@ export type {
   BoundaryStyleLayerIds,
   FacilitiesCatalogLayerId,
   FacilitiesStyleLayerIds,
+  FloodCatalogLayerId,
+  FloodStyleLayerIds,
+  HydroBasinsStyleLayerIds,
   ParcelsStyleLayerIds,
   PowerCatalogLayerId,
   StaticCatalogLayerId,
@@ -33,10 +41,18 @@ export function getBoundaryStyleLayerIds(layerId: BoundaryCatalogLayerId): Bound
   return readBoundaryStyleLayerIds(layerId);
 }
 
+export function getFloodStyleLayerIds(layerId: FloodCatalogLayerId): FloodStyleLayerIds {
+  return readFloodStyleLayerIds(layerId);
+}
+
 export function getFacilitiesStyleLayerIds(
   layerId: FacilitiesCatalogLayerId
 ): FacilitiesStyleLayerIds {
   return readFacilitiesStyleLayerIds(layerId);
+}
+
+export function getHydroBasinsStyleLayerIds(): HydroBasinsStyleLayerIds {
+  return readHydroBasinsStyleLayerIds();
 }
 
 export function getParcelsStyleLayerIds(): ParcelsStyleLayerIds {

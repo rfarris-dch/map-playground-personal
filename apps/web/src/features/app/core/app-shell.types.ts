@@ -17,6 +17,11 @@ export interface PerspectiveVisibilityState {
   readonly hyperscale: boolean;
 }
 
+export interface FloodVisibilityState {
+  readonly flood100: boolean;
+  readonly flood500: boolean;
+}
+
 export interface BoundaryVisibilityState {
   readonly country: boolean;
   readonly county: boolean;

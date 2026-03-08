@@ -1,11 +1,14 @@
-import type { LayerCatalog, LayerId } from "./index.types";
+function defineLayerIds<const TLayerIds extends readonly string[]>(layerIds: TLayerIds): TLayerIds {
+  return layerIds;
+}
 
-export type { LayerCatalog, LayerDefinition, LayerGroup, LayerId } from "./index.types";
-
-export const LAYER_IDS: readonly LayerId[] = [
+export const LAYER_IDS = defineLayerIds([
   "county",
   "state",
   "country",
+  "environmental.flood-100",
+  "environmental.flood-500",
+  "environmental.hydro-basins",
   "environmental.water-features",
   "facilities.colocation",
   "facilities.hyperscale",
@@ -15,7 +18,34 @@ export const LAYER_IDS: readonly LayerId[] = [
   "fiber-locator.metro",
   "fiber-locator.longhaul",
   "property.parcels",
-];
+]);
+
+const layerIdLookup: ReadonlySet<string> = new Set(LAYER_IDS);
+
+export type LayerId = (typeof LAYER_IDS)[number];
+
+export type LayerCatalog = Readonly<Record<LayerId, LayerDefinition>>;
+
+export interface LayerDefinition {
+  readonly budgetWeight: number;
+  readonly defaultVisible: boolean;
+  readonly dependencies: readonly LayerId[];
+  readonly group: LayerGroup;
+  readonly id: LayerId;
+  readonly sourceId: string;
+  readonly sourceType: "vector" | "raster" | "geojson" | "custom";
+  readonly zoomMax: number;
+  readonly zoomMin: number;
+}
+
+export type LayerGroup =
+  | "basemap"
+  | "boundaries"
+  | "facilities"
+  | "infrastructure"
+  | "environmental"
+  | "parcels"
+  | "models";
 
 export const DEFAULT_LAYER_CATALOG: LayerCatalog = {
   // Boundary layers are cataloged for governance, but feature layers are independently toggleable.
@@ -51,6 +81,39 @@ export const DEFAULT_LAYER_CATALOG: LayerCatalog = {
     defaultVisible: false,
     dependencies: [],
     budgetWeight: 1,
+  },
+  "environmental.flood-100": {
+    id: "environmental.flood-100",
+    group: "environmental",
+    sourceId: "environmental-flood",
+    sourceType: "vector",
+    zoomMin: 0,
+    zoomMax: 22,
+    defaultVisible: false,
+    dependencies: [],
+    budgetWeight: 2,
+  },
+  "environmental.flood-500": {
+    id: "environmental.flood-500",
+    group: "environmental",
+    sourceId: "environmental-flood",
+    sourceType: "vector",
+    zoomMin: 0,
+    zoomMax: 22,
+    defaultVisible: false,
+    dependencies: [],
+    budgetWeight: 2,
+  },
+  "environmental.hydro-basins": {
+    id: "environmental.hydro-basins",
+    group: "environmental",
+    sourceId: "environmental-hydro-basins",
+    sourceType: "vector",
+    zoomMin: 5,
+    zoomMax: 22,
+    defaultVisible: false,
+    dependencies: [],
+    budgetWeight: 2,
   },
   "environmental.water-features": {
     id: "environmental.water-features",
@@ -154,20 +217,7 @@ export const DEFAULT_LAYER_CATALOG: LayerCatalog = {
 };
 
 export function isLayerId(value: string): value is LayerId {
-  return (
-    value === "county" ||
-    value === "state" ||
-    value === "country" ||
-    value === "environmental.water-features" ||
-    value === "facilities.colocation" ||
-    value === "facilities.hyperscale" ||
-    value === "power.transmission" ||
-    value === "power.substations" ||
-    value === "power.plants" ||
-    value === "fiber-locator.metro" ||
-    value === "fiber-locator.longhaul" ||
-    value === "property.parcels"
-  );
+  return layerIdLookup.has(value);
 }
 
 export function validateLayerCatalog(catalog: LayerCatalog): string[] {

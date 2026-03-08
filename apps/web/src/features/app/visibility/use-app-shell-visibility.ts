@@ -1,27 +1,36 @@
 import type { FacilityPerspective } from "@map-migration/contracts";
 import { shallowRef } from "vue";
 import {
+  FLOOD_100_LAYER_ID,
+  FLOOD_500_LAYER_ID,
   facilitiesLayerId,
+  HYDRO_BASINS_LAYER_ID,
   PARCELS_LAYER_ID,
   powerLayerId,
   WATER_FEATURES_LAYER_ID,
 } from "@/features/app/core/app-shell.constants";
 import type {
   BoundaryVisibilityState,
+  FloodVisibilityState,
   PerspectiveVisibilityState,
 } from "@/features/app/core/app-shell.types";
 import {
   buildInitialBoundaryVisibilityState,
+  buildInitialFloodVisibilityState,
+  buildInitialHydroBasinsVisible,
   buildInitialParcelsVisible,
   buildInitialPerspectiveVisibilityState,
   buildInitialPowerVisibilityState,
   buildInitialWaterVisible,
   syncBoundaryVisibilityState,
+  syncFloodVisibilityState,
+  syncHydroBasinsVisible,
   syncParcelsVisible,
   syncPerspectiveVisibilityState,
   syncPowerVisibilityState,
   syncWaterVisible,
   withBoundaryVisibility,
+  withFloodVisibility,
   withPerspectiveVisibility,
   withPowerVisibility,
 } from "@/features/app/visibility/app-shell-visibility.service";
@@ -43,9 +52,11 @@ export function useAppShellVisibility(options: UseAppShellVisibilityOptions) {
   const boundaryVisibility = shallowRef<BoundaryVisibilityState>(
     buildInitialBoundaryVisibilityState()
   );
+  const floodVisibility = shallowRef<FloodVisibilityState>(buildInitialFloodVisibilityState());
   const visiblePerspectives = shallowRef<PerspectiveVisibilityState>(
     buildInitialPerspectiveVisibilityState()
   );
+  const hydroBasinsVisible = shallowRef<boolean>(buildInitialHydroBasinsVisible());
   const parcelsVisible = shallowRef<boolean>(buildInitialParcelsVisible());
   const powerVisibility = shallowRef<PowerVisibilityState>(buildInitialPowerVisibilityState());
   const waterVisible = shallowRef<boolean>(buildInitialWaterVisible());
@@ -71,6 +82,14 @@ export function useAppShellVisibility(options: UseAppShellVisibilityOptions) {
     boundaryVisibility.value = syncBoundaryVisibilityState({
       runtime,
       fallback: boundaryVisibility.value,
+    });
+    floodVisibility.value = syncFloodVisibilityState({
+      runtime,
+      fallback: floodVisibility.value,
+    });
+    hydroBasinsVisible.value = syncHydroBasinsVisible({
+      runtime,
+      fallback: hydroBasinsVisible.value,
     });
     parcelsVisible.value = syncParcelsVisible({
       runtime,
@@ -113,6 +132,22 @@ export function useAppShellVisibility(options: UseAppShellVisibilityOptions) {
     options.basemapLayerController.value?.setVisible(layerId, visible);
   }
 
+  function setFloodLayerVisible(layerId: keyof FloodVisibilityState, visible: boolean): void {
+    floodVisibility.value = withFloodVisibility({
+      layerId,
+      visible,
+      state: floodVisibility.value,
+    });
+
+    const catalogLayerId = layerId === "flood100" ? FLOOD_100_LAYER_ID : FLOOD_500_LAYER_ID;
+    options.layerRuntime.value?.setUserVisible(catalogLayerId, visible);
+  }
+
+  function setHydroBasinsVisible(visible: boolean): void {
+    hydroBasinsVisible.value = visible;
+    options.layerRuntime.value?.setUserVisible(HYDRO_BASINS_LAYER_ID, visible);
+  }
+
   function setWaterVisible(visible: boolean): void {
     waterVisible.value = visible;
     options.layerRuntime.value?.setUserVisible(WATER_FEATURES_LAYER_ID, visible);
@@ -149,7 +184,9 @@ export function useAppShellVisibility(options: UseAppShellVisibilityOptions) {
   return {
     basemapVisibility,
     boundaryVisibility,
+    floodVisibility,
     visiblePerspectives,
+    hydroBasinsVisible,
     parcelsVisible,
     powerVisibility,
     waterVisible,
@@ -158,6 +195,8 @@ export function useAppShellVisibility(options: UseAppShellVisibilityOptions) {
     setPerspectiveVisibility,
     setParcelsVisible,
     setBasemapLayerVisible,
+    setFloodLayerVisible,
+    setHydroBasinsVisible,
     setPowerLayerVisible,
     setWaterVisible,
     setBoundaryVisible,

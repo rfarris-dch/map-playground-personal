@@ -29,6 +29,28 @@ interface AppShellMapInitializeOptions {
   readonly initialViewport?: MapContextTransfer["viewport"];
 }
 
+export interface AppShellMapDependencies {
+  readonly createFullscreenControl: typeof createFullscreenControl;
+  readonly createMap: typeof createMap;
+  readonly createMapLibreAdapter: typeof createMapLibreAdapter;
+  readonly createNavigationControl: typeof createNavigationControl;
+  readonly createScaleControl: typeof createScaleControl;
+  readonly defaultBasemapStyleUrl: typeof defaultBasemapStyleUrl;
+  readonly mountBasemapLayerVisibility: typeof mountBasemapLayerVisibility;
+  readonly registerPmtilesProtocol: typeof registerPmtilesProtocol;
+}
+
+const defaultAppShellMapDependencies: AppShellMapDependencies = {
+  createFullscreenControl,
+  createMap,
+  createMapLibreAdapter,
+  createNavigationControl,
+  createScaleControl,
+  defaultBasemapStyleUrl,
+  mountBasemapLayerVisibility,
+  registerPmtilesProtocol,
+};
+
 function rewriteGlyphRequestUrl(url: string): string {
   if (!url.startsWith(OPENFREEMAP_GLYPHS_PREFIX)) {
     return url;
@@ -37,13 +59,16 @@ function rewriteGlyphRequestUrl(url: string): string {
   return `${MAPLIBRE_DEMOTILES_GLYPHS_PREFIX}${url.slice(OPENFREEMAP_GLYPHS_PREFIX.length)}`;
 }
 
-function mountMapControls(nextMap: IMap): readonly MapControl[] {
-  const navigationControl = createNavigationControl({
+function mountMapControls(
+  nextMap: IMap,
+  dependencies: AppShellMapDependencies
+): readonly MapControl[] {
+  const navigationControl = dependencies.createNavigationControl({
     showCompass: true,
     showZoom: true,
   });
-  const scaleControl = createScaleControl({ maxWidth: 140, unit: "imperial" });
-  const fullscreenControl = createFullscreenControl();
+  const scaleControl = dependencies.createScaleControl({ maxWidth: 140, unit: "imperial" });
+  const fullscreenControl = dependencies.createFullscreenControl();
 
   const controls: MapControl[] = [navigationControl, scaleControl, fullscreenControl];
 
@@ -84,34 +109,37 @@ function resolveInitialMapZoom(
   return initialViewport.zoom;
 }
 
-export function initializeAppShellMap(
-  container: HTMLDivElement,
-  options: AppShellMapInitializeOptions = {}
-): AppShellMapSetup {
-  const disposePmtilesProtocol = registerPmtilesProtocol();
-  const map = createMap(createMapLibreAdapter(), container, {
-    style: defaultBasemapStyleUrl(),
-    center: resolveInitialMapCenter(options.initialViewport),
-    preserveDrawingBuffer: true,
-    zoom: resolveInitialMapZoom(options.initialViewport),
-    projection: { type: "mercator" },
-    transformRequest: (url) => {
-      const rewrittenUrl = rewriteGlyphRequestUrl(url);
-      if (rewrittenUrl === url) {
-        return undefined;
-      }
+export function createAppShellMapInitializer(
+  dependencies: AppShellMapDependencies
+): (container: HTMLDivElement, options?: AppShellMapInitializeOptions) => AppShellMapSetup {
+  return (container, options = {}) => {
+    const disposePmtilesProtocol = dependencies.registerPmtilesProtocol();
+    const map = dependencies.createMap(dependencies.createMapLibreAdapter(), container, {
+      style: dependencies.defaultBasemapStyleUrl(),
+      center: resolveInitialMapCenter(options.initialViewport),
+      preserveDrawingBuffer: true,
+      zoom: resolveInitialMapZoom(options.initialViewport),
+      projection: { type: "mercator" },
+      transformRequest: (url) => {
+        const rewrittenUrl = rewriteGlyphRequestUrl(url);
+        if (rewrittenUrl === url) {
+          return undefined;
+        }
 
-      return { url: rewrittenUrl };
-    },
-  });
+        return { url: rewrittenUrl };
+      },
+    });
 
-  return {
-    map,
-    controls: mountMapControls(map),
-    basemapLayerController: mountBasemapLayerVisibility(map),
-    disposePmtilesProtocol,
+    return {
+      map,
+      controls: mountMapControls(map, dependencies),
+      basemapLayerController: dependencies.mountBasemapLayerVisibility(map),
+      disposePmtilesProtocol,
+    };
   };
 }
+
+export const initializeAppShellMap = createAppShellMapInitializer(defaultAppShellMapDependencies);
 
 export function suppressMapLibreGlyphWarnings(): () => void {
   return (): void => {
