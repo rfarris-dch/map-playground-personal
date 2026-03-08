@@ -4,7 +4,7 @@ import type { SpatialAnalysisParcelRecord } from "@/features/spatial-analysis/sp
 import type { SpatialAnalysisProviderSummaryItem } from "@/features/spatial-analysis/spatial-analysis-provider-summary.types";
 
 export interface MeasureSelectedFacility extends SpatialAnalysisFacilityRecord {
-  readonly countyFips: string;
+  readonly countyFips: string | null;
   readonly providerId: string;
 }
 

@@ -3,12 +3,13 @@ import type {
   ParcelsFeatureCollection,
   Warning,
 } from "@map-migration/contracts";
-import { Either, Effect } from "effect";
+import { Effect, Either } from "effect";
 import { fetchParcelsBySelectionEffect } from "@/features/measure/measure-analysis.api";
 import type {
   FetchSpatialAnalysisParcelsPagesArgs,
   SpatialAnalysisParcelsPagesResult,
 } from "@/features/spatial-analysis/spatial-analysis-parcels-query.service.types";
+import type { ApiEffectSuccess } from "@/lib/api-client-effect";
 import {
   type ApiEffectError,
   ApiIngestionRunMismatchError,
@@ -22,14 +23,41 @@ type SpatialAnalysisParcelsPagesSuccessResult = Extract<
   SpatialAnalysisParcelsPagesResult,
   { ok: true }
 >;
+type ParcelsSelectionPage = ApiEffectSuccess<ParcelsFeatureCollection>;
 
-function appendWarnings(
-  warnings: Map<string, Warning>,
-  nextWarnings: readonly Warning[]
-): void {
+function appendWarnings(warnings: Map<string, Warning>, nextWarnings: readonly Warning[]): void {
   for (const warning of nextWarnings) {
     warnings.set(`${warning.code}:${warning.message}`, warning);
   }
+}
+
+function createPageRequest(
+  args: FetchSpatialAnalysisParcelsPagesArgs,
+  cursor: string | null
+): ParcelEnrichRequest {
+  return {
+    ...args.request,
+    cursor,
+  };
+}
+
+function initializeSpatialAnalysisMeta(pageResult: ParcelsSelectionPage): {
+  readonly dataVersion: string;
+  readonly ingestionRunId: string | null;
+  readonly requestId: string;
+  readonly sourceMode: string;
+} {
+  return {
+    requestId: pageResult.data.meta.requestId,
+    dataVersion: pageResult.data.meta.dataVersion,
+    sourceMode: pageResult.data.meta.sourceMode,
+    ingestionRunId: pageResult.data.meta.ingestionRunId ?? null,
+  };
+}
+
+function getNextPageCursor(pageResult: ParcelsSelectionPage): string | null {
+  const pageNextCursor = pageResult.data.meta.nextCursor ?? null;
+  return pageResult.data.meta.truncated && pageNextCursor !== null ? pageNextCursor : null;
 }
 
 export function fetchSpatialAnalysisParcelsPagesEffect(
@@ -53,19 +81,17 @@ export function fetchSpatialAnalysisParcelsPagesEffect(
     const warnings = new Map<string, Warning>();
 
     while (true) {
-      const pageRequest: ParcelEnrichRequest = {
-        ...args.request,
-        cursor,
-      };
+      const pageRequest = createPageRequest(args, cursor);
       const pageResult = yield* fetchParcelsBySelectionEffect(pageRequest, args.signal, {
         expectedIngestionRunId: args.expectedIngestionRunId,
       });
       const pageMeta = pageResult.data.meta;
       if (requestId.length === 0) {
-        requestId = pageMeta.requestId;
-        dataVersion = pageMeta.dataVersion;
-        sourceMode = pageMeta.sourceMode;
-        ingestionRunId = pageMeta.ingestionRunId ?? null;
+        const initialMeta = initializeSpatialAnalysisMeta(pageResult);
+        requestId = initialMeta.requestId;
+        dataVersion = initialMeta.dataVersion;
+        sourceMode = initialMeta.sourceMode;
+        ingestionRunId = initialMeta.ingestionRunId;
       } else if ((pageMeta.ingestionRunId ?? null) !== ingestionRunId) {
         yield* Effect.fail(
           new ApiIngestionRunMismatchError({
@@ -83,8 +109,8 @@ export function fetchSpatialAnalysisParcelsPagesEffect(
       }
 
       pageCount += 1;
-      const pageNextCursor = pageResult.data.meta.nextCursor ?? null;
-      const hasMore = pageResult.data.meta.truncated && pageNextCursor !== null;
+      const pageNextCursor = getNextPageCursor(pageResult);
+      const hasMore = pageNextCursor !== null;
       args.onPage?.({
         pageCount,
         parcelCount: parcelsById.size,
@@ -141,7 +167,9 @@ export async function fetchSpatialAnalysisParcelsPages(
 
   if (Either.isRight(result)) {
     if (typeof result.right === "undefined") {
-      throw new Error("fetchSpatialAnalysisParcelsPagesEffect returned an undefined success value.");
+      throw new Error(
+        "fetchSpatialAnalysisParcelsPagesEffect returned an undefined success value."
+      );
     }
 
     return result.right;

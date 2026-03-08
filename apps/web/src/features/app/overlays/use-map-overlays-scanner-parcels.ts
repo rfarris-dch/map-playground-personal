@@ -1,6 +1,6 @@
 import type { ParcelEnrichRequest, ParcelsFeatureCollection } from "@map-migration/contracts";
 import type { IMap } from "@map-migration/map-engine";
-import { Either, Effect } from "effect";
+import { Effect, Either } from "effect";
 import { onBeforeUnmount, shallowRef, watch } from "vue";
 import {
   buildCenterLimitedBbox,
@@ -25,14 +25,14 @@ import {
   fetchSpatialAnalysisParcelsPagesEffect,
   type SpatialAnalysisParcelsPagesResult,
 } from "@/features/spatial-analysis/spatial-analysis-parcels-query.service";
+import { createDebouncedLatestRunner } from "@/lib/effect/debounced-latest-runner";
 import {
   ApiAbortedError,
   type ApiEffectError,
-  ApiIngestionRunMismatchError,
+  type ApiIngestionRunMismatchError,
   ApiPolicyRejectedError,
   getApiErrorReason,
 } from "@/lib/effect/errors";
-import { createDebouncedLatestRunner } from "@/lib/effect/debounced-latest-runner";
 import type { BrowserEffectFiber } from "@/lib/effect/runtime";
 import { forkScopedBrowserEffect, interruptBrowserFiber } from "@/lib/effect/runtime";
 import { listenToMapEvent } from "@/lib/effect/scoped-listener";
@@ -82,6 +82,10 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
   });
   let moveendListenerFiber: BrowserEffectFiber<void, never> | null = null;
   let scannerParcelsLastFetchKey: string | null = null;
+
+  function logScannerParcelsError(context: string, error: unknown): void {
+    console.error(`[map] scanner parcels ${context} failed`, error);
+  }
 
   function resetScannerParcelsSelection(): void {
     isScannerParcelsLoading.value = false;
@@ -248,7 +252,9 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
 
     scannerParcelsBlockedReason.value = null;
     scannerParcelsError.value =
-      "_tag" in error ? `Parcels query failed (${getApiErrorReason(error)}).` : "Parcels query failed (unexpected).";
+      "_tag" in error
+        ? `Parcels query failed (${getApiErrorReason(error)}).`
+        : "Parcels query failed (unexpected).";
     scannerParcelFeatures.value = [];
     scannerParcelTruncated.value = false;
     scannerParcelNextCursor.value = null;
@@ -303,11 +309,15 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
 
   function scheduleScannerParcelsRefresh(): void {
     if (!options.scannerFetchEnabled.value) {
-      void clearScannerParcelsState();
+      clearScannerParcelsState().catch((error: unknown) => {
+        logScannerParcelsError("clear", error);
+      });
       return;
     }
 
-    void scannerParcelsRunner.run(refreshScannerParcelsEffect());
+    scannerParcelsRunner.run(refreshScannerParcelsEffect()).catch((error: unknown) => {
+      logScannerParcelsError("schedule", error);
+    });
   }
 
   const onMapMoveEnd = (): void => {
@@ -333,7 +343,9 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
   watch(
     () => options.map.value,
     (nextMap) => {
-      void bindMoveendMap(nextMap);
+      bindMoveendMap(nextMap).catch((error: unknown) => {
+        logScannerParcelsError("bind moveend", error);
+      });
     },
     { immediate: true }
   );
@@ -347,7 +359,9 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
     ],
     ([, , , nextScannerFetchEnabled]) => {
       if (!nextScannerFetchEnabled) {
-        void clearScannerParcelsState();
+        clearScannerParcelsState().catch((error: unknown) => {
+          logScannerParcelsError("clear", error);
+        });
         return;
       }
 
@@ -361,7 +375,9 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
     [options.scannerFetchEnabled, () => options.map.value],
     ([nextScannerFetchEnabled, currentMap]) => {
       if (!(nextScannerFetchEnabled && currentMap !== null)) {
-        void clearScannerParcelsState();
+        clearScannerParcelsState().catch((error: unknown) => {
+          logScannerParcelsError("clear", error);
+        });
         return;
       }
 
@@ -372,8 +388,12 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
   );
 
   onBeforeUnmount(() => {
-    void scannerParcelsRunner.dispose();
-    void bindMoveendMap(null);
+    scannerParcelsRunner.dispose().catch((error: unknown) => {
+      logScannerParcelsError("dispose", error);
+    });
+    bindMoveendMap(null).catch((error: unknown) => {
+      logScannerParcelsError("unbind moveend", error);
+    });
     resetScannerParcelsSelection();
     scannerParcelsBlockedReason.value = null;
     scannerParcelsLastFetchKey = null;

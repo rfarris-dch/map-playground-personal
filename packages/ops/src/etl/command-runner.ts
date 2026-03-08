@@ -1,7 +1,9 @@
 import { Command } from "@effect/platform";
 import type * as CommandExecutor from "@effect/platform/CommandExecutor";
 import { BunContext } from "@effect/platform-bun";
-import { Effect, ManagedRuntime, Stream } from "effect";
+import { all, type Effect, gen, map, scoped } from "effect/Effect";
+import { make } from "effect/ManagedRuntime";
+import { runFold, type Stream } from "effect/Stream";
 import type {
   ManagedCommandProcess,
   RunBufferedCommandOptions,
@@ -11,7 +13,7 @@ import type {
 
 const DEFAULT_CAPTURE_MAX_BYTES = 2_000_000;
 const TRAILING_CR_RE = /\r$/;
-const commandRuntime = ManagedRuntime.make(BunContext.layer);
+const commandRuntime = make(BunContext.layer);
 const supportedSignals: readonly CommandExecutor.Signal[] = [
   "SIGABRT",
   "SIGALRM",
@@ -129,9 +131,9 @@ function normalizeSignal(signal?: number | string): CommandExecutor.Signal | und
 }
 
 function readStreamOutput(
-  stream: Stream.Stream<Uint8Array, unknown>,
+  stream: Stream<Uint8Array, unknown>,
   options: RunCommandOutputOptions | undefined
-): Effect.Effect<string, unknown> {
+): Effect<string, unknown> {
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
   const captureMaxBytes = options?.captureMaxBytes ?? DEFAULT_CAPTURE_MAX_BYTES;
@@ -142,7 +144,7 @@ function readStreamOutput(
     truncated: false,
   };
 
-  return Stream.runFold(stream, initialState, (state, chunk) => {
+  return runFold(stream, initialState, (state, chunk) => {
     if (!(chunk instanceof Uint8Array) || chunk.byteLength === 0) {
       return state;
     }
@@ -161,7 +163,7 @@ function readStreamOutput(
       captureMaxBytes
     );
   }).pipe(
-    Effect.map((state) => {
+    map((state) => {
       const flushed = decoder.decode();
       const withFlush =
         flushed.length > 0
@@ -206,10 +208,10 @@ export async function runBufferedCommand(
     command = Command.env(command, options.env);
   }
 
-  const program = Effect.scoped(
-    Effect.gen(function* () {
+  const program = scoped(
+    gen(function* () {
       const process = yield* Command.start(command);
-      const exited = commandRuntime.runPromise(Effect.map(process.exitCode, Number));
+      const exited = commandRuntime.runPromise(map(process.exitCode, Number));
       const managedProcess: ManagedCommandProcess = {
         exited,
         kill: (signal) => {
@@ -220,9 +222,9 @@ export async function runBufferedCommand(
       options.onProcessStart?.(managedProcess);
 
       try {
-        const [exitCode, stdout, stderr] = yield* Effect.all(
+        const [exitCode, stdout, stderr] = yield* all(
           [
-            Effect.map(process.exitCode, Number),
+            map(process.exitCode, Number),
             readStreamOutput(process.stdout, options.stdout),
             readStreamOutput(process.stderr, options.stderr),
           ],

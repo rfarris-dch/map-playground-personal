@@ -1,4 +1,5 @@
-import { Data, Effect } from "effect";
+import { TaggedError } from "effect/Data";
+import { fail, flatMap, gen, succeed, sync, tryPromise } from "effect/Effect";
 import { createRequestId, normalizeRequestIdHeader } from "./index";
 
 const DEFAULT_REQUEST_ID_HEADER_NAME = "x-request-id";
@@ -23,33 +24,55 @@ export interface FetchJsonEffectSuccess<T> {
   readonly response: Response;
 }
 
-export class RequestAbortedError extends Data.TaggedError("RequestAbortedError")<{
+export type RequestEffectError =
+  | RequestAbortedError
+  | RequestHttpError
+  | RequestJsonParseError
+  | RequestNetworkError
+  | RequestSchemaError;
+
+export class RequestAbortedError extends TaggedError("RequestAbortedError")<{
   readonly cause: unknown;
   readonly requestId: string;
 }> {}
 
-export class RequestNetworkError extends Data.TaggedError("RequestNetworkError")<{
+export class RequestNetworkError extends TaggedError("RequestNetworkError")<{
   readonly cause: unknown;
   readonly requestId: string;
 }> {}
 
-export class RequestHttpError extends Data.TaggedError("RequestHttpError")<{
+export class RequestHttpError extends TaggedError("RequestHttpError")<{
   readonly details: unknown;
   readonly requestId: string;
   readonly status: number;
   readonly statusText: string;
 }> {}
 
-export class RequestJsonParseError extends Data.TaggedError("RequestJsonParseError")<{
+export class RequestJsonParseError extends TaggedError("RequestJsonParseError")<{
   readonly cause: unknown;
   readonly requestId: string;
 }> {}
 
-export class RequestSchemaError extends Data.TaggedError("RequestSchemaError")<{
+export class RequestSchemaError extends TaggedError("RequestSchemaError")<{
   readonly cause: unknown;
   readonly payload: unknown;
   readonly requestId: string;
 }> {}
+
+export function isRequestEffectError(error: unknown): error is RequestEffectError {
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+
+  const tag = Reflect.get(error, "_tag");
+  return (
+    tag === "RequestAbortedError" ||
+    tag === "RequestHttpError" ||
+    tag === "RequestJsonParseError" ||
+    tag === "RequestNetworkError" ||
+    tag === "RequestSchemaError"
+  );
+}
 
 export function isAbortError(error: unknown): boolean {
   if (error instanceof DOMException) {
@@ -77,7 +100,10 @@ async function readErrorDetails(response: Response): Promise<unknown> {
   }
 }
 
-function resolveRequestSignal(initSignal: AbortSignal | null | undefined, effectSignal: AbortSignal) {
+function resolveRequestSignal(
+  initSignal: AbortSignal | null | undefined,
+  effectSignal: AbortSignal
+) {
   if (initSignal instanceof AbortSignal) {
     return initSignal;
   }
@@ -90,11 +116,11 @@ export function decodeWithSchemaEffect<T>(
   input: unknown,
   requestId: string
 ) {
-  return Effect.sync(() => schema.safeParse(input)).pipe(
-    Effect.flatMap((parsed) =>
+  return sync(() => schema.safeParse(input)).pipe(
+    flatMap((parsed) =>
       parsed.success
-        ? Effect.succeed(parsed.data)
-        : Effect.fail(
+        ? succeed(parsed.data)
+        : fail(
             new RequestSchemaError({
               cause: parsed.error,
               payload: input,
@@ -106,13 +132,13 @@ export function decodeWithSchemaEffect<T>(
 }
 
 export function fetchJsonEffect<T>(args: FetchJsonEffectArgs<T>) {
-  return Effect.gen(function* () {
+  return gen(function* () {
     const requestIdHeaderName = args.requestIdHeaderName ?? DEFAULT_REQUEST_ID_HEADER_NAME;
     const generatedRequestId = createRequestId(args.requestIdPrefix ?? "req");
     const headers = new Headers(args.init?.headers);
     headers.set(requestIdHeaderName, generatedRequestId);
 
-    const response = yield* Effect.tryPromise({
+    const response = yield* tryPromise({
       try: (signal) =>
         (args.fetchImplementation ?? fetch)(args.url, {
           ...args.init,
@@ -136,7 +162,7 @@ export function fetchJsonEffect<T>(args: FetchJsonEffectArgs<T>) {
       generatedRequestId;
 
     if (!response.ok) {
-      const details = yield* Effect.tryPromise({
+      const details = yield* tryPromise({
         try: () => readErrorDetails(response),
         catch: (cause) =>
           new RequestJsonParseError({
@@ -145,7 +171,7 @@ export function fetchJsonEffect<T>(args: FetchJsonEffectArgs<T>) {
           }),
       });
 
-      yield* Effect.fail(
+      yield* fail(
         new RequestHttpError({
           details,
           requestId,
@@ -155,7 +181,7 @@ export function fetchJsonEffect<T>(args: FetchJsonEffectArgs<T>) {
       );
     }
 
-    const rawBody = yield* Effect.tryPromise({
+    const rawBody = yield* tryPromise({
       try: () => response.json(),
       catch: (cause) =>
         new RequestJsonParseError({

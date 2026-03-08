@@ -11,14 +11,15 @@ import {
   queryCountyScoresStatus,
 } from "@/geo/county-scores/county-scores.service";
 import {
-  countyScoresMappingError,
-  countyScoresQueryError,
-  countyScoresSourceUnavailableError,
-  countyScoresStatusMappingError,
-  countyScoresStatusQueryError,
-  countyScoresStatusSourceUnavailableError,
+  buildCountyScoresMappingRouteError,
+  buildCountyScoresQueryRouteError,
+  buildCountyScoresSourceUnavailableRouteError,
+  buildCountyScoresStatusMappingRouteError,
+  buildCountyScoresStatusQueryRouteError,
+  buildCountyScoresStatusSourceUnavailableRouteError,
 } from "@/geo/county-scores/county-scores-route-errors.service";
-import { getOrCreateRequestId, jsonError, jsonOk } from "@/http/api-response";
+import { jsonOk } from "@/http/api-response";
+import { fromApiRequest, routeError, runEffectRoute } from "@/http/effect-route";
 import { isDatasetQueryAllowed } from "@/http/spatial-analysis-policy.service";
 import type {
   BuildCountyScoresResponseMeta,
@@ -85,104 +86,106 @@ function parseCountyIds(rawValue: string | undefined): CountyScoresQueryParamsRe
   };
 }
 
+function countyScoresStatusRouteError(reason: string, error: unknown) {
+  if (reason === "source_unavailable") {
+    return buildCountyScoresStatusSourceUnavailableRouteError(error);
+  }
+
+  if (reason === "query_failed") {
+    return buildCountyScoresStatusQueryRouteError(error);
+  }
+
+  return buildCountyScoresStatusMappingRouteError(error);
+}
+
+function countyScoresRouteError(reason: string, error: unknown) {
+  if (reason === "source_unavailable") {
+    return buildCountyScoresSourceUnavailableRouteError(error);
+  }
+
+  if (reason === "query_failed") {
+    return buildCountyScoresQueryRouteError(error);
+  }
+
+  return buildCountyScoresMappingRouteError(error);
+}
+
 export function registerCountyScoresRoute<E extends Env>(app: Hono<E>): void {
-  app.get(ApiRoutes.countyScoresStatus, async (c) => {
-    const requestId = getOrCreateRequestId(c, "api");
-    const countyScoresStatusResult = await queryCountyScoresStatus();
+  app.get(ApiRoutes.countyScoresStatus, (c) =>
+    runEffectRoute(
+      c,
+      fromApiRequest(async ({ honoContext, requestId }) => {
+        const countyScoresStatusResult = await queryCountyScoresStatus();
 
-    if (!countyScoresStatusResult.ok) {
-      if (countyScoresStatusResult.value.reason === "source_unavailable") {
-        return countyScoresStatusSourceUnavailableError(c, {
-          requestId,
-          error: countyScoresStatusResult.value.error,
+        if (!countyScoresStatusResult.ok) {
+          throw countyScoresStatusRouteError(
+            countyScoresStatusResult.value.reason,
+            countyScoresStatusResult.value.error
+          );
+        }
+
+        const payload: CountyScoresStatusResponse = {
+          ...countyScoresStatusResult.value,
+          meta: buildResponseMeta({
+            dataVersion: countyScoresStatusResult.value.dataVersion,
+            requestId,
+            recordCount: 1,
+          }),
+        };
+
+        return jsonOk(honoContext, CountyScoresStatusResponseSchema, payload, requestId);
+      })
+    )
+  );
+
+  app.get(ApiRoutes.countyScores, (c) =>
+    runEffectRoute(
+      c,
+      fromApiRequest(async ({ honoContext, requestId }) => {
+        if (!isDatasetQueryAllowed("county_scores", "county")) {
+          throw routeError({
+            httpStatus: 422,
+            code: "POLICY_REJECTED",
+            message: 'query granularity "county" is not allowed for county_scores',
+          });
+        }
+
+        const countyIdsResult = parseCountyIds(honoContext.req.query("countyIds"));
+        if (!countyIdsResult.ok) {
+          throw routeError({
+            httpStatus: 400,
+            code: "INVALID_COUNTY_IDS",
+            message: countyIdsResult.message,
+          });
+        }
+
+        const countyScoresResult = await queryCountyScores({
+          countyIds: countyIdsResult.value.countyIds,
         });
-      }
 
-      if (countyScoresStatusResult.value.reason === "query_failed") {
-        return countyScoresStatusQueryError(c, {
-          requestId,
-          error: countyScoresStatusResult.value.error,
-        });
-      }
+        if (!countyScoresResult.ok) {
+          throw countyScoresRouteError(
+            countyScoresResult.value.reason,
+            countyScoresResult.value.error
+          );
+        }
 
-      return countyScoresStatusMappingError(c, {
-        requestId,
-        error: countyScoresStatusResult.value.error,
-      });
-    }
+        const payload: CountyScoresResponse = {
+          rows: [...countyScoresResult.value.rows],
+          summary: {
+            requestedCountyIds: [...countyScoresResult.value.requestedCountyIds],
+            missingCountyIds: [...countyScoresResult.value.missingCountyIds],
+            unavailableCountyIds: [...countyScoresResult.value.unavailableCountyIds],
+          },
+          meta: buildResponseMeta({
+            dataVersion: countyScoresResult.value.dataVersion,
+            requestId,
+            recordCount: countyScoresResult.value.rows.length,
+          }),
+        };
 
-    const payload: CountyScoresStatusResponse = {
-      ...countyScoresStatusResult.value,
-      meta: buildResponseMeta({
-        dataVersion: countyScoresStatusResult.value.dataVersion,
-        requestId,
-        recordCount: 1,
-      }),
-    };
-
-    return jsonOk(c, CountyScoresStatusResponseSchema, payload, requestId);
-  });
-
-  app.get(ApiRoutes.countyScores, async (c) => {
-    const requestId = getOrCreateRequestId(c, "api");
-    if (!isDatasetQueryAllowed("county_scores", "county")) {
-      return jsonError(c, {
-        requestId,
-        httpStatus: 422,
-        code: "POLICY_REJECTED",
-        message: 'query granularity "county" is not allowed for county_scores',
-      });
-    }
-
-    const countyIdsResult = parseCountyIds(c.req.query("countyIds"));
-    if (!countyIdsResult.ok) {
-      return jsonError(c, {
-        requestId,
-        httpStatus: 400,
-        code: "INVALID_COUNTY_IDS",
-        message: countyIdsResult.message,
-      });
-    }
-
-    const countyScoresResult = await queryCountyScores({
-      countyIds: countyIdsResult.value.countyIds,
-    });
-
-    if (!countyScoresResult.ok) {
-      if (countyScoresResult.value.reason === "source_unavailable") {
-        return countyScoresSourceUnavailableError(c, {
-          requestId,
-          error: countyScoresResult.value.error,
-        });
-      }
-
-      if (countyScoresResult.value.reason === "query_failed") {
-        return countyScoresQueryError(c, {
-          error: countyScoresResult.value.error,
-          requestId,
-        });
-      }
-
-      return countyScoresMappingError(c, {
-        requestId,
-        error: countyScoresResult.value.error,
-      });
-    }
-
-    const payload: CountyScoresResponse = {
-      rows: [...countyScoresResult.value.rows],
-      summary: {
-        requestedCountyIds: [...countyScoresResult.value.requestedCountyIds],
-        missingCountyIds: [...countyScoresResult.value.missingCountyIds],
-        unavailableCountyIds: [...countyScoresResult.value.unavailableCountyIds],
-      },
-      meta: buildResponseMeta({
-        dataVersion: countyScoresResult.value.dataVersion,
-        requestId,
-        recordCount: countyScoresResult.value.rows.length,
-      }),
-    };
-
-    return jsonOk(c, CountyScoresResponseSchema, payload, requestId);
-  });
+        return jsonOk(honoContext, CountyScoresResponseSchema, payload, requestId);
+      })
+    )
+  );
 }

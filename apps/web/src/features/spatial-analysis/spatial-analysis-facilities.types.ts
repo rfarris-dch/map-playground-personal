@@ -12,7 +12,7 @@ export interface SpatialAnalysisFacilityRecord {
   readonly commissionedPowerMw: number | null;
   readonly commissionedSemantic: CommissionedSemantic;
   readonly coordinates: LngLat;
-  readonly countyFips: string;
+  readonly countyFips: string | null;
   readonly facilityId: string;
   readonly facilityName: string;
   readonly leaseOrOwn: LeaseOrOwn | null;

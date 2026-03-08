@@ -1,11 +1,17 @@
-import { Effect } from "effect";
-import { createMap, registerPmtilesProtocol, type IMap, type MapAdapter, type MapCreateOptions } from "./index";
+import { acquireRelease, asVoid, sync } from "effect/Effect";
+import {
+  createMap,
+  type IMap,
+  type MapAdapter,
+  type MapCreateOptions,
+  registerPmtilesProtocol,
+} from "./index";
 
 export function registerPmtilesProtocolScoped() {
-  return Effect.acquireRelease(
-    Effect.sync(() => registerPmtilesProtocol()),
-    (disposePmtilesProtocol) => Effect.sync(() => disposePmtilesProtocol())
-  ).pipe(Effect.asVoid);
+  return acquireRelease(
+    sync(() => registerPmtilesProtocol()),
+    (disposePmtilesProtocol) => sync(() => disposePmtilesProtocol())
+  ).pipe(asVoid);
 }
 
 export function createMapScoped(
@@ -13,8 +19,8 @@ export function createMapScoped(
   container: HTMLElement,
   options: MapCreateOptions
 ) {
-  return Effect.acquireRelease(
-    Effect.sync(() => createMap(adapter, container, options)),
-    (map: IMap) => Effect.sync(() => map.destroy())
+  return acquireRelease(
+    sync(() => createMap(adapter, container, options)),
+    (map: IMap) => sync(() => map.destroy())
   );
 }

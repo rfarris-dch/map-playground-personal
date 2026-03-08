@@ -1,5 +1,8 @@
-import type { SpatialAnalysisSummaryRequest } from "@map-migration/contracts";
-import { Either, Effect } from "effect";
+import type {
+  SpatialAnalysisSummaryRequest,
+  SpatialAnalysisSummaryResponse,
+} from "@map-migration/contracts";
+import { Effect, Either } from "effect";
 import { exportMeasureSelectionSummary } from "@/features/app/measure-selection/measure-selection-export.service";
 import type { MeasureSelectionSummary } from "@/features/measure/measure-analysis.types";
 import { selectionGeometryFromRing } from "@/features/selection/selection-analysis-request.service";
@@ -10,9 +13,7 @@ import type {
   SelectionToolProgress,
   SelectionToolProgressStageKey,
 } from "@/features/selection-tool/selection-tool.types";
-import {
-  fetchSpatialAnalysisSummaryEffect,
-} from "@/features/spatial-analysis/spatial-analysis-summary.api";
+import { fetchSpatialAnalysisSummaryEffect } from "@/features/spatial-analysis/spatial-analysis-summary.api";
 import {
   buildEmptySpatialAnalysisSummary,
   buildSpatialAnalysisSummaryModel,
@@ -154,6 +155,12 @@ function toMeasureSelectionSummary(summary: SelectionToolAnalysisSummary): Measu
   };
 }
 
+function readSelectionWarningMessage(response: SpatialAnalysisSummaryResponse): string | null {
+  const parcelWarning =
+    response.warnings.find((warning) => warning.code === "PARCELS_POLICY_REJECTED") ?? null;
+  return parcelWarning?.message ?? null;
+}
+
 export function buildEmptySelectionToolSummary(
   selectionRing: readonly [number, number][]
 ): SelectionToolAnalysisSummary {
@@ -203,10 +210,7 @@ export function querySelectionToolSummaryEffect(
       return {
         ok: true,
         value: {
-          errorMessage: getApiErrorMessage(
-            result.left,
-            "Unable to load spatial analysis summary."
-          ),
+          errorMessage: getApiErrorMessage(result.left, "Unable to load spatial analysis summary."),
           summary: buildEmptySpatialAnalysisSummary(args.selectionRing),
         },
       } satisfies QuerySelectionToolSummaryResult;
@@ -229,14 +233,14 @@ export function querySelectionToolSummaryEffect(
     return {
       ok: true,
       value: {
-        errorMessage: null,
+        errorMessage: readSelectionWarningMessage(result.right.data),
         summary,
       },
     } satisfies QuerySelectionToolSummaryResult;
   });
 }
 
-export async function querySelectionToolSummary(
+export function querySelectionToolSummary(
   args: QuerySelectionToolSummaryArgs
 ): Promise<QuerySelectionToolSummaryResult> {
   if (typeof args.signal === "undefined") {

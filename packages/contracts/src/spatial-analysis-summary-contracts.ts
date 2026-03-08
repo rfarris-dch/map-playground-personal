@@ -33,7 +33,7 @@ export const SpatialAnalysisSummaryFacilityRecordSchema = z.object({
   commissionedPowerMw: z.number().nullable(),
   commissionedSemantic: CommissionedSemanticSchema,
   coordinates: PointGeometrySchema.shape.coordinates,
-  countyFips: CountyFipsSchema,
+  countyFips: CountyFipsSchema.nullable(),
   facilityId: z.string().min(1),
   facilityName: z.string().min(1),
   leaseOrOwn: LeaseOrOwnSchema.nullable(),

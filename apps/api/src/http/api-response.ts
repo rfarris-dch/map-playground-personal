@@ -6,12 +6,14 @@ import {
 } from "@map-migration/contracts";
 import {
   createRequestId,
-  normalizeRequestIdHeader,
-  REQUEST_ID_MAX_LENGTH,
+  normalizeRequestIdHeader as normalizeRequestIdHeaderValue,
 } from "@map-migration/ops";
 import type { Context } from "hono";
 import type { ErrorEnvelopeArgs, JsonErrorArgs } from "./api-response.types";
-export { normalizeRequestIdHeader, REQUEST_ID_MAX_LENGTH } from "@map-migration/ops";
+
+export function normalizeRequestIdHeader(value: string | null | undefined): string | null {
+  return normalizeRequestIdHeaderValue(value ?? undefined);
+}
 
 function buildErrorEnvelope(args: ErrorEnvelopeArgs): ApiErrorResponse {
   const candidate: ApiErrorResponse = {
@@ -45,12 +47,12 @@ function buildErrorEnvelope(args: ErrorEnvelopeArgs): ApiErrorResponse {
 export function getOrCreateRequestId(c: Context, prefix = "api"): string {
   const fromContext = c.get("requestId");
   const normalizedFromContext =
-    typeof fromContext === "string" ? normalizeRequestIdHeader(fromContext) : null;
+    typeof fromContext === "string" ? normalizeRequestIdHeaderValue(fromContext) : null;
   if (typeof normalizedFromContext === "string") {
     return normalizedFromContext;
   }
 
-  const normalized = normalizeRequestIdHeader(c.req.header(ApiHeaders.requestId));
+  const normalized = normalizeRequestIdHeaderValue(c.req.header(ApiHeaders.requestId));
   if (typeof normalized === "string") {
     return normalized;
   }

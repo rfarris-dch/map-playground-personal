@@ -27,6 +27,10 @@ export function useAppShellSelectionAnalysis(options: UseAppShellSelectionAnalys
     },
   });
 
+  function logSelectionRunnerError(error: unknown): void {
+    console.error("[map] selection analysis refresh failed", error);
+  }
+
   async function clearSelectionSummary(): Promise<void> {
     await selectionRunner.interrupt();
     isSelectionLoading.value = false;
@@ -82,13 +86,13 @@ export function useAppShellSelectionAnalysis(options: UseAppShellSelectionAnalys
       () => options.visiblePerspectives.value.hyperscale,
     ],
     () => {
-      void refreshSelectionSummary();
+      refreshSelectionSummary().catch(logSelectionRunnerError);
     },
     { immediate: true }
   );
 
   onBeforeUnmount(() => {
-    void selectionRunner.dispose();
+    selectionRunner.dispose().catch(logSelectionRunnerError);
     isSelectionLoading.value = false;
     selectionError.value = null;
     selectionProgress.value = null;

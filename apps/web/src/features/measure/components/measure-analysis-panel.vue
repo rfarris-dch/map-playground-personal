@@ -4,6 +4,7 @@
   import { formatMeasurePowerMw } from "@/features/measure/measure-analysis.service";
   import type { MeasureSelectionSummary } from "@/features/measure/measure-analysis.types";
   import SpatialAnalysisPanel from "@/features/spatial-analysis/components/spatial-analysis-panel.vue";
+  import type { SpatialAnalysisSummaryModel } from "@/features/spatial-analysis/spatial-analysis-summary.types";
 
   interface MeasureAnalysisPanelProps {
     readonly errorMessage: string | null;
@@ -54,13 +55,49 @@
 
     return powerMw.toFixed(1);
   }
+
+  const panelSummary = computed<SpatialAnalysisSummaryModel | null>(() => {
+    if (props.summary === null) {
+      return null;
+    }
+
+    return {
+      area: {
+        countyIds: props.summary.countyIds,
+        selectionAreaSqKm: 0,
+      },
+      countyIntelligence: {
+        requestedCountyIds: props.summary.countyIds,
+        scores: null,
+        scoresError: null,
+        status: null,
+        statusError: null,
+        unavailableReason: null,
+      },
+      coverage: null,
+      meta: null,
+      policy: null,
+      provenance: null,
+      request: null,
+      summary: {
+        colocation: props.summary.colocation,
+        facilities: props.summary.facilities,
+        hyperscale: props.summary.hyperscale,
+        parcelSelection: props.summary.parcelSelection,
+        topColocationProviders: props.summary.topColocationProviders,
+        topHyperscaleProviders: props.summary.topHyperscaleProviders,
+        totalCount: props.summary.totalCount,
+      },
+      warnings: [],
+    };
+  });
 </script>
 
 <template>
   <SpatialAnalysisPanel
     :title="title"
     :subtitle="subtitle"
-    :summary="props.summary"
+    :summary="panelSummary"
     :error-message="props.errorMessage"
     :is-loading="props.isLoading"
     empty-message="No facilities or parcels in this selection."

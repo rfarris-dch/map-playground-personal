@@ -1,16 +1,12 @@
 import { createPmtilesSourceUrl as createPmtilesSourceUrlFromManifest } from "@map-migration/geo-tiles";
 import { loadTilePublishManifestEffect } from "@map-migration/geo-tiles/effect";
 import {
-  RequestAbortedError,
-  RequestHttpError,
-  RequestJsonParseError,
-  RequestNetworkError,
-  RequestSchemaError,
+  type FetchJsonEffectSuccess,
+  isRequestEffectError,
+  type RequestEffectError,
 } from "@map-migration/ops/effect";
 import { Effect, Either } from "effect";
-import {
-  createAbortError,
-} from "@/features/app/runtime-effect/errors";
+import { createAbortError } from "@/features/app/runtime-effect/errors";
 import type {
   StressGovernorController,
   StressGovernorOptions,
@@ -75,7 +71,10 @@ function normalizeEastLongitude(west: number, east: number): number {
 export async function loadParcelsManifest(
   args: LoadParcelsManifestArgs
 ): Promise<TilePublishManifest> {
-  const result = await Effect.runPromise(
+  const result: Either.Either<
+    FetchJsonEffectSuccess<TilePublishManifest>,
+    RequestEffectError
+  > = await Effect.runPromise(
     Effect.either(
       loadTilePublishManifestEffect({
         manifestPath: args.manifestPath,
@@ -89,16 +88,20 @@ export async function loadParcelsManifest(
   }
 
   const error = result.left;
-  if (error instanceof RequestAbortedError) {
+  if (!isRequestEffectError(error)) {
+    throw error;
+  }
+
+  if (error._tag === "RequestAbortedError") {
     throw createAbortError();
   }
-  if (error instanceof RequestNetworkError) {
+  if (error._tag === "RequestNetworkError") {
     throw error.cause;
   }
-  if (error instanceof RequestHttpError) {
+  if (error._tag === "RequestHttpError") {
     throw new Error(`Failed to load parcels manifest (${error.status} ${error.statusText})`);
   }
-  if (error instanceof RequestJsonParseError || error instanceof RequestSchemaError) {
+  if (error._tag === "RequestJsonParseError" || error._tag === "RequestSchemaError") {
     throw new Error("Failed to parse parcels manifest JSON");
   }
 

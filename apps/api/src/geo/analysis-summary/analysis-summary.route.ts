@@ -6,7 +6,8 @@ import {
 } from "@map-migration/contracts";
 import type { Context, Env, Hono } from "hono";
 import { readExpectedIngestionRunId } from "@/geo/parcels/route/parcels-route-meta.service";
-import { getOrCreateRequestId, jsonError, jsonOk, toDebugDetails } from "@/http/api-response";
+import { jsonError, jsonOk, toDebugDetails } from "@/http/api-response";
+import { fromApiRequest, routeError, runEffectRoute } from "@/http/effect-route";
 import { readJsonBody } from "@/http/json-request.service";
 import { querySpatialAnalysisSummary } from "./analysis-summary.service";
 
@@ -95,33 +96,37 @@ async function readSpatialAnalysisSummaryRequest(
 }
 
 export function registerAnalysisSummaryRoute<E extends Env>(app: Hono<E>): void {
-  app.post(ApiRoutes.analysisSummary, async (c) => {
-    const requestId = getOrCreateRequestId(c, "api");
-    const requestResult = await readSpatialAnalysisSummaryRequest(c, requestId);
-    if (!requestResult.ok) {
-      return requestResult.response;
-    }
+  app.post(ApiRoutes.analysisSummary, (c) =>
+    runEffectRoute(
+      c,
+      fromApiRequest(async ({ honoContext, requestId }) => {
+        const requestResult = await readSpatialAnalysisSummaryRequest(honoContext, requestId);
 
-    const result = await querySpatialAnalysisSummary({
-      expectedParcelIngestionRunId: readExpectedIngestionRunId(c),
-      request: requestResult.value,
-    });
+        if (!requestResult.ok) {
+          return requestResult.response;
+        }
 
-    if (!result.ok) {
-      return jsonError(c, {
-        requestId,
-        httpStatus: analysisSummaryErrorHttpStatus(result.value.reason),
-        code: result.value.reason.toUpperCase(),
-        message: analysisSummaryErrorMessage(result.value.reason),
-        details: toDebugDetails(result.value.error),
-      });
-    }
+        const result = await querySpatialAnalysisSummary({
+          expectedParcelIngestionRunId: readExpectedIngestionRunId(honoContext),
+          request: requestResult.value,
+        });
 
-    const payload: SpatialAnalysisSummaryResponse = {
-      ...result.value,
-      meta: buildMeta(requestId, result.value),
-    };
+        if (!result.ok) {
+          throw routeError({
+            httpStatus: analysisSummaryErrorHttpStatus(result.value.reason),
+            code: result.value.reason.toUpperCase(),
+            message: analysisSummaryErrorMessage(result.value.reason),
+            details: toDebugDetails(result.value.error),
+          });
+        }
 
-    return jsonOk(c, SpatialAnalysisSummaryResponseSchema, payload, requestId);
-  });
+        const payload: SpatialAnalysisSummaryResponse = {
+          ...result.value,
+          meta: buildMeta(requestId, result.value),
+        };
+
+        return jsonOk(honoContext, SpatialAnalysisSummaryResponseSchema, payload, requestId);
+      })
+    )
+  );
 }

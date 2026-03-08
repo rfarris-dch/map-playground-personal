@@ -45,6 +45,33 @@ export class ApiRouteError extends Error {
   }
 }
 
+export function routeError(args: ApiRouteErrorArgs): ApiRouteError {
+  return new ApiRouteError(args);
+}
+
+export function failRoute(args: ApiRouteErrorArgs): Effect.Effect<never, ApiRouteError> {
+  return Effect.fail(routeError(args));
+}
+
+export function fromApiRequest(
+  handler: (requestContext: ApiRequestContextService) => Promise<Response> | Response
+): Effect.Effect<Response, ApiRouteError, ApiRequestContext> {
+  return Effect.flatMap(ApiRequestContext, (requestContext) =>
+    Effect.tryPromise({
+      try: async () => handler(requestContext),
+      catch: (error) =>
+        error instanceof ApiRouteError
+          ? error
+          : routeError({
+              httpStatus: 500,
+              code: "UNHANDLED_EFFECT_ROUTE_ERROR",
+              message: "internal server error",
+              details: toDebugDetails(error),
+            }),
+    })
+  );
+}
+
 function createApiRequestLogger(requestId: string): ApiRequestLoggerService {
   return {
     debug: (...args) => {

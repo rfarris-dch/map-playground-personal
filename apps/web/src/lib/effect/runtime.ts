@@ -1,4 +1,4 @@
-import { Effect, Fiber, Layer, ManagedRuntime, Scope } from "effect";
+import { Effect, Fiber, Layer, ManagedRuntime, type Scope } from "effect";
 
 const browserRuntime = ManagedRuntime.make(Layer.empty);
 

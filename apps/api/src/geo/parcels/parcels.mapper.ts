@@ -72,7 +72,7 @@ function readNullableString(value: string | null | undefined): string | null {
   return normalized;
 }
 
-function readState2(value: string | null | undefined): string | null {
+function readState(value: string | null | undefined): string | null {
   const normalized = readNullableString(value);
   if (!normalized) {
     return null;
@@ -130,7 +130,7 @@ export function mapParcelRowToFeature(row: ParcelRow): ParcelFeature {
     geometry: readGeometry(row.geom_json),
     properties: {
       parcelId: row.parcel_id,
-      state2: readState2(row.state2),
+      state2: readState(row.state2),
       geoid: readNullableString(row.geoid),
       attrs: readAttrs(row.attrs_json),
     },

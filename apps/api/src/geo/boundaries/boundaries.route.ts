@@ -10,7 +10,8 @@ import {
 import type { Env, Hono } from "hono";
 import { mapBoundaryPowerRowsToFeatures } from "@/geo/boundaries/boundaries.mapper";
 import { type BoundaryPowerRow, listBoundaryPower } from "@/geo/boundaries/boundaries.repo";
-import { getOrCreateRequestId, jsonError, jsonOk, toDebugDetails } from "@/http/api-response";
+import { jsonOk, toDebugDetails } from "@/http/api-response";
+import { fromApiRequest, routeError, runEffectRoute } from "@/http/effect-route";
 import { getApiRuntimeConfig } from "@/http/runtime-config";
 import type { MapFeaturesResult, QueryRowsResult } from "./boundaries.route.types";
 
@@ -76,51 +77,54 @@ function mapBoundaryFeatures(
 }
 
 export function registerBoundariesRoute<E extends Env>(app: Hono<E>): void {
-  app.get(ApiRoutes.boundariesPower, async (c) => {
-    const requestId = getOrCreateRequestId(c, "api");
-    const level = parseBoundaryLevel(c.req.query("level"));
-    if (level === null) {
-      return jsonError(c, {
-        requestId,
-        httpStatus: 400,
-        code: "INVALID_LEVEL",
-        message: "level query param must be one of: county, state, country",
-      });
-    }
+  app.get(ApiRoutes.boundariesPower, (c) =>
+    runEffectRoute(
+      c,
+      fromApiRequest(async ({ honoContext, requestId }) => {
+        const level = parseBoundaryLevel(honoContext.req.query("level"));
+        if (level === null) {
+          throw routeError({
+            httpStatus: 400,
+            code: "INVALID_LEVEL",
+            message: "level query param must be one of: county, state, country",
+          });
+        }
 
-    const rowsResult = await queryBoundaryRows(level);
-    if (!rowsResult.ok) {
-      return jsonError(c, {
-        requestId,
-        httpStatus: 503,
-        code: "POSTGIS_QUERY_FAILED",
-        message: "postgis boundary query failed",
-        details: toDebugDetails(rowsResult.error),
-      });
-    }
+        const rowsResult = await queryBoundaryRows(level);
 
-    const featuresResult = mapBoundaryFeatures(rowsResult.rows, level);
-    if (!featuresResult.ok) {
-      return jsonError(c, {
-        requestId,
-        httpStatus: 500,
-        code: "BOUNDARY_MAPPING_FAILED",
-        message: "boundary mapping failed",
-        details: toDebugDetails(featuresResult.error),
-      });
-    }
+        if (!rowsResult.ok) {
+          throw routeError({
+            httpStatus: 503,
+            code: "POSTGIS_QUERY_FAILED",
+            message: "postgis boundary query failed",
+            details: toDebugDetails(rowsResult.error),
+          });
+        }
 
-    const payload: BoundaryPowerFeatureCollection = {
-      type: "FeatureCollection",
-      features: featuresResult.features,
-      meta: buildResponseMeta({
-        requestId,
-        recordCount: featuresResult.features.length,
-        truncated: false,
-        warnings: [],
-      }),
-    };
+        const featuresResult = mapBoundaryFeatures(rowsResult.rows, level);
 
-    return jsonOk(c, BoundaryPowerFeatureCollectionSchema, payload, requestId);
-  });
+        if (!featuresResult.ok) {
+          throw routeError({
+            httpStatus: 500,
+            code: "BOUNDARY_MAPPING_FAILED",
+            message: "boundary mapping failed",
+            details: toDebugDetails(featuresResult.error),
+          });
+        }
+
+        const payload: BoundaryPowerFeatureCollection = {
+          type: "FeatureCollection",
+          features: featuresResult.features,
+          meta: buildResponseMeta({
+            requestId,
+            recordCount: featuresResult.features.length,
+            truncated: false,
+            warnings: [],
+          }),
+        };
+
+        return jsonOk(honoContext, BoundaryPowerFeatureCollectionSchema, payload, requestId);
+      })
+    )
+  );
 }

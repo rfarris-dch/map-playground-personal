@@ -10,12 +10,18 @@ class ProtocolMock {
 }
 
 class MapMock {
-  public projection: unknown = null;
-  public removed = false;
+  projection: unknown = null;
+  removed = false;
 
-  addControl(): void {}
-  addLayer(): void {}
-  addSource(): void {}
+  addControl(): void {
+    /* noop */
+  }
+  addLayer(): void {
+    /* noop */
+  }
+  addSource(): void {
+    /* noop */
+  }
   getBounds() {
     return {
       getEast: () => -90,
@@ -55,8 +61,12 @@ class MapMock {
   isStyleLoaded() {
     return true;
   }
-  off(): void {}
-  on(): void {}
+  off(): void {
+    /* noop */
+  }
+  on(): void {
+    /* noop */
+  }
   project() {
     return {
       x: 10,
@@ -69,16 +79,30 @@ class MapMock {
   remove() {
     this.removed = true;
   }
-  removeControl(): void {}
-  removeLayer(): void {}
-  removeSource(): void {}
-  setFeatureState(): void {}
-  setLayoutProperty(): void {}
+  removeControl(): void {
+    /* noop */
+  }
+  removeLayer(): void {
+    /* noop */
+  }
+  removeSource(): void {
+    /* noop */
+  }
+  setFeatureState(): void {
+    /* noop */
+  }
+  setLayoutProperty(): void {
+    /* noop */
+  }
   setProjection(projection: unknown): void {
     this.projection = projection;
   }
-  setStyle(): void {}
-  setTerrain(): void {}
+  setStyle(): void {
+    /* noop */
+  }
+  setTerrain(): void {
+    /* noop */
+  }
 }
 
 mock.module("maplibre-gl", () => ({
@@ -99,8 +123,9 @@ mock.module("pmtiles", () => ({
   Protocol: ProtocolMock,
 }));
 
-const { createMap, createMapLibreAdapter, isZoomInRange, registerPmtilesProtocol } =
-  await import("@/index");
+const { createMap, createMapLibreAdapter, isZoomInRange, registerPmtilesProtocol } = await import(
+  "@/index"
+);
 
 afterAll(() => {
   mock.restore();
@@ -131,7 +156,11 @@ describe("map-engine", () => {
   });
 
   it("delegates createMap to the provided adapter", () => {
-    const map = { destroy() {} };
+    const map = {
+      destroy() {
+        return undefined;
+      },
+    };
     const createMapMock = mock(() => map);
     const container = {} as HTMLElement;
     const options = {

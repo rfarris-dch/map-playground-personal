@@ -1,4 +1,4 @@
-import { Cause, Effect, Exit, Fiber } from "effect";
+import { Cause, type Effect, Exit, Fiber } from "effect";
 import type { BrowserEffectFiber } from "@/lib/effect/runtime";
 import { forkBrowserEffect, interruptBrowserFiber, runBrowserEffect } from "@/lib/effect/runtime";
 

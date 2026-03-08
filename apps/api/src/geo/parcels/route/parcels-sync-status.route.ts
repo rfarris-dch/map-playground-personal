@@ -1,7 +1,8 @@
 import { ApiRoutes, ParcelsSyncStatusResponseSchema } from "@map-migration/contracts";
 import type { Env, Hono } from "hono";
 import { EXPOSE_SYNC_INTERNALS } from "@/geo/parcels/route/parcels-route-meta.service";
-import { getOrCreateRequestId, jsonError, jsonOk, toDebugDetails } from "@/http/api-response";
+import { jsonOk, toDebugDetails } from "@/http/api-response";
+import { fromApiRequest, routeError, runEffectRoute } from "@/http/effect-route";
 import { getParcelsSyncStatusSnapshot } from "@/sync/parcels-sync.service";
 
 function sanitizeRunProgress(
@@ -29,44 +30,46 @@ function sanitizeRunProgress(
 }
 
 export function registerParcelsSyncStatusRoute<E extends Env>(app: Hono<E>): void {
-  app.get(ApiRoutes.parcelsSyncStatus, (c) => {
-    const requestId = getOrCreateRequestId(c, "api");
+  app.get(ApiRoutes.parcelsSyncStatus, (c) =>
+    runEffectRoute(
+      c,
+      fromApiRequest(({ honoContext, requestId }) => {
+        let syncStatus: ReturnType<typeof getParcelsSyncStatusSnapshot>;
+        try {
+          syncStatus = getParcelsSyncStatusSnapshot();
+        } catch (error) {
+          throw routeError({
+            httpStatus: 503,
+            code: "PARCELS_SYNC_STATUS_REFRESH_FAILED",
+            message: "parcels sync status refresh failed",
+            details: toDebugDetails(error),
+          });
+        }
 
-    let syncStatus: ReturnType<typeof getParcelsSyncStatusSnapshot>;
-    try {
-      syncStatus = getParcelsSyncStatusSnapshot();
-    } catch (error) {
-      return jsonError(c, {
-        requestId,
-        httpStatus: 503,
-        code: "PARCELS_SYNC_STATUS_REFRESH_FAILED",
-        message: "parcels sync status refresh failed",
-        details: toDebugDetails(error),
-      });
-    }
+        const run = syncStatus.run;
+        const payload = {
+          status: "ok",
+          generatedAt: new Date().toISOString(),
+          enabled: syncStatus.enabled,
+          mode: syncStatus.mode,
+          intervalMs: syncStatus.intervalMs,
+          requireStartupSuccess: syncStatus.requireStartupSuccess,
+          snapshotRoot: EXPOSE_SYNC_INTERNALS ? syncStatus.snapshotRoot : "redacted",
+          latestRunId: syncStatus.latestRunId,
+          latestRunCompletedAt: syncStatus.latestRunCompletedAt,
+          run: {
+            ...run,
+            summary: EXPOSE_SYNC_INTERNALS ? run.summary : null,
+            progress: sanitizeRunProgress(run.progress),
+            states: run.states.map((state) => ({
+              ...state,
+            })),
+            logTail: EXPOSE_SYNC_INTERNALS ? [...run.logTail] : [],
+          },
+        };
 
-    const run = syncStatus.run;
-    const payload = {
-      status: "ok",
-      generatedAt: new Date().toISOString(),
-      enabled: syncStatus.enabled,
-      mode: syncStatus.mode,
-      intervalMs: syncStatus.intervalMs,
-      requireStartupSuccess: syncStatus.requireStartupSuccess,
-      snapshotRoot: EXPOSE_SYNC_INTERNALS ? syncStatus.snapshotRoot : "redacted",
-      latestRunId: syncStatus.latestRunId,
-      latestRunCompletedAt: syncStatus.latestRunCompletedAt,
-      run: {
-        ...run,
-        summary: EXPOSE_SYNC_INTERNALS ? run.summary : null,
-        progress: sanitizeRunProgress(run.progress),
-        states: run.states.map((state) => ({
-          ...state,
-        })),
-        logTail: EXPOSE_SYNC_INTERNALS ? [...run.logTail] : [],
-      },
-    };
-
-    return jsonOk(c, ParcelsSyncStatusResponseSchema, payload, requestId);
-  });
+        return jsonOk(honoContext, ParcelsSyncStatusResponseSchema, payload, requestId);
+      })
+    )
+  );
 }

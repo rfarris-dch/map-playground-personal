@@ -1,11 +1,8 @@
 import { ApiErrorResponseSchema, ApiHeaders, type SafeParseSchema } from "@map-migration/contracts";
 import {
+  type FetchJsonEffectSuccess,
   fetchJsonEffect,
-  RequestAbortedError,
-  RequestHttpError,
-  RequestJsonParseError,
-  RequestNetworkError,
-  RequestSchemaError,
+  isRequestEffectError,
 } from "@map-migration/ops/effect";
 import { Effect } from "effect";
 import {
@@ -57,7 +54,7 @@ export function apiGetJsonEffect<TValue>(
     url,
   }).pipe(
     Effect.map(
-      (result) =>
+      (result: FetchJsonEffectSuccess<TValue>) =>
         ({
           requestId: result.requestId,
           data: result.data,
@@ -71,30 +68,45 @@ export function apiGetJsonEffect<TValue>(
         ApiAbortedError | ApiHttpError | ApiNetworkError | ApiPolicyRejectedError | ApiSchemaError,
         never
       > => {
-      if (error instanceof RequestAbortedError) {
-        return Effect.fail(
-          new ApiAbortedError({
-            requestId: error.requestId,
-            details: error.cause,
-          })
-        );
-      }
+        if (!isRequestEffectError(error)) {
+          return Effect.die(error);
+        }
 
-      if (error instanceof RequestNetworkError) {
-        return Effect.fail(
-          new ApiNetworkError({
-            requestId: error.requestId,
-            cause: error.cause,
-          })
-        );
-      }
+        if (error._tag === "RequestAbortedError") {
+          return Effect.fail(
+            new ApiAbortedError({
+              requestId: error.requestId,
+              details: error.cause,
+            })
+          );
+        }
 
-      if (error instanceof RequestHttpError) {
-        const apiError = parseApiError(error.details);
-        if (apiError !== null) {
-          if (apiError.code === "POLICY_REJECTED") {
+        if (error._tag === "RequestNetworkError") {
+          return Effect.fail(
+            new ApiNetworkError({
+              requestId: error.requestId,
+              cause: error.cause,
+            })
+          );
+        }
+
+        if (error._tag === "RequestHttpError") {
+          const apiError = parseApiError(error.details);
+          if (apiError !== null) {
+            if (apiError.code === "POLICY_REJECTED") {
+              return Effect.fail(
+                new ApiPolicyRejectedError({
+                  requestId: apiError.requestId,
+                  status: error.status,
+                  code: apiError.code,
+                  message: apiError.message,
+                  details: apiError.details,
+                })
+              );
+            }
+
             return Effect.fail(
-              new ApiPolicyRejectedError({
+              new ApiHttpError({
                 requestId: apiError.requestId,
                 status: error.status,
                 code: apiError.code,
@@ -106,34 +118,23 @@ export function apiGetJsonEffect<TValue>(
 
           return Effect.fail(
             new ApiHttpError({
-              requestId: apiError.requestId,
+              requestId: error.requestId,
               status: error.status,
-              code: apiError.code,
-              message: apiError.message,
-              details: apiError.details,
+              details: error.details,
             })
           );
         }
 
-        return Effect.fail(
-          new ApiHttpError({
-            requestId: error.requestId,
-            status: error.status,
-            details: error.details,
-          })
-        );
-      }
+        if (error._tag === "RequestJsonParseError" || error._tag === "RequestSchemaError") {
+          return Effect.fail(
+            new ApiSchemaError({
+              requestId: error.requestId,
+              details: error.cause,
+            })
+          );
+        }
 
-      if (error instanceof RequestJsonParseError || error instanceof RequestSchemaError) {
-        return Effect.fail(
-          new ApiSchemaError({
-            requestId: error.requestId,
-            details: error.cause,
-          })
-        );
-      }
-
-      return Effect.die(error);
+        return Effect.die(error);
       }
     )
   );

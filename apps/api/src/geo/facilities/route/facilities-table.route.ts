@@ -3,10 +3,10 @@ import {
   type FacilitiesTableResponse,
   FacilitiesTableResponseSchema,
 } from "@map-migration/contracts";
-import type { Env, Hono } from "hono";
+import type { Context, Env, Hono } from "hono";
 import {
-  facilitiesMappingError,
-  facilitiesTableQueryError,
+  buildFacilitiesMappingRouteError,
+  buildFacilitiesTableQueryRouteError,
 } from "@/geo/facilities/route/facilities-route-errors.service";
 import {
   resolveFacilitySortBy,
@@ -14,97 +14,98 @@ import {
   resolveSortDirection,
 } from "@/geo/facilities/route/facilities-route-param.service";
 import { queryFacilitiesTable } from "@/geo/facilities/route/facilities-route-query.service";
-import { getOrCreateRequestId, jsonError, jsonOk } from "@/http/api-response";
+import { jsonOk } from "@/http/api-response";
+import { fromApiRequest, routeError, runEffectRoute } from "@/http/effect-route";
 import { resolvePaginationParams, totalPages } from "@/http/pagination-params.service";
 
-export function registerFacilitiesTableRoute<E extends Env>(app: Hono<E>): void {
-  app.get(ApiRoutes.facilitiesTable, async (c) => {
-    const requestId = getOrCreateRequestId(c, "api");
-
-    const perspectiveResolution = resolvePerspectiveParam(c.req.query("perspective"));
-    if (!(perspectiveResolution.ok && perspectiveResolution.perspective)) {
-      return jsonError(c, {
-        requestId,
-        httpStatus: 400,
-        code: "INVALID_PERSPECTIVE",
-        message: perspectiveResolution.error ?? "perspective query param is invalid",
-      });
-    }
-
-    const perspective = perspectiveResolution.perspective;
-
-    const paginationResolution = resolvePaginationParams(
-      c.req.query("page"),
-      c.req.query("pageSize"),
-      {
-        defaultPageSize: 100,
-        maxPageSize: 500,
-        maxOffset: 1_000_000,
-      }
-    );
-
-    if (!paginationResolution.ok) {
-      return jsonError(c, {
-        requestId,
-        httpStatus: 400,
-        code: "INVALID_PAGINATION",
-        message: paginationResolution.message,
-      });
-    }
-
-    const pagination = paginationResolution.value;
-    const sortBy = resolveFacilitySortBy(c.req.query("sortBy"));
-    if (sortBy === null) {
-      return jsonError(c, {
-        requestId,
-        httpStatus: 400,
-        code: "INVALID_SORT",
-        message:
-          "sortBy must be one of: facilityName, providerId, stateAbbrev, commissionedSemantic, leaseOrOwn, commissionedPowerMw, plannedPowerMw, underConstructionPowerMw, availablePowerMw, updatedAt",
-      });
-    }
-    const sortOrder = resolveSortDirection(c.req.query("sortOrder"));
-    if (sortOrder === null) {
-      return jsonError(c, {
-        requestId,
-        httpStatus: 400,
-        code: "INVALID_SORT",
-        message: "sortOrder must be one of: asc, desc",
-      });
-    }
-
-    const queryResult = await queryFacilitiesTable({
-      perspective,
-      limit: pagination.pageSize,
-      offset: pagination.offset,
-      sortBy,
-      sortOrder,
+function resolveFacilitiesTableQuery(honoContext: Context) {
+  const perspectiveResolution = resolvePerspectiveParam(honoContext.req.query("perspective"));
+  if (!(perspectiveResolution.ok && perspectiveResolution.perspective)) {
+    throw routeError({
+      httpStatus: 400,
+      code: "INVALID_PERSPECTIVE",
+      message: perspectiveResolution.error ?? "perspective query param is invalid",
     });
+  }
 
-    if (!queryResult.ok) {
-      if (queryResult.value.reason === "query_failed") {
-        return facilitiesTableQueryError(c, {
-          requestId,
-          error: queryResult.value.error,
-        });
-      }
-
-      return facilitiesMappingError(c, {
-        requestId,
-        error: queryResult.value.error,
-      });
+  const paginationResolution = resolvePaginationParams(
+    honoContext.req.query("page"),
+    honoContext.req.query("pageSize"),
+    {
+      defaultPageSize: 100,
+      maxPageSize: 500,
+      maxOffset: 1_000_000,
     }
+  );
 
-    const payload: FacilitiesTableResponse = {
-      rows: [...queryResult.value.rows],
-      pagination: {
-        page: pagination.page,
-        pageSize: pagination.pageSize,
-        totalCount: queryResult.value.totalCount,
-        totalPages: totalPages(queryResult.value.totalCount, pagination.pageSize),
-      },
-    };
+  if (!paginationResolution.ok) {
+    throw routeError({
+      httpStatus: 400,
+      code: "INVALID_PAGINATION",
+      message: paginationResolution.message,
+    });
+  }
 
-    return jsonOk(c, FacilitiesTableResponseSchema, payload, requestId);
-  });
+  const sortBy = resolveFacilitySortBy(honoContext.req.query("sortBy"));
+  if (sortBy === null) {
+    throw routeError({
+      httpStatus: 400,
+      code: "INVALID_SORT",
+      message:
+        "sortBy must be one of: facilityName, providerId, stateAbbrev, commissionedSemantic, leaseOrOwn, commissionedPowerMw, plannedPowerMw, underConstructionPowerMw, availablePowerMw, updatedAt",
+    });
+  }
+
+  const sortOrder = resolveSortDirection(honoContext.req.query("sortOrder"));
+  if (sortOrder === null) {
+    throw routeError({
+      httpStatus: 400,
+      code: "INVALID_SORT",
+      message: "sortOrder must be one of: asc, desc",
+    });
+  }
+
+  return {
+    perspective: perspectiveResolution.perspective,
+    pagination: paginationResolution.value,
+    sortBy,
+    sortOrder,
+  };
+}
+
+export function registerFacilitiesTableRoute<E extends Env>(app: Hono<E>): void {
+  app.get(ApiRoutes.facilitiesTable, (c) =>
+    runEffectRoute(
+      c,
+      fromApiRequest(async ({ honoContext, requestId }) => {
+        const query = resolveFacilitiesTableQuery(honoContext);
+
+        const queryResult = await queryFacilitiesTable({
+          perspective: query.perspective,
+          limit: query.pagination.pageSize,
+          offset: query.pagination.offset,
+          sortBy: query.sortBy,
+          sortOrder: query.sortOrder,
+        });
+
+        if (!queryResult.ok) {
+          throw queryResult.value.reason === "query_failed"
+            ? buildFacilitiesTableQueryRouteError(queryResult.value.error)
+            : buildFacilitiesMappingRouteError(queryResult.value.error);
+        }
+
+        const payload: FacilitiesTableResponse = {
+          rows: [...queryResult.value.rows],
+          pagination: {
+            page: query.pagination.page,
+            pageSize: query.pagination.pageSize,
+            totalCount: queryResult.value.totalCount,
+            totalPages: totalPages(queryResult.value.totalCount, query.pagination.pageSize),
+          },
+        };
+
+        return jsonOk(honoContext, FacilitiesTableResponseSchema, payload, requestId);
+      })
+    )
+  );
 }

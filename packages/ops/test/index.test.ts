@@ -1,17 +1,17 @@
 import { describe, expect, it, mock } from "bun:test";
 import { Effect, Either } from "effect";
 import {
-  createDiagnosticEvent,
-  createRequestId,
-  normalizeRequestIdHeader,
-  REQUEST_ID_MAX_LENGTH,
-} from "@/index";
-import {
   fetchJsonEffect,
   RequestAbortedError,
   RequestHttpError,
   RequestSchemaError,
 } from "@/effect";
+import {
+  createDiagnosticEvent,
+  createRequestId,
+  normalizeRequestIdHeader,
+  REQUEST_ID_MAX_LENGTH,
+} from "@/index";
 
 describe("ops request-id helpers", () => {
   it("creates ids with the requested prefix and validates the shared header rules", () => {
@@ -60,7 +60,9 @@ describe("ops fetchJsonEffect", () => {
         requestIdPrefix: "web",
         schema: {
           safeParse(input) {
-            return typeof input === "object" && input !== null && Reflect.get(input, "status") === "ok"
+            return typeof input === "object" &&
+              input !== null &&
+              Reflect.get(input, "status") === "ok"
               ? { success: true as const, data: { status: "ok" } }
               : { success: false as const, error: new Error("invalid health payload") };
           },

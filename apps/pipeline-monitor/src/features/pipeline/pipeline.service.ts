@@ -5,12 +5,9 @@ import {
   ParcelsSyncStatusResponseSchema,
 } from "@map-migration/contracts";
 import {
+  type FetchJsonEffectSuccess,
   fetchJsonEffect,
-  RequestAbortedError,
-  RequestHttpError,
-  RequestJsonParseError,
-  RequestNetworkError,
-  RequestSchemaError,
+  type RequestEffectError,
 } from "@map-migration/ops/effect";
 import { Effect, Either } from "effect";
 import type {
@@ -105,86 +102,86 @@ function applyRawStateCompletionFlags(
   };
 }
 
+function createPipelineStatusFailure(
+  error: RequestEffectError
+): Extract<PipelineStatusFetchResult, { ok: false }> {
+  if (error._tag === "RequestAbortedError") {
+    return {
+      ok: false,
+      error: {
+        reason: "aborted",
+        requestId: error.requestId,
+        message: "Request aborted",
+        details: error.cause,
+      },
+    };
+  }
+
+  if (error._tag === "RequestNetworkError") {
+    return {
+      ok: false,
+      error: {
+        reason: "network",
+        requestId: error.requestId,
+        message: "Network request failed",
+        details: error.cause,
+      },
+    };
+  }
+
+  if (error._tag === "RequestHttpError") {
+    return {
+      ok: false,
+      error: {
+        reason: "http",
+        requestId: error.requestId,
+        status: error.status,
+        message: `HTTP ${String(error.status)} ${error.statusText}`,
+        details: error.details,
+      },
+    };
+  }
+
+  return {
+    ok: false,
+    error: {
+      reason: "schema",
+      requestId: error.requestId,
+      message:
+        error._tag === "RequestJsonParseError"
+          ? "Response JSON parsing failed"
+          : "Response schema validation failed",
+      details: error.cause,
+    },
+  };
+}
+
 export function createFetchPipelineStatusEffect(
   signal?: AbortSignal
 ): Effect.Effect<PipelineStatusFetchResult, never> {
   return Effect.gen(function* () {
-    const result = yield* Effect.either(
-      fetchJsonEffect({
-        init: {
-          method: "GET",
-          ...(typeof signal === "undefined" ? {} : { signal }),
-        },
-        requestIdHeaderName: ApiHeaders.requestId,
-        requestIdPrefix: "pipeline-ui",
-        schema: ParcelsSyncStatusResponseSchema,
-        url: buildParcelsSyncStatusRoute(),
-      })
-    );
+    const requestEffect: Effect.Effect<
+      FetchJsonEffectSuccess<PipelineStatusPayload["response"]>,
+      RequestEffectError,
+      never
+    > = fetchJsonEffect({
+      init: {
+        method: "GET",
+        ...(typeof signal === "undefined" ? {} : { signal }),
+      },
+      requestIdHeaderName: ApiHeaders.requestId,
+      requestIdPrefix: "pipeline-ui",
+      schema: ParcelsSyncStatusResponseSchema,
+      url: buildParcelsSyncStatusRoute(),
+    });
+
+    const result: Either.Either<
+      FetchJsonEffectSuccess<PipelineStatusPayload["response"]>,
+      RequestEffectError
+    > = yield* Effect.either(requestEffect);
 
     if (Either.isLeft(result)) {
-      const error = result.left;
-      if (error instanceof RequestAbortedError) {
-        return {
-          ok: false,
-          error: {
-            reason: "aborted",
-            requestId: error.requestId,
-            message: "Request aborted",
-            details: error.cause,
-          },
-        };
-      }
-
-      if (error instanceof RequestNetworkError) {
-        return {
-          ok: false,
-          error: {
-            reason: "network",
-            requestId: error.requestId,
-            message: "Network request failed",
-            details: error.cause,
-          },
-        };
-      }
-
-      if (error instanceof RequestHttpError) {
-        return {
-          ok: false,
-          error: {
-            reason: "http",
-            requestId: error.requestId,
-            status: error.status,
-            message: `HTTP ${String(error.status)} ${error.statusText}`,
-            details: error.details,
-          },
-        };
-      }
-
-      if (error instanceof RequestJsonParseError || error instanceof RequestSchemaError) {
-        return {
-          ok: false,
-          error: {
-            reason: "schema",
-            requestId: error.requestId,
-            message:
-              error instanceof RequestJsonParseError
-                ? "Response JSON parsing failed"
-                : "Response schema validation failed",
-            details: error.cause,
-          },
-        };
-      }
-
-      return {
-        ok: false,
-        error: {
-          reason: "network",
-          requestId: "unknown",
-          message: "Network request failed",
-          details: error,
-        },
-      };
+      return createPipelineStatusFailure(result.left);
     }
 
     return {

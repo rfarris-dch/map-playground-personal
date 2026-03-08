@@ -27,7 +27,9 @@ export interface LoadTilePublishManifestEffectArgs {
 
 export function loadTilePublishManifestEffect(args: LoadTilePublishManifestEffectArgs) {
   return fetchJsonEffect({
-    fetchImplementation: args.fetchImplementation,
+    ...(typeof args.fetchImplementation === "undefined"
+      ? {}
+      : { fetchImplementation: args.fetchImplementation }),
     init: {
       headers: {
         accept: "application/json",

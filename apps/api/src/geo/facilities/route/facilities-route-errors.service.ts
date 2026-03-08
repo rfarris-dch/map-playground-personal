@@ -1,33 +1,29 @@
-import type { Context } from "hono";
-import { jsonError, toDebugDetails } from "@/http/api-response";
-import type { FacilitiesQueryErrorArgs } from "./facilities-route-errors.service.types";
+import { toDebugDetails } from "@/http/api-response";
+import { type ApiRouteError, routeError } from "@/http/effect-route";
 
-export function facilitiesPostgisQueryError(c: Context, args: FacilitiesQueryErrorArgs): Response {
-  return jsonError(c, {
-    requestId: args.requestId,
+export function buildFacilitiesPostgisQueryRouteError(error: unknown): ApiRouteError {
+  return routeError({
     httpStatus: 503,
     code: "POSTGIS_QUERY_FAILED",
     message: "postgis query failed",
-    details: toDebugDetails(args.error),
+    details: toDebugDetails(error),
   });
 }
 
-export function facilitiesMappingError(c: Context, args: FacilitiesQueryErrorArgs): Response {
-  return jsonError(c, {
-    requestId: args.requestId,
+export function buildFacilitiesMappingRouteError(error: unknown): ApiRouteError {
+  return routeError({
     httpStatus: 500,
     code: "FACILITY_MAPPING_FAILED",
     message: "facility mapping failed",
-    details: toDebugDetails(args.error),
+    details: toDebugDetails(error),
   });
 }
 
-export function facilitiesTableQueryError(c: Context, args: FacilitiesQueryErrorArgs): Response {
-  return jsonError(c, {
-    requestId: args.requestId,
+export function buildFacilitiesTableQueryRouteError(error: unknown): ApiRouteError {
+  return routeError({
     httpStatus: 503,
     code: "FACILITY_QUERY_FAILED",
     message: "facility query failed",
-    details: toDebugDetails(args.error),
+    details: toDebugDetails(error),
   });
 }

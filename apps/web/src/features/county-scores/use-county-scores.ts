@@ -1,5 +1,5 @@
 import type { CountyScoresResponse, CountyScoresStatusResponse } from "@map-migration/contracts";
-import { Either, Effect } from "effect";
+import { Effect, Either } from "effect";
 import { computed, onBeforeUnmount, type Ref, shallowRef, watch } from "vue";
 import {
   fetchCountyScoresEffect,
@@ -54,6 +54,10 @@ export function useCountyScores(options: UseCountyScoresOptions) {
       console.error("[county-scores] status fetch failed", error);
     },
   });
+
+  function logCountyScoresError(context: string, error: unknown): void {
+    console.error(`[county-scores] ${context} failed`, error);
+  }
 
   const normalizedCountyIds = computed(() => uniqueCountyIds(options.countyIds.value));
 
@@ -154,7 +158,9 @@ export function useCountyScores(options: UseCountyScoresOptions) {
     );
   }
 
-  void refreshCountyScoresStatus();
+  refreshCountyScoresStatus().catch((error: unknown) => {
+    logCountyScoresError("status fetch", error);
+  });
 
   watch(
     () => normalizedCountyIds.value,
@@ -164,7 +170,9 @@ export function useCountyScores(options: UseCountyScoresOptions) {
         return;
       }
 
-      void refreshCountyScores();
+      refreshCountyScores().catch((error: unknown) => {
+        logCountyScoresError("dashboard fetch", error);
+      });
     },
     {
       immediate: true,
@@ -172,8 +180,12 @@ export function useCountyScores(options: UseCountyScoresOptions) {
   );
 
   onBeforeUnmount(() => {
-    void countyScoresRunner.dispose();
-    void countyScoresStatusRunner.dispose();
+    countyScoresRunner.dispose().catch((error: unknown) => {
+      logCountyScoresError("runner dispose", error);
+    });
+    countyScoresStatusRunner.dispose().catch((error: unknown) => {
+      logCountyScoresError("status runner dispose", error);
+    });
   });
 
   return {

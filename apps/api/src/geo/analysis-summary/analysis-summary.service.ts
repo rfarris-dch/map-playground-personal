@@ -116,7 +116,7 @@ function toSelectionFacility(
     commissionedPowerMw: feature.properties.commissionedPowerMw,
     commissionedSemantic: feature.properties.commissionedSemantic,
     coordinates,
-    countyFips: feature.properties.countyFips,
+    countyFips: normalizeCountyFips(feature.properties.countyFips),
     facilityId: feature.properties.facilityId,
     facilityName: resolveDisplayName(feature.properties.facilityName, "Unknown facility"),
     leaseOrOwn: feature.properties.leaseOrOwn,
@@ -352,6 +352,59 @@ function buildWarning(code: string, message: string): Warning {
   };
 }
 
+function emptyParcelQueryValue(args: { readonly warnings?: readonly Warning[] }): {
+  readonly dataVersion: string | null;
+  readonly features: ParcelsFeatureCollection["features"];
+  readonly ingestionRunId: string | null;
+  readonly nextCursor: string | null;
+  readonly sourceMode: SpatialAnalysisSummaryResponse["meta"]["sourceMode"] | null;
+  readonly truncated: boolean;
+  readonly warnings: readonly Warning[];
+} {
+  return {
+    dataVersion: null,
+    features: [],
+    ingestionRunId: null,
+    nextCursor: null,
+    sourceMode: null,
+    truncated: false,
+    warnings: args.warnings ?? [],
+  };
+}
+
+function resolveParcelPolicyWarning(args: {
+  readonly includeParcels: boolean;
+  readonly geometry: ParcelEnrichRequest["aoi"];
+}): Warning | null {
+  if (!args.includeParcels) {
+    return null;
+  }
+
+  if (args.geometry.type !== "polygon") {
+    return buildWarning(
+      "PARCELS_POLICY_REJECTED",
+      "Parcel analysis skipped because only polygon AOIs are supported."
+    );
+  }
+
+  const polygonGeometry = resolvePolygonGeometry(args.geometry);
+  if (bboxExceedsLimits(polygonGeometry.bbox)) {
+    return buildWarning(
+      "PARCELS_POLICY_REJECTED",
+      "Parcel analysis skipped because the selection exceeds the parcel AOI limit."
+    );
+  }
+
+  if (polygonGeometry.geometryText.length > PARCELS_MAX_POLYGON_JSON_CHARS) {
+    return buildWarning(
+      "PARCELS_POLICY_REJECTED",
+      "Parcel analysis skipped because the selection payload is too large."
+    );
+  }
+
+  return null;
+}
+
 function isMissingRelationError(error: unknown, relationName: string): boolean {
   return (
     error instanceof Error &&
@@ -572,6 +625,44 @@ export async function querySpatialAnalysisSummary(
   const requestedPerspectives = new Set(args.request.perspectives);
   const shouldQueryColocation = requestedPerspectives.has("colocation");
   const shouldQueryHyperscale = requestedPerspectives.has("hyperscale");
+  const parcelPolicyWarning = resolveParcelPolicyWarning({
+    geometry: {
+      type: "polygon",
+      geometry: args.request.geometry,
+    },
+    includeParcels: args.request.includeParcels,
+  });
+  const parcelResultPromise = (() => {
+    if (!args.request.includeParcels) {
+      return Promise.resolve({
+        ok: true as const,
+        value: emptyParcelQueryValue({}),
+      });
+    }
+
+    if (parcelPolicyWarning !== null) {
+      return Promise.resolve({
+        ok: true as const,
+        value: emptyParcelQueryValue({
+          warnings: [parcelPolicyWarning],
+        }),
+      });
+    }
+
+    return queryParcels({
+      expectedIngestionRunId: args.expectedParcelIngestionRunId,
+      request: {
+        aoi: {
+          type: "polygon",
+          geometry: args.request.geometry,
+        },
+        format: "json",
+        includeGeometry: "centroid",
+        pageSize: args.request.parcelPageSize,
+        profile: "analysis_v1",
+      },
+    });
+  })();
 
   const [
     colocationResult,
@@ -615,32 +706,7 @@ export async function querySpatialAnalysisSummary(
       limit: 25,
       minimumSelectionOverlapPercent: args.request.minimumMarketSelectionOverlapPercent,
     }),
-    args.request.includeParcels
-      ? queryParcels({
-          expectedIngestionRunId: args.expectedParcelIngestionRunId,
-          request: {
-            aoi: {
-              type: "polygon",
-              geometry: args.request.geometry,
-            },
-            format: "json",
-            includeGeometry: "centroid",
-            pageSize: args.request.parcelPageSize,
-            profile: "analysis_v1",
-          },
-        })
-      : Promise.resolve({
-          ok: true as const,
-          value: {
-            dataVersion: null,
-            features: [],
-            ingestionRunId: null,
-            nextCursor: null,
-            sourceMode: null,
-            truncated: false,
-            warnings: [],
-          },
-        }),
+    parcelResultPromise,
     dependencies.queryCountyScoresStatus(),
     listIntersectedCountyIds(JSON.stringify(args.request.geometry)).then(
       (rows) => ({
@@ -908,7 +974,7 @@ export async function querySpatialAnalysisSummary(
           unavailableReason: marketSelection.unavailableReason,
         },
         parcels: {
-          included: args.request.includeParcels,
+          included: args.request.includeParcels && parcelPolicyWarning === null,
           nextCursor: parcelResult.value.nextCursor,
           truncated: parcelResult.value.truncated,
         },
