@@ -403,12 +403,11 @@ function ensureLandmarkLayers(map: IMap): void {
   }
 }
 
-function add3DBuildings(map: IMap, profile: BasemapProfile): void {
+function add3DBuildings(map: IMap, profile: BasemapProfile, sourceId: string): void {
   if (map.hasLayer(profile.buildingsLayerId)) {
     return;
   }
 
-  const sourceId = findBuildingSourceId(map, profile);
   const firstLabelLayerId = findFirstLabelLayerId(map);
 
   map.addLayer(
@@ -622,7 +621,8 @@ export function mountBasemapLayerVisibility(
     syncProjection();
     ensureSatelliteLayer(map);
     ensureLandmarkLayers(map);
-    add3DBuildings(map, profile);
+    const buildingSourceId = findBuildingSourceId(map, profile);
+    add3DBuildings(map, profile, buildingSourceId);
     groups = collectBasemapLayerGroups(map, profile);
     applyBasemapVisibility({
       map,

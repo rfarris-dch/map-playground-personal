@@ -34,6 +34,22 @@ function clamp(value: number, min: number, max: number): number {
   return value;
 }
 
+function padRange(
+  min: number,
+  max: number,
+  paddingFactor: number
+): {
+  readonly max: number;
+  readonly min: number;
+} {
+  const span = Math.max(0, max - min);
+  const padding = span * paddingFactor;
+  return {
+    min: min - padding,
+    max: max + padding,
+  };
+}
+
 function floorTo(value: number, decimals: number): number {
   const precision = 10 ** decimals;
   return Math.floor(value * precision) / precision;
@@ -91,6 +107,39 @@ export function quantizeBbox(bounds: BBox, decimals = 4): BBox {
     south,
     west,
   };
+}
+
+export function expandBbox(bounds: BBox, paddingFactor = 0.5): BBox {
+  const longitudeRange = padRange(bounds.west, bounds.east, paddingFactor);
+  const latitudeRange = padRange(bounds.south, bounds.north, paddingFactor);
+
+  return {
+    west: clamp(longitudeRange.min, -180, 180),
+    east: clamp(longitudeRange.max, -180, 180),
+    south: clamp(latitudeRange.min, -90, 90),
+    north: clamp(latitudeRange.max, -90, 90),
+  };
+}
+
+export function bboxContains(container: BBox, candidate: BBox): boolean {
+  return (
+    container.west <= candidate.west &&
+    container.south <= candidate.south &&
+    container.east >= candidate.east &&
+    container.north >= candidate.north
+  );
+}
+
+function pointWithinBbox(coordinates: readonly [number, number], bbox: BBox): boolean {
+  const [lng, lat] = coordinates;
+  return lng >= bbox.west && lng <= bbox.east && lat >= bbox.south && lat <= bbox.north;
+}
+
+export function filterFacilitiesFeaturesToBbox(
+  features: FacilitiesFeatureCollection["features"],
+  bbox: BBox
+): FacilitiesFeatureCollection["features"] {
+  return features.filter((feature) => pointWithinBbox(feature.geometry.coordinates, bbox));
 }
 
 export function isFeatureId(value: unknown): value is number | string {

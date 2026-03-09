@@ -1,6 +1,6 @@
 export interface ManagedCommandProcess {
   readonly exited: Promise<number>;
-  kill(signal?: number | string): void;
+  kill(signal?: string): void;
 }
 
 export interface RunCommandOutputOptions {

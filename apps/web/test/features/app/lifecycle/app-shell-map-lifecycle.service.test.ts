@@ -14,11 +14,17 @@ function createLifecycleOptions(fakeMap: FakeMap): UseAppShellMapLifecycleOption
     boundaryCountry: false,
     facilitiesHover: false,
     layerRuntime: false,
+    mapRuntime: false,
     parcels: false,
-    pmtiles: false,
     powerHover: false,
-    restoreWarn: false,
     sketchMeasure: false,
+  };
+  const mapControls = [createTestMapControl("navigation"), createTestMapControl("scale")];
+  const basemapLayerController = {
+    destroy() {
+      destroyed.basemap = true;
+    },
+    setVisible: noop,
   };
 
   return {
@@ -82,14 +88,15 @@ function createLifecycleOptions(fakeMap: FakeMap): UseAppShellMapLifecycleOption
       waterController: shallowRef(null),
     },
     runtime: {
-      basemapLayerController: shallowRef({
-        destroy() {
-          destroyed.basemap = true;
-        },
-        setVisible: noop,
-      }),
-      disposePmtilesProtocol: shallowRef(() => {
-        destroyed.pmtiles = true;
+      basemapLayerController: shallowRef(basemapLayerController),
+      disposeMapRuntime: shallowRef(() => {
+        basemapLayerController.destroy();
+        for (const control of mapControls) {
+          fakeMap.removeControl(control);
+        }
+        fakeMap.destroy();
+        destroyed.mapRuntime = true;
+        return Promise.resolve();
       }),
       layerRuntime: shallowRef({
         destroy() {
@@ -108,10 +115,6 @@ function createLifecycleOptions(fakeMap: FakeMap): UseAppShellMapLifecycleOption
       }),
       map: shallowRef(fakeMap),
       mapContainer: shallowRef(null),
-      mapControls: shallowRef([createTestMapControl("navigation"), createTestMapControl("scale")]),
-      restoreConsoleWarn: shallowRef(() => {
-        destroyed.restoreWarn = true;
-      }),
     },
     state: {
       boundaryFacetOptions: shallowRef({
@@ -162,20 +165,18 @@ function createLifecycleOptions(fakeMap: FakeMap): UseAppShellMapLifecycleOption
 }
 
 describe("app-shell-map-lifecycle service", () => {
-  it("tears down controls, controllers, PMTiles protocol, and map refs without leaking runtime state", () => {
+  it("tears down controls, controllers, PMTiles protocol, and map refs without leaking runtime state", async () => {
     const fakeMap = new FakeMap();
     const options = createLifecycleOptions(fakeMap);
 
-    destroyMapLifecycleRuntime(options);
+    await destroyMapLifecycleRuntime(options);
 
     expect(fakeMap.removedControls).toHaveLength(2);
     expect(fakeMap.destroyed).toBe(true);
     expect(options.runtime.map.value).toBeNull();
     expect(options.runtime.layerRuntime.value).toBeNull();
     expect(options.runtime.basemapLayerController.value).toBeNull();
-    expect(options.runtime.disposePmtilesProtocol.value).toBeNull();
-    expect(options.runtime.restoreConsoleWarn.value).toBeNull();
-    expect(options.runtime.mapControls.value).toEqual([]);
+    expect(options.runtime.disposeMapRuntime.value).toBeNull();
     expect(options.state.layerRuntimeSnapshot.value).toBeNull();
     expect(options.layers.boundaryControllers.value).toEqual({
       country: null,

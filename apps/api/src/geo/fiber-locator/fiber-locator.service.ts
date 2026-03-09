@@ -22,7 +22,7 @@ import type { FiberLocatorTileSnapshot } from "./fiber-locator.service.types";
 import {
   createTileSnapshotResponse,
   fetchFiberLocatorTileSnapshot,
-  fetchWithTimeout,
+  fetchJsonPayloadWithTimeout,
   waitForAbortableValue,
 } from "./fiber-locator-fetch.service";
 import {
@@ -54,6 +54,21 @@ function buildInViewPath(config: FiberLocatorConfig, bbox: BBox): string {
   return `/layers/inview/${encodedBbox}/${encodedBranches}`;
 }
 
+function readUpstreamResult(payload: unknown, requestName: string): readonly unknown[] {
+  const payloadRecord = payloadRecordOrThrow(payload, `${requestName} response`);
+  const status = Reflect.get(payloadRecord, "status");
+  if (status !== "ok") {
+    throw new Error(`${requestName} response status was not ok`);
+  }
+
+  const result = Reflect.get(payloadRecord, "result");
+  if (!Array.isArray(result)) {
+    throw new Error(`${requestName} response did not include result[]`);
+  }
+
+  return result;
+}
+
 function fetchFiberLocatorTileFromUpstream(
   config: FiberLocatorConfig,
   args: FiberLocatorTileRequest,
@@ -81,43 +96,15 @@ export async function fetchFiberLocatorCatalog(
   config: FiberLocatorConfig,
   signal?: AbortSignal
 ): Promise<FiberLocatorCatalogResult> {
-  const upstreamUrl = buildTokenPathUrl(config, "/layers/toc");
-  const requestInit: RequestInit = {
-    method: "GET",
-    headers: {
-      accept: "application/json",
-    },
-  };
-  if (typeof signal !== "undefined") {
-    requestInit.signal = signal;
-  }
-
-  const { response } = await fetchWithTimeout(upstreamUrl, config.requestTimeoutMs, requestInit);
-
-  if (!response.ok) {
-    throw new Error(
-      `fiberlocator layers request failed (${String(response.status)} ${response.statusText})`
-    );
-  }
-
-  let payload: unknown = null;
-  try {
-    payload = await response.json();
-  } catch {
-    throw new Error("fiberlocator layers response was not valid JSON");
-  }
-
-  const payloadRecord = payloadRecordOrThrow(payload, "fiberlocator layers response");
-
-  const status = Reflect.get(payloadRecord, "status");
-  if (status !== "ok") {
-    throw new Error("fiberlocator layers response status was not ok");
-  }
-
-  const result = Reflect.get(payloadRecord, "result");
-  if (!Array.isArray(result)) {
-    throw new Error("fiberlocator layers response did not include result[]");
-  }
+  const result = readUpstreamResult(
+    await fetchJsonPayloadWithTimeout(
+      buildTokenPathUrl(config, "/layers/toc"),
+      config.requestTimeoutMs,
+      "fiberlocator layers",
+      signal
+    ),
+    "fiberlocator layers"
+  );
 
   const allowedLayers = new Set(config.lineIds.map((lineId) => lineId.toLowerCase()));
   const lineSortOrder = createLineSortOrder(config.lineIds);
@@ -165,43 +152,15 @@ export async function fetchFiberLocatorLayersInView(
   bbox: BBox,
   signal?: AbortSignal
 ): Promise<FiberLocatorLayersInViewResult> {
-  const upstreamUrl = buildTokenPathUrl(config, buildInViewPath(config, bbox));
-  const requestInit: RequestInit = {
-    method: "GET",
-    headers: {
-      accept: "application/json",
-    },
-  };
-  if (typeof signal !== "undefined") {
-    requestInit.signal = signal;
-  }
-
-  const { response } = await fetchWithTimeout(upstreamUrl, config.requestTimeoutMs, requestInit);
-
-  if (!response.ok) {
-    throw new Error(
-      `fiberlocator layers/inview request failed (${String(response.status)} ${response.statusText})`
-    );
-  }
-
-  let payload: unknown = null;
-  try {
-    payload = await response.json();
-  } catch {
-    throw new Error("fiberlocator layers/inview response was not valid JSON");
-  }
-
-  const payloadRecord = payloadRecordOrThrow(payload, "fiberlocator layers/inview response");
-
-  const status = Reflect.get(payloadRecord, "status");
-  if (status !== "ok") {
-    throw new Error("fiberlocator layers/inview response status was not ok");
-  }
-
-  const result = Reflect.get(payloadRecord, "result");
-  if (!Array.isArray(result)) {
-    throw new Error("fiberlocator layers/inview response did not include result[]");
-  }
+  const result = readUpstreamResult(
+    await fetchJsonPayloadWithTimeout(
+      buildTokenPathUrl(config, buildInViewPath(config, bbox)),
+      config.requestTimeoutMs,
+      "fiberlocator layers/inview",
+      signal
+    ),
+    "fiberlocator layers/inview"
+  );
 
   const seen = new Set<string>();
   const layerNames = result.reduce<string[]>((accumulator, rawLayerName) => {

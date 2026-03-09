@@ -1,5 +1,5 @@
 import { describe, expect, it, mock } from "bun:test";
-import { Effect, Either } from "effect";
+import { Effect, Either, Exit } from "effect";
 import {
   fetchJsonEffect,
   RequestAbortedError,
@@ -101,6 +101,63 @@ describe("ops fetchJsonEffect", () => {
     }
 
     expect(result.left).toBeInstanceOf(RequestAbortedError);
+  });
+
+  it("composes caller and runtime abort signals for the same request", async () => {
+    const initController = new AbortController();
+    let requestSignal: AbortSignal | undefined;
+    let rejectPending: ((reason?: unknown) => void) | null = null;
+    let resolveStarted: (() => void) | null = null;
+    const started = new Promise<void>((resolve) => {
+      resolveStarted = resolve;
+    });
+    const fetchMock = mock((_input: RequestInfo | URL, init?: RequestInit) => {
+      requestSignal = init?.signal ?? undefined;
+      requestSignal?.addEventListener(
+        "abort",
+        () => {
+          rejectPending?.(new DOMException("The operation was aborted.", "AbortError"));
+        },
+        { once: true }
+      );
+      resolveStarted?.();
+      return new Promise<Response>((_resolve, reject) => {
+        rejectPending = reject;
+      });
+    });
+
+    const runtimeController = new AbortController();
+    const resultPromise = Effect.runPromiseExit(
+      fetchJsonEffect({
+        fetchImplementation: fetchMock as typeof fetch,
+        init: {
+          signal: initController.signal,
+        },
+        schema: {
+          safeParse(input) {
+            return { success: true as const, data: input };
+          },
+        },
+        url: "/api/slow",
+      }),
+      {
+        signal: runtimeController.signal,
+      }
+    );
+
+    await started;
+    expect(requestSignal).toBeDefined();
+    expect(requestSignal).not.toBe(initController.signal);
+
+    runtimeController.abort();
+
+    const exit = await resultPromise;
+    expect(Exit.isFailure(exit)).toBe(true);
+    if (!Exit.isFailure(exit)) {
+      throw new Error("Expected aborted request failure");
+    }
+    expect(requestSignal?.aborted).toBe(true);
+    expect(Exit.isInterrupted(exit)).toBe(true);
   });
 
   it("classifies HTTP and schema failures with shared tagged errors", async () => {

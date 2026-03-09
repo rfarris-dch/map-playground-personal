@@ -1,5 +1,5 @@
 import type { FacilitiesFeatureCollection, MapContextTransfer } from "@map-migration/contracts";
-import type { IMap, MapControl } from "@map-migration/map-engine";
+import type { IMap } from "@map-migration/map-engine";
 import type { ComputedRef, ShallowRef } from "vue";
 import type {
   BoundaryControllerState,
@@ -56,12 +56,10 @@ export interface EnvironmentalStressController {
 
 export interface AppShellMapLifecycleRuntimeRefs {
   readonly basemapLayerController: ShallowRef<BasemapLayerVisibilityController | null>;
-  readonly disposePmtilesProtocol: ShallowRef<(() => void) | null>;
+  readonly disposeMapRuntime: ShallowRef<(() => Promise<void>) | null>;
   readonly layerRuntime: ShallowRef<LayerRuntimeController | null>;
   readonly map: ShallowRef<IMap | null>;
   readonly mapContainer: Readonly<ShallowRef<HTMLDivElement | null>>;
-  readonly mapControls: ShallowRef<readonly MapControl[]>;
-  readonly restoreConsoleWarn: ShallowRef<(() => void) | null>;
 }
 
 export interface AppShellMapLifecycleLayerRefs {

@@ -1,13 +1,8 @@
 import { ApiErrorResponseSchema, ApiHeaders, type SafeParseSchema } from "@map-migration/contracts";
-import {
-  type FetchJsonEffectSuccess,
-  fetchJsonEffect,
-  isRequestEffectError,
-} from "@map-migration/ops/effect";
+import { type FetchJsonEffectSuccess, fetchJsonEffect } from "@map-migration/ops/effect";
 import { Effect } from "effect";
 import {
   ApiAbortedError,
-  type ApiEffectError,
   ApiHttpError,
   ApiNetworkError,
   ApiPolicyRejectedError,
@@ -45,7 +40,11 @@ export function apiGetJsonEffect<TValue>(
   schema: SafeParseSchema<TValue>,
   init: RequestInit = {},
   options: { requestIdPrefix?: string } = {}
-): Effect.Effect<ApiEffectSuccess<TValue>, Exclude<ApiEffectError, never>, never> {
+): Effect.Effect<
+  ApiEffectSuccess<TValue>,
+  ApiAbortedError | ApiHttpError | ApiNetworkError | ApiPolicyRejectedError | ApiSchemaError,
+  never
+> {
   return fetchJsonEffect({
     init,
     requestIdHeaderName: ApiHeaders.requestId,
@@ -68,34 +67,38 @@ export function apiGetJsonEffect<TValue>(
         ApiAbortedError | ApiHttpError | ApiNetworkError | ApiPolicyRejectedError | ApiSchemaError,
         never
       > => {
-        if (!isRequestEffectError(error)) {
-          return Effect.die(error);
-        }
+        switch (error._tag) {
+          case "RequestAbortedError":
+            return Effect.fail(
+              new ApiAbortedError({
+                requestId: error.requestId,
+                details: error.cause,
+              })
+            );
+          case "RequestNetworkError":
+            return Effect.fail(
+              new ApiNetworkError({
+                requestId: error.requestId,
+                cause: error.cause,
+              })
+            );
+          case "RequestHttpError": {
+            const apiError = parseApiError(error.details);
+            if (apiError !== null) {
+              if (apiError.code === "POLICY_REJECTED") {
+                return Effect.fail(
+                  new ApiPolicyRejectedError({
+                    requestId: apiError.requestId,
+                    status: error.status,
+                    code: apiError.code,
+                    message: apiError.message,
+                    details: apiError.details,
+                  })
+                );
+              }
 
-        if (error._tag === "RequestAbortedError") {
-          return Effect.fail(
-            new ApiAbortedError({
-              requestId: error.requestId,
-              details: error.cause,
-            })
-          );
-        }
-
-        if (error._tag === "RequestNetworkError") {
-          return Effect.fail(
-            new ApiNetworkError({
-              requestId: error.requestId,
-              cause: error.cause,
-            })
-          );
-        }
-
-        if (error._tag === "RequestHttpError") {
-          const apiError = parseApiError(error.details);
-          if (apiError !== null) {
-            if (apiError.code === "POLICY_REJECTED") {
               return Effect.fail(
-                new ApiPolicyRejectedError({
+                new ApiHttpError({
                   requestId: apiError.requestId,
                   status: error.status,
                   code: apiError.code,
@@ -107,34 +110,23 @@ export function apiGetJsonEffect<TValue>(
 
             return Effect.fail(
               new ApiHttpError({
-                requestId: apiError.requestId,
+                requestId: error.requestId,
                 status: error.status,
-                code: apiError.code,
-                message: apiError.message,
-                details: apiError.details,
+                details: error.details,
               })
             );
           }
-
-          return Effect.fail(
-            new ApiHttpError({
-              requestId: error.requestId,
-              status: error.status,
-              details: error.details,
-            })
-          );
+          case "RequestJsonParseError":
+          case "RequestSchemaError":
+            return Effect.fail(
+              new ApiSchemaError({
+                requestId: error.requestId,
+                details: error.cause,
+              })
+            );
+          default:
+            return Effect.die(error);
         }
-
-        if (error._tag === "RequestJsonParseError" || error._tag === "RequestSchemaError") {
-          return Effect.fail(
-            new ApiSchemaError({
-              requestId: error.requestId,
-              details: error.cause,
-            })
-          );
-        }
-
-        return Effect.die(error);
       }
     )
   );

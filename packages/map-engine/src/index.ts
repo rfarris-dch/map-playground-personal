@@ -528,6 +528,7 @@ export function createMapLibreAdapter(): MapAdapter {
         zoom,
         minZoom,
         maxZoom,
+        maxPitch,
         preserveDrawingBuffer,
         projection,
         style,
@@ -545,6 +546,9 @@ export function createMapLibreAdapter(): MapAdapter {
       }
       if (typeof maxZoom === "number") {
         mapOptions.maxZoom = maxZoom;
+      }
+      if (typeof maxPitch === "number") {
+        mapOptions.maxPitch = maxPitch;
       }
       if (typeof preserveDrawingBuffer === "boolean") {
         mapOptions.canvasContextAttributes = {

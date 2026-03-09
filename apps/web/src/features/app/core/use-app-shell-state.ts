@@ -1,5 +1,5 @@
 import type { FacilitiesFeatureCollection, FacilityPerspective } from "@map-migration/contracts";
-import type { IMap, MapControl } from "@map-migration/map-engine";
+import type { IMap } from "@map-migration/map-engine";
 import { computed, shallowRef, useTemplateRef } from "vue";
 import {
   initialBoundaryControllerState,
@@ -73,9 +73,7 @@ export function useAppShellState(): UseAppShellStateResult {
   const sketchMeasureController = shallowRef<SketchMeasureLayerController | null>(null);
   const basemapLayerController = shallowRef<BasemapLayerVisibilityController | null>(null);
   const waterController = shallowRef<WaterLayerVisibilityController | null>(null);
-  const disposePmtilesProtocol = shallowRef<(() => void) | null>(null);
-  const restoreConsoleWarn = shallowRef<(() => void) | null>(null);
-  const mapControls = shallowRef<readonly MapControl[]>([]);
+  const disposeMapRuntime = shallowRef<(() => Promise<void>) | null>(null);
   const facilitiesStatus = shallowRef<PerspectiveStatusState>(initialPerspectiveStatusState());
   const parcelsStatus = shallowRef<ParcelsStatus>(initialParcelsStatus());
   const boundaryFacetOptions = shallowRef<BoundaryFacetOptionsState>(
@@ -180,9 +178,7 @@ export function useAppShellState(): UseAppShellStateResult {
     sketchMeasureController,
     basemapLayerController,
     waterController,
-    disposePmtilesProtocol,
-    restoreConsoleWarn,
-    mapControls,
+    disposeMapRuntime,
     facilitiesStatus,
     parcelsStatus,
     boundaryFacetOptions,

@@ -1,14 +1,14 @@
 import type { MapContextTransfer } from "@map-migration/contracts";
 import {
   createFullscreenControl,
-  createMap,
   createMapLibreAdapter,
   createNavigationControl,
   createScaleControl,
   type IMap,
   type MapControl,
-  registerPmtilesProtocol,
 } from "@map-migration/map-engine";
+import { createMapScoped, registerPmtilesProtocolScoped } from "@map-migration/map-engine/effect";
+import { Effect, type Scope } from "effect";
 import {
   defaultBasemapStyleUrl,
   mountBasemapLayerVisibility,
@@ -17,11 +17,10 @@ import type { BasemapLayerVisibilityController } from "@/features/basemap/basema
 
 const OPENFREEMAP_GLYPHS_PREFIX = "https://tiles.openfreemap.org/fonts/";
 const MAPLIBRE_DEMOTILES_GLYPHS_PREFIX = "https://demotiles.maplibre.org/font/";
+const DEFAULT_MAP_MAX_PITCH = 85;
 
 export interface AppShellMapSetup {
   readonly basemapLayerController: BasemapLayerVisibilityController;
-  readonly controls: readonly MapControl[];
-  readonly disposePmtilesProtocol: () => void;
   readonly map: IMap;
 }
 
@@ -31,24 +30,24 @@ interface AppShellMapInitializeOptions {
 
 export interface AppShellMapDependencies {
   readonly createFullscreenControl: typeof createFullscreenControl;
-  readonly createMap: typeof createMap;
   readonly createMapLibreAdapter: typeof createMapLibreAdapter;
+  readonly createMapScoped: typeof createMapScoped;
   readonly createNavigationControl: typeof createNavigationControl;
   readonly createScaleControl: typeof createScaleControl;
   readonly defaultBasemapStyleUrl: typeof defaultBasemapStyleUrl;
   readonly mountBasemapLayerVisibility: typeof mountBasemapLayerVisibility;
-  readonly registerPmtilesProtocol: typeof registerPmtilesProtocol;
+  readonly registerPmtilesProtocolScoped: typeof registerPmtilesProtocolScoped;
 }
 
 const defaultAppShellMapDependencies: AppShellMapDependencies = {
   createFullscreenControl,
-  createMap,
+  createMapScoped,
   createMapLibreAdapter,
   createNavigationControl,
   createScaleControl,
   defaultBasemapStyleUrl,
   mountBasemapLayerVisibility,
-  registerPmtilesProtocol,
+  registerPmtilesProtocolScoped,
 };
 
 function rewriteGlyphRequestUrl(url: string): string {
@@ -66,6 +65,7 @@ function mountMapControls(
   const navigationControl = dependencies.createNavigationControl({
     showCompass: true,
     showZoom: true,
+    visualizePitch: true,
   });
   const scaleControl = dependencies.createScaleControl({ maxWidth: 140, unit: "imperial" });
   const fullscreenControl = dependencies.createFullscreenControl();
@@ -77,6 +77,28 @@ function mountMapControls(
   nextMap.addControl(fullscreenControl, "top-right");
 
   return controls;
+}
+
+function mountMapControlsScoped(map: IMap, dependencies: AppShellMapDependencies) {
+  return Effect.acquireRelease(
+    Effect.sync(() => mountMapControls(map, dependencies)),
+    (controls) =>
+      Effect.sync(() => {
+        for (const control of controls) {
+          map.removeControl(control);
+        }
+      })
+  );
+}
+
+function mountBasemapLayerVisibilityScoped(map: IMap, dependencies: AppShellMapDependencies) {
+  return Effect.acquireRelease(
+    Effect.sync(() => dependencies.mountBasemapLayerVisibility(map)),
+    (controller) =>
+      Effect.sync(() => {
+        controller.destroy();
+      })
+  );
 }
 
 function resolveInitialMapCenter(
@@ -111,38 +133,45 @@ function resolveInitialMapZoom(
 
 export function createAppShellMapInitializer(
   dependencies: AppShellMapDependencies
-): (container: HTMLDivElement, options?: AppShellMapInitializeOptions) => AppShellMapSetup {
-  return (container, options = {}) => {
-    const disposePmtilesProtocol = dependencies.registerPmtilesProtocol();
-    const map = dependencies.createMap(dependencies.createMapLibreAdapter(), container, {
-      style: dependencies.defaultBasemapStyleUrl(),
-      center: resolveInitialMapCenter(options.initialViewport),
-      preserveDrawingBuffer: true,
-      zoom: resolveInitialMapZoom(options.initialViewport),
-      projection: { type: "mercator" },
-      transformRequest: (url) => {
-        const rewrittenUrl = rewriteGlyphRequestUrl(url);
-        if (rewrittenUrl === url) {
-          return undefined;
+): (
+  container: HTMLDivElement,
+  options?: AppShellMapInitializeOptions
+) => Effect.Effect<AppShellMapSetup, never, Scope.Scope> {
+  return (container, options = {}) =>
+    Effect.gen(function* () {
+      yield* dependencies.registerPmtilesProtocolScoped();
+
+      const map = yield* dependencies.createMapScoped(
+        dependencies.createMapLibreAdapter(),
+        container,
+        {
+          style: dependencies.defaultBasemapStyleUrl(),
+          center: resolveInitialMapCenter(options.initialViewport),
+          preserveDrawingBuffer: true,
+          maxPitch: DEFAULT_MAP_MAX_PITCH,
+          zoom: resolveInitialMapZoom(options.initialViewport),
+          projection: { type: "mercator" },
+          transformRequest: (url) => {
+            const rewrittenUrl = rewriteGlyphRequestUrl(url);
+            if (rewrittenUrl === url) {
+              return undefined;
+            }
+
+            return { url: rewrittenUrl };
+          },
         }
+      );
 
-        return { url: rewrittenUrl };
-      },
+      yield* mountMapControlsScoped(map, dependencies);
+      const basemapLayerController = yield* mountBasemapLayerVisibilityScoped(map, dependencies);
+
+      return {
+        map,
+        basemapLayerController,
+      } satisfies AppShellMapSetup;
     });
-
-    return {
-      map,
-      controls: mountMapControls(map, dependencies),
-      basemapLayerController: dependencies.mountBasemapLayerVisibility(map),
-      disposePmtilesProtocol,
-    };
-  };
 }
 
-export const initializeAppShellMap = createAppShellMapInitializer(defaultAppShellMapDependencies);
-
-export function suppressMapLibreGlyphWarnings(): () => void {
-  return (): void => {
-    // Map initialization no longer patches console.warn globally.
-  };
-}
+export const initializeAppShellMapEffect = createAppShellMapInitializer(
+  defaultAppShellMapDependencies
+);

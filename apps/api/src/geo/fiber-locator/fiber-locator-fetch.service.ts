@@ -1,8 +1,6 @@
+import { Effect } from "effect";
 import type { FiberLocatorConfig } from "@/geo/fiber-locator/fiber-locator.types";
-import type {
-  FetchWithTimeoutResult,
-  FiberLocatorTileSnapshot,
-} from "./fiber-locator.service.types";
+import type { FiberLocatorTileSnapshot } from "./fiber-locator.service.types";
 
 const PASS_THROUGH_TILE_HEADER_NAMES: readonly string[] = [
   "cache-control",
@@ -33,34 +31,15 @@ export function delay(ms: number, signal?: AbortSignal): Promise<void> {
     return Promise.resolve();
   }
 
-  return new Promise<void>((resolve, reject) => {
-    const timeoutId = setTimeout(() => {
-      cleanup();
-      resolve();
-    }, ms);
-
-    const cleanup = (): void => {
-      clearTimeout(timeoutId);
-      if (typeof signal !== "undefined") {
-        signal.removeEventListener("abort", handleAbort);
-      }
-    };
-
-    const handleAbort = (): void => {
-      cleanup();
-      reject(createAbortError("fiberlocator tile retry aborted"));
-    };
-
-    if (typeof signal !== "undefined") {
-      if (signal.aborted) {
-        cleanup();
-        reject(createAbortError("fiberlocator tile retry aborted"));
-        return;
+  return Effect.runPromise(Effect.sleep(ms), signal == null ? undefined : { signal }).catch(
+    (error) => {
+      if (signal?.aborted) {
+        throw createAbortError("fiberlocator tile retry aborted");
       }
 
-      signal.addEventListener("abort", handleAbort, { once: true });
+      throw error;
     }
-  });
+  );
 }
 
 export function waitForAbortableValue<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
@@ -72,27 +51,15 @@ export function waitForAbortableValue<T>(promise: Promise<T>, signal?: AbortSign
     return Promise.reject(createAbortError("fiberlocator tile request aborted"));
   }
 
-  return new Promise<T>((resolve, reject) => {
-    const cleanup = (): void => {
-      signal.removeEventListener("abort", handleAbort);
-    };
+  return Effect.runPromise(
+    Effect.tryPromise(() => promise),
+    { signal }
+  ).catch((error) => {
+    if (signal.aborted) {
+      throw createAbortError("fiberlocator tile request aborted");
+    }
 
-    const handleAbort = (): void => {
-      cleanup();
-      reject(createAbortError("fiberlocator tile request aborted"));
-    };
-
-    signal.addEventListener("abort", handleAbort, { once: true });
-    promise.then(
-      (value) => {
-        cleanup();
-        resolve(value);
-      },
-      (error) => {
-        cleanup();
-        reject(error);
-      }
-    );
+    throw error;
   });
 }
 
@@ -115,41 +82,66 @@ export function createTileSnapshotResponse(snapshot: FiberLocatorTileSnapshot): 
   });
 }
 
-export async function fetchWithTimeout(
-  url: string,
-  timeoutMs: number,
-  init: RequestInit = {}
-): Promise<FetchWithTimeoutResult> {
-  const timeoutController = new AbortController();
-  const externalSignal = init.signal ?? null;
-
-  const onAbort = (): void => {
-    timeoutController.abort();
-  };
-
-  if (externalSignal !== null) {
-    if (externalSignal.aborted) {
-      timeoutController.abort();
-    }
-    externalSignal.addEventListener("abort", onAbort, { once: true });
+function resolveFetchSignal(
+  initSignal: AbortSignal | null | undefined,
+  effectSignal: AbortSignal
+): AbortSignal {
+  if (initSignal instanceof AbortSignal) {
+    return AbortSignal.any([initSignal, effectSignal]);
   }
 
-  const timeoutHandle = setTimeout(() => {
-    timeoutController.abort();
-  }, timeoutMs);
+  return effectSignal;
+}
+
+function fetchResponseEffect(url: string, timeoutMs: number, init: RequestInit = {}) {
+  return Effect.tryPromise({
+    try: (signal) =>
+      fetch(url, {
+        ...init,
+        signal: resolveFetchSignal(init.signal, signal),
+      }),
+    catch: (cause) => cause,
+  }).pipe(
+    Effect.timeoutFail({
+      duration: timeoutMs,
+      onTimeout: () => createAbortError("fiberlocator upstream request timed out"),
+    })
+  );
+}
+
+export async function fetchWithTimeout(url: string, timeoutMs: number, init: RequestInit = {}) {
+  const response = await Effect.runPromise(fetchResponseEffect(url, timeoutMs, init));
+  return { response };
+}
+
+export async function fetchJsonPayloadWithTimeout(
+  url: string,
+  timeoutMs: number,
+  requestName: string,
+  signal?: AbortSignal
+): Promise<unknown> {
+  const requestInit: RequestInit = {
+    method: "GET",
+    headers: {
+      accept: "application/json",
+    },
+  };
+  if (typeof signal !== "undefined") {
+    requestInit.signal = signal;
+  }
+
+  const response = await Effect.runPromise(fetchResponseEffect(url, timeoutMs, requestInit));
+
+  if (!response.ok) {
+    throw new Error(
+      `${requestName} request failed (${String(response.status)} ${response.statusText})`
+    );
+  }
 
   try {
-    const response = await fetch(url, {
-      ...init,
-      signal: timeoutController.signal,
-    });
-
-    return { response };
-  } finally {
-    clearTimeout(timeoutHandle);
-    if (externalSignal !== null) {
-      externalSignal.removeEventListener("abort", onAbort);
-    }
+    return await response.json();
+  } catch {
+    throw new Error(`${requestName} response was not valid JSON`);
   }
 }
 

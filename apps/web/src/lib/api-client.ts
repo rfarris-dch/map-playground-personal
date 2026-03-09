@@ -1,7 +1,7 @@
 import type { SafeParseSchema } from "@map-migration/contracts";
 import { Effect, Either } from "effect";
 import { apiGetJsonEffect } from "@/lib/api-client-effect";
-import { ApiIngestionRunMismatchError, toApiResultFailure } from "@/lib/effect/errors";
+import { toApiResultFailure } from "@/lib/effect/errors";
 import { runBrowserEffect } from "@/lib/effect/runtime";
 import type { ApiResult } from "./api-client.types";
 
@@ -30,13 +30,6 @@ export async function apiGetJson<T>(
       requestId: result.right.requestId,
       data: result.right.data,
     };
-  }
-
-  if (result.left instanceof ApiIngestionRunMismatchError) {
-    throw result.left;
-  }
-  if (typeof result.left === "undefined") {
-    throw new Error("apiGetJsonEffect returned an undefined failure.");
   }
 
   return toApiResultFailure(result.left);

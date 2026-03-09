@@ -1,4 +1,4 @@
-import type { ManagedSyncChildProcess } from "@/sync/parcels-sync/parcels-sync-runtime.types";
+import type { ManagedSyncChildProcess } from "@/sync/sync-loop-runtime.service";
 
 export interface RunSyncScriptHooks {
   readonly onProcessExit?: () => void;

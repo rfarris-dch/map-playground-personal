@@ -2,6 +2,7 @@ import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 
 const addProtocolMock = mock<(scheme: string, action: unknown) => void>();
 const removeProtocolMock = mock<(scheme: string) => void>();
+let lastMapOptions: Record<string, unknown> | null = null;
 
 class ProtocolMock {
   tile() {
@@ -12,6 +13,10 @@ class ProtocolMock {
 class MapMock {
   projection: unknown = null;
   removed = false;
+
+  constructor(options?: Record<string, unknown>) {
+    lastMapOptions = options ?? null;
+  }
 
   addControl(): void {
     /* noop */
@@ -135,6 +140,7 @@ describe("map-engine", () => {
   beforeEach(() => {
     addProtocolMock.mockReset();
     removeProtocolMock.mockReset();
+    lastMapOptions = null;
   });
 
   it("reference-counts the PMTiles protocol registration", () => {
@@ -186,6 +192,7 @@ describe("map-engine", () => {
     const map = adapter.createMap({} as HTMLElement, {
       center: [-96, 32],
       hash: true,
+      maxPitch: 85,
       maxZoom: 18,
       minZoom: 3,
       preserveDrawingBuffer: true,
@@ -197,6 +204,14 @@ describe("map-engine", () => {
 
     await Promise.resolve();
 
+    expect(lastMapOptions).toMatchObject({
+      hash: true,
+      maxPitch: 85,
+      maxZoom: 18,
+      minZoom: 3,
+      style: "mapbox://styles/test",
+      zoom: 6,
+    });
     expect(map.getProjection()).toEqual({ type: "mercator" });
     expect(isZoomInRange(6, 3, 10)).toBe(true);
     expect(isZoomInRange(2, 3, 10)).toBe(false);

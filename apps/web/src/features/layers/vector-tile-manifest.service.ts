@@ -3,30 +3,32 @@ import {
   type TilePublishManifest,
 } from "@map-migration/geo-tiles";
 import { loadTilePublishManifestEffect } from "@map-migration/geo-tiles/effect";
-import {
-  type FetchJsonEffectSuccess,
-  isRequestEffectError,
-  type RequestEffectError,
-} from "@map-migration/ops/effect";
+import type { FetchJsonEffectSuccess, RequestEffectError } from "@map-migration/ops/effect";
 import { Effect, Either } from "effect";
-import { createAbortError } from "@/features/app/runtime-effect/errors";
+import { createAbortError } from "@/lib/effect/errors";
+import { runBrowserEffect } from "@/lib/effect/runtime";
 
 export async function loadVectorTilePublishManifest(args: {
   readonly contextLabel: string;
   readonly manifestPath: string;
   readonly signal?: AbortSignal;
 }): Promise<TilePublishManifest> {
+  const runOptions =
+    typeof args.signal === "undefined"
+      ? undefined
+      : {
+          signal: args.signal,
+        };
   const result: Either.Either<
     FetchJsonEffectSuccess<TilePublishManifest>,
     RequestEffectError
-  > = await Effect.runPromise(
+  > = await runBrowserEffect(
     Effect.either(
       loadTilePublishManifestEffect({
-        contextLabel: args.contextLabel,
         manifestPath: args.manifestPath,
-        ...(typeof args.signal === "undefined" ? {} : { signal: args.signal }),
       })
-    )
+    ),
+    runOptions
   );
 
   if (Either.isRight(result)) {
@@ -34,26 +36,21 @@ export async function loadVectorTilePublishManifest(args: {
   }
 
   const error = result.left;
-  if (!isRequestEffectError(error)) {
-    throw error;
+  switch (error._tag) {
+    case "RequestAbortedError":
+      throw createAbortError();
+    case "RequestNetworkError":
+      throw new Error(`[${args.contextLabel}] failed to load tile manifest`);
+    case "RequestHttpError":
+      throw new Error(
+        `[${args.contextLabel}] failed to load tile manifest (${error.status} ${error.statusText})`
+      );
+    case "RequestJsonParseError":
+    case "RequestSchemaError":
+      throw new Error(`[${args.contextLabel}] failed to parse tile manifest JSON`);
+    default:
+      throw error;
   }
-
-  if (error._tag === "RequestAbortedError") {
-    throw createAbortError();
-  }
-  if (error._tag === "RequestNetworkError") {
-    throw new Error(`[${args.contextLabel}] failed to load tile manifest`);
-  }
-  if (error._tag === "RequestHttpError") {
-    throw new Error(
-      `[${args.contextLabel}] failed to load tile manifest (${error.status} ${error.statusText})`
-    );
-  }
-  if (error._tag === "RequestJsonParseError" || error._tag === "RequestSchemaError") {
-    throw new Error(`[${args.contextLabel}] failed to parse tile manifest JSON`);
-  }
-
-  throw error;
 }
 
 export function createPmtilesSourceUrl(manifest: TilePublishManifest): string {

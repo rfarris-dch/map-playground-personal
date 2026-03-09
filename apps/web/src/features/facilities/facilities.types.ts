@@ -71,8 +71,12 @@ export interface FacilitiesLayerController {
 
 export interface FacilitiesLayerState {
   abortController: AbortController | null;
+  cachedFeatures: FacilitiesFeatureCollection["features"];
   debounceTimer: number | null;
+  fetchedBbox: BBox | null;
   lastFetchKey: string | null;
+  lastRequestId: string | null;
+  lastTruncated: boolean;
   ready: boolean;
   requestSequence: number;
   selectedFeatureId: number | string | null;

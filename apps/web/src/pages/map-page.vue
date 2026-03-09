@@ -218,4 +218,8 @@
     top: 3.9rem;
     right: 0.75rem;
   }
+
+  .map-page-shell .maplibregl-canvas {
+    transition: filter 180ms ease;
+  }
 </style>

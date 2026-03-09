@@ -4,6 +4,7 @@ import type {
   ParcelsSyncRunProgress,
   ParcelsSyncRunReason,
 } from "@/sync/parcels-sync.types";
+import type { ManagedSyncRuntimeState } from "@/sync/sync-loop-runtime.service";
 
 export interface MutableParcelsSyncRunStatus {
   durationMs: number | null;
@@ -45,18 +46,7 @@ export interface MutableParcelsSyncStatusSnapshot {
   snapshotRoot: string;
 }
 
-export interface ParcelsSyncRuntimeState {
-  activeChild: ManagedSyncChildProcess | null;
-  activeRunPromise: Promise<void> | null;
-  intervalHandle: ReturnType<typeof setInterval> | null;
-  isRunning: boolean;
-  isStopping: boolean;
-}
-
-export interface ManagedSyncChildProcess {
-  readonly exited: Promise<number>;
-  kill(signal?: number | string): void;
-}
+export interface ParcelsSyncRuntimeState extends ManagedSyncRuntimeState {}
 
 export interface ParsedRunSummary {
   readonly completedAt: string | null;

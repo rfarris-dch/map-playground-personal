@@ -1,5 +1,5 @@
 import type { FacilitiesFeatureCollection, FacilityPerspective } from "@map-migration/contracts";
-import type { IMap, MapControl } from "@map-migration/map-engine";
+import type { IMap } from "@map-migration/map-engine";
 import type { ComputedRef, ShallowRef } from "vue";
 import type {
   BoundaryControllerState,
@@ -47,7 +47,7 @@ export interface UseAppShellStateResult {
   readonly clearSelectionGeometry: () => void;
   readonly clearSketchMeasure: () => void;
   readonly colocationViewportFeatures: ShallowRef<FacilitiesFeatureCollection["features"]>;
-  readonly disposePmtilesProtocol: ShallowRef<(() => void) | null>;
+  readonly disposeMapRuntime: ShallowRef<(() => Promise<void>) | null>;
   readonly environmentalStressController: ShallowRef<EnvironmentalStressController | null>;
   readonly facilitiesControllers: ShallowRef<readonly FacilitiesLayerController[]>;
   readonly facilitiesHoverController: ShallowRef<FacilitiesHoverController | null>;
@@ -66,12 +66,10 @@ export interface UseAppShellStateResult {
   readonly layerRuntimeSnapshot: ShallowRef<LayerRuntimeSnapshot | null>;
   readonly map: ShallowRef<IMap | null>;
   readonly mapContainer: Readonly<ShallowRef<HTMLDivElement | null>>;
-  readonly mapControls: ShallowRef<readonly MapControl[]>;
   readonly parcelsController: ShallowRef<ParcelsLayerController | null>;
   readonly parcelsStatus: ShallowRef<ParcelsStatus>;
   readonly powerControllers: ShallowRef<readonly PowerLayerVisibilityController[]>;
   readonly powerHoverController: ShallowRef<PowerHoverController | null>;
-  readonly restoreConsoleWarn: ShallowRef<(() => void) | null>;
   readonly selectionGeometry: ShallowRef<SketchAreaGeometry | null>;
   readonly setSketchMeasureAreaShape: (shape: SketchMeasureAreaShape) => void;
   readonly setSketchMeasureMode: (mode: SketchMeasureMode) => void;

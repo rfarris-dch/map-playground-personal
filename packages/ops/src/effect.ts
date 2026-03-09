@@ -105,7 +105,7 @@ function resolveRequestSignal(
   effectSignal: AbortSignal
 ) {
   if (initSignal instanceof AbortSignal) {
-    return initSignal;
+    return AbortSignal.any([initSignal, effectSignal]);
   }
 
   return effectSignal;

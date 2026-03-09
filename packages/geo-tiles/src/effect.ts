@@ -19,7 +19,6 @@ const tilePublishManifestSchema: SafeParseSchema<TilePublishManifest> = {
 };
 
 export interface LoadTilePublishManifestEffectArgs {
-  readonly contextLabel?: string;
   readonly fetchImplementation?: typeof fetch;
   readonly manifestPath: string;
   readonly signal?: AbortSignal;

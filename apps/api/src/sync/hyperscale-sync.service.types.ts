@@ -1,12 +1,3 @@
-export interface ManagedSyncChildProcess {
-  readonly exited: Promise<number>;
-  kill(signal?: number | string): void;
-}
+import type { ManagedSyncRuntimeState } from "@/sync/sync-loop-runtime.service";
 
-export interface HyperscaleSyncRuntimeState {
-  activeChild: ManagedSyncChildProcess | null;
-  activeRunPromise: Promise<void> | null;
-  intervalHandle: ReturnType<typeof setInterval> | null;
-  isRunning: boolean;
-  isStopping: boolean;
-}
+export interface HyperscaleSyncRuntimeState extends ManagedSyncRuntimeState {}

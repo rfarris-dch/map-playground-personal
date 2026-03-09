@@ -4,7 +4,6 @@ import {
   destroyMapLifecycleRuntime,
   initializeMapLifecycleRuntime,
   resetMapLifecycleInteractions,
-  restoreSuppressedGlyphWarnings,
 } from "@/features/app/lifecycle/app-shell-map-lifecycle.service";
 import type { UseAppShellMapLifecycleOptions } from "@/features/app/lifecycle/use-app-shell-map-lifecycle.types";
 
@@ -28,16 +27,15 @@ export function useAppShellMapLifecycle(options: UseAppShellMapLifecycleOptions)
   );
 
   onMounted(() => {
-    try {
-      options.runtime.restoreConsoleWarn.value = restoreSuppressedGlyphWarnings();
-      initializeMapLifecycleRuntime(options);
-    } catch (error: unknown) {
+    initializeMapLifecycleRuntime(options).catch((error: unknown) => {
       console.error("Map initialization failed", error);
-    }
+    });
   });
 
   onBeforeUnmount(() => {
-    destroyMapLifecycleRuntime(options);
+    destroyMapLifecycleRuntime(options).catch((error: unknown) => {
+      console.error("Map teardown failed", error);
+    });
   });
 
   return {

@@ -1,37 +1,59 @@
+import { type Effect, Exit, Scope } from "effect";
 import {
   destroyBoundaryRuntime,
   initializeBoundaryRuntime,
   resetBoundaryRuntime,
 } from "@/features/app/boundary/app-shell-boundary-runtime.service";
-import {
-  initializeAppShellMap,
-  suppressMapLibreGlyphWarnings,
-} from "@/features/app/lifecycle/app-shell-map.service";
+import { initializeAppShellMapEffect } from "@/features/app/lifecycle/app-shell-map.service";
 import {
   destroyMapLayerRuntime,
   initializeMapLayerRuntime,
 } from "@/features/app/lifecycle/app-shell-map-layer-runtime.service";
 import type { UseAppShellMapLifecycleOptions } from "@/features/app/lifecycle/use-app-shell-map-lifecycle.types";
 import { createLayerRuntime } from "@/features/layers/layer-runtime.service";
+import { runBrowserEffect } from "@/lib/effect/runtime";
 
-export function initializeMapLifecycleRuntime(options: UseAppShellMapLifecycleOptions): void {
+async function startScopedEffect<TValue>(
+  program: Effect.Effect<TValue, never, Scope.Scope>
+): Promise<{
+  readonly dispose: () => Promise<void>;
+  readonly value: TValue;
+}> {
+  const scope = await runBrowserEffect(Scope.make());
+
+  try {
+    const value = await runBrowserEffect(Scope.extend(program, scope));
+    return {
+      dispose: () => runBrowserEffect(Scope.close(scope, Exit.succeed(undefined))),
+      value,
+    };
+  } catch (error) {
+    await runBrowserEffect(Scope.close(scope, Exit.die(error)));
+    throw error;
+  }
+}
+
+export async function initializeMapLifecycleRuntime(
+  options: UseAppShellMapLifecycleOptions
+): Promise<void> {
   const container = options.runtime.mapContainer.value;
   if (container === null) {
     return;
   }
 
-  const mapSetup = initializeAppShellMap(container, {
-    initialViewport: options.initialViewport,
-  });
-  options.runtime.disposePmtilesProtocol.value = mapSetup.disposePmtilesProtocol;
-  options.runtime.map.value = mapSetup.map;
-  options.runtime.layerRuntime.value = createLayerRuntime(mapSetup.map, {
+  const mapSetup = await startScopedEffect(
+    initializeAppShellMapEffect(container, {
+      initialViewport: options.initialViewport,
+    })
+  );
+  options.runtime.disposeMapRuntime.value = mapSetup.dispose;
+  options.runtime.map.value = mapSetup.value.map;
+  options.runtime.layerRuntime.value = createLayerRuntime(mapSetup.value.map, {
     onSnapshot: (snapshot) => {
       options.state.layerRuntimeSnapshot.value = snapshot;
     },
   });
-  options.runtime.basemapLayerController.value = mapSetup.basemapLayerController;
-  options.runtime.mapControls.value = mapSetup.controls;
+  options.runtime.basemapLayerController.value = mapSetup.value.basemapLayerController;
   options.visibility.applyBasemapVisibility();
 
   initializeBoundaryRuntime(options);
@@ -50,37 +72,19 @@ export function resetMapLifecycleInteractions(options: UseAppShellMapLifecycleOp
   options.fiber.clearFiberHover();
 }
 
-export function destroyMapLifecycleRuntime(options: UseAppShellMapLifecycleOptions): void {
-  options.runtime.basemapLayerController.value?.destroy();
+export async function destroyMapLifecycleRuntime(
+  options: UseAppShellMapLifecycleOptions
+): Promise<void> {
   options.runtime.basemapLayerController.value = null;
 
   destroyMapLayerRuntime(options);
   destroyBoundaryRuntime(options);
 
-  const currentMap = options.runtime.map.value;
-
   options.runtime.layerRuntime.value?.destroy();
   options.runtime.layerRuntime.value = null;
   options.state.layerRuntimeSnapshot.value = null;
-
-  if (currentMap !== null) {
-    options.runtime.mapControls.value.reduce((_, control) => {
-      currentMap.removeControl(control);
-      return 0;
-    }, 0);
-  }
-
-  options.runtime.mapControls.value = [];
-  currentMap?.destroy();
+  const disposeMapRuntime = options.runtime.disposeMapRuntime.value;
+  options.runtime.disposeMapRuntime.value = null;
+  await disposeMapRuntime?.();
   options.runtime.map.value = null;
-
-  options.runtime.disposePmtilesProtocol.value?.();
-  options.runtime.disposePmtilesProtocol.value = null;
-
-  options.runtime.restoreConsoleWarn.value?.();
-  options.runtime.restoreConsoleWarn.value = null;
-}
-
-export function restoreSuppressedGlyphWarnings(): () => void {
-  return suppressMapLibreGlyphWarnings();
 }

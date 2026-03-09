@@ -91,6 +91,7 @@ export interface FeatureStateTarget {
 export interface MapCreateOptions {
   readonly center: LngLat;
   readonly hash?: boolean;
+  readonly maxPitch?: number;
   readonly maxZoom?: number;
   readonly minZoom?: number;
   readonly preserveDrawingBuffer?: boolean;

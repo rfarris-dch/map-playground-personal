@@ -56,6 +56,21 @@ export function isAbortError(error: unknown): boolean {
   return Reflect.get(error, "name") === "AbortError";
 }
 
+export function createAbortError(): Error | DOMException {
+  if (typeof DOMException !== "undefined") {
+    return new DOMException("The operation was aborted.", "AbortError");
+  }
+
+  const error = new Error("The operation was aborted.");
+  Object.defineProperty(error, "name", {
+    configurable: true,
+    enumerable: false,
+    value: "AbortError",
+    writable: true,
+  });
+  return error;
+}
+
 export function getApiErrorMessage(error: ApiEffectError, fallbackMessage: string): string {
   if ("message" in error && typeof error.message === "string" && error.message.length > 0) {
     return error.message;

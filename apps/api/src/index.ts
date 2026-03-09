@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { type ServerType, serve } from "@hono/node-server";
+import { Effect } from "effect";
 import { createApiApp } from "@/app";
 import { closePostgresPool } from "@/db/postgres";
 
@@ -58,51 +59,42 @@ function killListeningPids(pids: readonly number[]): void {
   }
 }
 
-function wait(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
-}
-
-async function forceClearPortBeforeStart(port: number): Promise<void> {
+function forceClearPortBeforeStartEffect(port: number): Effect.Effect<void, Error> {
   if (!isForcePortKillEnabled()) {
-    return;
+    return Effect.void;
   }
 
-  for (let attempt = 0; attempt < 12; attempt += 1) {
-    const otherPids = listListeningPids(port).filter((pid) => pid !== process.pid);
-    if (otherPids.length === 0) {
-      return;
-    }
-
-    console.warn(`[api] force clearing port ${String(port)}: ${otherPids.join(", ")}`);
-    killListeningPids(otherPids);
-    await wait(150);
-  }
-
-  const remainingPids = listListeningPids(port).filter((pid) => pid !== process.pid);
-  if (remainingPids.length > 0) {
-    throw new Error(
-      `Failed to clear port ${String(port)} before start: ${remainingPids.join(", ")}`
-    );
-  }
-}
-
-function closeServer(): Promise<void> {
-  const activeServer = server;
-  if (activeServer === null) {
-    return Promise.resolve();
-  }
-
-  return new Promise((resolve, reject) => {
-    activeServer.close((error) => {
-      server = null;
-      if (error) {
-        reject(error);
+  return Effect.gen(function* () {
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      const otherPids = listListeningPids(port).filter((pid) => pid !== process.pid);
+      if (otherPids.length === 0) {
         return;
       }
 
-      resolve();
+      console.warn(`[api] force clearing port ${String(port)}: ${otherPids.join(", ")}`);
+      killListeningPids(otherPids);
+      yield* Effect.sleep("150 millis");
+    }
+
+    const remainingPids = listListeningPids(port).filter((pid) => pid !== process.pid);
+    if (remainingPids.length > 0) {
+      yield* Effect.fail(
+        new Error(`Failed to clear port ${String(port)} before start: ${remainingPids.join(", ")}`)
+      );
+    }
+  });
+}
+
+function closeServerEffect(): Effect.Effect<void, Error> {
+  const activeServer = server;
+  if (activeServer === null) {
+    return Effect.void;
+  }
+
+  return Effect.async<void, Error>((resume) => {
+    activeServer.close((error) => {
+      server = null;
+      resume(error ? Effect.fail(error) : Effect.void);
     });
   });
 }
@@ -113,10 +105,12 @@ function shutdown(signal: string): Promise<void> {
   }
 
   console.log(`[api] shutting down (${signal})`);
-  shutdownPromise = (async () => {
-    await closeServer();
-    await closePostgresPool();
-  })();
+  shutdownPromise = Effect.runPromise(
+    Effect.gen(function* () {
+      yield* closeServerEffect();
+      yield* Effect.tryPromise(() => closePostgresPool());
+    })
+  );
   return shutdownPromise;
 }
 
@@ -134,25 +128,22 @@ process.on("SIGTERM", () => {
   });
 });
 
-async function startServer(): Promise<void> {
-  await forceClearPortBeforeStart(port);
-  server = serve(
-    {
-      fetch: app.fetch,
-      port,
-    },
-    (info) => {
-      console.log(`[api] listening on http://localhost:${info.port}`);
-    }
-  );
+function startServerEffect(): Effect.Effect<void, Error> {
+  return Effect.gen(function* () {
+    yield* forceClearPortBeforeStartEffect(port);
+    server = serve(
+      {
+        fetch: app.fetch,
+        port,
+      },
+      (info) => {
+        console.log(`[api] listening on http://localhost:${info.port}`);
+      }
+    );
+  });
 }
 
-try {
-  startServer().catch((error) => {
-    console.error("[api] startup failure", error);
-    process.exit(1);
-  });
-} catch (error) {
+Effect.runPromise(startServerEffect()).catch((error) => {
   console.error("[api] startup failure", error);
   process.exit(1);
-}
+});

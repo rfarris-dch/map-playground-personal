@@ -1,12 +1,7 @@
 import { createPmtilesSourceUrl as createPmtilesSourceUrlFromManifest } from "@map-migration/geo-tiles";
 import { loadTilePublishManifestEffect } from "@map-migration/geo-tiles/effect";
-import {
-  type FetchJsonEffectSuccess,
-  isRequestEffectError,
-  type RequestEffectError,
-} from "@map-migration/ops/effect";
+import type { FetchJsonEffectSuccess, RequestEffectError } from "@map-migration/ops/effect";
 import { Effect, Either } from "effect";
-import { createAbortError } from "@/features/app/runtime-effect/errors";
 import type {
   StressGovernorController,
   StressGovernorOptions,
@@ -18,6 +13,8 @@ import type {
   ParcelsStatus,
   TilePublishManifest,
 } from "@/features/parcels/parcels.types";
+import { createAbortError } from "@/lib/effect/errors";
+import { runBrowserEffect } from "@/lib/effect/runtime";
 
 function toRadians(value: number): number {
   return (value * Math.PI) / 180;
@@ -71,16 +68,22 @@ function normalizeEastLongitude(west: number, east: number): number {
 export async function loadParcelsManifest(
   args: LoadParcelsManifestArgs
 ): Promise<TilePublishManifest> {
+  const runOptions =
+    typeof args.signal === "undefined"
+      ? undefined
+      : {
+          signal: args.signal,
+        };
   const result: Either.Either<
     FetchJsonEffectSuccess<TilePublishManifest>,
     RequestEffectError
-  > = await Effect.runPromise(
+  > = await runBrowserEffect(
     Effect.either(
       loadTilePublishManifestEffect({
         manifestPath: args.manifestPath,
-        ...(typeof args.signal === "undefined" ? {} : { signal: args.signal }),
       })
-    )
+    ),
+    runOptions
   );
 
   if (Either.isRight(result)) {
@@ -88,24 +91,19 @@ export async function loadParcelsManifest(
   }
 
   const error = result.left;
-  if (!isRequestEffectError(error)) {
-    throw error;
+  switch (error._tag) {
+    case "RequestAbortedError":
+      throw createAbortError();
+    case "RequestNetworkError":
+      throw error.cause;
+    case "RequestHttpError":
+      throw new Error(`Failed to load parcels manifest (${error.status} ${error.statusText})`);
+    case "RequestJsonParseError":
+    case "RequestSchemaError":
+      throw new Error("Failed to parse parcels manifest JSON");
+    default:
+      throw error;
   }
-
-  if (error._tag === "RequestAbortedError") {
-    throw createAbortError();
-  }
-  if (error._tag === "RequestNetworkError") {
-    throw error.cause;
-  }
-  if (error._tag === "RequestHttpError") {
-    throw new Error(`Failed to load parcels manifest (${error.status} ${error.statusText})`);
-  }
-  if (error._tag === "RequestJsonParseError" || error._tag === "RequestSchemaError") {
-    throw new Error("Failed to parse parcels manifest JSON");
-  }
-
-  throw error;
 }
 
 export function createPmtilesSourceUrl(manifest: TilePublishManifest): string {

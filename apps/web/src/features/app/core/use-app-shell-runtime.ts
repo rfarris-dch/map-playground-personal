@@ -96,12 +96,10 @@ export function useAppShellRuntime(
     },
     runtime: {
       basemapLayerController: state.basemapLayerController,
-      disposePmtilesProtocol: state.disposePmtilesProtocol,
+      disposeMapRuntime: state.disposeMapRuntime,
       layerRuntime: state.layerRuntime,
       map: state.map,
       mapContainer: state.mapContainer,
-      mapControls: state.mapControls,
-      restoreConsoleWarn: state.restoreConsoleWarn,
     },
     state: {
       boundaryFacetOptions: state.boundaryFacetOptions,

@@ -16,63 +16,14 @@ import type {
   ParcelsSyncController,
   ParcelsSyncRunReason,
 } from "@/sync/parcels-sync.types";
+import {
+  createDisabledSyncController,
+  createManagedSyncRuntimeState,
+  scheduleManagedSyncRun,
+  startManagedSyncInterval,
+  stopManagedSyncLoop,
+} from "@/sync/sync-loop-runtime.service";
 import type { RunCycleArgs } from "./parcels-sync-loop.application.service.types";
-
-const SYNC_STOP_WAIT_TIMEOUT_MS = 15_000;
-
-function createDisabledController(): ParcelsSyncController {
-  return {
-    stop(): Promise<void> {
-      return Promise.resolve();
-    },
-  };
-}
-
-function waitForDelay(milliseconds: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, milliseconds);
-  });
-}
-
-async function terminateActiveProcess(runtimeState: ParcelsSyncRuntimeState): Promise<void> {
-  const activeChild = runtimeState.activeChild;
-  if (activeChild === null) {
-    return;
-  }
-
-  try {
-    activeChild.kill("SIGTERM");
-  } catch {
-    // Ignore termination errors and continue waiting for process exit.
-  }
-
-  const exitedAfterTerminate = await Promise.race([
-    activeChild.exited.then(() => true),
-    waitForDelay(SYNC_STOP_WAIT_TIMEOUT_MS).then(() => false),
-  ]);
-  if (exitedAfterTerminate) {
-    return;
-  }
-
-  try {
-    activeChild.kill("SIGKILL");
-  } catch {
-    // Ignore forced termination errors and continue waiting for process exit.
-  }
-
-  await Promise.race([activeChild.exited, waitForDelay(SYNC_STOP_WAIT_TIMEOUT_MS)]);
-}
-
-function scheduleRunCycle(args: RunCycleArgs): Promise<void> {
-  const { runtimeState } = args;
-  const promise = runCycle(args).finally(() => {
-    if (runtimeState.activeRunPromise === promise) {
-      runtimeState.activeRunPromise = null;
-    }
-  });
-  runtimeState.activeRunPromise = promise;
-  return promise;
-}
 
 async function runCycle(args: RunCycleArgs): Promise<void> {
   const statusStore = getParcelsSyncStatusStore();
@@ -138,18 +89,22 @@ async function runCycle(args: RunCycleArgs): Promise<void> {
 }
 
 function startInterval(runtimeState: ParcelsSyncRuntimeState, config: ParcelsSyncConfig): void {
-  runtimeState.intervalHandle = setInterval(() => {
-    scheduleRunCycle({
-      config,
-      failOnError: false,
-      reason: "interval",
-      runtimeState,
-    }).catch((error) => {
+  startManagedSyncInterval(
+    runtimeState,
+    config.intervalMs,
+    () =>
+      runCycle({
+        config,
+        failOnError: false,
+        reason: "interval",
+        runtimeState,
+      }),
+    (error) => {
       const statusStore = getParcelsSyncStatusStore();
       statusStore.markRunFailed(String(error));
       console.error("[api] parcels auto-sync interval failure", error);
-    });
-  }, config.intervalMs);
+    }
+  );
 }
 
 export async function startParcelsSyncLoop(): Promise<ParcelsSyncController> {
@@ -158,34 +113,30 @@ export async function startParcelsSyncLoop(): Promise<ParcelsSyncController> {
 
   if (!config.enabled) {
     console.log("[api] parcels auto-sync disabled");
-    return createDisabledController();
+    return createDisabledSyncController();
   }
 
   if (config.mode === "external") {
     console.log(
       "[api] parcels auto-sync configured for external mode; skipping in-process sync loop"
     );
-    return createDisabledController();
+    return createDisabledSyncController();
   }
 
   if (!existsSync(config.syncScriptPath)) {
     throw new Error(`[api] parcels sync script not found: ${config.syncScriptPath}`);
   }
 
-  const runtimeState: ParcelsSyncRuntimeState = {
-    activeChild: null,
-    activeRunPromise: null,
-    intervalHandle: null,
-    isRunning: false,
-    isStopping: false,
-  };
+  const runtimeState: ParcelsSyncRuntimeState = createManagedSyncRuntimeState();
 
-  await scheduleRunCycle({
-    config,
-    failOnError: config.requireStartupSuccess,
-    reason: "startup",
-    runtimeState,
-  });
+  await scheduleManagedSyncRun(runtimeState, () =>
+    runCycle({
+      config,
+      failOnError: config.requireStartupSuccess,
+      reason: "startup",
+      runtimeState,
+    })
+  );
 
   startInterval(runtimeState, config);
 
@@ -196,24 +147,8 @@ export async function startParcelsSyncLoop(): Promise<ParcelsSyncController> {
   );
 
   return {
-    async stop(): Promise<void> {
-      if (runtimeState.isStopping) {
-        return;
-      }
-
-      runtimeState.isStopping = true;
-      if (runtimeState.intervalHandle) {
-        clearInterval(runtimeState.intervalHandle);
-        runtimeState.intervalHandle = null;
-      }
-
-      await terminateActiveProcess(runtimeState);
-      if (runtimeState.activeRunPromise !== null) {
-        await Promise.race([
-          runtimeState.activeRunPromise,
-          waitForDelay(SYNC_STOP_WAIT_TIMEOUT_MS),
-        ]);
-      }
+    stop(): Promise<void> {
+      return stopManagedSyncLoop(runtimeState);
     },
   };
 }
