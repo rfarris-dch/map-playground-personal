@@ -1,15 +1,22 @@
 import {
   buildCountyScoresRoute,
   buildCountyScoresStatusRoute,
+  type CountyScoresResponse,
   CountyScoresResponseSchema,
+  type CountyScoresStatusResponse,
   CountyScoresStatusResponseSchema,
 } from "@map-migration/contracts";
+import {
+  type ApiEffectError,
+  type ApiEffectSuccess,
+  apiGetJson,
+  apiGetJsonEffect,
+} from "@map-migration/core-runtime/api";
+import type { Effect } from "effect";
 import type {
   CountyScoresFetchResult,
   CountyScoresStatusFetchResult,
 } from "@/features/county-scores/county-scores.types";
-import { apiGetJson } from "@/lib/api-client";
-import { apiGetJsonEffect } from "@/lib/api-client-effect";
 
 export function fetchCountyScores(
   countyIds: readonly string[],
@@ -30,7 +37,10 @@ export function fetchCountyScoresStatus(
   return apiGetJson(buildCountyScoresStatusRoute(), CountyScoresStatusResponseSchema, init);
 }
 
-export function fetchCountyScoresEffect(countyIds: readonly string[], init: RequestInit = {}) {
+export function fetchCountyScoresEffect(
+  countyIds: readonly string[],
+  init: RequestInit = {}
+): Effect.Effect<ApiEffectSuccess<CountyScoresResponse>, ApiEffectError, never> {
   return apiGetJsonEffect(
     buildCountyScoresRoute({
       countyIds,
@@ -40,6 +50,8 @@ export function fetchCountyScoresEffect(countyIds: readonly string[], init: Requ
   );
 }
 
-export function fetchCountyScoresStatusEffect(init: RequestInit = {}) {
+export function fetchCountyScoresStatusEffect(
+  init: RequestInit = {}
+): Effect.Effect<ApiEffectSuccess<CountyScoresStatusResponse>, ApiEffectError, never> {
   return apiGetJsonEffect(buildCountyScoresStatusRoute(), CountyScoresStatusResponseSchema, init);
 }

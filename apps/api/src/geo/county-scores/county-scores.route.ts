@@ -173,9 +173,10 @@ export function registerCountyScoresRoute<E extends Env>(app: Hono<E>): void {
         const payload: CountyScoresResponse = {
           rows: [...countyScoresResult.value.rows],
           summary: {
+            blockedCountyIds: [...countyScoresResult.value.blockedCountyIds],
+            deferredCountyIds: [...countyScoresResult.value.deferredCountyIds],
             requestedCountyIds: [...countyScoresResult.value.requestedCountyIds],
             missingCountyIds: [...countyScoresResult.value.missingCountyIds],
-            unavailableCountyIds: [...countyScoresResult.value.unavailableCountyIds],
           },
           meta: buildResponseMeta({
             dataVersion: countyScoresResult.value.dataVersion,

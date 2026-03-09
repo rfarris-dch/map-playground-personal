@@ -3,7 +3,7 @@ import type {
   ProvidersTableResponse,
   SortDirection,
 } from "@map-migration/contracts";
-import type { ApiResult } from "@/lib/api-client";
+import type { ApiResult } from "@map-migration/core-runtime/api";
 
 export interface ProvidersTableRequest {
   readonly page: number;

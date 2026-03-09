@@ -12,26 +12,29 @@ import type {
 } from "./county-scores.service.types";
 
 const COUNTY_SCORES_RELATION_NAMES: readonly string[] = [
-  "analytics.county_scores_v1",
-  "analytics.county_metrics_v1",
-  "analytics_meta.county_score_publications",
+  "analytics.county_market_pressure_current",
+  "analytics.dim_county",
+  "analytics.fact_publication",
 ];
 
 function compareCountyScores(left: CountyScore, right: CountyScore): number {
-  if (left.compositeScore === null && right.compositeScore === null) {
-    return left.countyFips.localeCompare(right.countyFips);
-  }
-
-  if (left.compositeScore === null) {
+  if (left.marketPressureIndex !== null && right.marketPressureIndex !== null) {
+    if (left.marketPressureIndex !== right.marketPressureIndex) {
+      return right.marketPressureIndex - left.marketPressureIndex;
+    }
+  } else if (left.marketPressureIndex === null && right.marketPressureIndex !== null) {
     return 1;
-  }
-
-  if (right.compositeScore === null) {
+  } else if (left.marketPressureIndex !== null && right.marketPressureIndex === null) {
     return -1;
   }
 
-  if (left.compositeScore !== right.compositeScore) {
-    return right.compositeScore - left.compositeScore;
+  if (left.rankStatus !== right.rankStatus) {
+    const rankOrder = new Map<string, number>([
+      ["blocked", 0],
+      ["ranked", 1],
+      ["deferred", 2],
+    ]);
+    return (rankOrder.get(left.rankStatus) ?? 3) - (rankOrder.get(right.rankStatus) ?? 3);
   }
 
   return left.countyFips.localeCompare(right.countyFips);
@@ -75,10 +78,6 @@ function isCountyReferenceAvailable(row: CountyScoreRow): boolean {
   return readBooleanFlag(row.has_county_reference);
 }
 
-function isCountyScoreAvailable(row: CountyScoreRow): boolean {
-  return readBooleanFlag(row.has_county_score);
-}
-
 function missingCountyIds(
   requestedCountyIds: readonly string[],
   rows: readonly CountyScoreRow[]
@@ -88,26 +87,6 @@ function missingCountyIds(
   );
 
   return requestedCountyIds.filter((countyId) => !returnedCountyIds.has(countyId));
-}
-
-function unavailableCountyIds(
-  requestedCountyIds: readonly string[],
-  rows: readonly CountyScoreRow[]
-): readonly string[] {
-  const availableCountyIds = new Set(
-    rows
-      .filter((row) => isCountyReferenceAvailable(row) && isCountyScoreAvailable(row))
-      .map((row) => row.county_fips)
-  );
-  const unavailableReferenceCountyIds = new Set(
-    rows
-      .filter((row) => isCountyReferenceAvailable(row) && !isCountyScoreAvailable(row))
-      .map((row) => row.county_fips)
-  );
-
-  return requestedCountyIds.filter(
-    (countyId) => unavailableReferenceCountyIds.has(countyId) && !availableCountyIds.has(countyId)
-  );
 }
 
 function readNullableText(value: string | null | undefined): string | null {
@@ -229,24 +208,14 @@ function mapCountyScoresStatusRow(
     row.missing_feature_families,
     "missing_feature_families"
   );
-  const rowCount = readNonNegativeInteger(row.score_row_count, "score_row_count");
-  const metricsRowCount = readNonNegativeInteger(row.metrics_row_count, "metrics_row_count");
+  const rowCount = readNonNegativeInteger(row.row_count, "row_count");
   const sourceCountyCount = readNonNegativeInteger(row.source_county_count, "source_county_count");
-  const scoredCountyCount =
-    typeof row.scored_county_count === "undefined" || row.scored_county_count === null
-      ? rowCount
-      : readNonNegativeInteger(row.scored_county_count, "scored_county_count");
-  const waterCoverageCount =
-    typeof row.water_coverage_count === "undefined" || row.water_coverage_count === null
-      ? 0
-      : readNonNegativeInteger(row.water_coverage_count, "water_coverage_count");
 
   return {
     datasetAvailable:
       readNullableText(row.publication_status) === "published" &&
       readNullableText(row.publication_run_id) !== null &&
-      rowCount > 0 &&
-      metricsRowCount > 0,
+      rowCount > 0,
     publicationRunId: readNullableText(row.publication_run_id),
     publishedAt: readNullableIsoDateTime(row.published_at, "published_at"),
     methodologyId: readNullableText(row.methodology_id),
@@ -255,23 +224,49 @@ function mapCountyScoresStatusRow(
     formulaVersion: readNullableText(row.formula_version),
     rowCount,
     sourceCountyCount,
-    scoredCountyCount,
-    waterCoverageCount,
+    rankedCountyCount: readNonNegativeInteger(row.ranked_county_count ?? 0, "ranked_county_count"),
+    deferredCountyCount: readNonNegativeInteger(
+      row.deferred_county_count ?? 0,
+      "deferred_county_count"
+    ),
+    blockedCountyCount: readNonNegativeInteger(
+      row.blocked_county_count ?? 0,
+      "blocked_county_count"
+    ),
+    highConfidenceCount: readNonNegativeInteger(
+      row.high_confidence_count ?? 0,
+      "high_confidence_count"
+    ),
+    mediumConfidenceCount: readNonNegativeInteger(
+      row.medium_confidence_count ?? 0,
+      "medium_confidence_count"
+    ),
+    lowConfidenceCount: readNonNegativeInteger(
+      row.low_confidence_count ?? 0,
+      "low_confidence_count"
+    ),
+    freshCountyCount: readNonNegativeInteger(row.fresh_county_count ?? 0, "fresh_county_count"),
     availableFeatureFamilies: [...availableFeatureFamilies],
     missingFeatureFamilies: [...missingFeatureFamilies],
     featureCoverage: {
-      enterprise: hasFeature(availableFeatureFamilies, "enterprise"),
-      facilities: hasFeature(availableFeatureFamilies, "facilities"),
-      fiber: hasFeature(availableFeatureFamilies, "fiber"),
-      hazards: hasFeature(availableFeatureFamilies, "hazards"),
-      hyperscale: hasFeature(availableFeatureFamilies, "hyperscale"),
+      demand: hasFeature(availableFeatureFamilies, "demand"),
+      gridFriction: hasFeature(availableFeatureFamilies, "grid_friction"),
+      history: hasFeature(availableFeatureFamilies, "history"),
+      infrastructure: hasFeature(availableFeatureFamilies, "infrastructure"),
+      marketSeams: hasFeature(availableFeatureFamilies, "market_seams"),
+      narratives: hasFeature(availableFeatureFamilies, "narratives"),
       policy: hasFeature(availableFeatureFamilies, "policy"),
-      terrain: hasFeature(availableFeatureFamilies, "terrain"),
-      transmission: hasFeature(availableFeatureFamilies, "transmission"),
-      utilityTerritory: hasFeature(availableFeatureFamilies, "utility_territory"),
-      waterStress: hasFeature(availableFeatureFamilies, "water_stress"),
+      supplyTimeline: hasFeature(availableFeatureFamilies, "supply_timeline"),
     },
   };
+}
+
+function deferredCountyIds(rows: readonly CountyScore[]): readonly string[] {
+  return rows.filter((row) => row.rankStatus === "deferred").map((row) => row.countyFips);
+}
+
+function blockedCountyIds(rows: readonly CountyScore[]): readonly string[] {
+  return rows.filter((row) => row.rankStatus === "blocked").map((row) => row.countyFips);
 }
 
 export async function queryCountyScores(
@@ -313,7 +308,7 @@ export async function queryCountyScores(
         ok: false,
         value: {
           reason: "source_unavailable",
-          error: new Error("county scores publication is unavailable"),
+          error: new Error("county market-pressure publication is unavailable"),
         },
       };
     }
@@ -331,11 +326,12 @@ export async function queryCountyScores(
     return {
       ok: true,
       value: {
+        blockedCountyIds: blockedCountyIds(mappedRows),
         dataVersion: publicationDataVersion,
+        deferredCountyIds: deferredCountyIds(mappedRows),
         rows: mappedRows,
         missingCountyIds: missingCountyIds(requestedCountyIds, rows),
         requestedCountyIds,
-        unavailableCountyIds: unavailableCountyIds(requestedCountyIds, rows),
       },
     };
   } catch (error) {

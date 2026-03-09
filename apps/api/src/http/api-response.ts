@@ -7,7 +7,7 @@ import {
 import {
   createRequestId,
   normalizeRequestIdHeader as normalizeRequestIdHeaderValue,
-} from "@map-migration/ops";
+} from "@map-migration/core-runtime";
 import type { Context } from "hono";
 import type { ErrorEnvelopeArgs, JsonErrorArgs } from "./api-response.types";
 

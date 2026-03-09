@@ -11,7 +11,7 @@
 <template>
   <aside
     v-if="props.hoverState !== null"
-    class="pointer-events-none absolute z-30 min-w-56 rounded-md border border-border/90 bg-card/95 p-2 shadow-md backdrop-blur-sm"
+    class="map-glass-panel-soft pointer-events-none absolute z-30 min-w-56 rounded-md p-2"
     :style="{
       left: `${props.hoverState.screenPoint[0] + 12}px`,
       top: `${props.hoverState.screenPoint[1] + 12}px`,

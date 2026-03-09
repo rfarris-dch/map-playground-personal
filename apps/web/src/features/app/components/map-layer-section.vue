@@ -10,7 +10,7 @@
   <AccordionItem :value="props.value" class="border-b border-border/70 last:border-b-0">
     <AccordionHeader>
       <AccordionTrigger
-        class="flex w-full items-center justify-between px-3 py-2 text-left text-xs font-semibold tracking-wide transition hover:bg-muted/40 [&[data-state=open]>svg]:rotate-180"
+        class="flex w-full items-center justify-between px-3 py-2 text-left text-xs font-semibold tracking-wide transition hover:bg-white/18 [&[data-state=open]>svg]:rotate-180"
       >
         {{ props.title }}
         <ChevronDown

@@ -85,7 +85,7 @@
 
 <template>
   <table class="w-full border-collapse text-[11px]">
-    <thead class="sticky top-0 z-10 bg-card/95 backdrop-blur-sm">
+    <thead class="map-glass-panel-soft sticky top-0 z-10">
       <tr
         class="border-b border-border/60 text-left text-[10px] uppercase tracking-wide text-muted-foreground"
       >

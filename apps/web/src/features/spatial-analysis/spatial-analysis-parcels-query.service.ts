@@ -3,21 +3,26 @@ import type {
   ParcelsFeatureCollection,
   Warning,
 } from "@map-migration/contracts";
-import { Effect, Either } from "effect";
+import {
+  type ApiEffectError,
+  type ApiEffectSuccess,
+  toApiResultFailure,
+} from "@map-migration/core-runtime/api";
+import { runEffectPromise } from "@map-migration/core-runtime/effect";
+import { Data, Effect, Either } from "effect";
 import { fetchParcelsBySelectionEffect } from "@/features/measure/measure-analysis.api";
 import type {
   FetchSpatialAnalysisParcelsPagesArgs,
   SpatialAnalysisParcelsPagesResult,
 } from "@/features/spatial-analysis/spatial-analysis-parcels-query.service.types";
-import type { ApiEffectSuccess } from "@/lib/api-client-effect";
-import {
-  type ApiEffectError,
-  ApiIngestionRunMismatchError,
-  toApiResultFailure,
-} from "@/lib/effect/errors";
-import { runBrowserEffect } from "@/lib/effect/runtime";
 
 export type { SpatialAnalysisParcelsPagesResult } from "@/features/spatial-analysis/spatial-analysis-parcels-query.service.types";
+
+export class ApiIngestionRunMismatchError extends Data.TaggedError("ApiIngestionRunMismatchError")<{
+  readonly actualIngestionRunId: string | null;
+  readonly expectedIngestionRunId: string | null;
+  readonly requestId: string;
+}> {}
 
 type SpatialAnalysisParcelsPagesSuccessResult = Extract<
   SpatialAnalysisParcelsPagesResult,
@@ -82,9 +87,13 @@ export function fetchSpatialAnalysisParcelsPagesEffect(
 
     while (true) {
       const pageRequest = createPageRequest(args, cursor);
-      const pageResult = yield* fetchParcelsBySelectionEffect(pageRequest, args.signal, {
-        expectedIngestionRunId: args.expectedIngestionRunId,
-      });
+      const pageResult: ParcelsSelectionPage = yield* fetchParcelsBySelectionEffect(
+        pageRequest,
+        args.signal,
+        {
+          expectedIngestionRunId: args.expectedIngestionRunId,
+        }
+      );
       const pageMeta = pageResult.data.meta;
       if (requestId.length === 0) {
         const initialMeta = initializeSpatialAnalysisMeta(pageResult);
@@ -154,24 +163,15 @@ export function fetchSpatialAnalysisParcelsPagesEffect(
 export async function fetchSpatialAnalysisParcelsPages(
   args: FetchSpatialAnalysisParcelsPagesArgs
 ): Promise<SpatialAnalysisParcelsPagesResult> {
-  const runOptions =
-    typeof args.signal === "undefined"
-      ? undefined
-      : {
-          signal: args.signal,
-        };
-  const result = await runBrowserEffect(
+  const result: Either.Either<
+    SpatialAnalysisParcelsPagesSuccessResult,
+    ApiEffectError | ApiIngestionRunMismatchError
+  > = await runEffectPromise(
     Effect.either(fetchSpatialAnalysisParcelsPagesEffect(args)),
-    runOptions
+    args.signal
   );
 
   if (Either.isRight(result)) {
-    if (typeof result.right === "undefined") {
-      throw new Error(
-        "fetchSpatialAnalysisParcelsPagesEffect returned an undefined success value."
-      );
-    }
-
     return result.right;
   }
 
@@ -184,9 +184,5 @@ export async function fetchSpatialAnalysisParcelsPages(
       actualIngestionRunId: result.left.actualIngestionRunId,
     };
   }
-  if (typeof result.left === "undefined") {
-    throw new Error("fetchSpatialAnalysisParcelsPagesEffect returned an undefined failure.");
-  }
-
   return toApiResultFailure(result.left);
 }

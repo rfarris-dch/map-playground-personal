@@ -245,13 +245,106 @@ describe("querySpatialAnalysisSummary", () => {
     expect(result.value.coverage.markets.unavailableReason).toBe(
       "Market boundary dataset is unavailable."
     );
-    expect(result.value.countyIntelligence.status?.publicationRunId).toBe("county-run-1");
+    expect(result.value.countyIntelligence.status).toBeNull();
     expect(result.value.countyIntelligence.scores).toBeNull();
     expect(result.value.warnings.map((warning) => warning.code)).toEqual(
       expect.arrayContaining([
+        "COUNTY_INTELLIGENCE_STATUS_INVALID",
         "COUNTY_INTELLIGENCE_UNAVAILABLE",
         "MARKET_BOUNDARY_SOURCE_UNAVAILABLE",
       ])
+    );
+  });
+
+  it("drops invalid embedded county intelligence payloads without failing the summary", async () => {
+    queryMarketsBySelectionMock.mockResolvedValue({
+      ok: true,
+      value: {
+        matchedMarkets: [],
+        primaryMarket: null,
+        selectionAreaSqKm: 123.45,
+      },
+    });
+    queryCountyScoresStatusMock.mockResolvedValue({
+      ok: true,
+      value: {
+        availableFeatureFamilies: ["facilities", "hyperscale"],
+        dataVersion: "2026-03-07",
+        datasetAvailable: true,
+        featureCoverage: {
+          enterprise: false,
+          facilities: true,
+          fiber: false,
+          hazards: false,
+          hyperscale: true,
+          policy: false,
+          terrain: false,
+          transmission: false,
+          utilityTerritory: false,
+          waterStress: false,
+        },
+        formulaVersion: "county-scores-v1",
+        inputDataVersion: "inputs-v1",
+        methodologyId: "county-method-v1",
+        missingFeatureFamilies: ["enterprise"],
+        publicationRunId: "county-run-1",
+        publishedAt: "2026-03-07T00:00:00.000Z",
+        rowCount: 1,
+        scoredCountyCount: 1,
+        sourceCountyCount: 1,
+        waterCoverageCount: 0,
+      },
+    });
+    queryCountyScoresMock.mockResolvedValue({
+      ok: true,
+      value: {
+        blockedCountyIds: [],
+        dataVersion: "2026-03-07",
+        deferredCountyIds: [],
+        missingCountyIds: [],
+        requestedCountyIds: ["48453"],
+        rows: [
+          {
+            compositeScore: 70.4873,
+            countyFips: "48453",
+            countyName: "Travis County",
+            demandScore: 97.8804,
+            formulaVersion: "county-scores-alpha-v1",
+            generationScore: 67.3634,
+            inputDataVersion: "inputs-v1",
+            policyScore: 21.9488,
+            scoreStatus: "scored",
+            stateAbbrev: "TX",
+          },
+        ],
+      },
+    });
+    getMarketBoundarySourceVersionMock.mockResolvedValue("derived-market-boundaries-v1");
+
+    const result = await querySpatialAnalysisSummary(
+      {
+        expectedParcelIngestionRunId: null,
+        request: createRequest(),
+      },
+      {
+        queryCountyScores: queryCountyScoresMock,
+        queryCountyScoresStatus: queryCountyScoresStatusMock,
+      }
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      throw new Error("Expected successful summary query with degraded county intelligence");
+    }
+
+    expect(result.value.summary.totalCount).toBe(1);
+    expect(result.value.countyIntelligence.status).toBeNull();
+    expect(result.value.countyIntelligence.scores).toBeNull();
+    expect(result.value.countyIntelligence.unavailableReason).toBe(
+      "County intelligence scores are temporarily unavailable."
+    );
+    expect(result.value.warnings.map((warning) => warning.code)).toEqual(
+      expect.arrayContaining(["COUNTY_INTELLIGENCE_INVALID", "COUNTY_INTELLIGENCE_STATUS_INVALID"])
     );
   });
 
@@ -274,11 +367,12 @@ describe("querySpatialAnalysisSummary", () => {
     queryCountyScoresMock.mockResolvedValue({
       ok: true,
       value: {
+        blockedCountyIds: [],
         dataVersion: "2026-03-07",
+        deferredCountyIds: [],
         missingCountyIds: [],
         requestedCountyIds: ["48453"],
         rows: [],
-        unavailableCountyIds: [],
       },
     });
     getMarketBoundarySourceVersionMock.mockResolvedValue("derived-market-boundaries-v1");
@@ -366,11 +460,12 @@ describe("querySpatialAnalysisSummary", () => {
     queryCountyScoresMock.mockResolvedValue({
       ok: true,
       value: {
+        blockedCountyIds: [],
         dataVersion: "2026-03-07",
+        deferredCountyIds: [],
         missingCountyIds: [],
         requestedCountyIds: ["48453"],
         rows: [],
-        unavailableCountyIds: [],
       },
     });
     getMarketBoundarySourceVersionMock.mockResolvedValue("derived-market-boundaries-v1");
@@ -445,11 +540,12 @@ describe("querySpatialAnalysisSummary", () => {
     queryCountyScoresMock.mockResolvedValue({
       ok: true,
       value: {
+        blockedCountyIds: [],
         dataVersion: "2026-03-07",
+        deferredCountyIds: [],
         missingCountyIds: [],
         requestedCountyIds: [],
         rows: [],
-        unavailableCountyIds: [],
       },
     });
     getMarketBoundarySourceVersionMock.mockResolvedValue("derived-market-boundaries-v1");

@@ -12,12 +12,12 @@
     "typecheck": "vue-tsc --noEmit -p tsconfig.app.json"
   },
   "dependencies": {
+    "@map-migration/core-runtime": "workspace:*",
     "@map-migration/contracts": "workspace:*",
     "@map-migration/geo-tiles": "workspace:*",
     "@map-migration/map-engine": "workspace:*",
     "@map-migration/map-layer-catalog": "workspace:*",
     "@map-migration/map-style": "workspace:*",
-    "@map-migration/ops": "workspace:*",
     "@tanstack/vue-query": "^5.92.9",
     "@tanstack/vue-table": "^8.21.3",
     "class-variance-authority": "^0.7.1",

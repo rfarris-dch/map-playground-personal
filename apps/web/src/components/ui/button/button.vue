@@ -31,6 +31,9 @@
       variants: {
         variant: {
           default: "bg-primary text-primary-foreground hover:bg-primary/90",
+          glass: "map-glass-button border-transparent text-foreground/90 hover:text-foreground",
+          "glass-active":
+            "map-glass-button map-glass-button-active border-transparent text-foreground",
           secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
           outline:
             "border bg-card text-card-foreground hover:bg-accent hover:text-accent-foreground",

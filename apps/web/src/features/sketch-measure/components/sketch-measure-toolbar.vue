@@ -82,7 +82,7 @@
 
 <template>
   <aside
-    class="pointer-events-auto absolute bottom-16 left-4 z-20 w-[min(28rem,calc(100%-2rem))] rounded-xl border border-border/80 bg-card/95 p-3 shadow-xl backdrop-blur-sm"
+    class="map-glass-panel pointer-events-auto absolute bottom-16 left-4 z-20 w-[min(28rem,calc(100%-2rem))] rounded-xl p-3"
     aria-label="Sketch and measure tools"
   >
     <header class="mb-3 flex items-start justify-between gap-3">
@@ -91,7 +91,7 @@
         <p class="m-0 text-[11px] text-muted-foreground">{{ helperText }}</p>
       </div>
       <span
-        class="inline-flex items-center rounded-full border border-border/60 bg-muted/30 px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+        class="map-glass-pill inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
       >
         {{ panelStatus }}
       </span>
@@ -104,7 +104,7 @@
       <div class="grid gap-2 sm:grid-cols-2">
         <Button
           size="sm"
-          :variant="props.state.mode === 'off' ? 'default' : 'outline'"
+          :variant="props.state.mode === 'off' ? 'glass-active' : 'glass'"
           class="justify-start"
           @click="setMode('off')"
         >
@@ -112,7 +112,7 @@
         </Button>
         <Button
           size="sm"
-          :variant="props.state.mode === 'distance' ? 'default' : 'outline'"
+          :variant="props.state.mode === 'distance' ? 'glass-active' : 'glass'"
           class="justify-start"
           @click="setMode('distance')"
         >
@@ -120,7 +120,7 @@
         </Button>
         <Button
           size="sm"
-          :variant="props.state.mode === 'area' && props.state.areaShape === 'freeform' ? 'default' : 'outline'"
+          :variant="props.state.mode === 'area' && props.state.areaShape === 'freeform' ? 'glass-active' : 'glass'"
           class="justify-start"
           @click="activateAreaShape('freeform')"
         >
@@ -128,7 +128,7 @@
         </Button>
         <Button
           size="sm"
-          :variant="props.state.mode === 'area' && props.state.areaShape === 'rectangle' ? 'default' : 'outline'"
+          :variant="props.state.mode === 'area' && props.state.areaShape === 'rectangle' ? 'glass-active' : 'glass'"
           class="justify-start"
           @click="activateAreaShape('rectangle')"
         >
@@ -136,7 +136,7 @@
         </Button>
         <Button
           size="sm"
-          :variant="props.state.mode === 'area' && props.state.areaShape === 'circle' ? 'default' : 'outline'"
+          :variant="props.state.mode === 'area' && props.state.areaShape === 'circle' ? 'glass-active' : 'glass'"
           class="justify-start sm:col-span-2"
           @click="activateAreaShape('circle')"
         >
@@ -146,33 +146,33 @@
     </section>
 
     <section class="mb-3 grid gap-2 sm:grid-cols-2">
-      <div class="rounded-md border border-border/60 bg-background/60 px-3 py-2">
+      <div class="map-glass-card rounded-md px-3 py-2">
         <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Mode</div>
         <div class="text-sm font-medium">{{ props.state.mode }}</div>
       </div>
-      <div class="rounded-md border border-border/60 bg-background/60 px-3 py-2">
+      <div class="map-glass-card rounded-md px-3 py-2">
         <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Area Shape</div>
         <div class="text-sm font-medium">
           {{ props.state.mode === "area" ? props.state.areaShape : "n/a" }}
         </div>
       </div>
-      <div class="rounded-md border border-border/60 bg-background/60 px-3 py-2">
+      <div class="map-glass-card rounded-md px-3 py-2">
         <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Distance</div>
         <div class="text-sm font-medium tabular-nums">
           {{ formatDistance(props.state.distanceKm) }}
         </div>
       </div>
-      <div class="rounded-md border border-border/60 bg-background/60 px-3 py-2">
+      <div class="map-glass-card rounded-md px-3 py-2">
         <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Area</div>
         <div class="text-sm font-medium tabular-nums">{{ formatArea(props.state.areaSqKm) }}</div>
       </div>
-      <div class="rounded-md border border-border/60 bg-background/60 px-3 py-2">
+      <div class="map-glass-card rounded-md px-3 py-2">
         <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Sketch</div>
         <div class="text-sm font-medium">
           {{ props.state.isAreaComplete ? "Complete" : "In progress" }}
         </div>
       </div>
-      <div class="rounded-md border border-border/60 bg-background/60 px-3 py-2">
+      <div class="map-glass-card rounded-md px-3 py-2">
         <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Vertices</div>
         <div class="text-sm font-medium tabular-nums">{{ props.state.vertexCount }}</div>
       </div>
@@ -181,6 +181,7 @@
     <footer class="flex flex-wrap items-center gap-2">
       <Button
         size="sm"
+        variant="glass-active"
         class="flex-1"
         :disabled="props.state.mode !== 'area' || !props.state.canFinishArea"
         @click="finishArea"
@@ -189,14 +190,14 @@
       </Button>
       <Button
         size="sm"
-        variant="outline"
+        variant="glass"
         class="flex-1"
         :disabled="props.state.completedAreaGeometry === null"
         @click="useAsSelection"
       >
         Use Sketch As Selection
       </Button>
-      <Button size="sm" variant="ghost" @click="clearSketchMeasure">Clear</Button>
+      <Button size="sm" variant="glass" @click="clearSketchMeasure">Clear</Button>
     </footer>
   </aside>
 </template>

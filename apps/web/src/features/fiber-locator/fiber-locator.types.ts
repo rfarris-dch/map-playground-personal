@@ -2,8 +2,8 @@ import type {
   FiberLocatorCatalogResponse,
   FiberLocatorLayersInViewResponse,
 } from "@map-migration/contracts";
+import type { ApiResult } from "@map-migration/core-runtime/api";
 import type { IMap } from "@map-migration/map-engine";
-import type { ApiResult } from "@/lib/api-client";
 
 export type FiberLocatorLineId = "metro" | "longhaul";
 

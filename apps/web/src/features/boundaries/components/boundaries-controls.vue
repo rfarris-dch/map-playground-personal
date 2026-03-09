@@ -64,9 +64,7 @@
   const countrySearchQuery = shallowRef<string>("");
 
   const containerClass = computed(() =>
-    props.embedded
-      ? "w-full"
-      : "w-full rounded-lg border border-border/90 bg-card/95 p-3 shadow-lg backdrop-blur-sm"
+    props.embedded ? "w-full" : "map-glass-panel w-full rounded-lg p-3"
   );
 
   const heatStops = boundaryHeatStops();
@@ -339,11 +337,12 @@
       <section
         v-for="section in facetSections"
         :key="section.level"
-        class="rounded-md border border-border/70 p-2"
+        class="map-glass-card rounded-md p-2"
       >
         <div class="flex items-start gap-3">
           <Checkbox
             :checked="section.visible"
+            class="border-white/55 bg-white/35 shadow-sm backdrop-blur-sm data-[state=checked]:bg-white/85 data-[state=checked]:text-foreground"
             @update:checked="onToggleVisibility(section.level, $event)"
           />
 
@@ -361,7 +360,7 @@
           </div>
         </div>
 
-        <Accordion type="single" collapsible class="mt-2 rounded-md border border-border/60 px-2">
+        <Accordion type="single" collapsible class="map-glass-card mt-2 rounded-md px-2">
           <AccordionItem value="filters" class="border-b-0">
             <AccordionTrigger class="py-1.5 text-xs font-medium hover:no-underline">
               <span>{{ section.title }} filters</span>
@@ -376,14 +375,14 @@
                 <Input
                   :value="section.searchQuery"
                   :placeholder="section.searchPlaceholder"
-                  class="h-8 text-xs"
+                  class="map-glass-input h-8 border-white/40 bg-white/25 text-xs shadow-none"
                   @input="onSearchInput(section.level, $event)"
                 />
 
                 <div class="flex items-center justify-between gap-2">
                   <Button
                     size="sm"
-                    variant="ghost"
+                    variant="glass"
                     class="h-7 px-2 text-[11px]"
                     @click="onSelectAll(section.level)"
                   >
@@ -391,7 +390,7 @@
                   </Button>
                   <Button
                     size="sm"
-                    variant="ghost"
+                    variant="glass"
                     class="h-7 px-2 text-[11px]"
                     @click="onClearAll(section.level)"
                   >
@@ -399,7 +398,7 @@
                   </Button>
                 </div>
 
-                <div class="max-h-44 overflow-y-auto rounded-md border border-border/60 p-1">
+                <div class="map-glass-card max-h-44 overflow-y-auto rounded-md p-1">
                   <p
                     v-if="section.filteredOptions.length === 0"
                     class="px-2 py-3 text-center text-[11px] text-muted-foreground"
@@ -410,10 +409,11 @@
                   <div
                     v-for="option in section.filteredOptions"
                     :key="option.regionId"
-                    class="flex items-center gap-2 rounded-md px-1.5 py-1 hover:bg-muted/40"
+                    class="flex items-center gap-2 rounded-md px-1.5 py-1 hover:bg-white/18"
                   >
                     <Checkbox
                       :checked="section.selectedRegionIds.has(option.regionId)"
+                      class="border-white/55 bg-white/35 shadow-sm backdrop-blur-sm data-[state=checked]:bg-white/85 data-[state=checked]:text-foreground"
                       @update:checked="onToggleFacet(section.level, option.regionId, $event)"
                     />
                     <div class="min-w-0 flex-1">
@@ -432,10 +432,7 @@
       </section>
     </div>
 
-    <section
-      class="mt-3 rounded-md border border-border/70 p-2"
-      aria-label="Commissioned power legend"
-    >
+    <section class="map-glass-card mt-3 rounded-md p-2" aria-label="Commissioned power legend">
       <h3 class="text-[11px] font-medium">Commissioned Power (MW)</h3>
       <div class="mt-2 h-2.5 w-full rounded-sm" :style="{ background: legendGradient }" />
 

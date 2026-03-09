@@ -1,12 +1,10 @@
 import {
   assertTileManifestMatchesDataset,
+  createPmtilesSourceUrl,
   type TilePublishManifest,
 } from "@map-migration/geo-tiles";
+import { loadTilePublishManifest } from "@map-migration/geo-tiles/effect";
 import { getCatalogStyleLayerIds, getHydroBasinsStyleLayerIds } from "@map-migration/map-style";
-import {
-  createPmtilesSourceUrl,
-  loadVectorTilePublishManifest,
-} from "@/features/layers/vector-tile-manifest.service";
 import type {
   HydroBasinsStressMode,
   HydroBasinsVisibilityController,
@@ -203,7 +201,7 @@ export function mountHydroBasinsLayer(
       state.sourceInitializationAbortController?.abort();
       const abortController = new AbortController();
       state.sourceInitializationAbortController = abortController;
-      const manifest = await loadVectorTilePublishManifest({
+      const manifest = await loadTilePublishManifest({
         contextLabel: "hydro-basins",
         manifestPath,
         signal: abortController.signal,

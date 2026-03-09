@@ -1,14 +1,13 @@
 import {
-  ApiHeaders,
   buildParcelsSyncStatusRoute,
   type ParcelSyncPhase,
   ParcelsSyncStatusResponseSchema,
 } from "@map-migration/contracts";
 import {
-  type FetchJsonEffectSuccess,
-  fetchJsonEffect,
-  type RequestEffectError,
-} from "@map-migration/ops/effect";
+  type ApiEffectError,
+  type ApiEffectSuccess,
+  apiGetJsonEffect,
+} from "@map-migration/core-runtime/api";
 import { Effect, Either } from "effect";
 import type {
   PipelineStatusFetchResult,
@@ -103,21 +102,21 @@ function applyRawStateCompletionFlags(
 }
 
 function createPipelineStatusFailure(
-  error: RequestEffectError
+  error: ApiEffectError
 ): Extract<PipelineStatusFetchResult, { ok: false }> {
-  if (error._tag === "RequestAbortedError") {
+  if (error._tag === "ApiAbortedError") {
     return {
       ok: false,
       error: {
         reason: "aborted",
         requestId: error.requestId,
         message: "Request aborted",
-        details: error.cause,
+        details: error.details,
       },
     };
   }
 
-  if (error._tag === "RequestNetworkError") {
+  if (error._tag === "ApiNetworkError") {
     return {
       ok: false,
       error: {
@@ -129,15 +128,18 @@ function createPipelineStatusFailure(
     };
   }
 
-  if (error._tag === "RequestHttpError") {
+  if (error._tag === "ApiHttpError" || error._tag === "ApiPolicyRejectedError") {
     return {
       ok: false,
       error: {
         reason: "http",
         requestId: error.requestId,
-        status: error.status,
-        message: `HTTP ${String(error.status)} ${error.statusText}`,
+        message:
+          typeof error.message === "string" && error.message.length > 0
+            ? error.message
+            : `HTTP ${String(error.status ?? 0)}`,
         details: error.details,
+        ...(typeof error.status === "number" ? { status: error.status } : {}),
       },
     };
   }
@@ -148,10 +150,10 @@ function createPipelineStatusFailure(
       reason: "schema",
       requestId: error.requestId,
       message:
-        error._tag === "RequestJsonParseError"
+        error.kind === "json-parse"
           ? "Response JSON parsing failed"
           : "Response schema validation failed",
-      details: error.cause,
+      details: error.details,
     },
   };
 }
@@ -161,23 +163,24 @@ export function createFetchPipelineStatusEffect(
 ): Effect.Effect<PipelineStatusFetchResult, never> {
   return Effect.gen(function* () {
     const requestEffect: Effect.Effect<
-      FetchJsonEffectSuccess<PipelineStatusPayload["response"]>,
-      RequestEffectError,
+      ApiEffectSuccess<PipelineStatusPayload["response"]>,
+      ApiEffectError,
       never
-    > = fetchJsonEffect({
-      init: {
+    > = apiGetJsonEffect(
+      buildParcelsSyncStatusRoute(),
+      ParcelsSyncStatusResponseSchema,
+      {
         method: "GET",
         ...(typeof signal === "undefined" ? {} : { signal }),
       },
-      requestIdHeaderName: ApiHeaders.requestId,
-      requestIdPrefix: "pipeline-ui",
-      schema: ParcelsSyncStatusResponseSchema,
-      url: buildParcelsSyncStatusRoute(),
-    });
+      {
+        requestIdPrefix: "pipeline-ui",
+      }
+    );
 
     const result: Either.Either<
-      FetchJsonEffectSuccess<PipelineStatusPayload["response"]>,
-      RequestEffectError
+      ApiEffectSuccess<PipelineStatusPayload["response"]>,
+      ApiEffectError
     > = yield* Effect.either(requestEffect);
 
     if (Either.isLeft(result)) {

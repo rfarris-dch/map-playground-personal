@@ -1,7 +1,7 @@
+import { createBrowserEffectRuntime } from "@map-migration/core-runtime/browser";
 import { onBeforeUnmount, onMounted } from "vue";
 import { createFetchPipelineStatusEffect } from "@/features/pipeline/pipeline.service";
 import type { PipelineStatusController } from "@/features/pipeline/pipeline.types";
-import { createPipelineEffectRuntime } from "@/features/pipeline/pipeline-effect-runtime.service";
 import { createPipelineStatusController } from "./pipeline.view.service";
 
 export function usePipelineStatus(): PipelineStatusController {
@@ -10,7 +10,7 @@ export function usePipelineStatus(): PipelineStatusController {
     clearTimeout,
     fetchPipelineStatus: () => createFetchPipelineStatusEffect(),
     now: () => Date.now(),
-    runtime: createPipelineEffectRuntime(),
+    runtime: createBrowserEffectRuntime(),
     setInterval,
     setTimeout,
   });

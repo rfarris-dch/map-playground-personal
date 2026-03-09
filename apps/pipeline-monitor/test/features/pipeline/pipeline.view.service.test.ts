@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
+import { createBrowserEffectRuntime } from "@map-migration/core-runtime/browser";
 import { Effect } from "effect";
 import type { PipelineStatusFetchResult } from "../../../src/features/pipeline/pipeline.types";
 import { createPipelineStatusController } from "../../../src/features/pipeline/pipeline.view.service";
-import { createPipelineEffectRuntime } from "../../../src/features/pipeline/pipeline-effect-runtime.service";
 import { FakeClock } from "../../support/fake-clock";
 import { createPipelineStatusFetchSuccess } from "../../support/pipeline-status-fixtures";
 
@@ -50,7 +50,7 @@ function createControllerHarness(
       return nextEffect();
     },
     now: () => clock.now(),
-    runtime: createPipelineEffectRuntime(),
+    runtime: createBrowserEffectRuntime(),
     setInterval: clock.setInterval,
     setTimeout: clock.setTimeout,
   });

@@ -3,11 +3,11 @@ import {
   buildParcelDetailRoute,
   ParcelDetailResponseSchema,
 } from "@map-migration/contracts";
+import { apiGetJson } from "@map-migration/core-runtime/api";
 import type {
   ParcelDetailRequest,
   ParcelDetailResult,
 } from "@/features/parcels/parcel-detail/detail.types";
-import { apiGetJson } from "@/lib/api-client";
 
 export function fetchParcelDetail(request: ParcelDetailRequest): Promise<ParcelDetailResult> {
   const requestInit: RequestInit = {};

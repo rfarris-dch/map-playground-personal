@@ -68,7 +68,7 @@
 <template>
   <aside
     v-if="props.isPanelOpen"
-    class="pointer-events-auto absolute bottom-16 left-4 z-20 w-[min(28rem,calc(100%-2rem))] rounded-xl border border-border/80 bg-card/95 p-3 shadow-xl backdrop-blur-sm"
+    class="map-glass-panel pointer-events-auto absolute bottom-16 left-4 z-20 w-[min(28rem,calc(100%-2rem))] rounded-xl p-3"
     aria-label="Selection tools"
   >
     <header class="mb-3 flex items-start justify-between gap-3">
@@ -77,7 +77,7 @@
         <p class="m-0 text-[11px] text-muted-foreground">{{ helperText }}</p>
       </div>
       <span
-        class="inline-flex items-center rounded-full border border-border/60 bg-muted/30 px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+        class="map-glass-pill inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
       >
         {{ panelStatus }}
       </span>
@@ -90,7 +90,7 @@
       <div class="grid gap-2 sm:grid-cols-2">
         <Button
           size="sm"
-          :variant="props.measureState.mode === 'area' && props.measureState.areaShape === 'freeform' ? 'default' : 'outline'"
+          :variant="props.measureState.mode === 'area' && props.measureState.areaShape === 'freeform' ? 'glass-active' : 'glass'"
           class="justify-start"
           @click="emit('set-area-shape', 'freeform')"
         >
@@ -98,7 +98,7 @@
         </Button>
         <Button
           size="sm"
-          :variant="props.measureState.mode === 'area' && props.measureState.areaShape === 'rectangle' ? 'default' : 'outline'"
+          :variant="props.measureState.mode === 'area' && props.measureState.areaShape === 'rectangle' ? 'glass-active' : 'glass'"
           class="justify-start"
           @click="emit('set-area-shape', 'rectangle')"
         >
@@ -112,23 +112,23 @@
         Current Shape
       </p>
       <div class="grid gap-2 sm:grid-cols-2">
-        <div class="rounded-md border border-border/60 bg-background/60 px-3 py-2">
+        <div class="map-glass-card rounded-md px-3 py-2">
           <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Shape</div>
           <div class="text-sm font-medium">
             {{ props.measureState.mode === "area" ? props.measureState.areaShape : "none" }}
           </div>
         </div>
-        <div class="rounded-md border border-border/60 bg-background/60 px-3 py-2">
+        <div class="map-glass-card rounded-md px-3 py-2">
           <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Status</div>
           <div class="text-sm font-medium">
             {{ props.hasCompletedDraftSelection ? "Ready" : "In progress" }}
           </div>
         </div>
-        <div class="rounded-md border border-border/60 bg-background/60 px-3 py-2">
+        <div class="map-glass-card rounded-md px-3 py-2">
           <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Area</div>
           <div class="text-sm font-medium tabular-nums">{{ selectionMetrics.areaText }}</div>
         </div>
-        <div class="rounded-md border border-border/60 bg-background/60 px-3 py-2">
+        <div class="map-glass-card rounded-md px-3 py-2">
           <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Vertices</div>
           <div class="text-sm font-medium tabular-nums">{{ props.measureState.vertexCount }}</div>
         </div>
@@ -140,15 +140,15 @@
         Last Result
       </p>
       <div class="grid gap-2 sm:grid-cols-3">
-        <div class="rounded-md border border-border/60 bg-background/60 px-3 py-2">
+        <div class="map-glass-card rounded-md px-3 py-2">
           <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Facilities</div>
           <div class="text-sm font-medium tabular-nums">{{ selectionMetrics.facilityCount }}</div>
         </div>
-        <div class="rounded-md border border-border/60 bg-background/60 px-3 py-2">
+        <div class="map-glass-card rounded-md px-3 py-2">
           <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Markets</div>
           <div class="text-sm font-medium tabular-nums">{{ selectionMetrics.marketCount }}</div>
         </div>
-        <div class="rounded-md border border-border/60 bg-background/60 px-3 py-2">
+        <div class="map-glass-card rounded-md px-3 py-2">
           <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Parcels</div>
           <div class="text-sm font-medium tabular-nums">{{ selectionMetrics.parcelCount }}</div>
         </div>
@@ -156,11 +156,16 @@
     </section>
 
     <footer class="flex flex-wrap items-center gap-2">
-      <Button class="flex-1" :disabled="!canAnalyze" @click="emit('analyze-current-selection')">
+      <Button
+        variant="glass-active"
+        class="flex-1"
+        :disabled="!canAnalyze"
+        @click="emit('analyze-current-selection')"
+      >
         Analyze Current Selection
       </Button>
-      <Button variant="outline" @click="emit('clear-draft')">Clear Draft</Button>
-      <Button variant="ghost" @click="emit('dismiss')">Close</Button>
+      <Button variant="glass" @click="emit('clear-draft')">Clear Draft</Button>
+      <Button variant="glass" @click="emit('dismiss')">Close</Button>
     </footer>
   </aside>
 </template>

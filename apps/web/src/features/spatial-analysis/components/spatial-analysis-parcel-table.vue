@@ -80,7 +80,7 @@
     <div class="flex items-center gap-1">
       <Button
         size="sm"
-        variant="ghost"
+        variant="glass"
         class="h-6 px-2 text-[10px]"
         :disabled="page <= 1"
         @click="showPreviousPage"
@@ -90,7 +90,7 @@
       <span class="font-mono">Page {{ page }} / {{ pageCount }}</span>
       <Button
         size="sm"
-        variant="ghost"
+        variant="glass"
         class="h-6 px-2 text-[10px]"
         :disabled="page >= pageCount"
         @click="showNextPage"
@@ -102,7 +102,7 @@
   <table class="min-w-max text-[11px]">
     <thead>
       <tr
-        class="sticky top-0 bg-card/95 text-[10px] uppercase tracking-wide text-muted-foreground whitespace-nowrap"
+        class="map-glass-panel-soft sticky top-0 text-[10px] uppercase tracking-wide text-muted-foreground whitespace-nowrap"
       >
         <th class="px-2 py-1 text-left">parcel_id</th>
         <th

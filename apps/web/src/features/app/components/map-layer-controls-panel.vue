@@ -23,7 +23,7 @@
 <template>
   <button
     type="button"
-    class="pointer-events-auto absolute left-4 top-4 z-40 inline-flex items-center gap-2 rounded-md border border-border/90 bg-card/95 px-3 py-2 text-xs font-semibold shadow-lg backdrop-blur-sm transition hover:bg-card"
+    class="map-glass-button pointer-events-auto absolute left-4 top-4 z-40 inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold transition"
     :aria-expanded="props.isOpen"
     aria-controls="layer-controls-panel"
     :aria-label="props.isOpen ? 'Close layer controls panel' : 'Open layer controls panel'"
@@ -43,7 +43,7 @@
     <AccordionRoot
       type="multiple"
       :default-value="[]"
-      class="w-full overflow-hidden rounded-lg border border-border/90 bg-card/95 shadow-lg backdrop-blur-sm"
+      class="map-glass-panel w-full overflow-hidden rounded-lg"
     >
       <MapLayerSection title="Basemap" value="basemap">
         <BasemapControls

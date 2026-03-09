@@ -3,8 +3,8 @@ import type {
   BoundaryPowerFeatureCollection,
   BoundaryPowerLevel,
 } from "@map-migration/contracts";
+import type { ApiResult } from "@map-migration/core-runtime/api";
 import type { LayerVisibilityController } from "@/features/layers/layer-runtime.types";
-import type { ApiResult } from "@/lib/api-client";
 
 export type BoundaryLayerId = BoundaryPowerLevel;
 

@@ -1,11 +1,16 @@
 import type { CountyScoresResponse, CountyScoresStatusResponse } from "@map-migration/contracts";
+import {
+  ApiAbortedError,
+  type ApiEffectError,
+  type ApiEffectSuccess,
+  getApiErrorMessage,
+} from "@map-migration/core-runtime/api";
 import { Effect, Either } from "effect";
 import { computed, onBeforeUnmount, type Ref, shallowRef, watch } from "vue";
 import {
   fetchCountyScoresEffect,
   fetchCountyScoresStatusEffect,
 } from "@/features/county-scores/county-scores.api";
-import { ApiAbortedError, getApiErrorMessage } from "@/lib/effect/errors";
 import { createLatestRunner } from "@/lib/effect/latest-runner";
 import { mutateVueState } from "@/lib/effect/vue-bridge";
 
@@ -42,7 +47,7 @@ export function useCountyScores(options: UseCountyScoresOptions) {
     onUnexpectedError(error) {
       countyScoresLoading.value = false;
       countyScores.value = null;
-      countyScoresError.value = "Unable to load county attractiveness scores.";
+      countyScoresError.value = "Unable to load county market-pressure rows.";
       console.error("[county-scores] dashboard fetch failed", error);
     },
   });
@@ -73,19 +78,15 @@ export function useCountyScores(options: UseCountyScoresOptions) {
     countyScoresStatusLoading.value = true;
     countyScoresStatusError.value = null;
 
-    await countyScoresStatusRunner.run(
-      Effect.either(fetchCountyScoresStatusEffect()).pipe(
-        Effect.flatMap((result) =>
+    const statusProgram: Effect.Effect<void, never, never> = Effect.either(
+      fetchCountyScoresStatusEffect()
+    ).pipe(
+      Effect.flatMap(
+        (result: Either.Either<ApiEffectSuccess<CountyScoresStatusResponse>, ApiEffectError>) =>
           mutateVueState(() => {
             countyScoresStatusLoading.value = false;
 
             if (Either.isRight(result)) {
-              if (typeof result.right === "undefined") {
-                throw new Error(
-                  "fetchCountyScoresStatusEffect returned an undefined success value."
-                );
-              }
-
               countyScoresStatus.value = result.right.data;
               countyScoresStatusError.value = null;
               return;
@@ -94,9 +95,6 @@ export function useCountyScores(options: UseCountyScoresOptions) {
             if (result.left instanceof ApiAbortedError) {
               return;
             }
-            if (typeof result.left === "undefined") {
-              throw new Error("fetchCountyScoresStatusEffect returned an undefined failure.");
-            }
 
             countyScoresStatus.value = null;
             countyScoresStatusError.value = getApiErrorMessage(
@@ -104,9 +102,9 @@ export function useCountyScores(options: UseCountyScoresOptions) {
               "Unable to load county intelligence publication status."
             );
           })
-        )
       )
     );
+    await countyScoresStatusRunner.run(statusProgram);
   }
 
   async function refreshCountyScores(): Promise<void> {
@@ -124,17 +122,15 @@ export function useCountyScores(options: UseCountyScoresOptions) {
     countyScoresError.value = null;
     countyScores.value = null;
 
-    await countyScoresRunner.run(
-      Effect.either(fetchCountyScoresEffect(countyIds)).pipe(
-        Effect.flatMap((result) =>
+    const countyScoresProgram: Effect.Effect<void, never, never> = Effect.either(
+      fetchCountyScoresEffect(countyIds)
+    ).pipe(
+      Effect.flatMap(
+        (result: Either.Either<ApiEffectSuccess<CountyScoresResponse>, ApiEffectError>) =>
           mutateVueState(() => {
             countyScoresLoading.value = false;
 
             if (Either.isRight(result)) {
-              if (typeof result.right === "undefined") {
-                throw new Error("fetchCountyScoresEffect returned an undefined success value.");
-              }
-
               countyScores.value = result.right.data;
               countyScoresError.value = null;
               return;
@@ -143,19 +139,16 @@ export function useCountyScores(options: UseCountyScoresOptions) {
             if (result.left instanceof ApiAbortedError) {
               return;
             }
-            if (typeof result.left === "undefined") {
-              throw new Error("fetchCountyScoresEffect returned an undefined failure.");
-            }
 
             countyScores.value = null;
             countyScoresError.value = getApiErrorMessage(
               result.left,
-              "Unable to load county attractiveness scores."
+              "Unable to load county market-pressure rows."
             );
           })
-        )
       )
     );
+    await countyScoresRunner.run(countyScoresProgram);
   }
 
   refreshCountyScoresStatus().catch((error: unknown) => {

@@ -1,12 +1,7 @@
 import { afterEach, describe, expect, it, mock } from "bun:test";
-import {
-  createPmtilesSourceUrl as createVectorPmtilesSourceUrl,
-  loadVectorTilePublishManifest,
-} from "@/features/layers/vector-tile-manifest.service";
-import {
-  createPmtilesSourceUrl as createParcelsPmtilesSourceUrl,
-  loadParcelsManifest,
-} from "@/features/parcels/parcels.service";
+import { createPmtilesSourceUrl } from "@map-migration/geo-tiles";
+import { loadTilePublishManifest } from "@map-migration/geo-tiles/effect";
+import { loadParcelsManifest } from "@/features/parcels/parcels.service";
 
 const validManifest = {
   dataset: "parcels-draw-v1",
@@ -36,7 +31,7 @@ describe("manifest loading services", () => {
     globalThis.fetch = mock(() => Promise.reject(new Error("socket hang up")));
 
     await expect(
-      loadVectorTilePublishManifest({
+      loadTilePublishManifest({
         contextLabel: "flood",
         manifestPath: "manifests/flood.json",
       })
@@ -80,17 +75,17 @@ describe("manifest loading services", () => {
     const parcelsManifest = await loadParcelsManifest({
       manifestPath: "manifests/parcels.json",
     });
-    const vectorManifest = await loadVectorTilePublishManifest({
+    const vectorManifest = await loadTilePublishManifest({
       contextLabel: "parcels",
       manifestPath: "manifests/parcels.json",
     });
 
     expect(parcelsManifest.current.version).toBe("20260308.deadbeef");
     expect(vectorManifest.current.version).toBe("20260308.deadbeef");
-    expect(createParcelsPmtilesSourceUrl(parcelsManifest)).toBe(
+    expect(createPmtilesSourceUrl(parcelsManifest)).toBe(
       "pmtiles://https://example.com/tiles/parcels/20260308.deadbeef.pmtiles"
     );
-    expect(createVectorPmtilesSourceUrl(vectorManifest)).toBe(
+    expect(createPmtilesSourceUrl(vectorManifest)).toBe(
       "pmtiles://https://example.com/tiles/parcels/20260308.deadbeef.pmtiles"
     );
     expect(fetchMock).toHaveBeenCalledTimes(2);

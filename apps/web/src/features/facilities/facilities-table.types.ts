@@ -4,7 +4,7 @@ import type {
   FacilitySortBy,
   SortDirection,
 } from "@map-migration/contracts";
-import type { ApiResult } from "@/lib/api-client";
+import type { ApiResult } from "@map-migration/core-runtime/api";
 
 export interface FacilitiesTableRequest {
   readonly page: number;

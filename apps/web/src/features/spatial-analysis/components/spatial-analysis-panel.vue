@@ -237,14 +237,14 @@
     readonly id: SpatialAnalysisPanelTab;
   }): string {
     if (activeTab.value === tab.id) {
-      return "bg-background text-foreground shadow-sm";
+      return "map-glass-button-active text-foreground";
     }
 
     if (tab.disabled) {
-      return "cursor-not-allowed text-muted-foreground/60";
+      return "map-glass-button cursor-not-allowed text-muted-foreground/60 opacity-60";
     }
 
-    return "text-muted-foreground hover:bg-background/70 hover:text-foreground";
+    return "map-glass-button text-muted-foreground hover:text-foreground";
   }
 
   function progressStageDotClass(status: string): string {
@@ -304,7 +304,7 @@
 
 <template>
   <aside
-    class="pointer-events-auto absolute bottom-4 right-3 z-20 flex max-h-[78vh] flex-col overflow-hidden rounded-xl border border-border/80 bg-card/95 p-3 shadow-2xl backdrop-blur-sm transition-[width] duration-200"
+    class="map-glass-panel pointer-events-auto absolute bottom-4 right-3 z-20 flex max-h-[78vh] flex-col overflow-hidden rounded-xl p-3 transition-[width] duration-200"
     :class="panelWidthClass"
     :aria-label="props.title"
   >
@@ -314,7 +314,7 @@
           <h2 class="m-0 text-base font-semibold">{{ props.title }}</h2>
           <span
             v-if="props.isLoading || props.isParcelsLoading"
-            class="inline-flex items-center rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+            class="map-glass-pill inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
           >
             {{ props.progress === null ? "Refreshing" : `Refreshing · ${progressPercentText}` }}
           </span>
@@ -325,7 +325,7 @@
       <button
         type="button"
         :aria-label="props.dismissLabel"
-        class="rounded p-1 text-muted-foreground transition hover:bg-muted/80 hover:text-foreground"
+        class="map-glass-button rounded p-1 text-muted-foreground transition hover:text-foreground"
         @click="emit('dismiss')"
       >
         <X class="h-4 w-4" />
@@ -351,10 +351,7 @@
       </span>
     </div>
 
-    <div
-      v-if="hasAnyResults"
-      class="mb-3 inline-flex rounded-lg border border-border/60 bg-muted/20 p-1"
-    >
+    <div v-if="hasAnyResults" class="map-glass-segment mb-3 inline-flex rounded-lg p-1">
       <button
         v-for="tab in tabItems"
         :key="tab.id"
@@ -371,7 +368,7 @@
 
     <section
       v-if="props.isLoading"
-      class="flex-1 overflow-auto rounded-lg border border-border/60 bg-muted/10 p-3"
+      class="map-glass-card flex-1 overflow-auto rounded-lg p-3"
       :aria-label="`${props.title} loading`"
     >
       <div
@@ -399,7 +396,7 @@
           <div
             v-for="stage in visibleProgressStages"
             :key="stage.key"
-            class="rounded-md border border-border/60 bg-background/60 px-3 py-2"
+            class="map-glass-card rounded-md px-3 py-2"
           >
             <div class="flex items-center justify-between gap-2">
               <div class="flex items-center gap-2">
@@ -460,7 +457,7 @@
 
           <article
             v-if="hasMarkets || marketSelectionUnavailableReason !== null"
-            class="rounded-md border border-border/60 bg-muted/20 p-2 lg:col-span-2"
+            class="map-glass-card rounded-md p-2 lg:col-span-2"
             aria-label="Market summary"
           >
             <div class="mb-1 flex items-center gap-1.5">
@@ -479,23 +476,17 @@
               v-if="hasMarkets"
               class="grid grid-cols-[1fr_auto] gap-x-2 gap-y-1 text-[11px] sm:grid-cols-[repeat(3,minmax(0,1fr))]"
             >
-              <div
-                class="flex items-center justify-between gap-2 rounded bg-background/60 px-2 py-1"
-              >
+              <div class="map-glass-card flex items-center justify-between gap-2 rounded px-2 py-1">
                 <dt class="text-muted-foreground">Matches</dt>
                 <dd class="m-0 font-medium">{{ panelSummary.marketSelection?.matchCount ?? 0 }}</dd>
               </div>
-              <div
-                class="flex items-center justify-between gap-2 rounded bg-background/60 px-2 py-1"
-              >
+              <div class="map-glass-card flex items-center justify-between gap-2 rounded px-2 py-1">
                 <dt class="text-muted-foreground">Primary</dt>
                 <dd class="m-0 font-medium">
                   {{ panelSummary.marketSelection?.primaryMarket?.name ?? "-" }}
                 </dd>
               </div>
-              <div
-                class="flex items-center justify-between gap-2 rounded bg-background/60 px-2 py-1"
-              >
+              <div class="map-glass-card flex items-center justify-between gap-2 rounded px-2 py-1">
                 <dt class="text-muted-foreground">Selection Area</dt>
                 <dd class="m-0 font-medium">
                   {{ panelSummary.marketSelection?.selectionAreaSqKm.toFixed(1) ?? "0.0" }}
@@ -508,7 +499,7 @@
               <div
                 v-for="market in matchedMarkets"
                 :key="market.marketId"
-                class="rounded border border-border/70 bg-background/60 px-2 py-1.5 text-[11px]"
+                class="map-glass-card rounded px-2 py-1.5 text-[11px]"
               >
                 <div class="flex items-center justify-between gap-2">
                   <span class="truncate font-medium">{{ market.name }}</span>
@@ -537,7 +528,7 @@
 
           <article
             v-if="hasParcels || props.isParcelsLoading"
-            class="rounded-md border border-border/60 bg-muted/20 p-2 lg:col-span-2"
+            class="map-glass-card rounded-md p-2 lg:col-span-2"
             aria-label="Parcel summary"
           >
             <div class="mb-1 flex items-center gap-1.5">
@@ -548,34 +539,26 @@
             <dl
               class="grid grid-cols-[1fr_auto] gap-x-2 gap-y-1 text-[11px] sm:grid-cols-[repeat(3,minmax(0,1fr))]"
             >
-              <div
-                class="flex items-center justify-between gap-2 rounded bg-background/60 px-2 py-1"
-              >
+              <div class="map-glass-card flex items-center justify-between gap-2 rounded px-2 py-1">
                 <dt class="text-muted-foreground">Records</dt>
                 <dd class="m-0 font-medium">{{ panelSummary.parcelSelection.count }}</dd>
               </div>
-              <div
-                class="flex items-center justify-between gap-2 rounded bg-background/60 px-2 py-1"
-              >
+              <div class="map-glass-card flex items-center justify-between gap-2 rounded px-2 py-1">
                 <dt class="text-muted-foreground">States</dt>
                 <dd class="m-0 font-medium">{{ parcelOverview.stateCount }}</dd>
               </div>
-              <div
-                class="flex items-center justify-between gap-2 rounded bg-background/60 px-2 py-1"
-              >
+              <div class="map-glass-card flex items-center justify-between gap-2 rounded px-2 py-1">
                 <dt class="text-muted-foreground">Counties</dt>
                 <dd class="m-0 font-medium">{{ parcelOverview.countyCount }}</dd>
               </div>
-              <div
-                class="flex items-center justify-between gap-2 rounded bg-background/60 px-2 py-1"
-              >
+              <div class="map-glass-card flex items-center justify-between gap-2 rounded px-2 py-1">
                 <dt class="text-muted-foreground">Truncated</dt>
                 <dd class="m-0 font-medium">
                   {{ panelSummary.parcelSelection.truncated ? "Yes" : "No" }}
                 </dd>
               </div>
               <div
-                class="flex items-center justify-between gap-2 rounded bg-background/60 px-2 py-1 sm:col-span-2"
+                class="map-glass-card flex items-center justify-between gap-2 rounded px-2 py-1 sm:col-span-2"
               >
                 <dt class="text-muted-foreground">Next Cursor</dt>
                 <dd class="m-0 max-w-[18rem] truncate font-mono text-[10px]">
@@ -594,7 +577,7 @@
 
     <section
       v-else-if="hasCountyScores && activeTab === 'counties'"
-      class="flex-1 overflow-auto rounded-lg border border-border/60 bg-muted/10 p-2"
+      class="map-glass-card flex-1 overflow-auto rounded-lg p-2"
     >
       <SpatialAnalysisCountyScoresSection
         :county-scores="countyScores"
@@ -606,7 +589,7 @@
 
     <section
       v-else-if="hasFacilities && activeTab === 'facilities'"
-      class="flex-1 overflow-auto rounded-lg border border-border/60"
+      class="map-glass-card flex-1 overflow-auto rounded-lg"
     >
       <SpatialAnalysisFacilitiesTable
         :facilities="orderedFacilities"
@@ -621,14 +604,14 @@
 
     <section
       v-else-if="hasParcels && activeTab === 'parcels'"
-      class="flex-1 overflow-auto rounded-lg border border-border/60"
+      class="map-glass-card flex-1 overflow-auto rounded-lg"
     >
       <SpatialAnalysisParcelTable :parcels="orderedParcels" />
     </section>
 
     <section
       v-else
-      class="flex-1 rounded-lg border border-dashed border-border/60 bg-muted/10 px-3 py-6 text-center text-[11px] text-muted-foreground"
+      class="map-glass-card flex-1 rounded-lg border-dashed px-3 py-6 text-center text-[11px] text-muted-foreground"
     >
       {{ props.emptyMessage }}
     </section>
@@ -636,6 +619,7 @@
     <footer class="mt-3 flex items-center gap-2">
       <Button
         size="sm"
+        variant="glass-active"
         class="flex-1"
         :disabled="props.dashboardDisabled"
         @click="emit('open-dashboard')"
@@ -643,11 +627,11 @@
         <LayoutDashboard class="mr-1.5 h-3.5 w-3.5" />
         {{ props.dashboardLabel }}
       </Button>
-      <Button size="sm" variant="outline" :disabled="props.exportDisabled" @click="emit('export')">
+      <Button size="sm" variant="glass" :disabled="props.exportDisabled" @click="emit('export')">
         <Download class="mr-1.5 h-3.5 w-3.5" />
         {{ props.exportLabel }}
       </Button>
-      <Button size="sm" variant="ghost" @click="emit('dismiss')">{{ props.dismissLabel }}</Button>
+      <Button size="sm" variant="glass" @click="emit('dismiss')">{{ props.dismissLabel }}</Button>
     </footer>
   </aside>
 </template>

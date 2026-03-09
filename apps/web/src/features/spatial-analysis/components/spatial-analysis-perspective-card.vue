@@ -49,7 +49,7 @@
 </script>
 
 <template>
-  <article class="rounded-md border border-border/60 bg-muted/20 p-2">
+  <article class="map-glass-card rounded-md p-2">
     <div class="mb-1 flex items-center gap-1.5">
       <span class="inline-block h-2 w-2 rounded-full" :class="dotClass" />
       <h3 class="m-0 text-xs font-semibold" :class="headingClass">{{ props.title }}</h3>

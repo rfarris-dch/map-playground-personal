@@ -1,6 +1,6 @@
-import { Cause, type Effect, Exit, Fiber } from "effect";
-import type { BrowserEffectFiber } from "@/lib/effect/runtime";
-import { forkBrowserEffect, interruptBrowserFiber, runBrowserEffect } from "@/lib/effect/runtime";
+import type { BrowserEffectFiber } from "@map-migration/core-runtime/browser";
+import { forkBrowserEffect, interruptBrowserFiber } from "@map-migration/core-runtime/browser";
+import { Cause, Effect, Exit, Fiber } from "effect";
 
 interface LatestRunnerState {
   activeFiber: BrowserEffectFiber<unknown, unknown> | null;
@@ -34,7 +34,7 @@ export function createLatestRunner(options: LatestRunnerOptions = {}): LatestRun
   }
 
   function observeFiber(fiber: BrowserEffectFiber<unknown, unknown>): void {
-    runBrowserEffect(Fiber.await(fiber))
+    Effect.runPromise(Fiber.await(fiber))
       .then((exit) => {
         if (state.activeFiber === fiber) {
           state.activeFiber = null;

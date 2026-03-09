@@ -30,7 +30,7 @@
 <template>
   <aside
     v-if="props.selectedFacility !== null"
-    class="pointer-events-auto absolute right-4 top-4 z-10 w-[min(24rem,calc(100%-2rem))] rounded-lg border border-border/80 bg-card/95 p-4 shadow-xl backdrop-blur-sm"
+    class="map-glass-panel pointer-events-auto absolute right-4 top-4 z-10 w-[min(24rem,calc(100%-2rem))] rounded-lg p-4"
     aria-label="Facility detail"
   >
     <header class="mb-3 flex items-center gap-2">
@@ -39,7 +39,7 @@
         facility
       </h2>
       <p class="m-0 truncate text-xs font-medium">{{ facilityName }}</p>
-      <Button variant="ghost" size="sm" class="ml-auto" @click="onClose">Close</Button>
+      <Button variant="glass" size="sm" class="ml-auto" @click="onClose">Close</Button>
     </header>
 
     <p v-if="props.isLoading" class="m-0 text-xs font-mono text-muted-foreground">

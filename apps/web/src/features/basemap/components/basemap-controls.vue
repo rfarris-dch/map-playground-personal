@@ -37,9 +37,7 @@
   }>();
 
   const containerClass = computed(() =>
-    props.embedded
-      ? "w-full"
-      : "w-full rounded-lg border border-border/90 bg-card/95 p-3 shadow-lg backdrop-blur-sm"
+    props.embedded ? "w-full" : "map-glass-panel w-full rounded-lg p-3"
   );
 
   const controls = computed<readonly BasemapControlOption[]>(() => {
@@ -187,7 +185,7 @@
       <label
         v-for="control in controls"
         :key="control.layerId"
-        class="flex cursor-pointer items-start gap-3 rounded-md border border-border/70 p-2"
+        class="map-glass-card flex cursor-pointer items-start gap-3 rounded-md p-2"
       >
         <input
           class="mt-0.5 h-4 w-4"

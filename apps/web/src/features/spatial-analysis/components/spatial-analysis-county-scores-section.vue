@@ -2,6 +2,18 @@
   import type { CountyScoresResponse, CountyScoresStatusResponse } from "@map-migration/contracts";
   import { computed } from "vue";
   import CountyScoresDatasetStatus from "@/features/county-scores/components/county-scores-dataset-status.vue";
+  import {
+    confidenceToneClass,
+    countyLabel,
+    formatCount,
+    formatDateTime,
+    formatDeferredReason,
+    formatMetric,
+    formatRankStatus,
+    formatShare,
+    formatTier,
+    rankToneClass,
+  } from "@/features/county-scores/county-scores-display.service";
 
   interface SpatialAnalysisCountyScoresSectionProps {
     readonly countyScores: CountyScoresResponse | null;
@@ -19,53 +31,46 @@
   const rows = computed(() => props.countyScores?.rows ?? []);
   const requestedCountyIds = computed(() => props.countyScores?.summary.requestedCountyIds ?? []);
   const missingCountyIds = computed(() => props.countyScores?.summary.missingCountyIds ?? []);
-  const unavailableCountyIds = computed(
-    () => props.countyScores?.summary.unavailableCountyIds ?? []
-  );
+  const deferredCountyIds = computed(() => props.countyScores?.summary.deferredCountyIds ?? []);
+  const blockedCountyIds = computed(() => props.countyScores?.summary.blockedCountyIds ?? []);
   const hasRows = computed(() => rows.value.length > 0);
   const hasMissingCountyIds = computed(() => missingCountyIds.value.length > 0);
-  const hasUnavailableCountyIds = computed(() => unavailableCountyIds.value.length > 0);
   const hasCountySummary = computed(
     () =>
       requestedCountyIds.value.length > 0 ||
       hasRows.value ||
-      hasMissingCountyIds.value ||
-      hasUnavailableCountyIds.value
+      missingCountyIds.value.length > 0 ||
+      deferredCountyIds.value.length > 0 ||
+      blockedCountyIds.value.length > 0
   );
-  const scoredCountyCount = computed(
-    () => rows.value.filter((row) => row.scoreStatus === "scored").length
+  const rankedCountyCount = computed(
+    () => rows.value.filter((row) => row.rankStatus === "ranked").length
   );
 
-  function formatScore(value: number | null): string {
-    if (value === null || !Number.isFinite(value)) {
-      return "-";
+  function visibleChanges(
+    row: CountyScoreRow
+  ): readonly CountyScoreRow["whatChanged30d"][number][] {
+    if (row.whatChanged30d.length > 0) {
+      return row.whatChanged30d;
     }
 
-    return value.toLocaleString(undefined, {
-      maximumFractionDigits: 1,
-      minimumFractionDigits: 1,
-    });
-  }
-
-  function countyLabel(row: CountyScoreRow): string {
-    const countyName = row.countyName ?? row.countyFips;
-    if (row.stateAbbrev === null) {
-      return countyName;
+    if (row.whatChanged60d.length > 0) {
+      return row.whatChanged60d;
     }
 
-    return `${countyName}, ${row.stateAbbrev}`;
+    return row.whatChanged90d;
   }
 </script>
 
 <template>
   <article class="space-y-3 rounded-xl border border-border/70 bg-background/70 p-4">
     <div class="flex items-center gap-2">
-      <span class="inline-block h-2.5 w-2.5 rounded-full bg-indigo-500" />
+      <span class="inline-block h-2.5 w-2.5 rounded-full bg-cyan-500" />
       <div>
-        <h2 class="m-0 text-sm font-semibold">County Intelligence</h2>
+        <h2 class="m-0 text-sm font-semibold">County Market Pressure</h2>
         <p class="m-0 text-xs text-muted-foreground">
-          Ranked county scores with publication status, provenance, and coverage for the current
-          county selection.
+          County-first market-pressure triage with demand, supply timeline, grid friction, policy,
+          confidence, and deferred-state detail.
         </p>
       </div>
     </div>
@@ -90,14 +95,13 @@
       aria-live="polite"
       aria-busy="true"
     >
-      <div class="h-3 w-32 animate-pulse rounded bg-muted" />
-      <div class="h-10 animate-pulse rounded-md bg-muted/80" />
-      <div class="h-10 animate-pulse rounded-md bg-muted/80" />
-      <div class="h-10 animate-pulse rounded-md bg-muted/80" />
+      <div class="h-3 w-40 animate-pulse rounded bg-muted" />
+      <div class="h-28 animate-pulse rounded-md bg-muted/80" />
+      <div class="h-28 animate-pulse rounded-md bg-muted/80" />
     </div>
 
     <div v-else-if="hasCountySummary" class="space-y-3">
-      <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+      <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
         <div class="rounded-md border border-border/60 bg-card/80 px-3 py-2">
           <div class="text-[10px] uppercase tracking-wide text-muted-foreground">
             Selected Counties
@@ -105,62 +109,189 @@
           <div class="text-lg font-semibold">{{ requestedCountyIds.length }}</div>
         </div>
         <div class="rounded-md border border-border/60 bg-card/80 px-3 py-2">
-          <div class="text-[10px] uppercase tracking-wide text-muted-foreground">
-            Scored Successfully
-          </div>
-          <div class="text-lg font-semibold">{{ scoredCountyCount }}</div>
+          <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Ranked</div>
+          <div class="text-lg font-semibold">{{ rankedCountyCount }}</div>
+        </div>
+        <div class="rounded-md border border-border/60 bg-card/80 px-3 py-2">
+          <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Deferred</div>
+          <div class="text-lg font-semibold">{{ deferredCountyIds.length }}</div>
+        </div>
+        <div class="rounded-md border border-border/60 bg-card/80 px-3 py-2">
+          <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Blocked</div>
+          <div class="text-lg font-semibold">{{ blockedCountyIds.length }}</div>
         </div>
         <div class="rounded-md border border-border/60 bg-card/80 px-3 py-2">
           <div class="text-[10px] uppercase tracking-wide text-muted-foreground">
-            Not In Reference Geography
+            Missing Geography
           </div>
           <div class="text-lg font-semibold">{{ missingCountyIds.length }}</div>
         </div>
-        <div class="rounded-md border border-border/60 bg-card/80 px-3 py-2">
-          <div class="text-[10px] uppercase tracking-wide text-muted-foreground">
-            Found But Not Scored
-          </div>
-          <div class="text-lg font-semibold">{{ unavailableCountyIds.length }}</div>
-        </div>
       </div>
 
-      <div v-if="hasRows" class="space-y-2">
+      <div v-if="hasRows" class="space-y-3">
         <div
           v-for="row in rows"
           :key="row.countyFips"
-          class="rounded-md border border-border/60 bg-card/80 px-3 py-3"
+          class="space-y-3 rounded-md border border-border/60 bg-card/80 px-3 py-3"
         >
-          <div class="mb-2 flex items-center justify-between gap-3">
+          <div class="flex flex-wrap items-start justify-between gap-3">
             <div>
               <div class="text-sm font-medium">{{ countyLabel(row) }}</div>
               <div class="text-[11px] text-muted-foreground">FIPS {{ row.countyFips }}</div>
             </div>
-            <div class="text-right">
-              <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Composite</div>
-              <div class="text-lg font-semibold">{{ formatScore(row.compositeScore) }}</div>
-              <div
-                v-if="row.scoreStatus === 'unavailable'"
-                class="text-[10px] text-muted-foreground"
+
+            <div class="flex flex-wrap items-center gap-2 text-[11px]">
+              <span
+                class="rounded-full border px-2.5 py-1 font-medium"
+                :class="rankToneClass(row.rankStatus)"
               >
-                Score unavailable
-              </div>
+                {{ formatRankStatus(row.rankStatus) }}
+              </span>
+              <span
+                class="rounded-full border px-2.5 py-1 font-medium"
+                :class="confidenceToneClass(row.confidenceBadge)"
+              >
+                {{ row.confidenceBadge.toUpperCase() }}
+                confidence
+              </span>
             </div>
           </div>
 
-          <dl class="grid grid-cols-3 gap-2 text-xs">
+          <div class="grid gap-2 lg:grid-cols-[1.3fr_1fr]">
+            <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              <div class="rounded bg-muted/50 px-2 py-1.5">
+                <div class="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  Pressure Index
+                </div>
+                <div class="text-sm font-semibold">{{ formatMetric(row.marketPressureIndex) }}</div>
+              </div>
+              <div class="rounded bg-muted/50 px-2 py-1.5">
+                <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Tier</div>
+                <div class="text-sm font-semibold">{{ formatTier(row.attractivenessTier) }}</div>
+              </div>
+              <div class="rounded bg-muted/50 px-2 py-1.5">
+                <div class="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  Freshness
+                </div>
+                <div class="text-sm font-semibold">{{ formatMetric(row.freshnessScore) }}</div>
+              </div>
+              <div class="rounded bg-muted/50 px-2 py-1.5">
+                <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Updated</div>
+                <div class="text-sm font-semibold">{{ formatDateTime(row.lastUpdatedAt) }}</div>
+              </div>
+            </div>
+
+            <div class="rounded-md border border-border/60 bg-background/70 px-3 py-2 text-xs">
+              <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Narrative</div>
+              <p class="mt-1 mb-0">
+                {{ row.narrativeSummary ?? "No county narrative is available." }}
+              </p>
+            </div>
+          </div>
+
+          <dl class="grid gap-2 text-xs sm:grid-cols-2 xl:grid-cols-4">
             <div class="rounded bg-muted/50 px-2 py-1.5">
-              <dt class="text-muted-foreground">Demand</dt>
-              <dd class="m-0 font-medium">{{ formatScore(row.demandScore) }}</dd>
+              <dt class="text-muted-foreground">Demand Pressure</dt>
+              <dd class="m-0 font-medium">{{ formatMetric(row.demandPressureScore) }}</dd>
             </div>
             <div class="rounded bg-muted/50 px-2 py-1.5">
-              <dt class="text-muted-foreground">Generation</dt>
-              <dd class="m-0 font-medium">{{ formatScore(row.generationScore) }}</dd>
+              <dt class="text-muted-foreground">Supply Timeline</dt>
+              <dd class="m-0 font-medium">{{ formatMetric(row.supplyTimelineScore) }}</dd>
             </div>
             <div class="rounded bg-muted/50 px-2 py-1.5">
-              <dt class="text-muted-foreground">Policy</dt>
-              <dd class="m-0 font-medium">{{ formatScore(row.policyScore) }}</dd>
+              <dt class="text-muted-foreground">Grid Friction</dt>
+              <dd class="m-0 font-medium">{{ formatMetric(row.gridFrictionScore) }}</dd>
+            </div>
+            <div class="rounded bg-muted/50 px-2 py-1.5">
+              <dt class="text-muted-foreground">Policy Constraint</dt>
+              <dd class="m-0 font-medium">{{ formatMetric(row.policyConstraintScore) }}</dd>
             </div>
           </dl>
+
+          <dl class="grid gap-2 text-xs lg:grid-cols-3">
+            <div class="rounded-md border border-border/60 bg-background/70 px-3 py-2">
+              <dt class="text-[10px] uppercase tracking-wide text-muted-foreground">Demand</dt>
+              <dd class="mt-1 space-y-1">
+                <div>0-24m expected MW: {{ formatMetric(row.expectedMw0To24m) }}</div>
+                <div>24-60m expected MW: {{ formatMetric(row.expectedMw24To60m) }}</div>
+                <div>Momentum QoQ: {{ formatMetric(row.demandMomentumQoq, 2) }}</div>
+                <div>Provider entries 12m: {{ formatCount(row.providerEntryCount12m) }}</div>
+              </dd>
+            </div>
+
+            <div class="rounded-md border border-border/60 bg-background/70 px-3 py-2">
+              <dt class="text-[10px] uppercase tracking-wide text-muted-foreground">
+                Supply + Friction
+              </dt>
+              <dd class="mt-1 space-y-1">
+                <div>0-36m expected supply MW: {{ formatMetric(row.expectedSupplyMw0To36m) }}</div>
+                <div>Signed IA MW: {{ formatMetric(row.signedIaMw) }}</div>
+                <div>Queue MW active: {{ formatMetric(row.queueMwActive) }}</div>
+                <div>Median queue days: {{ formatMetric(row.medianDaysInQueueActive, 0) }}</div>
+                <div>Past-due share: {{ formatShare(row.pastDueShare) }}</div>
+              </dd>
+            </div>
+
+            <div class="rounded-md border border-border/60 bg-background/70 px-3 py-2">
+              <dt class="text-[10px] uppercase tracking-wide text-muted-foreground">
+                Policy + Context
+              </dt>
+              <dd class="mt-1 space-y-1">
+                <div>Moratorium: {{ row.moratoriumStatus }}</div>
+                <div>Policy momentum: {{ formatMetric(row.policyMomentumScore) }}</div>
+                <div>Policy events: {{ formatCount(row.policyEventCount) }}</div>
+                <div>Primary market: {{ row.primaryMarketId ?? "-" }}</div>
+                <div>Water stress: {{ formatMetric(row.waterStressScore, 2) }}</div>
+              </dd>
+            </div>
+          </dl>
+
+          <div
+            v-if="row.topDrivers.length > 0 || row.deferredReasonCodes.length > 0 || visibleChanges(row).length > 0"
+            class="grid gap-2 text-xs lg:grid-cols-3"
+          >
+            <div class="rounded-md border border-border/60 bg-background/70 px-3 py-2">
+              <div class="text-[10px] uppercase tracking-wide text-muted-foreground">
+                Top Drivers
+              </div>
+              <ul class="mt-1 mb-0 space-y-1 pl-4">
+                <li v-for="driver in row.topDrivers" :key="driver.code">
+                  {{ driver.label }}: {{ driver.summary }}
+                </li>
+              </ul>
+            </div>
+
+            <div class="rounded-md border border-border/60 bg-background/70 px-3 py-2">
+              <div class="text-[10px] uppercase tracking-wide text-muted-foreground">
+                Deferred Reasons
+              </div>
+              <p v-if="row.deferredReasonCodes.length === 0" class="mt-1 mb-0">
+                No deferred reasons.
+              </p>
+              <ul v-else class="mt-1 mb-0 space-y-1 pl-4">
+                <li v-for="reason in row.deferredReasonCodes" :key="reason">
+                  {{ formatDeferredReason(reason) }}
+                </li>
+              </ul>
+            </div>
+
+            <div class="rounded-md border border-border/60 bg-background/70 px-3 py-2">
+              <div class="text-[10px] uppercase tracking-wide text-muted-foreground">
+                What Changed
+              </div>
+              <p v-if="visibleChanges(row).length === 0" class="mt-1 mb-0">
+                No tracked change yet.
+              </p>
+              <ul v-else class="mt-1 mb-0 space-y-1 pl-4">
+                <li
+                  v-for="change in visibleChanges(row)"
+                  :key="`${change.code}-${change.direction}`"
+                >
+                  {{ change.label }}: {{ change.summary }}
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -170,18 +301,10 @@
       >
         Counties not found in the reference geography: {{ missingCountyIds.join(", ") }}
       </p>
-
-      <p
-        v-if="hasUnavailableCountyIds"
-        class="rounded-md border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-950"
-      >
-        Counties found in reference geography but missing published scores:
-        {{ unavailableCountyIds.join(", ") }}
-      </p>
     </div>
 
     <p v-else class="text-sm text-muted-foreground">
-      No county scores are available for this selection.
+      No county market-pressure rows are available for this selection.
     </p>
   </article>
 </template>

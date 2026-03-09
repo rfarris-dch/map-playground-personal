@@ -1,16 +1,18 @@
-import type {
-  CountyScoresResponse,
-  CountyScoresStatusResponse,
-  FacilitiesFeatureCollection,
-  ParcelEnrichRequest,
-  ParcelsFeatureCollection,
-  SpatialAnalysisParcelRecord,
-  SpatialAnalysisPerspectiveSummary,
-  SpatialAnalysisProviderSummary,
-  SpatialAnalysisSelectionSummary,
-  SpatialAnalysisSummaryFacilityRecord,
-  SpatialAnalysisSummaryResponse,
-  Warning,
+import {
+  type CountyScoresResponse,
+  CountyScoresResponseSchema,
+  type CountyScoresStatusResponse,
+  CountyScoresStatusResponseSchema,
+  type FacilitiesFeatureCollection,
+  type ParcelEnrichRequest,
+  type ParcelsFeatureCollection,
+  type SpatialAnalysisParcelRecord,
+  type SpatialAnalysisPerspectiveSummary,
+  type SpatialAnalysisProviderSummary,
+  type SpatialAnalysisSelectionSummary,
+  type SpatialAnalysisSummaryFacilityRecord,
+  type SpatialAnalysisSummaryResponse,
+  type Warning,
 } from "@map-migration/contracts";
 import {
   queryCountyScores,
@@ -350,6 +352,18 @@ function buildWarning(code: string, message: string): Warning {
     code,
     message,
   };
+}
+
+function validateCountyScoresPayload(payload: CountyScoresResponse): CountyScoresResponse | null {
+  const parsed = CountyScoresResponseSchema.safeParse(payload);
+  return parsed.success ? parsed.data : null;
+}
+
+function validateCountyScoresStatusPayload(
+  payload: CountyScoresStatusResponse
+): CountyScoresStatusResponse | null {
+  const parsed = CountyScoresStatusResponseSchema.safeParse(payload);
+  return parsed.success ? parsed.data : null;
 }
 
 function emptyParcelQueryValue(args: { readonly warnings?: readonly Warning[] }): {
@@ -873,7 +887,7 @@ export async function querySpatialAnalysisSummary(
   let countyUnavailableReason: string | null = null;
 
   if (countyStatusResult.ok) {
-    countyStatus = {
+    const countyStatusPayload: CountyScoresStatusResponse = {
       ...countyStatusResult.value,
       meta: {
         dataVersion: countyStatusResult.value.dataVersion ?? "unpublished",
@@ -885,6 +899,11 @@ export async function querySpatialAnalysisSummary(
         warnings: [],
       },
     };
+    countyStatus = validateCountyScoresStatusPayload(countyStatusPayload);
+    if (countyStatus === null) {
+      countyUnavailableReason = "County intelligence status is temporarily unavailable.";
+      warnings.push(buildWarning("COUNTY_INTELLIGENCE_STATUS_INVALID", countyUnavailableReason));
+    }
   } else {
     countyUnavailableReason = "County intelligence status is unavailable.";
     warnings.push(buildWarning("COUNTY_INTELLIGENCE_STATUS_UNAVAILABLE", countyUnavailableReason));
@@ -899,7 +918,7 @@ export async function querySpatialAnalysisSummary(
     });
 
     if (countyScoresResult.ok) {
-      countyScores = {
+      const countyScoresPayload: CountyScoresResponse = {
         meta: {
           dataVersion: countyScoresResult.value.dataVersion,
           generatedAt: new Date().toISOString(),
@@ -911,11 +930,17 @@ export async function querySpatialAnalysisSummary(
         },
         rows: [...countyScoresResult.value.rows],
         summary: {
+          blockedCountyIds: [...countyScoresResult.value.blockedCountyIds],
+          deferredCountyIds: [...countyScoresResult.value.deferredCountyIds],
           missingCountyIds: [...countyScoresResult.value.missingCountyIds],
           requestedCountyIds: [...countyScoresResult.value.requestedCountyIds],
-          unavailableCountyIds: [...countyScoresResult.value.unavailableCountyIds],
         },
       };
+      countyScores = validateCountyScoresPayload(countyScoresPayload);
+      if (countyScores === null) {
+        countyUnavailableReason = "County intelligence scores are temporarily unavailable.";
+        warnings.push(buildWarning("COUNTY_INTELLIGENCE_INVALID", countyUnavailableReason));
+      }
     } else {
       countyUnavailableReason =
         countyScoresResult.value.reason === "source_unavailable"

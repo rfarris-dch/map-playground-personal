@@ -6,7 +6,7 @@ export function buildCountyScoresSourceUnavailableRouteError(error: unknown): Ap
     httpStatus: 503,
     code: "COUNTY_SCORES_SOURCE_UNAVAILABLE",
     message:
-      "county intelligence dataset is unavailable; publish analytics_meta.county_score_publications before using county score queries",
+      "county market-pressure dataset is unavailable; publish analytics.fact_publication before using county intelligence queries",
     details: toDebugDetails(error),
   });
 }
@@ -16,7 +16,7 @@ export function buildCountyScoresStatusSourceUnavailableRouteError(error: unknow
     httpStatus: 503,
     code: "COUNTY_SCORES_STATUS_SOURCE_UNAVAILABLE",
     message:
-      "county intelligence status is unavailable; initialize and publish county scores before requesting status",
+      "county market-pressure status is unavailable; initialize and publish county market pressure before requesting status",
     details: toDebugDetails(error),
   });
 }
@@ -25,7 +25,7 @@ export function buildCountyScoresQueryRouteError(error: unknown): ApiRouteError 
   return routeError({
     httpStatus: 503,
     code: "COUNTY_SCORES_QUERY_FAILED",
-    message: "county scores query failed",
+    message: "county market-pressure query failed",
     details: toDebugDetails(error),
   });
 }
@@ -34,7 +34,7 @@ export function buildCountyScoresStatusQueryRouteError(error: unknown): ApiRoute
   return routeError({
     httpStatus: 503,
     code: "COUNTY_SCORES_STATUS_QUERY_FAILED",
-    message: "county scores status query failed",
+    message: "county market-pressure status query failed",
     details: toDebugDetails(error),
   });
 }
@@ -43,7 +43,7 @@ export function buildCountyScoresMappingRouteError(error: unknown): ApiRouteErro
   return routeError({
     httpStatus: 500,
     code: "COUNTY_SCORES_MAPPING_FAILED",
-    message: "county scores mapping failed",
+    message: "county market-pressure mapping failed",
     details: toDebugDetails(error),
   });
 }
@@ -52,7 +52,7 @@ export function buildCountyScoresStatusMappingRouteError(error: unknown): ApiRou
   return routeError({
     httpStatus: 500,
     code: "COUNTY_SCORES_STATUS_MAPPING_FAILED",
-    message: "county scores status mapping failed",
+    message: "county market-pressure status mapping failed",
     details: toDebugDetails(error),
   });
 }

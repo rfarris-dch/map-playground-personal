@@ -2,6 +2,13 @@ import type {
   SpatialAnalysisSummaryRequest,
   SpatialAnalysisSummaryResponse,
 } from "@map-migration/contracts";
+import {
+  ApiAbortedError,
+  type ApiEffectError,
+  type ApiEffectSuccess,
+  getApiErrorMessage,
+} from "@map-migration/core-runtime/api";
+import { runEffectPromise } from "@map-migration/core-runtime/effect";
 import { Effect, Either } from "effect";
 import { exportMeasureSelectionSummary } from "@/features/app/measure-selection/measure-selection-export.service";
 import type { MeasureSelectionSummary } from "@/features/measure/measure-analysis.types";
@@ -18,8 +25,6 @@ import {
   buildEmptySpatialAnalysisSummary,
   buildSpatialAnalysisSummaryModel,
 } from "@/features/spatial-analysis/spatial-analysis-summary.service";
-import { ApiAbortedError, getApiErrorMessage } from "@/lib/effect/errors";
-import { runBrowserEffect } from "@/lib/effect/runtime";
 
 function listVisiblePerspectives(
   visiblePerspectives: QuerySelectionToolSummaryArgs["visiblePerspectives"]
@@ -198,7 +203,10 @@ export function querySelectionToolSummaryEffect(
             expectedParcelIngestionRunId: args.expectedParcelsIngestionRunId,
             signal: args.signal,
           };
-    const result = yield* Effect.either(fetchSpatialAnalysisSummaryEffect(request, summaryOptions));
+    const result: Either.Either<
+      ApiEffectSuccess<SpatialAnalysisSummaryResponse>,
+      ApiEffectError
+    > = yield* Effect.either(fetchSpatialAnalysisSummaryEffect(request, summaryOptions));
 
     if (Either.isLeft(result)) {
       if (result.left instanceof ApiAbortedError) {
@@ -243,13 +251,7 @@ export function querySelectionToolSummaryEffect(
 export function querySelectionToolSummary(
   args: QuerySelectionToolSummaryArgs
 ): Promise<QuerySelectionToolSummaryResult> {
-  if (typeof args.signal === "undefined") {
-    return runBrowserEffect(querySelectionToolSummaryEffect(args));
-  }
-
-  return runBrowserEffect(querySelectionToolSummaryEffect(args), {
-    signal: args.signal,
-  });
+  return runEffectPromise(querySelectionToolSummaryEffect(args), args.signal);
 }
 
 export function exportSelectionToolSummary(summary: SelectionToolAnalysisSummary | null): void {

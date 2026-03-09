@@ -1,9 +1,9 @@
 import { buildProvidersRoute, ProvidersTableResponseSchema } from "@map-migration/contracts";
+import { apiGetJson } from "@map-migration/core-runtime/api";
 import type {
   ProvidersTableRequest,
   ProvidersTableResult,
 } from "@/features/providers/providers.types";
-import { apiGetJson } from "@/lib/api-client";
 
 export function fetchProvidersTable(request: ProvidersTableRequest): Promise<ProvidersTableResult> {
   const requestInit: RequestInit = {};

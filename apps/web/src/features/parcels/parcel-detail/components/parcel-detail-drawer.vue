@@ -44,7 +44,7 @@
 <template>
   <aside
     v-if="selectedParcel !== null"
-    class="pointer-events-auto absolute right-4 top-4 z-10 w-[min(32rem,calc(100%-2rem))] rounded-lg border border-border/80 bg-card/95 p-4 shadow-xl backdrop-blur-sm"
+    class="map-glass-panel pointer-events-auto absolute right-4 top-4 z-10 w-[min(32rem,calc(100%-2rem))] rounded-lg p-4"
     aria-label="Parcel detail"
   >
     <header class="mb-3 flex items-center gap-2">
@@ -52,7 +52,7 @@
       <p class="m-0 truncate text-xs font-mono text-muted-foreground">
         {{ selectedParcel.parcelId }}
       </p>
-      <Button variant="ghost" size="sm" class="ml-auto" @click="onClose">Close</Button>
+      <Button variant="glass" size="sm" class="ml-auto" @click="onClose">Close</Button>
     </header>
 
     <p v-if="isLoading" class="m-0 text-xs font-mono text-muted-foreground">Loading detail...</p>
@@ -80,7 +80,7 @@
         <dd class="m-0 font-mono">{{ detail.response.feature.lineage.ingestionRunId ?? "n/a" }}</dd>
       </dl>
 
-      <section class="mb-3 rounded-md border border-border/70 bg-muted/20 p-3">
+      <section class="map-glass-card mb-3 rounded-md p-3">
         <h3 class="mb-2 mt-0 text-xs font-semibold tracking-wide">Flood context</h3>
         <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-xs">
           <dt class="text-muted-foreground">Classification</dt>
@@ -104,9 +104,9 @@
           {{ attributeEntries.length }}
           keys in payload
         </p>
-        <div class="max-h-96 overflow-auto rounded-md border border-border/70">
+        <div class="map-glass-card max-h-96 overflow-auto rounded-md">
           <table class="w-full border-collapse text-[11px]">
-            <thead class="sticky top-0 bg-muted/80 backdrop-blur-sm">
+            <thead class="map-glass-panel-soft sticky top-0">
               <tr>
                 <th class="px-2 py-1 text-left font-semibold">Field</th>
                 <th class="px-2 py-1 text-left font-semibold">Value</th>

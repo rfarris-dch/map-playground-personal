@@ -21,6 +21,7 @@
         "@effect/platform-bun": "^0.87.1",
         "@hono/node-server": "^1.13.8",
         "@map-migration/contracts": "workspace:*",
+        "@map-migration/core-runtime": "workspace:*",
         "@map-migration/geo-sql": "workspace:*",
         "@map-migration/ops": "workspace:*",
         "effect": "^3.19.19",
@@ -59,7 +60,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@map-migration/contracts": "workspace:*",
-        "@map-migration/ops": "workspace:*",
+        "@map-migration/core-runtime": "workspace:*",
         "effect": "^3.19.19",
         "vue": "^3.5.22",
       },
@@ -76,11 +77,11 @@
       "version": "0.1.0",
       "dependencies": {
         "@map-migration/contracts": "workspace:*",
+        "@map-migration/core-runtime": "workspace:*",
         "@map-migration/geo-tiles": "workspace:*",
         "@map-migration/map-engine": "workspace:*",
         "@map-migration/map-layer-catalog": "workspace:*",
         "@map-migration/map-style": "workspace:*",
-        "@map-migration/ops": "workspace:*",
         "@tanstack/vue-query": "^5.92.9",
         "@tanstack/vue-table": "^8.21.3",
         "class-variance-authority": "^0.7.1",
@@ -112,6 +113,14 @@
         "zod": "^3.24.2",
       },
     },
+    "packages/core-runtime": {
+      "name": "@map-migration/core-runtime",
+      "version": "0.1.0",
+      "dependencies": {
+        "@map-migration/contracts": "workspace:*",
+        "effect": "^3.19.19",
+      },
+    },
     "packages/fixtures": {
       "name": "@map-migration/fixtures",
       "version": "0.1.0",
@@ -126,11 +135,16 @@
     "packages/geo-tiles": {
       "name": "@map-migration/geo-tiles",
       "version": "0.1.0",
+      "dependencies": {
+        "@map-migration/core-runtime": "workspace:*",
+        "effect": "^3.19.19",
+      },
     },
     "packages/map-engine": {
       "name": "@map-migration/map-engine",
       "version": "0.1.0",
       "dependencies": {
+        "effect": "^3.19.19",
         "pmtiles": "4.4.0",
       },
       "devDependencies": {
@@ -158,7 +172,6 @@
       "dependencies": {
         "@effect/platform": "^0.94.5",
         "@effect/platform-bun": "^0.87.1",
-        "@map-migration/contracts": "workspace:*",
         "effect": "^3.19.19",
       },
       "devDependencies": {
@@ -308,6 +321,8 @@
     "@map-migration/bench": ["@map-migration/bench@workspace:packages/bench"],
 
     "@map-migration/contracts": ["@map-migration/contracts@workspace:packages/contracts"],
+
+    "@map-migration/core-runtime": ["@map-migration/core-runtime@workspace:packages/core-runtime"],
 
     "@map-migration/docs": ["@map-migration/docs@workspace:apps/docs"],
 

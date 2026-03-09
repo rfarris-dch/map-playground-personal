@@ -1,5 +1,5 @@
 {
-  "name": "@map-migration/geo-tiles",
+  "name": "@map-migration/core-runtime",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -13,13 +13,21 @@
     "dev": "tsc -w -p tsconfig.json"
   },
   "dependencies": {
-    "@map-migration/core-runtime": "workspace:*",
+    "@map-migration/contracts": "workspace:*",
     "effect": "^3.19.19"
   },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./api": {
+      "types": "./dist/api.d.ts",
+      "default": "./dist/api.js"
+    },
+    "./browser": {
+      "types": "./dist/browser.d.ts",
+      "default": "./dist/browser.js"
     },
     "./effect": {
       "types": "./dist/effect.d.ts",

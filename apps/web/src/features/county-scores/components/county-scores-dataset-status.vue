@@ -1,6 +1,10 @@
 <script setup lang="ts">
   import type { CountyScoresStatusResponse } from "@map-migration/contracts";
   import { computed } from "vue";
+  import {
+    formatDateTime,
+    formatFeatureFamily,
+  } from "@/features/county-scores/county-scores-display.service";
 
   interface CountyScoresDatasetStatusProps {
     readonly errorMessage?: string | null;
@@ -18,35 +22,15 @@
       : "border-amber-400/40 bg-amber-500/10 text-amber-950"
   );
   const statusLabel = computed(() =>
-    props.status?.datasetAvailable ? "Published intelligence dataset" : "Publication unavailable"
+    props.status?.datasetAvailable ? "Published market-pressure dataset" : "Publication unavailable"
   );
-
-  function formatFeatureFamily(value: string): string {
-    return value
-      .split("_")
-      .map((part) => {
-        const normalized = part.trim();
-        if (normalized.length === 0) {
-          return normalized;
-        }
-
-        return `${normalized[0]?.toUpperCase() ?? ""}${normalized.slice(1)}`;
-      })
-      .join(" ");
-  }
-
-  function formatDateTime(value: string | null): string {
-    if (value === null) {
+  const confidenceSummary = computed(() => {
+    if (props.status === null) {
       return "-";
     }
 
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) {
-      return value;
-    }
-
-    return parsed.toLocaleString();
-  }
+    return `${props.status.highConfidenceCount} high / ${props.status.mediumConfidenceCount} medium / ${props.status.lowConfidenceCount} low`;
+  });
 </script>
 
 <template>
@@ -55,7 +39,8 @@
       <div>
         <h3 class="m-0 text-sm font-semibold">Dataset Status</h3>
         <p class="mt-1 text-xs text-muted-foreground">
-          Publication metadata, versioning, and feature-family coverage for county intelligence.
+          Publication metadata, freshness, confidence, and source-family coverage for county market
+          pressure.
         </p>
       </div>
 
@@ -77,16 +62,16 @@
 
     <div
       v-else-if="props.isLoading"
-      class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3"
+      class="grid gap-2 sm:grid-cols-2 xl:grid-cols-4"
       role="status"
       aria-live="polite"
       aria-busy="true"
     >
-      <div v-for="index in 6" :key="index" class="h-16 animate-pulse rounded-md bg-muted/80" />
+      <div v-for="index in 8" :key="index" class="h-16 animate-pulse rounded-md bg-muted/80" />
     </div>
 
     <div v-else-if="props.status !== null" class="space-y-3">
-      <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+      <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         <div class="rounded-md border border-border/60 bg-background/70 px-3 py-2">
           <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Published</div>
           <div class="mt-1 text-sm font-semibold">
@@ -123,10 +108,24 @@
         </div>
         <div class="rounded-md border border-border/60 bg-background/70 px-3 py-2">
           <div class="text-[10px] uppercase tracking-wide text-muted-foreground">
-            Scored vs Source Counties
+            Ranked / Deferred / Blocked
           </div>
           <div class="mt-1 text-sm font-semibold">
-            {{ props.status.scoredCountyCount }}
+            {{ props.status.rankedCountyCount }}
+            / {{ props.status.deferredCountyCount }}
+            / {{ props.status.blockedCountyCount }}
+          </div>
+        </div>
+        <div class="rounded-md border border-border/60 bg-background/70 px-3 py-2">
+          <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Confidence</div>
+          <div class="mt-1 text-sm font-semibold">{{ confidenceSummary }}</div>
+        </div>
+        <div class="rounded-md border border-border/60 bg-background/70 px-3 py-2">
+          <div class="text-[10px] uppercase tracking-wide text-muted-foreground">
+            Fresh Counties
+          </div>
+          <div class="mt-1 text-sm font-semibold">
+            {{ props.status.freshCountyCount }}
             / {{ props.status.sourceCountyCount }}
           </div>
         </div>
@@ -140,10 +139,10 @@
           </dd>
         </div>
         <div class="rounded-md border border-border/60 bg-background/70 px-3 py-2">
-          <dt class="text-[10px] uppercase tracking-wide text-muted-foreground">Water Coverage</dt>
+          <dt class="text-[10px] uppercase tracking-wide text-muted-foreground">Rows Published</dt>
           <dd class="mt-1 text-[11px] font-medium">
-            {{ props.status.waterCoverageCount }}
-            counties with basin coverage
+            {{ props.status.rowCount }}
+            current county rows
           </dd>
         </div>
       </dl>
@@ -177,7 +176,7 @@
       v-else
       class="rounded-md border border-border/60 bg-background/70 px-3 py-2 text-xs text-muted-foreground"
     >
-      County intelligence publication metadata is not available for this selection.
+      County market-pressure publication metadata is not available for this selection.
     </p>
   </section>
 </template>

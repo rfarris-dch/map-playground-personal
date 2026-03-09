@@ -67,9 +67,7 @@
     () => props.metroSourceLayers.length + props.longhaulSourceLayers.length
   );
   const containerClass = computed(() =>
-    props.embedded
-      ? "w-full"
-      : "w-full rounded-lg border border-border/90 bg-card/95 p-3 shadow-lg backdrop-blur-sm"
+    props.embedded ? "w-full" : "map-glass-panel w-full rounded-lg p-3"
   );
 
   function onToggleMetro(event: Event): void {
@@ -119,7 +117,7 @@
     <p class="mb-2 break-words text-[11px] font-mono text-muted-foreground">{{ props.status }}</p>
 
     <div class="grid gap-2">
-      <label class="flex cursor-pointer items-start gap-3 rounded-md border border-border/70 p-2">
+      <label class="map-glass-card flex cursor-pointer items-start gap-3 rounded-md p-2">
         <input
           class="mt-0.5 h-4 w-4"
           type="checkbox"
@@ -135,7 +133,7 @@
         </div>
       </label>
 
-      <label class="flex cursor-pointer items-start gap-3 rounded-md border border-border/70 p-2">
+      <label class="map-glass-card flex cursor-pointer items-start gap-3 rounded-md p-2">
         <input
           class="mt-0.5 h-4 w-4"
           type="checkbox"
@@ -154,7 +152,7 @@
       </label>
     </div>
 
-    <div class="mt-2 rounded-md border border-border/70 p-2">
+    <div class="map-glass-card mt-2 rounded-md p-2">
       <div class="mb-2 flex items-center justify-between">
         <h3 class="m-0 text-[11px] font-semibold tracking-wide">
           Fiber ({{ totalSourceLayerCount }})
@@ -166,11 +164,11 @@
         v-model="searchQuery"
         type="text"
         placeholder="Filter fiber lines..."
-        class="mb-2 w-full rounded border border-border/70 bg-background/80 px-2 py-1 text-[11px] leading-5 outline-none focus:border-primary"
+        class="map-glass-input mb-2 w-full rounded border-white/40 bg-white/25 px-2 py-1 text-[11px] leading-5 outline-none"
       >
 
       <div class="grid gap-2">
-        <section class="rounded border border-border/70 p-2">
+        <section class="map-glass-card rounded p-2">
           <div class="mb-1 flex items-center justify-between">
             <h4 class="m-0 text-[11px] font-semibold">
               Metro ({{ filteredMetroSourceLayers.length }})
@@ -178,14 +176,14 @@
             <div class="flex items-center gap-2 text-[10px]">
               <button
                 type="button"
-                class="text-primary hover:underline"
+                class="map-glass-button rounded px-2 py-1 text-foreground/85"
                 @click="emit('setAllSourceLayers', 'metro', true)"
               >
                 All
               </button>
               <button
                 type="button"
-                class="text-primary hover:underline"
+                class="map-glass-button rounded px-2 py-1 text-foreground/85"
                 @click="emit('setAllSourceLayers', 'metro', false)"
               >
                 None
@@ -197,7 +195,7 @@
             <label
               v-for="layer in filteredMetroSourceLayers"
               :key="layer.layerName"
-              class="mb-1 flex cursor-pointer items-start gap-2 rounded px-1 py-1 text-[11px] hover:bg-muted/40"
+              class="mb-1 flex cursor-pointer items-start gap-2 rounded px-1 py-1 text-[11px] hover:bg-white/18"
             >
               <input
                 class="mt-0.5 h-3.5 w-3.5"
@@ -221,7 +219,7 @@
           </div>
         </section>
 
-        <section class="rounded border border-border/70 p-2">
+        <section class="map-glass-card rounded p-2">
           <div class="mb-1 flex items-center justify-between">
             <h4 class="m-0 text-[11px] font-semibold">
               Longhaul ({{ filteredLonghaulSourceLayers.length }})
@@ -229,14 +227,14 @@
             <div class="flex items-center gap-2 text-[10px]">
               <button
                 type="button"
-                class="text-primary hover:underline"
+                class="map-glass-button rounded px-2 py-1 text-foreground/85"
                 @click="emit('setAllSourceLayers', 'longhaul', true)"
               >
                 All
               </button>
               <button
                 type="button"
-                class="text-primary hover:underline"
+                class="map-glass-button rounded px-2 py-1 text-foreground/85"
                 @click="emit('setAllSourceLayers', 'longhaul', false)"
               >
                 None
@@ -248,7 +246,7 @@
             <label
               v-for="layer in filteredLonghaulSourceLayers"
               :key="layer.layerName"
-              class="mb-1 flex cursor-pointer items-start gap-2 rounded px-1 py-1 text-[11px] hover:bg-muted/40"
+              class="mb-1 flex cursor-pointer items-start gap-2 rounded px-1 py-1 text-[11px] hover:bg-white/18"
             >
               <input
                 class="mt-0.5 h-3.5 w-3.5"

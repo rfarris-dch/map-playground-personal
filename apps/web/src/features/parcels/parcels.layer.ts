@@ -1,5 +1,6 @@
 import {
   assertTileManifestMatchesDataset,
+  createPmtilesSourceUrl,
   type VectorTilesetSchemaContract,
 } from "@map-migration/geo-tiles";
 import type { IMap, MapClickEvent, MapPointerEvent } from "@map-migration/map-engine";
@@ -10,7 +11,6 @@ import {
 } from "@map-migration/map-style";
 import type { ParcelFeatureTarget } from "@/features/parcels/parcels.layer.types";
 import {
-  createPmtilesSourceUrl,
   createStressGovernor,
   evaluateParcelsGuardrails,
   loadParcelsManifest,

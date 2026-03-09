@@ -1,3 +1,9 @@
+import {
+  createAbortError as createAbortErrorFromEffect,
+  fetchResponseEffect,
+  runEffectPromise,
+  waitForAbortableValue as waitForAbortableValueFromEffect,
+} from "@map-migration/core-runtime/effect";
 import { Effect } from "effect";
 import type { FiberLocatorConfig } from "@/geo/fiber-locator/fiber-locator.types";
 import type { FiberLocatorTileSnapshot } from "./fiber-locator.service.types";
@@ -11,56 +17,20 @@ const PASS_THROUGH_TILE_HEADER_NAMES: readonly string[] = [
   "vary",
 ];
 
-export function createAbortError(message: string): Error {
-  const error = new Error(message);
-  error.name = "AbortError";
-  return error;
-}
-
-export function shouldRetryUpstreamResponse(response: Response): boolean {
+function shouldRetryUpstreamResponse(response: Response): boolean {
   return response.status === 408 || response.status === 429 || response.status >= 500;
 }
 
-export function retryDelayMs(attempt: number): number {
-  const exponent = Math.max(0, attempt);
-  return 250 * 2 ** exponent;
+function retryDelayMs(attempt: number): number {
+  return 250 * 2 ** Math.max(0, attempt);
 }
 
-export function delay(ms: number, signal?: AbortSignal): Promise<void> {
-  if (ms <= 0) {
-    return Promise.resolve();
-  }
-
-  return Effect.runPromise(Effect.sleep(ms), signal == null ? undefined : { signal }).catch(
-    (error) => {
-      if (signal?.aborted) {
-        throw createAbortError("fiberlocator tile retry aborted");
-      }
-
-      throw error;
-    }
-  );
+export function createAbortError(message: string): Error | DOMException {
+  return createAbortErrorFromEffect(message);
 }
 
 export function waitForAbortableValue<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
-  if (typeof signal === "undefined") {
-    return promise;
-  }
-
-  if (signal.aborted) {
-    return Promise.reject(createAbortError("fiberlocator tile request aborted"));
-  }
-
-  return Effect.runPromise(
-    Effect.tryPromise(() => promise),
-    { signal }
-  ).catch((error) => {
-    if (signal.aborted) {
-      throw createAbortError("fiberlocator tile request aborted");
-    }
-
-    throw error;
-  });
+  return waitForAbortableValueFromEffect(promise, signal);
 }
 
 export function copyTileHeaders(headers: Headers): Headers {
@@ -82,36 +52,33 @@ export function createTileSnapshotResponse(snapshot: FiberLocatorTileSnapshot): 
   });
 }
 
-function resolveFetchSignal(
-  initSignal: AbortSignal | null | undefined,
-  effectSignal: AbortSignal
-): AbortSignal {
-  if (initSignal instanceof AbortSignal) {
-    return AbortSignal.any([initSignal, effectSignal]);
-  }
+function fetchResponseWithTimeout(
+  url: string,
+  timeoutMs: number,
+  init: RequestInit = {},
+  options: {
+    readonly maxAttempts?: number;
+    readonly shouldRetryResponse?: (response: Response) => boolean;
+  } = {}
+): Promise<Response> {
+  const signal = init.signal instanceof AbortSignal ? init.signal : undefined;
 
-  return effectSignal;
-}
-
-function fetchResponseEffect(url: string, timeoutMs: number, init: RequestInit = {}) {
-  return Effect.tryPromise({
-    try: (signal) =>
-      fetch(url, {
-        ...init,
-        signal: resolveFetchSignal(init.signal, signal),
-      }),
-    catch: (cause) => cause,
-  }).pipe(
-    Effect.timeoutFail({
-      duration: timeoutMs,
-      onTimeout: () => createAbortError("fiberlocator upstream request timed out"),
-    })
+  return runEffectPromise(
+    fetchResponseEffect({
+      init,
+      retryDelayMs,
+      shouldRetryError: (error) =>
+        error._tag === "RequestNetworkError" ||
+        (error._tag === "RequestAbortedError" && signal?.aborted !== true),
+      timeoutMs,
+      url,
+      ...(typeof options.maxAttempts === "number" ? { maxAttempts: options.maxAttempts } : {}),
+      ...(typeof options.shouldRetryResponse === "function"
+        ? { shouldRetryResponse: options.shouldRetryResponse }
+        : {}),
+    }).pipe(Effect.map(({ response }) => response)),
+    signal
   );
-}
-
-export async function fetchWithTimeout(url: string, timeoutMs: number, init: RequestInit = {}) {
-  const response = await Effect.runPromise(fetchResponseEffect(url, timeoutMs, init));
-  return { response };
 }
 
 export async function fetchJsonPayloadWithTimeout(
@@ -120,17 +87,13 @@ export async function fetchJsonPayloadWithTimeout(
   requestName: string,
   signal?: AbortSignal
 ): Promise<unknown> {
-  const requestInit: RequestInit = {
-    method: "GET",
+  const response = await fetchResponseWithTimeout(url, timeoutMs, {
     headers: {
       accept: "application/json",
     },
-  };
-  if (typeof signal !== "undefined") {
-    requestInit.signal = signal;
-  }
-
-  const response = await Effect.runPromise(fetchResponseEffect(url, timeoutMs, requestInit));
+    method: "GET",
+    ...(typeof signal === "undefined" ? {} : { signal }),
+  });
 
   if (!response.ok) {
     throw new Error(
@@ -151,42 +114,27 @@ export async function fetchFiberLocatorTileSnapshot(
   accept: string,
   signal?: AbortSignal
 ): Promise<FiberLocatorTileSnapshot> {
-  const requestInit: RequestInit = {
-    method: "GET",
-    headers: {
-      accept,
+  const response = await fetchResponseWithTimeout(
+    url,
+    config.requestTimeoutMs,
+    {
+      headers: {
+        accept,
+      },
+      method: "GET",
+      ...(typeof signal === "undefined" ? {} : { signal }),
     },
-  };
-  if (typeof signal !== "undefined") {
-    requestInit.signal = signal;
-  }
-
-  let attempt = 0;
-  while (attempt < 3) {
-    try {
-      const { response } = await fetchWithTimeout(url, config.requestTimeoutMs, requestInit);
-      if (shouldRetryUpstreamResponse(response) && attempt < 2) {
-        response.body?.cancel();
-      } else {
-        const body = new Uint8Array(await response.arrayBuffer());
-        return {
-          body,
-          cachedAtMs: Date.now(),
-          headers: copyTileHeaders(response.headers),
-          status: response.status,
-          statusText: response.statusText,
-        };
-      }
-    } catch (error) {
-      if (attempt >= 2) {
-        throw error;
-      }
+    {
+      maxAttempts: 3,
+      shouldRetryResponse: shouldRetryUpstreamResponse,
     }
+  );
 
-    const waitMs = retryDelayMs(attempt);
-    attempt += 1;
-    await delay(waitMs, signal);
-  }
-
-  throw new Error("fiberlocator tile request exceeded retry attempts");
+  return {
+    body: new Uint8Array(await response.arrayBuffer()),
+    cachedAtMs: Date.now(),
+    headers: copyTileHeaders(response.headers),
+    status: response.status,
+    statusText: response.statusText,
+  };
 }

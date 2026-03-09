@@ -1,5 +1,5 @@
 import type { MarketSortBy, MarketsTableResponse, SortDirection } from "@map-migration/contracts";
-import type { ApiResult } from "@/lib/api-client";
+import type { ApiResult } from "@map-migration/core-runtime/api";
 
 export interface MarketsTableRequest {
   readonly page: number;

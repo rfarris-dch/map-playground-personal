@@ -3,8 +3,8 @@ import {
   type MarketsSelectionRequest,
   MarketsSelectionResponseSchema,
 } from "@map-migration/contracts";
-import type { ApiResult } from "@/lib/api-client";
-import { apiGetJson } from "@/lib/api-client";
+import type { ApiResult } from "@map-migration/core-runtime/api";
+import { apiGetJson } from "@map-migration/core-runtime/api";
 
 type MarketsSelectionResult = ApiResult<typeof MarketsSelectionResponseSchema._type>;
 

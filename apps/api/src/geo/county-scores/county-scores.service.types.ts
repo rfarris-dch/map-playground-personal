@@ -9,10 +9,11 @@ export type QueryCountyScoresResult =
       readonly ok: true;
       readonly value: {
         readonly dataVersion: string;
+        readonly blockedCountyIds: readonly string[];
+        readonly deferredCountyIds: readonly string[];
         readonly rows: readonly CountyScore[];
         readonly missingCountyIds: readonly string[];
         readonly requestedCountyIds: readonly string[];
-        readonly unavailableCountyIds: readonly string[];
       };
     }
   | {

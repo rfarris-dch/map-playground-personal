@@ -1,37 +1,19 @@
-import { type Effect, Exit, Scope } from "effect";
+import { startBrowserScopedEffect } from "@map-migration/core-runtime/browser";
 import {
   destroyBoundaryRuntime,
   initializeBoundaryRuntime,
   resetBoundaryRuntime,
 } from "@/features/app/boundary/app-shell-boundary-runtime.service";
-import { initializeAppShellMapEffect } from "@/features/app/lifecycle/app-shell-map.service";
+import {
+  type AppShellMapSetup,
+  initializeAppShellMapEffect,
+} from "@/features/app/lifecycle/app-shell-map.service";
 import {
   destroyMapLayerRuntime,
   initializeMapLayerRuntime,
 } from "@/features/app/lifecycle/app-shell-map-layer-runtime.service";
 import type { UseAppShellMapLifecycleOptions } from "@/features/app/lifecycle/use-app-shell-map-lifecycle.types";
 import { createLayerRuntime } from "@/features/layers/layer-runtime.service";
-import { runBrowserEffect } from "@/lib/effect/runtime";
-
-async function startScopedEffect<TValue>(
-  program: Effect.Effect<TValue, never, Scope.Scope>
-): Promise<{
-  readonly dispose: () => Promise<void>;
-  readonly value: TValue;
-}> {
-  const scope = await runBrowserEffect(Scope.make());
-
-  try {
-    const value = await runBrowserEffect(Scope.extend(program, scope));
-    return {
-      dispose: () => runBrowserEffect(Scope.close(scope, Exit.succeed(undefined))),
-      value,
-    };
-  } catch (error) {
-    await runBrowserEffect(Scope.close(scope, Exit.die(error)));
-    throw error;
-  }
-}
 
 export async function initializeMapLifecycleRuntime(
   options: UseAppShellMapLifecycleOptions
@@ -41,7 +23,7 @@ export async function initializeMapLifecycleRuntime(
     return;
   }
 
-  const mapSetup = await startScopedEffect(
+  const mapSetup = await startBrowserScopedEffect<AppShellMapSetup, never>(
     initializeAppShellMapEffect(container, {
       initialViewport: options.initialViewport,
     })

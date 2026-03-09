@@ -1,7 +1,4 @@
-import { createPmtilesSourceUrl as createPmtilesSourceUrlFromManifest } from "@map-migration/geo-tiles";
-import { loadTilePublishManifestEffect } from "@map-migration/geo-tiles/effect";
-import type { FetchJsonEffectSuccess, RequestEffectError } from "@map-migration/ops/effect";
-import { Effect, Either } from "effect";
+import { loadTilePublishManifest } from "@map-migration/geo-tiles/effect";
 import type {
   StressGovernorController,
   StressGovernorOptions,
@@ -13,8 +10,6 @@ import type {
   ParcelsStatus,
   TilePublishManifest,
 } from "@/features/parcels/parcels.types";
-import { createAbortError } from "@/lib/effect/errors";
-import { runBrowserEffect } from "@/lib/effect/runtime";
 
 function toRadians(value: number): number {
   return (value * Math.PI) / 180;
@@ -65,49 +60,12 @@ function normalizeEastLongitude(west: number, east: number): number {
   return east + 360;
 }
 
-export async function loadParcelsManifest(
-  args: LoadParcelsManifestArgs
-): Promise<TilePublishManifest> {
-  const runOptions =
-    typeof args.signal === "undefined"
-      ? undefined
-      : {
-          signal: args.signal,
-        };
-  const result: Either.Either<
-    FetchJsonEffectSuccess<TilePublishManifest>,
-    RequestEffectError
-  > = await runBrowserEffect(
-    Effect.either(
-      loadTilePublishManifestEffect({
-        manifestPath: args.manifestPath,
-      })
-    ),
-    runOptions
-  );
-
-  if (Either.isRight(result)) {
-    return result.right.data;
-  }
-
-  const error = result.left;
-  switch (error._tag) {
-    case "RequestAbortedError":
-      throw createAbortError();
-    case "RequestNetworkError":
-      throw error.cause;
-    case "RequestHttpError":
-      throw new Error(`Failed to load parcels manifest (${error.status} ${error.statusText})`);
-    case "RequestJsonParseError":
-    case "RequestSchemaError":
-      throw new Error("Failed to parse parcels manifest JSON");
-    default:
-      throw error;
-  }
-}
-
-export function createPmtilesSourceUrl(manifest: TilePublishManifest): string {
-  return createPmtilesSourceUrlFromManifest(manifest);
+export function loadParcelsManifest(args: LoadParcelsManifestArgs): Promise<TilePublishManifest> {
+  return loadTilePublishManifest({
+    manifestPath: args.manifestPath,
+    preserveNetworkErrorCause: true,
+    ...(args.signal instanceof AbortSignal ? { signal: args.signal } : {}),
+  });
 }
 
 function estimateViewportWidthKm(bounds: {

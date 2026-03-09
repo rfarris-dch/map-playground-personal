@@ -1,9 +1,9 @@
 import { buildFacilityDetailRoute, FacilitiesDetailResponseSchema } from "@map-migration/contracts";
+import { apiGetJson } from "@map-migration/core-runtime/api";
 import type {
   FacilityDetailRequest,
   FacilityDetailResult,
 } from "@/features/facilities/facility-detail/detail.types";
-import { apiGetJson } from "@/lib/api-client";
 
 export function fetchFacilityDetail(request: FacilityDetailRequest): Promise<FacilityDetailResult> {
   const requestInit: RequestInit = {};

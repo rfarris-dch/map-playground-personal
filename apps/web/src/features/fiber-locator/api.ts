@@ -5,11 +5,11 @@ import {
   FiberLocatorCatalogResponseSchema,
   FiberLocatorLayersInViewResponseSchema,
 } from "@map-migration/contracts";
+import { apiGetJson } from "@map-migration/core-runtime/api";
 import type {
   FiberLocatorCatalogFetchResult,
   FiberLocatorInViewFetchResult,
 } from "@/features/fiber-locator/fiber-locator.types";
-import { apiGetJson } from "@/lib/api-client";
 
 export function fetchFiberLocatorCatalog(): Promise<FiberLocatorCatalogFetchResult> {
   return apiGetJson(ApiRoutes.fiberLocatorLayers, FiberLocatorCatalogResponseSchema);

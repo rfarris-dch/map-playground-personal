@@ -1,13 +1,11 @@
 import {
   assertTileManifestMatchesDataset,
+  createPmtilesSourceUrl,
   type TilePublishManifest,
 } from "@map-migration/geo-tiles";
+import { loadTilePublishManifest } from "@map-migration/geo-tiles/effect";
 import type { IMap } from "@map-migration/map-engine";
 import { getCatalogStyleLayerIds, getFloodStyleLayerIds } from "@map-migration/map-style";
-import {
-  createPmtilesSourceUrl,
-  loadVectorTilePublishManifest,
-} from "@/features/layers/vector-tile-manifest.service";
 import type {
   FloodLayerMountResult,
   FloodLayerVisibilityController,
@@ -177,7 +175,7 @@ export function mountFloodLayers(options: MountFloodLayersOptions): FloodLayerMo
       state.sourceInitializationAbortController?.abort();
       const abortController = new AbortController();
       state.sourceInitializationAbortController = abortController;
-      const manifest = await loadVectorTilePublishManifest({
+      const manifest = await loadTilePublishManifest({
         contextLabel: "flood",
         manifestPath,
         signal: abortController.signal,

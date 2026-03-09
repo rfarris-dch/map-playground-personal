@@ -124,7 +124,7 @@
 </script>
 
 <template>
-  <article class="rounded-lg border border-border/60 bg-muted/20 p-3">
+  <article class="map-glass-card rounded-lg p-3">
     <div class="mb-3 flex items-start justify-between gap-3">
       <div>
         <div class="mb-1 flex items-center gap-1.5">
@@ -135,7 +135,7 @@
           Power, provider mix, parcel candidates, and facility preview.
         </p>
       </div>
-      <div class="rounded-md border border-border/60 bg-background/60 px-2 py-1 text-right">
+      <div class="map-glass-card rounded-md px-2 py-1 text-right">
         <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Facilities</div>
         <div class="text-sm font-semibold text-foreground/90">{{ metrics.totalFacilities }}</div>
       </div>
@@ -160,7 +160,7 @@
         </div>
       </div>
 
-      <div class="rounded-md border border-border/60 bg-background/70 p-2">
+      <div class="map-glass-card rounded-md p-2">
         <div class="text-[10px] uppercase tracking-wide text-muted-foreground">
           Avg MW / Facility
         </div>
@@ -171,7 +171,7 @@
         </div>
       </div>
 
-      <div class="rounded-md border border-border/60 bg-background/70 p-2">
+      <div class="map-glass-card rounded-md p-2">
         <div class="text-[10px] uppercase tracking-wide text-muted-foreground">
           Total Commissioned
         </div>
@@ -180,14 +180,14 @@
         </div>
       </div>
 
-      <div class="rounded-md border border-border/60 bg-background/70 p-2">
+      <div class="map-glass-card rounded-md p-2">
         <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Pipeline Power</div>
         <div class="text-lg font-semibold text-foreground/90">
           {{ props.formatPower(metrics.totalPipelinePowerMw) }}
         </div>
       </div>
 
-      <div class="rounded-md border border-border/60 bg-background/70 p-2">
+      <div class="map-glass-card rounded-md p-2">
         <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Total Space</div>
         <div class="text-lg font-semibold text-foreground/90">
           {{ formatNullableSquareFootage(metrics.totalSquareFootage) }}
@@ -196,7 +196,7 @@
     </div>
 
     <div class="mb-3 grid gap-3 lg:grid-cols-2">
-      <section class="rounded-md border border-border/60 bg-background/60 p-2">
+      <section class="map-glass-card rounded-md p-2">
         <div class="mb-1 flex items-center gap-1.5">
           <span class="inline-block h-2 w-2 rounded-full bg-slate-500" />
           <h4 class="m-0 text-[11px] font-semibold text-foreground/90">Commissioned Mix</h4>
@@ -229,7 +229,7 @@
         </div>
       </section>
 
-      <section class="rounded-md border border-border/60 bg-background/60 p-2">
+      <section class="map-glass-card rounded-md p-2">
         <div class="mb-1 flex items-center gap-1.5">
           <span class="inline-block h-2 w-2 rounded-full bg-emerald-500" />
           <h4 class="m-0 text-[11px] font-semibold text-foreground/90">Status Breakdown</h4>
@@ -252,7 +252,7 @@
     </div>
 
     <div class="mb-3 grid gap-3 lg:grid-cols-2">
-      <section class="rounded-md border border-border/60 bg-background/60 p-2">
+      <section class="map-glass-card rounded-md p-2">
         <div class="mb-1 flex items-center gap-1.5">
           <span class="inline-block h-2 w-2 rounded-full bg-violet-500" />
           <h4 class="m-0 text-[11px] font-semibold text-foreground/90">Top Providers</h4>
@@ -279,26 +279,26 @@
         <p v-else class="text-[10px] text-muted-foreground">No provider totals available.</p>
       </section>
 
-      <section class="rounded-md border border-border/60 bg-background/60 p-2">
+      <section class="map-glass-card rounded-md p-2">
         <div class="mb-1 flex items-center gap-1.5">
           <span class="inline-block h-2 w-2 rounded-full bg-emerald-500" />
           <h4 class="m-0 text-[11px] font-semibold text-foreground/90">Parcel Candidates</h4>
         </div>
 
         <div class="grid grid-cols-3 gap-2 text-[11px]">
-          <div class="rounded bg-muted/30 px-2 py-1">
+          <div class="map-glass-card rounded px-2 py-1">
             <span class="text-muted-foreground">Total acres:</span>
             <span class="font-medium tabular-nums">
               {{ formatNullableAcres(parcelCandidates.totalAcres) }}
             </span>
           </div>
-          <div class="rounded bg-muted/30 px-2 py-1">
+          <div class="map-glass-card rounded px-2 py-1">
             <span class="text-muted-foreground">Avg acres:</span>
             <span class="font-medium tabular-nums">
               {{ formatNullableAcres(parcelCandidates.averageAcres) }}
             </span>
           </div>
-          <div class="rounded bg-muted/30 px-2 py-1">
+          <div class="map-glass-card rounded px-2 py-1">
             <span class="text-muted-foreground">Max acres:</span>
             <span class="font-medium tabular-nums">
               {{ formatNullableAcres(parcelCandidates.maxAcres) }}
@@ -310,7 +310,7 @@
           <div
             v-for="(parcel, index) in parcelCandidates.sample"
             :key="`${parcel.parcelNumber ?? parcel.address ?? 'parcel'}-${String(index)}`"
-            class="rounded border border-border/70 px-2 py-1.5 text-[11px]"
+            class="map-glass-card rounded px-2 py-1.5 text-[11px]"
           >
             <div class="flex items-center justify-between gap-2">
               <span class="truncate font-medium">
@@ -331,7 +331,7 @@
       </section>
     </div>
 
-    <section class="rounded-md border border-border/60 bg-background/60 p-2">
+    <section class="map-glass-card rounded-md p-2">
       <div class="mb-1 flex items-center gap-1.5">
         <span class="inline-block h-2 w-2 rounded-full bg-slate-500" />
         <h4 class="m-0 text-[11px] font-semibold text-foreground/90">Facilities</h4>
@@ -342,7 +342,7 @@
           v-for="facility in facilityPreview"
           :key="`${facility.perspective}:${facility.facilityId}`"
           type="button"
-          class="flex w-full items-start justify-between gap-2 rounded border border-transparent px-2 py-1.5 text-left transition hover:border-border hover:bg-muted/30"
+          class="map-glass-button flex w-full items-start justify-between gap-2 rounded px-2 py-1.5 text-left transition"
           @click="selectFacility(facility)"
         >
           <div class="min-w-0">

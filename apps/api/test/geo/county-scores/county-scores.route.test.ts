@@ -7,11 +7,12 @@ const queryCountyScoresMock =
       | {
           readonly ok: true;
           readonly value: {
+            readonly blockedCountyIds: readonly string[];
             readonly dataVersion: string;
+            readonly deferredCountyIds: readonly string[];
             readonly rows: readonly CountyScore[];
             readonly missingCountyIds: readonly string[];
             readonly requestedCountyIds: readonly string[];
-            readonly unavailableCountyIds: readonly string[];
           };
         }
       | {
@@ -47,21 +48,24 @@ const queryCountyScoresStatusMock =
             readonly formulaVersion: string | null;
             readonly rowCount: number;
             readonly sourceCountyCount: number;
-            readonly scoredCountyCount: number;
-            readonly waterCoverageCount: number;
+            readonly rankedCountyCount: number;
+            readonly deferredCountyCount: number;
+            readonly blockedCountyCount: number;
+            readonly highConfidenceCount: number;
+            readonly mediumConfidenceCount: number;
+            readonly lowConfidenceCount: number;
+            readonly freshCountyCount: number;
             readonly availableFeatureFamilies: readonly string[];
             readonly missingFeatureFamilies: readonly string[];
             readonly featureCoverage: {
-              readonly enterprise: boolean;
-              readonly facilities: boolean;
-              readonly fiber: boolean;
-              readonly hazards: boolean;
-              readonly hyperscale: boolean;
+              readonly demand: boolean;
+              readonly gridFriction: boolean;
+              readonly history: boolean;
+              readonly infrastructure: boolean;
+              readonly marketSeams: boolean;
+              readonly narratives: boolean;
               readonly policy: boolean;
-              readonly terrain: boolean;
-              readonly transmission: boolean;
-              readonly utilityTerritory: boolean;
-              readonly waterStress: boolean;
+              readonly supplyTimeline: boolean;
             };
           };
         }
@@ -95,6 +99,70 @@ afterAll(() => {
   mock.restore();
 });
 
+function createDeferredCountyRow(): CountyScore {
+  return {
+    countyFips: "06085",
+    countyName: "Santa Clara",
+    stateAbbrev: "CA",
+    rankStatus: "deferred",
+    attractivenessTier: "deferred",
+    confidenceBadge: "low",
+    marketPressureIndex: null,
+    demandPressureScore: 82.4,
+    supplyTimelineScore: null,
+    gridFrictionScore: null,
+    policyConstraintScore: null,
+    freshnessScore: 91,
+    lastUpdatedAt: "2026-03-07T00:00:00.000Z",
+    sourceVolatility: "high",
+    narrativeSummary: "Demand pressure is visible, but queue and policy baselines are missing.",
+    topDrivers: [],
+    deferredReasonCodes: ["MISSING_QUEUE_BASELINE", "MISSING_POLICY_BASELINE"],
+    whatChanged30d: [],
+    whatChanged60d: [],
+    whatChanged90d: [],
+    pillarValueStates: {
+      demand: "observed",
+      gridFriction: "unknown",
+      infrastructure: "derived",
+      policy: "unknown",
+      supplyTimeline: "unknown",
+    },
+    expectedMw0To24m: 180,
+    expectedMw24To60m: 70,
+    recentCommissionedMw24m: 45,
+    demandMomentumQoq: 0.32,
+    providerEntryCount12m: 1,
+    expectedSupplyMw0To36m: null,
+    expectedSupplyMw36To60m: null,
+    signedIaMw: null,
+    queueMwActive: null,
+    queueProjectCountActive: null,
+    medianDaysInQueueActive: null,
+    pastDueShare: null,
+    marketWithdrawalPrior: null,
+    congestionProxyScore: null,
+    plannedUpgradeCount: null,
+    heatmapSignalFlag: null,
+    policyMomentumScore: null,
+    moratoriumStatus: "unknown",
+    publicSentimentScore: null,
+    policyEventCount: null,
+    countyTaggedEventShare: null,
+    policyMappingConfidence: null,
+    transmissionMiles69kvPlus: null,
+    transmissionMiles230kvPlus: null,
+    gasPipelinePresenceFlag: null,
+    gasPipelineMileageCounty: null,
+    fiberPresenceFlag: null,
+    waterStressScore: 3.5,
+    primaryMarketId: "silicon-valley",
+    isSeamCounty: false,
+    formulaVersion: "county-market-pressure-v1",
+    inputDataVersion: "inputs-v1",
+  };
+}
+
 describe("county scores route", () => {
   beforeEach(() => {
     queryCountyScoresMock.mockReset();
@@ -126,24 +194,12 @@ describe("county scores route", () => {
     queryCountyScoresMock.mockResolvedValue({
       ok: true,
       value: {
+        blockedCountyIds: [],
         dataVersion: "2026-03-07",
-        rows: [
-          {
-            countyFips: "06085",
-            countyName: "Santa Clara",
-            stateAbbrev: "CA",
-            scoreStatus: "scored",
-            compositeScore: 82.4,
-            demandScore: 76.1,
-            generationScore: 88.5,
-            policyScore: 61.2,
-            formulaVersion: "v1",
-            inputDataVersion: "2026-03-07",
-          },
-        ],
+        deferredCountyIds: ["06085"],
+        rows: [createDeferredCountyRow()],
         missingCountyIds: ["48113"],
         requestedCountyIds: ["06085", "48113"],
-        unavailableCountyIds: [],
       },
     });
 
@@ -153,7 +209,8 @@ describe("county scores route", () => {
     expect(response.status).toBe(200);
     expect(payload.rows).toHaveLength(1);
     expect(payload.summary.missingCountyIds).toEqual(["48113"]);
-    expect(payload.summary.unavailableCountyIds).toEqual([]);
+    expect(payload.summary.deferredCountyIds).toEqual(["06085"]);
+    expect(payload.summary.blockedCountyIds).toEqual([]);
     expect(payload.meta.dataVersion).toBe("2026-03-07");
     expect(payload.meta.recordCount).toBe(1);
   });
@@ -164,7 +221,7 @@ describe("county scores route", () => {
       ok: false,
       value: {
         reason: "source_unavailable",
-        error: new Error('relation "analytics.county_scores_v1" does not exist'),
+        error: new Error('relation "analytics.county_market_pressure_current" does not exist'),
       },
     });
 
@@ -198,30 +255,32 @@ describe("county scores route", () => {
       ok: true,
       value: {
         datasetAvailable: true,
-        publicationRunId: "county-scores-20260307T000000Z",
+        publicationRunId: "county-market-pressure-20260307T000000Z",
         publishedAt: "2026-03-07T00:00:00.000Z",
-        methodologyId: "county-intelligence-alpha-v1",
+        methodologyId: "county-market-pressure-v1",
         dataVersion: "2026-03-07",
-        inputDataVersion:
-          "facilities=2026-03-07;hyperscale=2026-03-07;water=mirror.water_stress_basins",
-        formulaVersion: "county-scores-alpha-v1",
+        inputDataVersion: "dc_pipeline=2026-03-07;water=mirror.water_stress_basins",
+        formulaVersion: "county-market-pressure-v1",
         rowCount: 3221,
         sourceCountyCount: 3221,
-        scoredCountyCount: 3221,
-        waterCoverageCount: 3221,
-        availableFeatureFamilies: ["facilities", "hyperscale", "water_stress"],
-        missingFeatureFamilies: ["hazards", "terrain"],
+        rankedCountyCount: 0,
+        deferredCountyCount: 3221,
+        blockedCountyCount: 0,
+        highConfidenceCount: 0,
+        mediumConfidenceCount: 0,
+        lowConfidenceCount: 3221,
+        freshCountyCount: 3221,
+        availableFeatureFamilies: ["demand", "history", "market_seams", "narratives", "water"],
+        missingFeatureFamilies: ["grid_friction", "policy", "supply_timeline"],
         featureCoverage: {
-          enterprise: false,
-          facilities: true,
-          fiber: false,
-          hazards: false,
-          hyperscale: true,
+          demand: true,
+          gridFriction: false,
+          history: true,
+          infrastructure: true,
+          marketSeams: true,
+          narratives: true,
           policy: false,
-          terrain: false,
-          transmission: false,
-          utilityTerritory: false,
-          waterStress: true,
+          supplyTimeline: false,
         },
       },
     });
@@ -233,8 +292,14 @@ describe("county scores route", () => {
     expect(payload.datasetAvailable).toBe(true);
     expect(payload.meta.dataVersion).toBe("2026-03-07");
     expect(payload.rowCount).toBe(3221);
-    expect(payload.availableFeatureFamilies).toEqual(["facilities", "hyperscale", "water_stress"]);
-    expect(payload.featureCoverage.waterStress).toBe(true);
+    expect(payload.availableFeatureFamilies).toEqual([
+      "demand",
+      "history",
+      "market_seams",
+      "narratives",
+      "water",
+    ]);
+    expect(payload.featureCoverage.demand).toBe(true);
   });
 
   it("returns unpublished meta version when county status has no publication", async () => {
@@ -251,21 +316,24 @@ describe("county scores route", () => {
         formulaVersion: null,
         rowCount: 0,
         sourceCountyCount: 3221,
-        scoredCountyCount: 0,
-        waterCoverageCount: 0,
+        rankedCountyCount: 0,
+        deferredCountyCount: 0,
+        blockedCountyCount: 0,
+        highConfidenceCount: 0,
+        mediumConfidenceCount: 0,
+        lowConfidenceCount: 0,
+        freshCountyCount: 0,
         availableFeatureFamilies: [],
         missingFeatureFamilies: [],
         featureCoverage: {
-          enterprise: false,
-          facilities: false,
-          fiber: false,
-          hazards: false,
-          hyperscale: false,
+          demand: false,
+          gridFriction: false,
+          history: false,
+          infrastructure: false,
+          marketSeams: false,
+          narratives: false,
           policy: false,
-          terrain: false,
-          transmission: false,
-          utilityTerritory: false,
-          waterStress: false,
+          supplyTimeline: false,
         },
       },
     });
@@ -274,8 +342,8 @@ describe("county scores route", () => {
     const payload = await response.json();
 
     expect(response.status).toBe(200);
-    expect(payload.datasetAvailable).toBe(false);
     expect(payload.meta.dataVersion).toBe("unpublished");
+    expect(payload.datasetAvailable).toBe(false);
   });
 
   it("returns 503 when county score status is unavailable", async () => {
@@ -284,7 +352,7 @@ describe("county scores route", () => {
       ok: false,
       value: {
         reason: "source_unavailable",
-        error: new Error('relation "analytics_meta.county_score_publications" does not exist'),
+        error: new Error('relation "analytics.fact_publication" does not exist'),
       },
     });
 

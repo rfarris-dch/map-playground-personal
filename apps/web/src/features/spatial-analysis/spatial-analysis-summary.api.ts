@@ -5,9 +5,9 @@ import {
   type SpatialAnalysisSummaryResponse,
   SpatialAnalysisSummaryResponseSchema,
 } from "@map-migration/contracts";
-import type { ApiResult } from "@/lib/api-client";
-import { apiGetJson } from "@/lib/api-client";
-import { apiGetJsonEffect } from "@/lib/api-client-effect";
+import type { ApiEffectError, ApiEffectSuccess } from "@map-migration/core-runtime/api";
+import { type ApiResult, apiGetJson, apiGetJsonEffect } from "@map-migration/core-runtime/api";
+import type { Effect } from "effect";
 
 export interface FetchSpatialAnalysisSummaryOptions {
   readonly expectedParcelIngestionRunId: string | null;
@@ -52,7 +52,7 @@ export function fetchSpatialAnalysisSummary(
 export function fetchSpatialAnalysisSummaryEffect(
   request: SpatialAnalysisSummaryRequest,
   options: FetchSpatialAnalysisSummaryOptions
-) {
+): Effect.Effect<ApiEffectSuccess<SpatialAnalysisSummaryResponse>, ApiEffectError, never> {
   const requestInit: RequestInit = {
     body: JSON.stringify(request),
     headers: {

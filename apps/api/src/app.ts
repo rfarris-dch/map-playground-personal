@@ -3,7 +3,7 @@ import {
   createRequestId,
   normalizeRequestIdHeader,
   REQUEST_ID_MAX_LENGTH,
-} from "@map-migration/ops";
+} from "@map-migration/core-runtime";
 import { Effect } from "effect";
 import type { Context } from "hono";
 import { Hono } from "hono";

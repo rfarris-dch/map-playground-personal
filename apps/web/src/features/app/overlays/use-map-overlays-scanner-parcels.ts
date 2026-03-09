@@ -1,4 +1,15 @@
 import type { ParcelEnrichRequest, ParcelsFeatureCollection } from "@map-migration/contracts";
+import {
+  ApiAbortedError,
+  type ApiEffectError,
+  ApiPolicyRejectedError,
+  getApiErrorReason,
+} from "@map-migration/core-runtime/api";
+import type { BrowserEffectFiber } from "@map-migration/core-runtime/browser";
+import {
+  forkScopedBrowserEffect,
+  interruptBrowserFiber,
+} from "@map-migration/core-runtime/browser";
 import type { IMap } from "@map-migration/map-engine";
 import { Effect, Either } from "effect";
 import { onBeforeUnmount, shallowRef, watch } from "vue";
@@ -22,19 +33,11 @@ import type {
   UseMapOverlaysScannerParcelsOptions,
 } from "@/features/app/overlays/use-map-overlays-scanner-parcels.types";
 import {
+  type ApiIngestionRunMismatchError,
   fetchSpatialAnalysisParcelsPagesEffect,
   type SpatialAnalysisParcelsPagesResult,
 } from "@/features/spatial-analysis/spatial-analysis-parcels-query.service";
 import { createDebouncedLatestRunner } from "@/lib/effect/debounced-latest-runner";
-import {
-  ApiAbortedError,
-  type ApiEffectError,
-  type ApiIngestionRunMismatchError,
-  ApiPolicyRejectedError,
-  getApiErrorReason,
-} from "@/lib/effect/errors";
-import type { BrowserEffectFiber } from "@/lib/effect/runtime";
-import { forkScopedBrowserEffect, interruptBrowserFiber } from "@/lib/effect/runtime";
 import { listenToMapEvent } from "@/lib/effect/scoped-listener";
 import { mutateVueState } from "@/lib/effect/vue-bridge";
 

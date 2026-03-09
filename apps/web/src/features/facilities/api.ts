@@ -2,11 +2,11 @@ import {
   buildFacilitiesBboxRoute,
   FacilitiesFeatureCollectionSchema,
 } from "@map-migration/contracts";
+import { apiGetJson } from "@map-migration/core-runtime/api";
 import type {
   FacilitiesBboxRequest,
   FacilitiesFetchResult,
 } from "@/features/facilities/facilities.types";
-import { apiGetJson } from "@/lib/api-client";
 
 export function fetchFacilitiesByBbox(args: FacilitiesBboxRequest): Promise<FacilitiesFetchResult> {
   const requestInit: RequestInit = {};
