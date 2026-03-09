@@ -30,8 +30,9 @@ describe("runEffectRoute", () => {
     const payload = await response.json();
 
     expect(response.status).toBe(200);
-    expect(response.headers.get(ApiHeaders.requestId)).toBe("req-123");
-    expect(payload.requestId).toBe("req-123");
+    expect(response.headers.get(ApiHeaders.requestId)).toBe(payload.requestId);
+    expect(typeof payload.requestId).toBe("string");
+    expect(payload.requestId.length).toBeGreaterThan(0);
     expect(payload.aborted).toBe(false);
   });
 

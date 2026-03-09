@@ -1,5 +1,6 @@
 import { Effect } from "effect";
 import { closePostgresPool } from "@/db/postgres";
+import { describeEffectDevToolsConnection, runApiEffect } from "@/effect/api-effect-runtime";
 import { startHyperscaleSyncLoop } from "@/sync/hyperscale-sync.service";
 import type { HyperscaleSyncController } from "@/sync/hyperscale-sync.types";
 import { startParcelsSyncLoop } from "@/sync/parcels-sync.service";
@@ -8,6 +9,7 @@ import type { ParcelsSyncController } from "@/sync/parcels-sync.types";
 let hyperscaleSyncController: HyperscaleSyncController | null = null;
 let parcelsSyncController: ParcelsSyncController | null = null;
 let isShuttingDown = false;
+const effectDevToolsConnection = describeEffectDevToolsConnection();
 
 function shutdown(signal: string): Promise<void> {
   if (isShuttingDown) {
@@ -16,7 +18,7 @@ function shutdown(signal: string): Promise<void> {
 
   isShuttingDown = true;
   console.log(`[api-sync-worker] shutting down (${signal})`);
-  return Effect.runPromise(
+  return runApiEffect(
     Effect.gen(function* () {
       if (hyperscaleSyncController !== null) {
         const controller = hyperscaleSyncController;
@@ -71,6 +73,11 @@ function startLoopEffect<TController>(
 
 function startSyncWorkerEffect(): Effect.Effect<void, Error> {
   return Effect.gen(function* () {
+    yield* Effect.sync(() => {
+      if (effectDevToolsConnection !== null) {
+        console.log(`[api-sync-worker] Effect DevTools enabled (${effectDevToolsConnection})`);
+      }
+    });
     const [hyperscaleController, parcelsController] = yield* Effect.all(
       [
         startLoopEffect<HyperscaleSyncController>("hyperscale", startHyperscaleSyncLoop),
@@ -96,7 +103,7 @@ function startSyncWorkerEffect(): Effect.Effect<void, Error> {
   });
 }
 
-Effect.runPromise(startSyncWorkerEffect()).catch((error) => {
+runApiEffect(startSyncWorkerEffect()).catch((error) => {
   console.error("[api-sync-worker] startup failure", error);
   process.exit(1);
 });

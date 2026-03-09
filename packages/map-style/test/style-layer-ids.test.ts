@@ -19,6 +19,7 @@ describe("style layer ids", () => {
       fill100LayerId: "environmental-flood-100-fill",
       fill500LayerId: "environmental-flood-500-fill",
       outline100LayerId: "environmental-flood-100-outline",
+      outline500LayerId: "environmental-flood-500-outline",
     });
     expect(getFacilitiesStyleLayerIds("facilities.colocation")).toEqual({
       clusterLayerId: "facilities.colocation.clusters",
@@ -63,6 +64,7 @@ describe("style layer ids", () => {
     ]);
     expect(getCatalogStyleLayerIds("environmental.flood-500")).toEqual([
       "environmental-flood-500-fill",
+      "environmental-flood-500-outline",
     ]);
     expect(getCatalogStyleLayerIds("environmental.hydro-basins")).toEqual([
       "environmental-hydro-basins-huc4-line",

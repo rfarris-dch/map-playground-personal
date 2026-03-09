@@ -1,5 +1,6 @@
 import { Cause, Effect, Context as EffectContext, Exit, Option } from "effect";
 import type { Context as HonoContext } from "hono";
+import { runApiEffectExit } from "@/effect/api-effect-runtime";
 import { jsonError, resolveRequestId, toDebugDetails, withRequestId } from "./api-response";
 
 export interface ApiRequestContextService {
@@ -138,7 +139,7 @@ export async function runEffectRoute(
     Effect.provideService(ApiRequestLogger, createApiRequestLogger(requestId))
   );
 
-  const exit = await Effect.runPromiseExit(providedProgram, {
+  const exit = await runApiEffectExit(providedProgram, {
     signal,
   });
 

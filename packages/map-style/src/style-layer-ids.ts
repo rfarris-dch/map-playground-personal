@@ -23,6 +23,7 @@ export function getFloodStyleLayerIds(_: FloodCatalogLayerId): FloodStyleLayerId
     fill100LayerId: "environmental-flood-100-fill",
     fill500LayerId: "environmental-flood-500-fill",
     outline100LayerId: "environmental-flood-100-outline",
+    outline500LayerId: "environmental-flood-500-outline",
   };
 }
 
@@ -85,7 +86,7 @@ export function getCatalogStyleLayerIds(layerId: StaticCatalogLayerId): readonly
       return [floodLayers.fill100LayerId, floodLayers.outline100LayerId];
     }
 
-    return [floodLayers.fill500LayerId];
+    return [floodLayers.fill500LayerId, floodLayers.outline500LayerId];
   }
 
   if (layerId === "environmental.hydro-basins") {

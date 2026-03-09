@@ -17,6 +17,7 @@ import {
   flood100OutlinePaint,
   flood500FillFilter,
   flood500FillPaint,
+  flood500OutlinePaint,
 } from "./flood-style.service";
 
 const FLOOD_DATASET = "environmental-flood";
@@ -93,6 +94,8 @@ function ensureFloodLayers(
         type: "fill",
         source: sourceId,
         "source-layer": sourceLayer,
+        minzoom: 0,
+        maxzoom: 24,
         filter: flood500FillFilter(),
         paint: flood500FillPaint(),
       },
@@ -107,8 +110,26 @@ function ensureFloodLayers(
         type: "fill",
         source: sourceId,
         "source-layer": sourceLayer,
+        minzoom: 0,
+        maxzoom: 24,
         filter: flood100FillFilter(),
         paint: flood100FillPaint(),
+      },
+      beforeLayerId
+    );
+  }
+
+  if (!map.hasLayer(styleLayerIds.outline500LayerId)) {
+    map.addLayer(
+      {
+        id: styleLayerIds.outline500LayerId,
+        type: "line",
+        source: sourceId,
+        "source-layer": sourceLayer,
+        minzoom: 0,
+        maxzoom: 24,
+        filter: flood500FillFilter(),
+        paint: flood500OutlinePaint(),
       },
       beforeLayerId
     );
@@ -121,6 +142,8 @@ function ensureFloodLayers(
         type: "line",
         source: sourceId,
         "source-layer": sourceLayer,
+        minzoom: 0,
+        maxzoom: 24,
         filter: flood100FillFilter(),
         paint: flood100OutlinePaint(),
       },
@@ -150,6 +173,7 @@ export function mountFloodLayers(options: MountFloodLayersOptions): FloodLayerMo
 
     setLayerVisibility(options.map, styleLayerIds.fill500LayerId, state.flood500Visible);
     setLayerVisibility(options.map, styleLayerIds.fill100LayerId, state.flood100Visible);
+    setLayerVisibility(options.map, styleLayerIds.outline500LayerId, state.flood500Visible);
     setLayerVisibility(options.map, styleLayerIds.outline100LayerId, state.flood100Visible);
   }
 
@@ -257,6 +281,7 @@ export function mountFloodLayers(options: MountFloodLayersOptions): FloodLayerMo
 
       for (const layerId of [
         styleLayerIds.outline100LayerId,
+        styleLayerIds.outline500LayerId,
         styleLayerIds.fill100LayerId,
         styleLayerIds.fill500LayerId,
       ]) {

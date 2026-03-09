@@ -3,11 +3,13 @@ import { type ServerType, serve } from "@hono/node-server";
 import { Effect } from "effect";
 import { createApiApp } from "@/app";
 import { closePostgresPool } from "@/db/postgres";
+import { describeEffectDevToolsConnection, runApiEffect } from "@/effect/api-effect-runtime";
 
 const app = createApiApp();
 let server: ServerType | null = null;
 let shutdownPromise: Promise<void> | null = null;
 const whitespacePattern = /\s+/;
+const effectDevToolsConnection = describeEffectDevToolsConnection();
 
 function resolvePort(): number {
   const rawPort = process.env.PORT ?? "3001";
@@ -105,7 +107,7 @@ function shutdown(signal: string): Promise<void> {
   }
 
   console.log(`[api] shutting down (${signal})`);
-  shutdownPromise = Effect.runPromise(
+  shutdownPromise = runApiEffect(
     Effect.gen(function* () {
       yield* closeServerEffect();
       yield* Effect.tryPromise(() => closePostgresPool());
@@ -131,6 +133,11 @@ process.on("SIGTERM", () => {
 function startServerEffect(): Effect.Effect<void, Error> {
   return Effect.gen(function* () {
     yield* forceClearPortBeforeStartEffect(port);
+    yield* Effect.sync(() => {
+      if (effectDevToolsConnection !== null) {
+        console.log(`[api] Effect DevTools enabled (${effectDevToolsConnection})`);
+      }
+    });
     server = serve(
       {
         fetch: app.fetch,
@@ -143,7 +150,7 @@ function startServerEffect(): Effect.Effect<void, Error> {
   });
 }
 
-Effect.runPromise(startServerEffect()).catch((error) => {
+runApiEffect(startServerEffect()).catch((error) => {
   console.error("[api] startup failure", error);
   process.exit(1);
 });

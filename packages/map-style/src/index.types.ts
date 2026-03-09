@@ -38,6 +38,7 @@ export interface FloodStyleLayerIds {
   readonly fill100LayerId: string;
   readonly fill500LayerId: string;
   readonly outline100LayerId: string;
+  readonly outline500LayerId: string;
 }
 
 export interface FacilitiesStyleLayerIds {

@@ -23,7 +23,7 @@ export const LAYER_ORDER_INVARIANTS: LayerOrderInvariants = {
     getParcelsStyleLayerIds().outlineLayerId,
   ],
   flood500BelowParcelOutlines: [
-    floodStyleLayerIds.fill500LayerId,
+    floodStyleLayerIds.outline500LayerId,
     getParcelsStyleLayerIds().outlineLayerId,
   ],
   hydroLabelsBelowFacilityPoints: [
