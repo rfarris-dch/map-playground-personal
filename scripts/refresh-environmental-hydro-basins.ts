@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { existsSync, lstatSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, extname, join } from "node:path";
 import {
   buildBoundaryLineFeatures,
   ensureRunDirectories,
@@ -31,6 +31,12 @@ import type {
 } from "./environmental/environmental-sync.types";
 
 const HUC_LEVELS: readonly number[] = [4, 6, 8, 10, 12];
+const HYDRO_BASINS_BUNDLE_LEVEL_PATTERN = /lev01-12/i;
+
+interface HydroBasinsLevelSource {
+  readonly ogrDataSourcePath: string;
+  readonly sourceLayer: string;
+}
 
 function currentStep(): string {
   const step = parseArg("--step");
@@ -77,6 +83,72 @@ function resolvePolygonSourceFromDirectory(directoryPath: string, level: number)
   return null;
 }
 
+function hydroBasinsLevelToken(level: number): string {
+  return `lev${String(level).padStart(2, "0")}`;
+}
+
+function resolveHydroBasinsSource(
+  sourcePath: string,
+  level: number
+): HydroBasinsLevelSource | null {
+  const levelToken = hydroBasinsLevelToken(level);
+
+  if (existsSync(sourcePath) && lstatSync(sourcePath).isDirectory()) {
+    const entries = listDirectoryPolygonSources(sourcePath);
+    for (const entry of entries) {
+      const entryName = basename(entry).toLowerCase();
+      if (
+        !(
+          entryName.endsWith(".shp") &&
+          entryName.includes("hybas") &&
+          entryName.includes(levelToken)
+        )
+      ) {
+        continue;
+      }
+
+      const ogrDataSourcePath = resolveOgrDataSourcePath(entry);
+      return {
+        ogrDataSourcePath,
+        sourceLayer: resolveOgrLayerName(ogrDataSourcePath, null, [
+          basename(entry, extname(entry)),
+        ]),
+      };
+    }
+
+    return null;
+  }
+
+  const normalizedExtension = extname(sourcePath).toLowerCase();
+  if (normalizedExtension === ".zip") {
+    const baseName = basename(sourcePath, extname(sourcePath));
+    const normalizedBaseName = baseName.toLowerCase();
+    if (!(normalizedBaseName.includes("hybas") && normalizedBaseName.includes("lev01-12"))) {
+      return null;
+    }
+
+    return {
+      ogrDataSourcePath: resolveOgrDataSourcePath(sourcePath),
+      sourceLayer: baseName.replace(HYDRO_BASINS_BUNDLE_LEVEL_PATTERN, levelToken),
+    };
+  }
+
+  if (normalizedExtension === ".shp") {
+    const baseName = basename(sourcePath, extname(sourcePath));
+    const normalizedBaseName = baseName.toLowerCase();
+    if (!(normalizedBaseName.includes("hybas") && normalizedBaseName.includes(levelToken))) {
+      return null;
+    }
+
+    return {
+      ogrDataSourcePath: resolveOgrDataSourcePath(sourcePath),
+      sourceLayer: baseName,
+    };
+  }
+
+  return null;
+}
+
 function sqlFieldExpression(fieldName: string | null, fallbackType: "REAL" | "TEXT"): string {
   if (fieldName === null) {
     return `CAST(NULL AS ${fallbackType})`;
@@ -90,6 +162,48 @@ function buildExtractOptions(): Record<string, string> {
     result[`huc${String(level)}Layer`] = resolveConfiguredLayer(level) ?? "";
     return result;
   }, {});
+}
+
+function buildHydroBasinsPolygonFileFromSourceLayer(
+  ogrDataSourcePath: string,
+  sourceLayer: string,
+  outputPath: string,
+  dataVersion: string
+): void {
+  const fieldNames = readOgrFieldNames(ogrDataSourcePath, sourceLayer);
+  const geometryField = readOgrGeometryFieldName(ogrDataSourcePath, sourceLayer);
+  const pfafField = resolveOgrFieldName(fieldNames, ["PFAF_ID", "PFAFID"], false);
+  const hybasField = resolveOgrFieldName(fieldNames, ["HYBAS_ID", "HYBASID"], false);
+  const areaField = resolveOgrFieldName(
+    fieldNames,
+    ["UP_AREA", "SUB_AREA", "areasqkm", "AreaSqKm"],
+    false
+  );
+
+  const pfafExpression = sqlFieldExpression(pfafField, "TEXT");
+  const hybasExpression = sqlFieldExpression(hybasField, "TEXT");
+  const labelExpression = `COALESCE(${pfafExpression}, ${hybasExpression})`;
+
+  const sql = [
+    "SELECT",
+    `CAST(${labelExpression} AS TEXT) AS huc,`,
+    `CAST(${labelExpression} AS TEXT) AS name,`,
+    `${sqlFieldExpression(areaField, "REAL")} AS areasqkm,`,
+    "CAST(NULL AS TEXT) AS states,",
+    `${quoteSqlString(dataVersion)} AS data_version,`,
+    `${quoteSqlIdentifier(geometryField)} AS geometry FROM ${quoteSqlIdentifier(sourceLayer)}`,
+  ].join(" ");
+
+  runCommand("ogr2ogr", [
+    "-f",
+    "GeoJSON",
+    outputPath,
+    ogrDataSourcePath,
+    "-dialect",
+    "SQLite",
+    "-sql",
+    sql,
+  ]);
 }
 
 function readRunConfig(path: string): RunConfigRecord {
@@ -195,6 +309,18 @@ function extractStep(): void {
         featureCount: readOgrFeatureCount(ogrDataSourcePath, sourceLayer),
         level,
         sourceLayer,
+      };
+    }
+
+    const hydroBasinsSource = resolveHydroBasinsSource(localSourcePath, level);
+    if (hydroBasinsSource !== null) {
+      return {
+        featureCount: readOgrFeatureCount(
+          hydroBasinsSource.ogrDataSourcePath,
+          hydroBasinsSource.sourceLayer
+        ),
+        level,
+        sourceLayer: hydroBasinsSource.sourceLayer,
       };
     }
 
@@ -432,6 +558,49 @@ function normalizeGpkgSource(
   }
 }
 
+function normalizeHydroBasinsSource(
+  contextRunDir: string,
+  localSourcePath: string,
+  dataVersion: string
+): void {
+  for (const level of HUC_LEVELS) {
+    const hydroBasinsSource = resolveHydroBasinsSource(localSourcePath, level);
+    if (hydroBasinsSource === null) {
+      throw new Error(`Missing HydroBASINS source for huc${String(level)} from ${localSourcePath}`);
+    }
+
+    const polygonPath = join(contextRunDir, "normalized", `huc${String(level)}-polygon.geojson`);
+    buildHydroBasinsPolygonFileFromSourceLayer(
+      hydroBasinsSource.ogrDataSourcePath,
+      hydroBasinsSource.sourceLayer,
+      polygonPath,
+      dataVersion
+    );
+
+    const normalizedPolygons = normalizePolygonCollection(
+      readGeoJsonFeatureCollection(polygonPath),
+      dataVersion
+    );
+    writeFeatureCollection(polygonPath, normalizedPolygons.features);
+
+    const lineFeatures = buildBoundaryLineFeatures(
+      normalizedPolygons,
+      buildLineProperties(level, dataVersion)
+    );
+    writeFeatureCollection(
+      join(contextRunDir, "normalized", `huc${String(level)}-line.geojson`),
+      lineFeatures
+    );
+
+    if (level < 12) {
+      buildLabelFileFromPolygonGeoJson(
+        polygonPath,
+        join(contextRunDir, "normalized", `huc${String(level)}-label.geojson`)
+      );
+    }
+  }
+}
+
 function normalizeStep(): void {
   const context = resolveRunContext("environmental-hydro-basins", import.meta.url);
   const dataVersion = readDataVersion(context.runSummaryPath, context.runId);
@@ -439,7 +608,17 @@ function normalizeStep(): void {
   const localSourcePath = resolveLocalSourcePath(context.rawDir, runConfig);
 
   if (existsSync(localSourcePath) && lstatSync(localSourcePath).isDirectory()) {
+    if (resolveHydroBasinsSource(localSourcePath, 4) !== null) {
+      normalizeHydroBasinsSource(context.runDir, localSourcePath, dataVersion);
+      return;
+    }
+
     normalizeDirectorySource(context.runDir, localSourcePath, dataVersion);
+    return;
+  }
+
+  if (resolveHydroBasinsSource(localSourcePath, 4) !== null) {
+    normalizeHydroBasinsSource(context.runDir, localSourcePath, dataVersion);
     return;
   }
 

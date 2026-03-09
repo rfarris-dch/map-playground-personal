@@ -6,13 +6,13 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json --resolve-full-paths --resolve-full-extension .js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "bun test",
     "verify:openapi": "bun test test/openapi-envelope-contracts.test.ts",
     "ci:check": "bun run typecheck && bun run test",
     "lint": "biome check .",
-    "dev": "tsc -w -p tsconfig.json"
+    "dev": "tsc -w -p tsconfig.json & tsc-alias -w -p tsconfig.json --resolve-full-paths --resolve-full-extension .js"
   },
   "dependencies": {
     "zod": "^3.24.2"

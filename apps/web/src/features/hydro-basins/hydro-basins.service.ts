@@ -6,9 +6,9 @@ export interface HydroBasinsControlMetadata {
 
 const HYDRO_BASINS_CONTROL_METADATA: HydroBasinsControlMetadata = {
   color: "#6c6486",
-  label: "Hydro basins (detail increases with zoom)",
+  label: "Hydro basins",
   description:
-    "Displays WBD-style HUC boundaries and basin labels from one shared vector source. Granularity shifts from HUC4 to HUC12 by zoom.",
+    "Displays one stable basin partition with persistent fills, outlines, and labels across zoom levels.",
 };
 
 export function hydroBasinsControlMetadata(): HydroBasinsControlMetadata {

@@ -19,14 +19,19 @@ PMTILES_PATH="${OUT_DIR}/${DATASET}_${RUN_ID}.pmtiles"
 TMP_DIR="${ENVIRONMENTAL_HYDRO_TMP_DIR:-${OUT_DIR}/tmp-${RUN_ID}}"
 
 SOURCE_FILES=(
+  "${SOURCE_ROOT}/huc4-polygon.geojson"
   "${SOURCE_ROOT}/huc4-line.geojson"
   "${SOURCE_ROOT}/huc4-label.geojson"
+  "${SOURCE_ROOT}/huc6-polygon.geojson"
   "${SOURCE_ROOT}/huc6-line.geojson"
   "${SOURCE_ROOT}/huc6-label.geojson"
+  "${SOURCE_ROOT}/huc8-polygon.geojson"
   "${SOURCE_ROOT}/huc8-line.geojson"
   "${SOURCE_ROOT}/huc8-label.geojson"
+  "${SOURCE_ROOT}/huc10-polygon.geojson"
   "${SOURCE_ROOT}/huc10-line.geojson"
   "${SOURCE_ROOT}/huc10-label.geojson"
+  "${SOURCE_ROOT}/huc12-polygon.geojson"
   "${SOURCE_ROOT}/huc12-line.geojson"
 )
 
@@ -49,14 +54,19 @@ tippecanoe \
   --output="${MBTILES_PATH}" \
   -Z 5 \
   -z 12 \
+  -L "huc4-fill:${SOURCE_ROOT}/huc4-polygon.geojson" \
   -L "huc4-line:${SOURCE_ROOT}/huc4-line.geojson" \
   -L "huc4-label:${SOURCE_ROOT}/huc4-label.geojson" \
+  -L "huc6-fill:${SOURCE_ROOT}/huc6-polygon.geojson" \
   -L "huc6-line:${SOURCE_ROOT}/huc6-line.geojson" \
   -L "huc6-label:${SOURCE_ROOT}/huc6-label.geojson" \
+  -L "huc8-fill:${SOURCE_ROOT}/huc8-polygon.geojson" \
   -L "huc8-line:${SOURCE_ROOT}/huc8-line.geojson" \
   -L "huc8-label:${SOURCE_ROOT}/huc8-label.geojson" \
+  -L "huc10-fill:${SOURCE_ROOT}/huc10-polygon.geojson" \
   -L "huc10-line:${SOURCE_ROOT}/huc10-line.geojson" \
   -L "huc10-label:${SOURCE_ROOT}/huc10-label.geojson" \
+  -L "huc12-fill:${SOURCE_ROOT}/huc12-polygon.geojson" \
   -L "huc12-line:${SOURCE_ROOT}/huc12-line.geojson"
 
 pmtiles convert "${MBTILES_PATH}" "${PMTILES_PATH}" --tmpdir="${TMP_DIR}"

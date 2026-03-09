@@ -14,10 +14,8 @@ import type {
 import {
   flood100FillFilter,
   flood100FillPaint,
-  flood100OutlinePaint,
   flood500FillFilter,
   flood500FillPaint,
-  flood500OutlinePaint,
 } from "./flood-style.service";
 
 const FLOOD_DATASET = "environmental-flood";
@@ -114,38 +112,6 @@ function ensureFloodLayers(
         maxzoom: 24,
         filter: flood100FillFilter(),
         paint: flood100FillPaint(),
-      },
-      beforeLayerId
-    );
-  }
-
-  if (!map.hasLayer(styleLayerIds.outline500LayerId)) {
-    map.addLayer(
-      {
-        id: styleLayerIds.outline500LayerId,
-        type: "line",
-        source: sourceId,
-        "source-layer": sourceLayer,
-        minzoom: 0,
-        maxzoom: 24,
-        filter: flood500FillFilter(),
-        paint: flood500OutlinePaint(),
-      },
-      beforeLayerId
-    );
-  }
-
-  if (!map.hasLayer(styleLayerIds.outline100LayerId)) {
-    map.addLayer(
-      {
-        id: styleLayerIds.outline100LayerId,
-        type: "line",
-        source: sourceId,
-        "source-layer": sourceLayer,
-        minzoom: 0,
-        maxzoom: 24,
-        filter: flood100FillFilter(),
-        paint: flood100OutlinePaint(),
       },
       beforeLayerId
     );

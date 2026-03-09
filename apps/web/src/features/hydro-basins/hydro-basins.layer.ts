@@ -11,15 +11,19 @@ import type {
   MountHydroBasinsLayerOptions,
 } from "./hydro-basins.types";
 import {
+  hydroBasinsFillPaint,
   hydroBasinsLabelLayout,
   hydroBasinsLabelPaint,
   hydroBasinsLinePaint,
-  hydroBasinsZoomBand,
 } from "./hydro-basins-style.service";
 
 const HYDRO_BASINS_DATASET = "environmental-hydro-basins";
 const HYDRO_BASINS_MANIFEST_PATH = "/tiles/environmental-hydro-basins/latest.json";
 const HYDRO_BASINS_SOURCE_ID = "environmental-hydro-basins";
+const HYDRO_BASINS_VISUAL_LEVEL = "huc6";
+const HYDRO_BASINS_VISUAL_MIN_ZOOM = 5;
+const HYDRO_BASINS_VISUAL_MAX_ZOOM = 22;
+const HYDRO_BASINS_FILL_LAYER_IDS: readonly string[] = ["environmental-hydro-basins-huc6-fill"];
 const UPPER_BOUND_LAYER_ANCHORS: readonly string[] = [
   ...getCatalogStyleLayerIds("property.parcels"),
   ...getCatalogStyleLayerIds("facilities.colocation"),
@@ -91,34 +95,54 @@ function ensureHydroBasinsSource(
 function ensureHydroBasinsLayers(map: MountHydroBasinsLayerOptions["map"]): void {
   const styleLayerIds = getHydroBasinsStyleLayerIds();
   const beforeLayerId = resolveBeforeLayerId(map);
-  const lineLevels: readonly ["huc4" | "huc6" | "huc8" | "huc10" | "huc12", string][] = [
-    ["huc4", styleLayerIds.lineLayerIds[0] ?? "environmental-hydro-basins-huc4-line"],
-    ["huc6", styleLayerIds.lineLayerIds[1] ?? "environmental-hydro-basins-huc6-line"],
-    ["huc8", styleLayerIds.lineLayerIds[2] ?? "environmental-hydro-basins-huc8-line"],
-    ["huc10", styleLayerIds.lineLayerIds[3] ?? "environmental-hydro-basins-huc10-line"],
-    ["huc12", styleLayerIds.lineLayerIds[4] ?? "environmental-hydro-basins-huc12-line"],
+  const fillLevels: readonly ["huc6", string][] = [
+    [HYDRO_BASINS_VISUAL_LEVEL, "environmental-hydro-basins-huc6-fill"],
   ];
-  const labelLevels: readonly ["huc4" | "huc6" | "huc8" | "huc10", string][] = [
-    ["huc4", styleLayerIds.labelLayerIds[0] ?? "environmental-hydro-basins-huc4-label"],
-    ["huc6", styleLayerIds.labelLayerIds[1] ?? "environmental-hydro-basins-huc6-label"],
-    ["huc8", styleLayerIds.labelLayerIds[2] ?? "environmental-hydro-basins-huc8-label"],
-    ["huc10", styleLayerIds.labelLayerIds[3] ?? "environmental-hydro-basins-huc10-label"],
+  const lineLevels: readonly ["huc6", string][] = [
+    [
+      HYDRO_BASINS_VISUAL_LEVEL,
+      styleLayerIds.lineLayerIds[1] ?? "environmental-hydro-basins-huc6-line",
+    ],
   ];
+  const labelLevels: readonly ["huc6", string][] = [
+    [
+      HYDRO_BASINS_VISUAL_LEVEL,
+      styleLayerIds.labelLayerIds[1] ?? "environmental-hydro-basins-huc6-label",
+    ],
+  ];
+
+  for (const [level, layerId] of fillLevels) {
+    if (map.hasLayer(layerId)) {
+      continue;
+    }
+
+    map.addLayer(
+      {
+        id: layerId,
+        type: "fill",
+        source: HYDRO_BASINS_SOURCE_ID,
+        "source-layer": `${level}-fill`,
+        minzoom: HYDRO_BASINS_VISUAL_MIN_ZOOM,
+        maxzoom: HYDRO_BASINS_VISUAL_MAX_ZOOM,
+        paint: hydroBasinsFillPaint(level),
+      },
+      beforeLayerId
+    );
+  }
 
   for (const [level, layerId] of lineLevels) {
     if (map.hasLayer(layerId)) {
       continue;
     }
 
-    const zoomBand = hydroBasinsZoomBand(level);
     map.addLayer(
       {
         id: layerId,
         type: "line",
         source: HYDRO_BASINS_SOURCE_ID,
         "source-layer": `${level}-line`,
-        minzoom: zoomBand.minZoom,
-        maxzoom: zoomBand.maxZoom,
+        minzoom: HYDRO_BASINS_VISUAL_MIN_ZOOM,
+        maxzoom: HYDRO_BASINS_VISUAL_MAX_ZOOM,
         paint: hydroBasinsLinePaint(level),
       },
       beforeLayerId
@@ -130,15 +154,14 @@ function ensureHydroBasinsLayers(map: MountHydroBasinsLayerOptions["map"]): void
       continue;
     }
 
-    const zoomBand = hydroBasinsZoomBand(level);
     map.addLayer(
       {
         id: layerId,
         type: "symbol",
         source: HYDRO_BASINS_SOURCE_ID,
         "source-layer": `${level}-label`,
-        minzoom: zoomBand.minZoom,
-        maxzoom: zoomBand.maxZoom,
+        minzoom: HYDRO_BASINS_VISUAL_MIN_ZOOM,
+        maxzoom: HYDRO_BASINS_VISUAL_MAX_ZOOM,
         layout: hydroBasinsLabelLayout(level),
         paint: hydroBasinsLabelPaint(),
       },
@@ -153,12 +176,9 @@ export function mountHydroBasinsLayer(
   const state = initialState();
   const manifestPath = options.manifestPath ?? HYDRO_BASINS_MANIFEST_PATH;
   const styleLayerIds = getHydroBasinsStyleLayerIds();
-  const degradedLineLayerIds = [
-    "environmental-hydro-basins-huc8-line",
-    "environmental-hydro-basins-huc10-line",
-    "environmental-hydro-basins-huc12-line",
-  ];
-  const degradedLabelLayerIds = ["environmental-hydro-basins-huc10-label"];
+  const degradedLineLayerIds: readonly string[] = [];
+  const degradedFillLayerIds: readonly string[] = [];
+  const degradedLabelLayerIds = ["environmental-hydro-basins-huc6-label"];
 
   function applyVisibility(): void {
     if (!(state.ready && state.sourceInitialized)) {
@@ -167,7 +187,11 @@ export function mountHydroBasinsLayer(
 
     setLayerVisibility(
       options.map,
-      [...styleLayerIds.lineLayerIds, ...styleLayerIds.labelLayerIds],
+      [
+        ...HYDRO_BASINS_FILL_LAYER_IDS,
+        ...styleLayerIds.lineLayerIds,
+        ...styleLayerIds.labelLayerIds,
+      ],
       state.visible
     );
 
@@ -175,6 +199,7 @@ export function mountHydroBasinsLayer(
       return;
     }
 
+    setLayerVisibility(options.map, degradedFillLayerIds, false);
     setLayerVisibility(options.map, degradedLineLayerIds, false);
     setLayerVisibility(options.map, degradedLabelLayerIds, false);
   }
@@ -237,11 +262,15 @@ export function mountHydroBasinsLayer(
   };
 
   options.map.on("load", onLoad);
+  const existingStyleLayers = options.map.getStyle().layers;
+  if (existingStyleLayers.length > 0) {
+    onLoad();
+  }
 
   return {
     setVisible(visible: boolean): void {
       state.visible = visible;
-      if (visible && state.ready) {
+      if (visible) {
         initializeSource().catch((error: unknown) => {
           console.error("[hydro-basins] source initialization failed", error);
         });

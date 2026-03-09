@@ -1,4 +1,8 @@
-import type { LineLayerSpecification, SymbolLayerSpecification } from "maplibre-gl";
+import type {
+  FillLayerSpecification,
+  LineLayerSpecification,
+  SymbolLayerSpecification,
+} from "maplibre-gl";
 
 export interface HydroBasinsZoomBand {
   readonly maxZoom: number;
@@ -67,6 +71,58 @@ export function hydroBasinsLinePaint(
       lineStyle.width[0],
       zoomBand.maxZoom,
       lineStyle.width[1],
+    ],
+  };
+}
+
+export function hydroBasinsFillPaint(
+  level: "huc10" | "huc12" | "huc4" | "huc6" | "huc8"
+): NonNullable<FillLayerSpecification["paint"]> {
+  const fillStyles: Readonly<
+    Record<
+      "huc10" | "huc12" | "huc4" | "huc6" | "huc8",
+      {
+        readonly opacity: readonly [number, number];
+      }
+    >
+  > = {
+    huc4: { opacity: [0.58, 0.48] },
+    huc6: { opacity: [0.52, 0.42] },
+    huc8: { opacity: [0.44, 0.34] },
+    huc10: { opacity: [0.34, 0.24] },
+    huc12: { opacity: [0.22, 0.16] },
+  };
+
+  const fillStyle = fillStyles[level];
+  const zoomBand = hydroBasinsZoomBand(level);
+  return {
+    "fill-color": [
+      "match",
+      ["%", ["to-number", ["coalesce", ["get", "huc"], "0"]], 8],
+      0,
+      "#f7ec9d",
+      1,
+      "#f5b1d5",
+      2,
+      "#b9d0ff",
+      3,
+      "#f5c57b",
+      4,
+      "#bea7ea",
+      5,
+      "#99e3c2",
+      6,
+      "#f3a8a0",
+      "#9fd36f",
+    ],
+    "fill-opacity": [
+      "interpolate",
+      ["linear"],
+      ["zoom"],
+      zoomBand.minZoom,
+      fillStyle.opacity[0],
+      zoomBand.maxZoom,
+      fillStyle.opacity[1],
     ],
   };
 }
