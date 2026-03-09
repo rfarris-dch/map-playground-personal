@@ -34,23 +34,23 @@ export function flood500FillPaint(): NonNullable<FillLayerSpecification["paint"]
 export function flood100OutlinePaint(): NonNullable<LineLayerSpecification["paint"]> {
   return {
     "line-color": FLOOD_100_OUTLINE_COLOR,
-    "line-opacity": 0.92,
+    "line-opacity": 0.96,
     "line-width": [
       "interpolate",
       ["linear"],
       ["zoom"],
       0,
-      1.1,
+      2.2,
       6,
-      1.1,
+      2.2,
       11,
-      0.95,
+      1.2,
       12,
-      1.25,
+      1.5,
       14,
-      1.75,
+      1.9,
       18,
-      1.75,
+      1.9,
     ],
   };
 }
@@ -58,23 +58,23 @@ export function flood100OutlinePaint(): NonNullable<LineLayerSpecification["pain
 export function flood500OutlinePaint(): NonNullable<LineLayerSpecification["paint"]> {
   return {
     "line-color": FLOOD_500_OUTLINE_COLOR,
-    "line-opacity": 0.82,
+    "line-opacity": 0.9,
     "line-width": [
       "interpolate",
       ["linear"],
       ["zoom"],
       0,
-      0.95,
+      1.8,
       6,
-      0.95,
+      1.8,
       11,
-      0.8,
-      12,
       1,
+      12,
+      1.2,
       14,
-      1.3,
+      1.5,
       18,
-      1.3,
+      1.5,
     ],
   };
 }

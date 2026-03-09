@@ -8,7 +8,6 @@ import {
   type ApiEffectSuccess,
   getApiErrorMessage,
 } from "@map-migration/core-runtime/api";
-import { runEffectPromise } from "@map-migration/core-runtime/effect";
 import { Effect, Either } from "effect";
 import { exportMeasureSelectionSummary } from "@/features/app/measure-selection/measure-selection-export.service";
 import type { MeasureSelectionSummary } from "@/features/measure/measure-analysis.types";
@@ -246,12 +245,6 @@ export function querySelectionToolSummaryEffect(
       },
     } satisfies QuerySelectionToolSummaryResult;
   });
-}
-
-export function querySelectionToolSummary(
-  args: QuerySelectionToolSummaryArgs
-): Promise<QuerySelectionToolSummaryResult> {
-  return runEffectPromise(querySelectionToolSummaryEffect(args), args.signal);
 }
 
 export function exportSelectionToolSummary(summary: SelectionToolAnalysisSummary | null): void {

@@ -1,6 +1,7 @@
 import { Effect } from "effect";
 import { closePostgresPool } from "@/db/postgres";
 import { describeEffectDevToolsConnection, runApiEffect } from "@/effect/api-effect-runtime";
+import { recordRuntimeEffectFailure } from "@/effect/effect-failure-trail.service";
 import { startHyperscaleSyncLoop } from "@/sync/hyperscale-sync.service";
 import type { HyperscaleSyncController } from "@/sync/hyperscale-sync.types";
 import { startParcelsSyncLoop } from "@/sync/parcels-sync.service";
@@ -45,6 +46,14 @@ function shutdown(signal: string): Promise<void> {
 
 process.on("SIGINT", () => {
   shutdown("SIGINT").catch((error) => {
+    recordRuntimeEffectFailure({
+      cause:
+        error instanceof Error && typeof error.stack === "string" ? error.stack : String(error),
+      code: "SYNC_WORKER_SHUTDOWN_FAILURE",
+      details: error,
+      message: "sync worker shutdown failure",
+      source: "api-sync-worker",
+    });
     console.error("[api-sync-worker] shutdown failure", error);
     process.exit(1);
   });
@@ -52,6 +61,14 @@ process.on("SIGINT", () => {
 
 process.on("SIGTERM", () => {
   shutdown("SIGTERM").catch((error) => {
+    recordRuntimeEffectFailure({
+      cause:
+        error instanceof Error && typeof error.stack === "string" ? error.stack : String(error),
+      code: "SYNC_WORKER_SHUTDOWN_FAILURE",
+      details: error,
+      message: "sync worker shutdown failure",
+      source: "api-sync-worker",
+    });
     console.error("[api-sync-worker] shutdown failure", error);
     process.exit(1);
   });
@@ -64,6 +81,14 @@ function startLoopEffect<TController>(
   return Effect.tryPromise(() => start()).pipe(
     Effect.catchAll((error) =>
       Effect.sync(() => {
+        recordRuntimeEffectFailure({
+          cause:
+            error instanceof Error && typeof error.stack === "string" ? error.stack : String(error),
+          code: "SYNC_LOOP_START_FAILURE",
+          details: error,
+          message: `${label} loop failed to start`,
+          source: "api-sync-worker",
+        });
         console.error(`[api-sync-worker] ${label} loop failed to start`, error);
         return null;
       })
@@ -104,6 +129,13 @@ function startSyncWorkerEffect(): Effect.Effect<void, Error> {
 }
 
 runApiEffect(startSyncWorkerEffect()).catch((error) => {
+  recordRuntimeEffectFailure({
+    cause: error instanceof Error && typeof error.stack === "string" ? error.stack : String(error),
+    code: "SYNC_WORKER_STARTUP_FAILURE",
+    details: error,
+    message: "sync worker startup failure",
+    source: "api-sync-worker",
+  });
   console.error("[api-sync-worker] startup failure", error);
   process.exit(1);
 });

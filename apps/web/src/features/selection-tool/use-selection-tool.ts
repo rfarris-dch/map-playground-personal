@@ -1,15 +1,17 @@
+import { Effect } from "effect";
 import { computed, onBeforeUnmount, shallowRef } from "vue";
 import { cloneSelectionRing } from "@/features/selection/selection-analysis-request.service";
 import {
   buildEmptySelectionToolSummary,
   exportSelectionToolSummary,
-  querySelectionToolSummary,
+  querySelectionToolSummaryEffect,
 } from "@/features/selection-tool/selection-tool.service";
 import type {
   SelectionToolAnalysisSummary,
   SelectionToolProgress,
   UseSelectionToolOptions,
 } from "@/features/selection-tool/selection-tool.types";
+import { createLatestRunner } from "@/lib/effect/latest-runner";
 
 function buildSelectionRingKey(selectionRing: readonly [number, number][]): string {
   return selectionRing.map((vertex) => `${vertex[0].toFixed(6)},${vertex[1].toFixed(6)}`).join("|");
@@ -21,8 +23,14 @@ export function useSelectionTool(options: UseSelectionToolOptions) {
   const selectionError = shallowRef<string | null>(null);
   const isSelectionLoading = shallowRef<boolean>(false);
   const selectionGeometry = shallowRef<readonly [number, number][] | null>(null);
-  let selectionAbortController: AbortController | null = null;
-  let selectionRequestSequence = 0;
+  const selectionRunner = createLatestRunner({
+    onUnexpectedError(error) {
+      isSelectionLoading.value = false;
+      selectionProgress.value = null;
+      selectionError.value = "Unable to load spatial analysis summary.";
+      console.error("[map] selection analysis refresh failed", error);
+    },
+  });
 
   const draftSelectionRing = computed(() => options.measureState.value.selectionRing);
   const hasCompletedDraftSelection = computed(
@@ -45,6 +53,10 @@ export function useSelectionTool(options: UseSelectionToolOptions) {
     return buildSelectionRingKey(draft) !== buildSelectionRingKey(analyzed);
   });
 
+  function logSelectionRunnerError(error: unknown): void {
+    console.error("[map] selection analysis refresh failed", error);
+  }
+
   async function analyzeCurrentSelection(): Promise<void> {
     const draft = draftSelectionRing.value;
     if (draft === null || !options.measureState.value.isSelectionComplete) {
@@ -52,50 +64,41 @@ export function useSelectionTool(options: UseSelectionToolOptions) {
     }
 
     const nextSelectionRing = cloneSelectionRing(draft);
-    selectionRequestSequence += 1;
-    const requestSequence = selectionRequestSequence;
-    selectionAbortController?.abort();
-    const abortController = new AbortController();
-    selectionAbortController = abortController;
     isSelectionLoading.value = true;
     selectionError.value = null;
     selectionProgress.value = null;
     selectionGeometry.value = nextSelectionRing;
     selectionSummary.value = buildEmptySelectionToolSummary(nextSelectionRing);
 
-    const queryResult = await querySelectionToolSummary({
-      expectedParcelsIngestionRunId: options.expectedParcelsIngestionRunId.value,
-      includeParcels: true,
-      onProgress(progress) {
-        if (requestSequence !== selectionRequestSequence) {
-          return;
-        }
+    await selectionRunner.run(
+      querySelectionToolSummaryEffect({
+        expectedParcelsIngestionRunId: options.expectedParcelsIngestionRunId.value,
+        includeParcels: true,
+        onProgress(progress) {
+          selectionProgress.value = progress;
+        },
+        selectionRing: nextSelectionRing,
+        visiblePerspectives: options.visiblePerspectives.value,
+      }).pipe(
+        Effect.flatMap((queryResult) =>
+          Effect.sync(() => {
+            isSelectionLoading.value = false;
 
-        selectionProgress.value = progress;
-      },
-      selectionRing: nextSelectionRing,
-      signal: abortController.signal,
-      visiblePerspectives: options.visiblePerspectives.value,
-    });
+            if (!queryResult.ok) {
+              selectionProgress.value = null;
+              return;
+            }
 
-    if (requestSequence !== selectionRequestSequence) {
-      return;
-    }
-
-    isSelectionLoading.value = false;
-    if (!queryResult.ok) {
-      selectionProgress.value = null;
-      return;
-    }
-
-    selectionError.value = queryResult.value.errorMessage;
-    selectionSummary.value = queryResult.value.summary;
+            selectionError.value = queryResult.value.errorMessage;
+            selectionSummary.value = queryResult.value.summary;
+          })
+        )
+      )
+    );
   }
 
-  function clearSelectionResult(): void {
-    selectionAbortController?.abort();
-    selectionAbortController = null;
-    selectionRequestSequence += 1;
+  async function clearSelectionResult(): Promise<void> {
+    await selectionRunner.interrupt();
     isSelectionLoading.value = false;
     selectionError.value = null;
     selectionGeometry.value = null;
@@ -108,8 +111,7 @@ export function useSelectionTool(options: UseSelectionToolOptions) {
   }
 
   onBeforeUnmount(() => {
-    selectionAbortController?.abort();
-    selectionAbortController = null;
+    selectionRunner.dispose().catch(logSelectionRunnerError);
     isSelectionLoading.value = false;
     selectionError.value = null;
     selectionProgress.value = null;

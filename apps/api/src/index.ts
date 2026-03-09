@@ -4,6 +4,7 @@ import { Effect } from "effect";
 import { createApiApp } from "@/app";
 import { closePostgresPool } from "@/db/postgres";
 import { describeEffectDevToolsConnection, runApiEffect } from "@/effect/api-effect-runtime";
+import { recordRuntimeEffectFailure } from "@/effect/effect-failure-trail.service";
 
 const app = createApiApp();
 let server: ServerType | null = null;
@@ -118,6 +119,14 @@ function shutdown(signal: string): Promise<void> {
 
 process.on("SIGINT", () => {
   shutdown("SIGINT").catch((error) => {
+    recordRuntimeEffectFailure({
+      cause:
+        error instanceof Error && typeof error.stack === "string" ? error.stack : String(error),
+      code: "API_SHUTDOWN_FAILURE",
+      details: error,
+      message: "api shutdown failure",
+      source: "api-server",
+    });
     console.error("[api] shutdown failure", error);
     process.exit(1);
   });
@@ -125,6 +134,14 @@ process.on("SIGINT", () => {
 
 process.on("SIGTERM", () => {
   shutdown("SIGTERM").catch((error) => {
+    recordRuntimeEffectFailure({
+      cause:
+        error instanceof Error && typeof error.stack === "string" ? error.stack : String(error),
+      code: "API_SHUTDOWN_FAILURE",
+      details: error,
+      message: "api shutdown failure",
+      source: "api-server",
+    });
     console.error("[api] shutdown failure", error);
     process.exit(1);
   });
@@ -145,12 +162,20 @@ function startServerEffect(): Effect.Effect<void, Error> {
       },
       (info) => {
         console.log(`[api] listening on http://localhost:${info.port}`);
+        console.log(`[api] Effect issues: http://localhost:${info.port}/api/debug/effect/issues`);
       }
     );
   });
 }
 
 runApiEffect(startServerEffect()).catch((error) => {
+  recordRuntimeEffectFailure({
+    cause: error instanceof Error && typeof error.stack === "string" ? error.stack : String(error),
+    code: "API_STARTUP_FAILURE",
+    details: error,
+    message: "api startup failure",
+    source: "api-server",
+  });
   console.error("[api] startup failure", error);
   process.exit(1);
 });

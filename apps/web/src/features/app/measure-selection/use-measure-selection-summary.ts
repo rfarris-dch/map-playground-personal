@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import { onBeforeUnmount, shallowRef, watch } from "vue";
 import {
   buildEmptyMeasureSelectionSummary,
@@ -5,63 +6,73 @@ import {
 } from "@/features/app/measure-selection/measure-selection.service";
 import type { UseAppShellMeasureSelectionOptions } from "@/features/app/measure-selection/use-app-shell-measure-selection.types";
 import type { MeasureSelectionSummary } from "@/features/measure/measure-analysis.types";
+import { createLatestRunner } from "@/lib/effect/latest-runner";
 
 export function useMeasureSelectionSummary(options: UseAppShellMeasureSelectionOptions) {
   const measureSelectionSummary = shallowRef<MeasureSelectionSummary | null>(null);
   const measureSelectionError = shallowRef<string | null>(null);
   const isMeasureSelectionLoading = shallowRef<boolean>(false);
-  let measureSelectionAbortController: AbortController | null = null;
-  let measureSelectionRequestSequence = 0;
+  const measureSelectionRunner = createLatestRunner({
+    onUnexpectedError(error) {
+      isMeasureSelectionLoading.value = false;
+      measureSelectionError.value = "Unable to load measure selection summary.";
+      measureSelectionSummary.value = null;
+      console.error("[map] measure selection summary refresh failed", error);
+    },
+  });
+
+  function logMeasureSelectionRunnerError(error: unknown): void {
+    console.error("[map] measure selection summary refresh failed", error);
+  }
+
+  async function clearMeasureSelectionSummary(): Promise<void> {
+    await measureSelectionRunner.interrupt();
+    isMeasureSelectionLoading.value = false;
+    measureSelectionError.value = null;
+    measureSelectionSummary.value = null;
+  }
 
   async function refreshMeasureSelectionSummary(): Promise<void> {
     if (options.outputMode.value !== "analysis") {
-      measureSelectionAbortController?.abort();
-      measureSelectionAbortController = null;
-      measureSelectionRequestSequence += 1;
-      isMeasureSelectionLoading.value = false;
-      measureSelectionError.value = null;
-      measureSelectionSummary.value = null;
+      await clearMeasureSelectionSummary();
       return;
     }
 
     const selectionRing = options.measureState.value.selectionRing;
     if (selectionRing === null) {
-      measureSelectionAbortController?.abort();
-      measureSelectionAbortController = null;
-      measureSelectionRequestSequence += 1;
-      isMeasureSelectionLoading.value = false;
-      measureSelectionError.value = null;
-      measureSelectionSummary.value = null;
+      await clearMeasureSelectionSummary();
       return;
     }
 
-    measureSelectionRequestSequence += 1;
-    const requestSequence = measureSelectionRequestSequence;
-    measureSelectionAbortController?.abort();
-    const abortController = new AbortController();
-    measureSelectionAbortController = abortController;
     isMeasureSelectionLoading.value = true;
     measureSelectionError.value = null;
     measureSelectionSummary.value = buildEmptyMeasureSelectionSummary(selectionRing);
 
-    const queryResult = await queryMeasureSelectionSummary({
-      expectedParcelsIngestionRunId: options.expectedParcelsIngestionRunId.value,
-      selectionRing,
-      visiblePerspectives: options.visiblePerspectives.value,
-      signal: abortController.signal,
-    });
+    await measureSelectionRunner.run(
+      Effect.tryPromise({
+        try: (signal) =>
+          queryMeasureSelectionSummary({
+            expectedParcelsIngestionRunId: options.expectedParcelsIngestionRunId.value,
+            selectionRing,
+            visiblePerspectives: options.visiblePerspectives.value,
+            signal,
+          }),
+        catch: (error) => error,
+      }).pipe(
+        Effect.flatMap((queryResult) =>
+          Effect.sync(() => {
+            isMeasureSelectionLoading.value = false;
 
-    if (requestSequence !== measureSelectionRequestSequence) {
-      return;
-    }
+            if (!queryResult.ok) {
+              return;
+            }
 
-    isMeasureSelectionLoading.value = false;
-    if (!queryResult.ok) {
-      return;
-    }
-
-    measureSelectionError.value = queryResult.value.errorMessage;
-    measureSelectionSummary.value = queryResult.value.summary;
+            measureSelectionError.value = queryResult.value.errorMessage;
+            measureSelectionSummary.value = queryResult.value.summary;
+          })
+        )
+      )
+    );
   }
 
   watch(
@@ -81,8 +92,7 @@ export function useMeasureSelectionSummary(options: UseAppShellMeasureSelectionO
   );
 
   onBeforeUnmount(() => {
-    measureSelectionAbortController?.abort();
-    measureSelectionAbortController = null;
+    measureSelectionRunner.dispose().catch(logMeasureSelectionRunnerError);
     isMeasureSelectionLoading.value = false;
     measureSelectionError.value = null;
   });

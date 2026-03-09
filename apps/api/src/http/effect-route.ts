@@ -1,6 +1,7 @@
 import { Cause, Effect, Context as EffectContext, Exit, Option } from "effect";
 import type { Context as HonoContext } from "hono";
 import { runApiEffectExit } from "@/effect/api-effect-runtime";
+import { recordRouteEffectFailure } from "@/effect/effect-failure-trail.service";
 import { jsonError, resolveRequestId, toDebugDetails, withRequestId } from "./api-response";
 
 export interface ApiRequestContextService {
@@ -83,6 +84,37 @@ function createApiRequestLogger(requestId: string): ApiRequestLoggerService {
   };
 }
 
+function handleApiRouteError(c: HonoContext, requestId: string, error: ApiRouteError): Response {
+  const cause = `${error.name}: ${error.message}`;
+  recordRouteEffectFailure({
+    cause,
+    code: error.code,
+    details: error.details,
+    httpStatus: error.httpStatus,
+    message: error.message,
+    method: c.req.method,
+    path: c.req.path,
+    requestId,
+  });
+
+  if (error.httpStatus >= 500) {
+    console.error(`[api][${requestId}] handled route error`, {
+      cause,
+      code: error.code,
+      method: c.req.method,
+      path: c.req.path,
+    });
+  }
+
+  return jsonError(c, {
+    requestId,
+    httpStatus: error.httpStatus,
+    code: error.code,
+    message: error.message,
+    details: error.details,
+  });
+}
+
 function buildUnexpectedEffectErrorDetails(cause: Cause.Cause<unknown>): unknown {
   const defect = Cause.dieOption(cause);
   if (Option.isSome(defect)) {
@@ -102,8 +134,25 @@ function renderRouteFailure(
   requestId: string,
   cause: Cause.Cause<unknown>
 ): Response {
+  const causePretty = Cause.pretty(cause);
   const failure = Cause.failureOption(cause);
   if (Option.isSome(failure) && failure.value instanceof ApiRouteError) {
+    recordRouteEffectFailure({
+      cause: causePretty,
+      code: failure.value.code,
+      details: failure.value.details,
+      httpStatus: failure.value.httpStatus,
+      message: failure.value.message,
+      method: c.req.method,
+      path: c.req.path,
+      requestId,
+    });
+    console.error(`[api][${requestId}] effect route failure`, {
+      cause: causePretty,
+      code: failure.value.code,
+      method: c.req.method,
+      path: c.req.path,
+    });
     return jsonError(c, {
       requestId,
       httpStatus: failure.value.httpStatus,
@@ -113,12 +162,28 @@ function renderRouteFailure(
     });
   }
 
+  const details = buildUnexpectedEffectErrorDetails(cause);
+  recordRouteEffectFailure({
+    cause: causePretty,
+    code: "UNHANDLED_EFFECT_ERROR",
+    details,
+    httpStatus: 500,
+    message: "internal server error",
+    method: c.req.method,
+    path: c.req.path,
+    requestId,
+  });
+  console.error(`[api][${requestId}] unhandled effect route failure`, {
+    cause: causePretty,
+    method: c.req.method,
+    path: c.req.path,
+  });
   return jsonError(c, {
     requestId,
     httpStatus: 500,
     code: "UNHANDLED_EFFECT_ERROR",
     message: "internal server error",
-    details: buildUnexpectedEffectErrorDetails(cause),
+    details,
   });
 }
 
@@ -135,6 +200,10 @@ export async function runEffectRoute(
   };
 
   const providedProgram = program.pipe(
+    Effect.catchIf(
+      (error): error is ApiRouteError => error instanceof ApiRouteError,
+      (error) => Effect.sync(() => handleApiRouteError(c, requestId, error))
+    ),
     Effect.provideService(ApiRequestContext, requestContext),
     Effect.provideService(ApiRequestLogger, createApiRequestLogger(requestId))
   );

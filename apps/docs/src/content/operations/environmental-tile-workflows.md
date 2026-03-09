@@ -37,10 +37,10 @@ Flood remains fixed to:
 - vector source id: `environmental-flood`
 - source-layer: `flood-hazard`
 
-The current flood tile build defaults to a full zoom range of `0-16` unless overridden with:
+The flood tile build is fixed to a full zoom range of `0-16`.
 
-- `ENVIRONMENTAL_FLOOD_MIN_ZOOM`
-- `ENVIRONMENTAL_FLOOD_MAX_ZOOM`
+- `ENVIRONMENTAL_FLOOD_MIN_ZOOM` is intentionally not supported for production builds.
+- `ENVIRONMENTAL_FLOOD_MAX_ZOOM` remains available when rebuilding a partial archive for maintenance work.
 
 Hydro basins remain fixed to:
 

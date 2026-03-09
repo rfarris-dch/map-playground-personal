@@ -1,6 +1,7 @@
 {
   "$schema": "./node_modules/turbo/schema.json",
   "globalDependencies": ["tsconfig.base.json", "tsconfig.json", "bun.lock"],
+  "globalPassThroughEnv": ["MAP_EFFECT_DEVTOOLS", "MAP_EFFECT_DEVTOOLS_URL"],
   "tasks": {
     "dev": {
       "cache": false,

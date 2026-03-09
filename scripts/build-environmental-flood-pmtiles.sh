@@ -17,9 +17,14 @@ SOURCE_FILE="${ENVIRONMENTAL_FLOOD_SOURCE_FILE:-${ROOT_DIR}/data/environmental/f
 OUT_DIR="${ENVIRONMENTAL_FLOOD_TILES_OUT_DIR:-${ROOT_DIR}/.cache/tiles/${DATASET}}"
 MBTILES_PATH="${OUT_DIR}/${DATASET}_${RUN_ID}.mbtiles"
 PMTILES_PATH="${OUT_DIR}/${DATASET}_${RUN_ID}.pmtiles"
-MIN_Z="${ENVIRONMENTAL_FLOOD_MIN_ZOOM:-0}"
+MIN_Z="0"
 MAX_Z="${ENVIRONMENTAL_FLOOD_MAX_ZOOM:-16}"
 TMP_DIR="${ENVIRONMENTAL_FLOOD_TMP_DIR:-${OUT_DIR}/tmp-${RUN_ID}}"
+
+if [[ -n "${ENVIRONMENTAL_FLOOD_MIN_ZOOM:-}" && "${ENVIRONMENTAL_FLOOD_MIN_ZOOM}" != "0" ]]; then
+  echo "[tiles] ERROR: environmental flood tiles must keep min zoom fixed at 0 (got ${ENVIRONMENTAL_FLOOD_MIN_ZOOM})" >&2
+  exit 1
+fi
 
 if [[ ! -f "${SOURCE_FILE}" ]]; then
   echo "[tiles] ERROR: source file not found: ${SOURCE_FILE}" >&2
@@ -30,10 +35,11 @@ mkdir -p "${OUT_DIR}" "${TMP_DIR}"
 rm -f "${MBTILES_PATH}" "${PMTILES_PATH}"
 
 echo "[tiles] building environmental flood PMTiles" >&2
-echo "[tiles] dataset=${DATASET} layer=${LAYER_NAME} source=${SOURCE_FILE}" >&2
+echo "[tiles] dataset=${DATASET} layer=${LAYER_NAME} source=${SOURCE_FILE} z=${MIN_Z}-${MAX_Z}" >&2
 
 tippecanoe \
   --force \
+  --read-parallel \
   --layer="${LAYER_NAME}" \
   -Z "${MIN_Z}" \
   -z "${MAX_Z}" \
@@ -54,6 +60,12 @@ tippecanoe \
   "${SOURCE_FILE}"
 
 pmtiles convert "${MBTILES_PATH}" "${PMTILES_PATH}" --tmpdir="${TMP_DIR}"
+
+ARCHIVE_MIN_Z="$(pmtiles show "${PMTILES_PATH}" | awk -F': ' '/min zoom/ {print $2; exit}')"
+if [[ "${ARCHIVE_MIN_Z}" != "0" ]]; then
+  echo "[tiles] ERROR: environmental flood archive must expose tiles from zoom 0; built archive reported min zoom ${ARCHIVE_MIN_Z}" >&2
+  exit 1
+fi
 
 echo "[tiles] PMTiles ready" >&2
 echo "PMTILES_PATH=${PMTILES_PATH}"

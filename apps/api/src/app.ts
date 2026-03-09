@@ -8,6 +8,7 @@ import { HTTPException } from "hono/http-exception";
 import { requestId } from "hono/request-id";
 import { timeout } from "hono/timeout";
 import { parsePositiveIntFlag } from "@/config/env-parsing.service";
+import { registerEffectMetricsRoute } from "@/effect/effect-metrics.route";
 import { registerAnalysisSummaryRoute } from "@/geo/analysis-summary/analysis-summary.route";
 import { registerBoundariesRoute } from "@/geo/boundaries/boundaries.route";
 import { registerCountyScoresRoute } from "@/geo/county-scores/county-scores.route";
@@ -194,6 +195,7 @@ export function createApiApp(options: CreateApiAppOptions = {}): Hono {
 
   app.get(ApiRoutes.health, (c) => runEffectRoute(c, healthRouteProgram()));
 
+  registerEffectMetricsRoute(app);
   registerFacilitiesRoute(app);
   registerAnalysisSummaryRoute(app);
   registerFiberLocatorRoute(app);

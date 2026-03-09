@@ -119,9 +119,14 @@ BEGIN
         SELECT
           county.county_geoid,
           market.market_id,
-          ST_Area(ST_Intersection(county.geom_3857, market.geom_3857)) AS overlap_area_m2,
+          ST_Area(
+            ST_Intersection(
+              county.geom_3857,
+              ST_Transform(market.geom, 3857)
+            )
+          ) AS overlap_area_m2,
           ST_Area(county.geom_3857) AS county_area_m2,
-          ST_Area(market.geom_3857) AS market_area_m2
+          ST_Area(ST_Transform(market.geom, 3857)) AS market_area_m2
         FROM analytics.dim_county AS county
         INNER JOIN market_current.market_boundaries AS market
           ON ST_Intersects(county.geom, market.geom)
