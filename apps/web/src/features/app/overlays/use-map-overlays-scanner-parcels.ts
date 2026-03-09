@@ -39,7 +39,6 @@ import {
 } from "@/features/spatial-analysis/spatial-analysis-parcels-query.service";
 import { createDebouncedLatestRunner } from "@/lib/effect/debounced-latest-runner";
 import { listenToMapEvent } from "@/lib/effect/scoped-listener";
-import { mutateVueState } from "@/lib/effect/vue-bridge";
 
 const SCANNER_PARCELS_REFRESH_DEBOUNCE_MS = 260;
 const SCANNER_PARCELS_MAX_BBOX_WIDTH_DEGREES = 2;
@@ -267,13 +266,13 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
 
   function refreshScannerParcelsEffect(): Effect.Effect<void, ApiEffectError, never> {
     return Effect.gen(function* () {
-      const scope = yield* mutateVueState(() => startScannerParcelsRefresh());
+      const scope = yield* Effect.sync(() => startScannerParcelsRefresh());
       if (scope === null) {
         return;
       }
 
       const result = yield* Effect.either(fetchScannerParcelsFromBboxEffect(scope));
-      yield* mutateVueState(() => {
+      yield* Effect.sync(() => {
         isScannerParcelsLoading.value = false;
       });
 
@@ -285,7 +284,7 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
           throw new Error("fetchScannerParcelsFromBboxEffect returned a non-error failure.");
         }
 
-        yield* mutateVueState(() => {
+        yield* Effect.sync(() => {
           applyFailedScannerParcelsFetch(result.left);
         });
         return;
@@ -301,7 +300,7 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
         nextCursor: result.right.nextCursor,
       });
 
-      yield* mutateVueState(() => {
+      yield* Effect.sync(() => {
         scannerParcelsBlockedReason.value = null;
         scannerParcelFeatures.value = selection.features;
         scannerParcelTruncated.value = selection.truncated;
@@ -309,7 +308,6 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
       });
     });
   }
-
   function scheduleScannerParcelsRefresh(): void {
     if (!options.scannerFetchEnabled.value) {
       clearScannerParcelsState().catch((error: unknown) => {

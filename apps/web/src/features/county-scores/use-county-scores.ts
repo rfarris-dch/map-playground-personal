@@ -12,7 +12,6 @@ import {
   fetchCountyScoresStatusEffect,
 } from "@/features/county-scores/county-scores.api";
 import { createLatestRunner } from "@/lib/effect/latest-runner";
-import { mutateVueState } from "@/lib/effect/vue-bridge";
 
 interface UseCountyScoresOptions {
   readonly countyIds: Ref<readonly string[]>;
@@ -83,7 +82,7 @@ export function useCountyScores(options: UseCountyScoresOptions) {
     ).pipe(
       Effect.flatMap(
         (result: Either.Either<ApiEffectSuccess<CountyScoresStatusResponse>, ApiEffectError>) =>
-          mutateVueState(() => {
+          Effect.sync(() => {
             countyScoresStatusLoading.value = false;
 
             if (Either.isRight(result)) {
@@ -127,7 +126,7 @@ export function useCountyScores(options: UseCountyScoresOptions) {
     ).pipe(
       Effect.flatMap(
         (result: Either.Either<ApiEffectSuccess<CountyScoresResponse>, ApiEffectError>) =>
-          mutateVueState(() => {
+          Effect.sync(() => {
             countyScoresLoading.value = false;
 
             if (Either.isRight(result)) {

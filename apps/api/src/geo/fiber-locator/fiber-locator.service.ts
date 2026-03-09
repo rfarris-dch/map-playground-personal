@@ -1,4 +1,10 @@
 import { type BBox, formatBboxParam } from "@map-migration/contracts";
+import {
+  fetchJsonEffect,
+  runEffectPromise,
+  waitForAbortableValue,
+} from "@map-migration/core-runtime/effect";
+import { Effect } from "effect";
 import type {
   FiberLocatorCatalogResult,
   FiberLocatorConfig,
@@ -22,8 +28,6 @@ import type { FiberLocatorTileSnapshot } from "./fiber-locator.service.types";
 import {
   createTileSnapshotResponse,
   fetchFiberLocatorTileSnapshot,
-  fetchJsonPayloadWithTimeout,
-  waitForAbortableValue,
 } from "./fiber-locator-fetch.service";
 import {
   cacheTileSnapshot,
@@ -41,6 +45,17 @@ const fiberLocatorConfigDefaults: FiberLocatorConfigDefaults = {
   requestTimeoutMs: 30_000,
   tileCacheMaxEntries: FIBER_LOCATOR_TILE_CACHE_MAX_ENTRIES,
   tileCacheTtlMs: FIBER_LOCATOR_TILE_CACHE_TTL_MS,
+};
+
+const UnknownJsonPayloadSchema: {
+  safeParse(input: unknown): { success: true; data: unknown } | { success: false; error: unknown };
+} = {
+  safeParse(input: unknown) {
+    return {
+      success: true,
+      data: input,
+    };
+  },
 };
 
 function buildTokenPathUrl(config: FiberLocatorConfig, path: string): string {
@@ -67,6 +82,51 @@ function readUpstreamResult(payload: unknown, requestName: string): readonly unk
   }
 
   return result;
+}
+
+function mapFiberLocatorJsonError(requestName: string, error: unknown): Error | unknown {
+  if (typeof error !== "object" || error === null) {
+    return error;
+  }
+
+  const tag = Reflect.get(error, "_tag");
+  if (tag === "RequestHttpError") {
+    const status = Reflect.get(error, "status");
+    const statusText = Reflect.get(error, "statusText");
+    return new Error(`${requestName} request failed (${String(status)} ${String(statusText)})`);
+  }
+
+  if (tag === "RequestJsonParseError" || tag === "RequestSchemaError") {
+    return new Error(`${requestName} response was not valid JSON`);
+  }
+
+  return error;
+}
+
+function fetchFiberLocatorJsonPayload(
+  config: FiberLocatorConfig,
+  url: string,
+  requestName: string,
+  signal?: AbortSignal
+): Promise<unknown> {
+  return runEffectPromise(
+    fetchJsonEffect({
+      init: {
+        headers: {
+          accept: "application/json",
+        },
+        method: "GET",
+        ...(typeof signal === "undefined" ? {} : { signal }),
+      },
+      schema: UnknownJsonPayloadSchema,
+      timeoutMs: config.requestTimeoutMs,
+      url,
+    }).pipe(
+      Effect.map(({ data }) => data),
+      Effect.mapError((error) => mapFiberLocatorJsonError(requestName, error))
+    ),
+    signal
+  );
 }
 
 function fetchFiberLocatorTileFromUpstream(
@@ -97,9 +157,9 @@ export async function fetchFiberLocatorCatalog(
   signal?: AbortSignal
 ): Promise<FiberLocatorCatalogResult> {
   const result = readUpstreamResult(
-    await fetchJsonPayloadWithTimeout(
+    await fetchFiberLocatorJsonPayload(
+      config,
       buildTokenPathUrl(config, "/layers/toc"),
-      config.requestTimeoutMs,
       "fiberlocator layers",
       signal
     ),
@@ -153,9 +213,9 @@ export async function fetchFiberLocatorLayersInView(
   signal?: AbortSignal
 ): Promise<FiberLocatorLayersInViewResult> {
   const result = readUpstreamResult(
-    await fetchJsonPayloadWithTimeout(
+    await fetchFiberLocatorJsonPayload(
+      config,
       buildTokenPathUrl(config, buildInViewPath(config, bbox)),
-      config.requestTimeoutMs,
       "fiberlocator layers/inview",
       signal
     ),

@@ -1,5 +1,16 @@
+import type { ApiEffectError } from "@map-migration/core-runtime/api";
+import { ApiAbortedError, getApiErrorMessage } from "@map-migration/core-runtime/api";
+import type { BrowserEffectFiber } from "@map-migration/core-runtime/browser";
+import {
+  forkScopedBrowserEffect,
+  interruptBrowserFiber,
+} from "@map-migration/core-runtime/browser";
+import type { IMap } from "@map-migration/map-engine";
+import { Effect, Either } from "effect";
 import { onBeforeUnmount, shallowRef, watch } from "vue";
-import { fetchMarketsBySelection } from "@/features/selection-tool/selection-tool.api";
+import { fetchMarketsBySelectionEffect } from "@/features/selection-tool/selection-tool.api";
+import { createDebouncedLatestRunner } from "@/lib/effect/debounced-latest-runner";
+import { listenToMapEvent } from "@/lib/effect/scoped-listener";
 import { buildMapOverlaysFetchKey } from "./map-overlays.service";
 import {
   buildEmptyScannerMarketSelectionSummary,
@@ -17,29 +28,35 @@ export function useMapOverlaysScannerMarkets(
   options: UseMapOverlaysScannerMarketsOptions
 ): UseMapOverlaysScannerMarketsResult {
   const scannerMarketSelection = shallowRef(buildEmptyScannerMarketSelectionSummary());
-  let scannerMarketsAbortController: AbortController | null = null;
-  let scannerMarketsRequestSequence = 0;
-  let scannerMarketsDebounceTimer: number | null = null;
+  const scannerMarketsRunner = createDebouncedLatestRunner({
+    debounceMs: SCANNER_MARKETS_REFRESH_DEBOUNCE_MS,
+    onUnexpectedError(error) {
+      scannerMarketsLastFetchKey = null;
+      scannerMarketSelection.value = buildEmptyScannerMarketSelectionSummary(
+        "Market selection is unavailable."
+      );
+      console.error("[map] scanner markets refresh failed", error);
+    },
+  });
   let scannerMarketsLastFetchKey: string | null = null;
-  let moveendBoundMap = options.map.value;
+  let moveendListenerFiber: BrowserEffectFiber<void, never> | null = null;
 
-  function clearScannerMarketsState(): void {
-    scannerMarketsAbortController?.abort();
-    scannerMarketsAbortController = null;
-    scannerMarketsRequestSequence += 1;
+  function logScannerMarketsError(context: string, error: unknown): void {
+    console.error(`[map] scanner markets ${context} failed`, error);
+  }
+
+  async function clearScannerMarketsState(): Promise<void> {
+    await scannerMarketsRunner.interrupt();
     scannerMarketsLastFetchKey = null;
     scannerMarketSelection.value = buildEmptyScannerMarketSelectionSummary();
   }
 
-  function isStaleScannerMarketsRequest(requestSequence: number): boolean {
-    return requestSequence !== scannerMarketsRequestSequence;
-  }
-
-  async function refreshScannerMarkets(): Promise<void> {
+  function startScannerMarketsRefresh(): ReturnType<typeof buildScannerMarketsRequest> {
     const currentMap = options.map.value;
     if (currentMap === null || !options.scannerFetchEnabled.value) {
-      clearScannerMarketsState();
-      return;
+      scannerMarketsLastFetchKey = null;
+      scannerMarketSelection.value = buildEmptyScannerMarketSelectionSummary();
+      return null;
     }
 
     const bounds = currentMap.getBounds();
@@ -51,7 +68,7 @@ export function useMapOverlaysScannerMarkets(
     };
     const fetchKey = buildMapOverlaysFetchKey(mapBounds, "markets");
     if (fetchKey === scannerMarketsLastFetchKey) {
-      return;
+      return null;
     }
 
     const request = buildScannerMarketsRequest(mapBounds);
@@ -60,88 +77,86 @@ export function useMapOverlaysScannerMarkets(
       scannerMarketSelection.value = buildEmptyScannerMarketSelectionSummary(
         "Market overlap is unavailable for wrapped viewport bounds."
       );
-      return;
+      return null;
     }
 
     scannerMarketsLastFetchKey = fetchKey;
-    scannerMarketsRequestSequence += 1;
-    const requestSequence = scannerMarketsRequestSequence;
-    scannerMarketsAbortController?.abort();
-    const abortController = new AbortController();
-    scannerMarketsAbortController = abortController;
+    return request;
+  }
 
-    const result = await fetchMarketsBySelection(request, abortController.signal);
-    if (isStaleScannerMarketsRequest(requestSequence)) {
-      return;
-    }
-
-    if (result.ok) {
-      scannerMarketSelection.value = buildScannerMarketSelectionSummary(result.data);
-      return;
-    }
-
-    if (result.reason === "aborted") {
+  function applyFailedScannerMarketsFetch(error: ApiEffectError): void {
+    if (error instanceof ApiAbortedError) {
       return;
     }
 
     scannerMarketsLastFetchKey = null;
     scannerMarketSelection.value = buildEmptyScannerMarketSelectionSummary(
-      typeof result.message === "string" ? result.message : "Market selection is unavailable."
+      getApiErrorMessage(error, "Market selection is unavailable.")
+    );
+  }
+
+  function refreshScannerMarketsEffect(): Effect.Effect<void, never, never> {
+    return Effect.gen(function* () {
+      const request = startScannerMarketsRefresh();
+      if (request === null) {
+        return;
+      }
+
+      const result = yield* Effect.either(fetchMarketsBySelectionEffect(request));
+      if (Either.isRight(result)) {
+        scannerMarketSelection.value = buildScannerMarketSelectionSummary(result.right.data);
+        return;
+      }
+
+      applyFailedScannerMarketsFetch(result.left);
+    }).pipe(
+      Effect.catchAll((error) =>
+        Effect.sync(() => {
+          logScannerMarketsError("refresh", error);
+        })
+      )
     );
   }
 
   function scheduleScannerMarketsRefresh(): void {
     if (!options.scannerFetchEnabled.value) {
-      clearScannerMarketsState();
-      return;
-    }
-
-    if (typeof window === "undefined") {
-      refreshScannerMarkets().catch((error: unknown) => {
-        console.error("[map] scanner markets refresh failed", error);
+      clearScannerMarketsState().catch((error: unknown) => {
+        logScannerMarketsError("clear", error);
       });
       return;
     }
 
-    if (scannerMarketsDebounceTimer !== null) {
-      window.clearTimeout(scannerMarketsDebounceTimer);
-    }
-
-    scannerMarketsDebounceTimer = window.setTimeout(() => {
-      scannerMarketsDebounceTimer = null;
-      refreshScannerMarkets().catch((error: unknown) => {
-        console.error("[map] scanner markets refresh failed", error);
-      });
-    }, SCANNER_MARKETS_REFRESH_DEBOUNCE_MS);
+    scannerMarketsRunner.run(refreshScannerMarketsEffect()).catch((error: unknown) => {
+      logScannerMarketsError("schedule", error);
+    });
   }
 
   const onMapMoveEnd = (): void => {
     scheduleScannerMarketsRefresh();
   };
 
-  function unbindMoveendMap(): void {
-    if (moveendBoundMap === null) {
-      return;
-    }
+  async function bindMoveendMap(nextMap: IMap | null): Promise<void> {
+    await interruptBrowserFiber(moveendListenerFiber);
+    moveendListenerFiber = null;
 
-    moveendBoundMap.off("moveend", onMapMoveEnd);
-    moveendBoundMap = null;
-  }
-
-  function bindMoveendMap(nextMap: UseMapOverlaysScannerMarketsOptions["map"]["value"]): void {
-    unbindMoveendMap();
     if (nextMap === null) {
       return;
     }
 
-    moveendBoundMap = nextMap;
-    nextMap.on("moveend", onMapMoveEnd);
+    moveendListenerFiber = forkScopedBrowserEffect(
+      Effect.gen(function* () {
+        yield* listenToMapEvent(nextMap, "moveend", onMapMoveEnd);
+        yield* Effect.never;
+      })
+    );
   }
 
   watch(
     () => options.map.value,
     (nextMap) => {
-      bindMoveendMap(nextMap);
+      bindMoveendMap(nextMap).catch((error: unknown) => {
+        logScannerMarketsError("bind moveend", error);
+      });
     },
     { immediate: true }
   );
@@ -150,7 +165,9 @@ export function useMapOverlaysScannerMarkets(
     [options.scannerFetchEnabled, () => options.map.value],
     ([nextScannerFetchEnabled, currentMap]) => {
       if (!(nextScannerFetchEnabled && currentMap !== null)) {
-        clearScannerMarketsState();
+        clearScannerMarketsState().catch((error: unknown) => {
+          logScannerMarketsError("clear", error);
+        });
         return;
       }
 
@@ -161,13 +178,14 @@ export function useMapOverlaysScannerMarkets(
   );
 
   onBeforeUnmount(() => {
-    if (scannerMarketsDebounceTimer !== null) {
-      window.clearTimeout(scannerMarketsDebounceTimer);
-      scannerMarketsDebounceTimer = null;
-    }
-
-    unbindMoveendMap();
-    clearScannerMarketsState();
+    scannerMarketsRunner.dispose().catch((error: unknown) => {
+      logScannerMarketsError("dispose", error);
+    });
+    bindMoveendMap(null).catch((error: unknown) => {
+      logScannerMarketsError("unbind moveend", error);
+    });
+    scannerMarketsLastFetchKey = null;
+    scannerMarketSelection.value = buildEmptyScannerMarketSelectionSummary();
   });
 
   return {

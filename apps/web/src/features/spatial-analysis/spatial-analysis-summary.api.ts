@@ -1,5 +1,4 @@
 import {
-  ApiHeaders,
   buildSpatialAnalysisSummaryRoute,
   type SpatialAnalysisSummaryRequest,
   type SpatialAnalysisSummaryResponse,
@@ -8,6 +7,10 @@ import {
 import type { ApiEffectError, ApiEffectSuccess } from "@map-migration/core-runtime/api";
 import { type ApiResult, apiGetJson, apiGetJsonEffect } from "@map-migration/core-runtime/api";
 import type { Effect } from "effect";
+import {
+  buildJsonPostRequestInit,
+  withParcelIngestionRunIdHeader,
+} from "@/lib/api/api-request-init.service";
 
 export interface FetchSpatialAnalysisSummaryOptions {
   readonly expectedParcelIngestionRunId: string | null;
@@ -16,36 +19,27 @@ export interface FetchSpatialAnalysisSummaryOptions {
 
 export type SpatialAnalysisSummaryResult = ApiResult<SpatialAnalysisSummaryResponse>;
 
+function buildSpatialAnalysisSummaryRequestInit(
+  request: SpatialAnalysisSummaryRequest,
+  options: FetchSpatialAnalysisSummaryOptions
+): RequestInit {
+  return withParcelIngestionRunIdHeader(
+    buildJsonPostRequestInit({
+      body: request,
+      signal: options.signal,
+    }),
+    options.expectedParcelIngestionRunId
+  );
+}
+
 export function fetchSpatialAnalysisSummary(
   request: SpatialAnalysisSummaryRequest,
   options: FetchSpatialAnalysisSummaryOptions
 ): Promise<SpatialAnalysisSummaryResult> {
-  const requestInit: RequestInit = {
-    body: JSON.stringify(request),
-    headers: {
-      "content-type": "application/json",
-    },
-    method: "POST",
-  };
-
-  if (options.signal) {
-    requestInit.signal = options.signal;
-  }
-
-  if (
-    typeof options.expectedParcelIngestionRunId === "string" &&
-    options.expectedParcelIngestionRunId.trim().length > 0
-  ) {
-    requestInit.headers = {
-      ...requestInit.headers,
-      [ApiHeaders.parcelIngestionRunId]: options.expectedParcelIngestionRunId.trim(),
-    };
-  }
-
   return apiGetJson(
     buildSpatialAnalysisSummaryRoute(),
     SpatialAnalysisSummaryResponseSchema,
-    requestInit
+    buildSpatialAnalysisSummaryRequestInit(request, options)
   );
 }
 
@@ -53,31 +47,9 @@ export function fetchSpatialAnalysisSummaryEffect(
   request: SpatialAnalysisSummaryRequest,
   options: FetchSpatialAnalysisSummaryOptions
 ): Effect.Effect<ApiEffectSuccess<SpatialAnalysisSummaryResponse>, ApiEffectError, never> {
-  const requestInit: RequestInit = {
-    body: JSON.stringify(request),
-    headers: {
-      "content-type": "application/json",
-    },
-    method: "POST",
-  };
-
-  if (typeof options.signal !== "undefined") {
-    requestInit.signal = options.signal;
-  }
-
-  if (
-    typeof options.expectedParcelIngestionRunId === "string" &&
-    options.expectedParcelIngestionRunId.trim().length > 0
-  ) {
-    requestInit.headers = {
-      ...requestInit.headers,
-      [ApiHeaders.parcelIngestionRunId]: options.expectedParcelIngestionRunId.trim(),
-    };
-  }
-
   return apiGetJsonEffect(
     buildSpatialAnalysisSummaryRoute(),
     SpatialAnalysisSummaryResponseSchema,
-    requestInit
+    buildSpatialAnalysisSummaryRequestInit(request, options)
   );
 }

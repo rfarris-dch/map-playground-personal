@@ -11,7 +11,6 @@ import type {
   SelectionToolProgress,
 } from "@/features/selection-tool/selection-tool.types";
 import { createLatestRunner } from "@/lib/effect/latest-runner";
-import { mutateVueState } from "@/lib/effect/vue-bridge";
 
 export function useAppShellSelectionAnalysis(options: UseAppShellSelectionAnalysisOptions) {
   const selectionProgress = shallowRef<SelectionToolProgress | null>(null);
@@ -62,7 +61,7 @@ export function useAppShellSelectionAnalysis(options: UseAppShellSelectionAnalys
         visiblePerspectives: options.visiblePerspectives.value,
       }).pipe(
         Effect.flatMap((queryResult) =>
-          mutateVueState(() => {
+          Effect.sync(() => {
             isSelectionLoading.value = false;
 
             if (!queryResult.ok) {

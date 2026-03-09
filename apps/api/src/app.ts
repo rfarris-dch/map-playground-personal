@@ -1,9 +1,5 @@
 import { ApiHeaders, ApiRoutes, type HealthResponse, HealthSchema } from "@map-migration/contracts";
-import {
-  createRequestId,
-  normalizeRequestIdHeader,
-  REQUEST_ID_MAX_LENGTH,
-} from "@map-migration/core-runtime";
+import { createRequestId, REQUEST_ID_MAX_LENGTH } from "@map-migration/core-runtime";
 import { Effect } from "effect";
 import type { Context } from "hono";
 import { Hono } from "hono";
@@ -20,7 +16,13 @@ import { registerFiberLocatorRoute } from "@/geo/fiber-locator/fiber-locator.rou
 import { registerMarketsRoute } from "@/geo/markets/markets.route";
 import { registerParcelsRoute } from "@/geo/parcels/parcels.route";
 import { registerProvidersRoute } from "@/geo/providers/providers.route";
-import { getOrCreateRequestId, jsonError, jsonOk, toDebugDetails } from "@/http/api-response";
+import {
+  jsonError,
+  jsonOk,
+  normalizeRequestIdHeader,
+  resolveRequestId,
+  toDebugDetails,
+} from "@/http/api-response";
 import { ApiRequestContext, runEffectRoute } from "@/http/effect-route";
 import { registerTilesRoute } from "@/http/tiles.route";
 import type { ApiAppOptions, CreateApiAppOptions } from "./app.types";
@@ -133,7 +135,7 @@ export function createApiApp(options: CreateApiAppOptions = {}): Hono {
     bodyLimit({
       maxSize: resolvedOptions.requestBodyLimitBytes,
       onError: (c) => {
-        const requestIdValue = getOrCreateRequestId(c, "api");
+        const requestIdValue = resolveRequestId(c, "api");
         return jsonError(c, {
           requestId: requestIdValue,
           httpStatus: 413,
@@ -158,7 +160,7 @@ export function createApiApp(options: CreateApiAppOptions = {}): Hono {
   });
 
   app.onError((error, c) => {
-    const requestIdValue = getOrCreateRequestId(c, "api");
+    const requestIdValue = resolveRequestId(c, "api");
     if (error instanceof HTTPException) {
       return jsonError(c, {
         requestId: requestIdValue,
@@ -179,7 +181,7 @@ export function createApiApp(options: CreateApiAppOptions = {}): Hono {
   });
 
   app.notFound((c) => {
-    const requestIdValue = getOrCreateRequestId(c, "api");
+    const requestIdValue = resolveRequestId(c, "api");
     return jsonError(c, {
       requestId: requestIdValue,
       httpStatus: 404,

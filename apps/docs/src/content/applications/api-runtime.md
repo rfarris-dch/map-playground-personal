@@ -97,7 +97,7 @@ The `apps/api/src/http` folder is the transport layer. It keeps request and resp
 
 - `jsonOk()` validates successful payloads against the schema passed in from `@map-migration/contracts`
 - `jsonError()` and `responseError()` produce the shared error envelope shape
-- `getOrCreateRequestId()` and `normalizeRequestIdHeader()` keep request tracing stable across happy and unhappy paths
+- `resolveRequestId()` and `normalizeRequestIdHeader()` keep request tracing stable across happy and unhappy paths
 - `toDebugDetails()` strips debug details in production but leaves them available during development
 
 This is the main place where the API runtime turns internal errors into transport-safe responses.

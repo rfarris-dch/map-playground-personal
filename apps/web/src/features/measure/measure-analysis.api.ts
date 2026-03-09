@@ -1,5 +1,4 @@
 import {
-  ApiHeaders,
   buildFacilitiesSelectionRoute,
   buildParcelEnrichRoute,
   type FacilitiesSelectionRequest,
@@ -21,32 +20,48 @@ import type {
   FetchParcelsBySelectionOptions,
   ParcelsSelectionResult,
 } from "@/features/measure/measure-analysis.api.types";
+import {
+  buildJsonPostRequestInit,
+  withParcelIngestionRunIdHeader,
+} from "@/lib/api/api-request-init.service";
 
 export type {
   FacilitiesSelectionResult,
   ParcelsSelectionResult,
 } from "@/features/measure/measure-analysis.api.types";
 
+function buildFacilitiesSelectionRequestInit(
+  request: FacilitiesSelectionRequest,
+  signal?: AbortSignal
+): RequestInit {
+  return buildJsonPostRequestInit({
+    body: request,
+    signal,
+  });
+}
+
+function buildParcelsSelectionRequestInit(
+  request: ParcelEnrichRequest,
+  signal?: AbortSignal,
+  options: FetchParcelsBySelectionOptions = {}
+): RequestInit {
+  return withParcelIngestionRunIdHeader(
+    buildJsonPostRequestInit({
+      body: request,
+      signal,
+    }),
+    options.expectedIngestionRunId
+  );
+}
+
 export function fetchFacilitiesBySelection(
   request: FacilitiesSelectionRequest,
   signal?: AbortSignal
 ): Promise<FacilitiesSelectionResult> {
-  const requestInit: RequestInit = {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-    },
-    body: JSON.stringify(request),
-  };
-
-  if (signal) {
-    requestInit.signal = signal;
-  }
-
   return apiGetJson(
     buildFacilitiesSelectionRoute(),
     FacilitiesSelectionResponseSchema,
-    requestInit
+    buildFacilitiesSelectionRequestInit(request, signal)
   );
 }
 
@@ -54,22 +69,10 @@ export function fetchFacilitiesBySelectionEffect(
   request: FacilitiesSelectionRequest,
   signal?: AbortSignal
 ): Effect.Effect<ApiEffectSuccess<FacilitiesSelectionResponse>, ApiEffectError, never> {
-  const requestInit: RequestInit = {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-    },
-    body: JSON.stringify(request),
-  };
-
-  if (typeof signal !== "undefined") {
-    requestInit.signal = signal;
-  }
-
   return apiGetJsonEffect(
     buildFacilitiesSelectionRoute(),
     FacilitiesSelectionResponseSchema,
-    requestInit
+    buildFacilitiesSelectionRequestInit(request, signal)
   );
 }
 
@@ -78,29 +81,11 @@ export function fetchParcelsBySelection(
   signal?: AbortSignal,
   options: FetchParcelsBySelectionOptions = {}
 ): Promise<ParcelsSelectionResult> {
-  const requestInit: RequestInit = {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-    },
-    body: JSON.stringify(request),
-  };
-
-  if (signal) {
-    requestInit.signal = signal;
-  }
-
-  if (
-    typeof options.expectedIngestionRunId === "string" &&
-    options.expectedIngestionRunId.trim().length > 0
-  ) {
-    requestInit.headers = {
-      ...requestInit.headers,
-      [ApiHeaders.parcelIngestionRunId]: options.expectedIngestionRunId.trim(),
-    };
-  }
-
-  return apiGetJson(buildParcelEnrichRoute(), ParcelsFeatureCollectionSchema, requestInit);
+  return apiGetJson(
+    buildParcelEnrichRoute(),
+    ParcelsFeatureCollectionSchema,
+    buildParcelsSelectionRequestInit(request, signal, options)
+  );
 }
 
 export function fetchParcelsBySelectionEffect(
@@ -108,27 +93,9 @@ export function fetchParcelsBySelectionEffect(
   signal?: AbortSignal,
   options: FetchParcelsBySelectionOptions = {}
 ): Effect.Effect<ApiEffectSuccess<ParcelsFeatureCollection>, ApiEffectError, never> {
-  const requestInit: RequestInit = {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-    },
-    body: JSON.stringify(request),
-  };
-
-  if (typeof signal !== "undefined") {
-    requestInit.signal = signal;
-  }
-
-  if (
-    typeof options.expectedIngestionRunId === "string" &&
-    options.expectedIngestionRunId.trim().length > 0
-  ) {
-    requestInit.headers = {
-      ...requestInit.headers,
-      [ApiHeaders.parcelIngestionRunId]: options.expectedIngestionRunId.trim(),
-    };
-  }
-
-  return apiGetJsonEffect(buildParcelEnrichRoute(), ParcelsFeatureCollectionSchema, requestInit);
+  return apiGetJsonEffect(
+    buildParcelEnrichRoute(),
+    ParcelsFeatureCollectionSchema,
+    buildParcelsSelectionRequestInit(request, signal, options)
+  );
 }

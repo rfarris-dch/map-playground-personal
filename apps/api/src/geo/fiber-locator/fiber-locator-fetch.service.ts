@@ -1,9 +1,4 @@
-import {
-  createAbortError as createAbortErrorFromEffect,
-  fetchResponseEffect,
-  runEffectPromise,
-  waitForAbortableValue as waitForAbortableValueFromEffect,
-} from "@map-migration/core-runtime/effect";
+import { fetchResponseEffect, runEffectPromise } from "@map-migration/core-runtime/effect";
 import { Effect } from "effect";
 import type { FiberLocatorConfig } from "@/geo/fiber-locator/fiber-locator.types";
 import type { FiberLocatorTileSnapshot } from "./fiber-locator.service.types";
@@ -25,14 +20,6 @@ function retryDelayMs(attempt: number): number {
   return 250 * 2 ** Math.max(0, attempt);
 }
 
-export function createAbortError(message: string): Error | DOMException {
-  return createAbortErrorFromEffect(message);
-}
-
-export function waitForAbortableValue<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
-  return waitForAbortableValueFromEffect(promise, signal);
-}
-
 export function copyTileHeaders(headers: Headers): Headers {
   return PASS_THROUGH_TILE_HEADER_NAMES.reduce((copiedHeaders, headerName) => {
     const headerValue = headers.get(headerName);
@@ -52,82 +39,31 @@ export function createTileSnapshotResponse(snapshot: FiberLocatorTileSnapshot): 
   });
 }
 
-function fetchResponseWithTimeout(
-  url: string,
-  timeoutMs: number,
-  init: RequestInit = {},
-  options: {
-    readonly maxAttempts?: number;
-    readonly shouldRetryResponse?: (response: Response) => boolean;
-  } = {}
-): Promise<Response> {
-  const signal = init.signal instanceof AbortSignal ? init.signal : undefined;
-
-  return runEffectPromise(
-    fetchResponseEffect({
-      init,
-      retryDelayMs,
-      shouldRetryError: (error) =>
-        error._tag === "RequestNetworkError" ||
-        (error._tag === "RequestAbortedError" && signal?.aborted !== true),
-      timeoutMs,
-      url,
-      ...(typeof options.maxAttempts === "number" ? { maxAttempts: options.maxAttempts } : {}),
-      ...(typeof options.shouldRetryResponse === "function"
-        ? { shouldRetryResponse: options.shouldRetryResponse }
-        : {}),
-    }).pipe(Effect.map(({ response }) => response)),
-    signal
-  );
-}
-
-export async function fetchJsonPayloadWithTimeout(
-  url: string,
-  timeoutMs: number,
-  requestName: string,
-  signal?: AbortSignal
-): Promise<unknown> {
-  const response = await fetchResponseWithTimeout(url, timeoutMs, {
-    headers: {
-      accept: "application/json",
-    },
-    method: "GET",
-    ...(typeof signal === "undefined" ? {} : { signal }),
-  });
-
-  if (!response.ok) {
-    throw new Error(
-      `${requestName} request failed (${String(response.status)} ${response.statusText})`
-    );
-  }
-
-  try {
-    return await response.json();
-  } catch {
-    throw new Error(`${requestName} response was not valid JSON`);
-  }
-}
-
 export async function fetchFiberLocatorTileSnapshot(
   config: FiberLocatorConfig,
   url: string,
   accept: string,
   signal?: AbortSignal
 ): Promise<FiberLocatorTileSnapshot> {
-  const response = await fetchResponseWithTimeout(
-    url,
-    config.requestTimeoutMs,
-    {
-      headers: {
-        accept,
+  const response = await runEffectPromise(
+    fetchResponseEffect({
+      init: {
+        headers: {
+          accept,
+        },
+        method: "GET",
+        ...(typeof signal === "undefined" ? {} : { signal }),
       },
-      method: "GET",
-      ...(typeof signal === "undefined" ? {} : { signal }),
-    },
-    {
       maxAttempts: 3,
+      retryDelayMs,
+      shouldRetryError: (error) =>
+        error._tag === "RequestNetworkError" ||
+        (error._tag === "RequestAbortedError" && signal?.aborted !== true),
       shouldRetryResponse: shouldRetryUpstreamResponse,
-    }
+      timeoutMs: config.requestTimeoutMs,
+      url,
+    }).pipe(Effect.map(({ response: upstreamResponse }) => upstreamResponse)),
+    signal
   );
 
   return {

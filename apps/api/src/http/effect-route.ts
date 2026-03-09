@@ -1,7 +1,6 @@
-import { ApiHeaders } from "@map-migration/contracts";
 import { Cause, Effect, Context as EffectContext, Exit, Option } from "effect";
 import type { Context as HonoContext } from "hono";
-import { getOrCreateRequestId, jsonError, toDebugDetails } from "./api-response";
+import { jsonError, resolveRequestId, toDebugDetails, withRequestId } from "./api-response";
 
 export interface ApiRequestContextService {
   readonly honoContext: HonoContext;
@@ -83,11 +82,6 @@ function createApiRequestLogger(requestId: string): ApiRequestLoggerService {
   };
 }
 
-function ensureRequestIdHeader(response: Response, requestId: string): Response {
-  response.headers.set(ApiHeaders.requestId, requestId);
-  return response;
-}
-
 function buildUnexpectedEffectErrorDetails(cause: Cause.Cause<unknown>): unknown {
   const defect = Cause.dieOption(cause);
   if (Option.isSome(defect)) {
@@ -131,7 +125,7 @@ export async function runEffectRoute(
   c: HonoContext,
   program: Effect.Effect<Response, ApiRouteError, ApiRequestContext | ApiRequestLogger>
 ): Promise<Response> {
-  const requestId = getOrCreateRequestId(c, "api");
+  const requestId = resolveRequestId(c, "api");
   const signal = c.req.raw.signal;
   const requestContext: ApiRequestContextService = {
     honoContext: c,
@@ -149,7 +143,7 @@ export async function runEffectRoute(
   });
 
   if (Exit.isSuccess(exit)) {
-    return ensureRequestIdHeader(exit.value, requestId);
+    return withRequestId(exit.value, requestId);
   }
 
   return renderRouteFailure(c, requestId, exit.cause);

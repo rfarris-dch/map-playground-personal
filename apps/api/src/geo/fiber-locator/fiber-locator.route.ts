@@ -1,5 +1,4 @@
 import {
-  ApiHeaders,
   ApiRoutes,
   type FiberLocatorCatalogResponse,
   FiberLocatorCatalogResponseSchema,
@@ -95,7 +94,6 @@ export function registerFiberLocatorRoute<E extends Env>(app: Hono<E>): void {
           signal,
         });
 
-        response.headers.set(ApiHeaders.requestId, requestId);
         return response;
       })
     )
@@ -117,7 +115,6 @@ export function registerFiberLocatorRoute<E extends Env>(app: Hono<E>): void {
           signal,
         });
 
-        response.headers.set(ApiHeaders.requestId, requestId);
         return response;
       })
     )

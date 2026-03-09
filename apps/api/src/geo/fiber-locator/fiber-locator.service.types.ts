@@ -5,7 +5,3 @@ export interface FiberLocatorTileSnapshot {
   readonly status: number;
   readonly statusText: string;
 }
-
-export interface FetchWithTimeoutResult {
-  readonly response: Response;
-}

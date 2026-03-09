@@ -15,6 +15,17 @@ export function normalizeRequestIdHeader(value: string | null | undefined): stri
   return normalizeRequestIdHeaderValue(value ?? undefined);
 }
 
+export function resolveRequestId(c: Context, prefix = "api"): string {
+  const fromContext = c.get("requestId");
+  const normalizedFromContext =
+    typeof fromContext === "string" ? normalizeRequestIdHeaderValue(fromContext) : null;
+  if (typeof normalizedFromContext === "string") {
+    return normalizedFromContext;
+  }
+
+  return createRequestId(prefix);
+}
+
 function buildErrorEnvelope(args: ErrorEnvelopeArgs): ApiErrorResponse {
   const candidate: ApiErrorResponse = {
     status: "error",
@@ -44,22 +55,6 @@ function buildErrorEnvelope(args: ErrorEnvelopeArgs): ApiErrorResponse {
   };
 }
 
-export function getOrCreateRequestId(c: Context, prefix = "api"): string {
-  const fromContext = c.get("requestId");
-  const normalizedFromContext =
-    typeof fromContext === "string" ? normalizeRequestIdHeaderValue(fromContext) : null;
-  if (typeof normalizedFromContext === "string") {
-    return normalizedFromContext;
-  }
-
-  const normalized = normalizeRequestIdHeaderValue(c.req.header(ApiHeaders.requestId));
-  if (typeof normalized === "string") {
-    return normalized;
-  }
-
-  return createRequestId(prefix);
-}
-
 export function toDebugDetails(error: unknown): unknown {
   if (process.env.NODE_ENV === "production") {
     return undefined;
@@ -76,19 +71,23 @@ export function toDebugDetails(error: unknown): unknown {
   return String(error);
 }
 
-export function jsonError(c: Context, args: JsonErrorArgs): Response {
-  c.header(ApiHeaders.requestId, args.requestId);
+export function withRequestId(response: Response, requestId: string): Response {
+  response.headers.set(ApiHeaders.requestId, requestId);
+  return response;
+}
+
+export function jsonError(_c: Context, args: JsonErrorArgs): Response {
   return responseError(args);
 }
 
 export function responseError(args: JsonErrorArgs): Response {
   const payload = buildErrorEnvelope(args);
-  return Response.json(payload, {
-    status: args.httpStatus,
-    headers: {
-      [ApiHeaders.requestId]: args.requestId,
-    },
-  });
+  return withRequestId(
+    Response.json(payload, {
+      status: args.httpStatus,
+    }),
+    args.requestId
+  );
 }
 
 export function jsonOk<T>(
@@ -108,6 +107,5 @@ export function jsonOk<T>(
     });
   }
 
-  c.header(ApiHeaders.requestId, requestId);
-  return c.json(parsed.data);
+  return withRequestId(c.json(parsed.data), requestId);
 }

@@ -3,26 +3,45 @@ import {
   type MarketsSelectionRequest,
   MarketsSelectionResponseSchema,
 } from "@map-migration/contracts";
-import type { ApiResult } from "@map-migration/core-runtime/api";
-import { apiGetJson } from "@map-migration/core-runtime/api";
+import type { ApiEffectError, ApiEffectSuccess, ApiResult } from "@map-migration/core-runtime/api";
+import { apiGetJson, apiGetJsonEffect } from "@map-migration/core-runtime/api";
+import type { Effect } from "effect";
+import { buildJsonPostRequestInit } from "@/lib/api/api-request-init.service";
 
 type MarketsSelectionResult = ApiResult<typeof MarketsSelectionResponseSchema._type>;
+
+function buildMarketsSelectionRequestInit(
+  request: MarketsSelectionRequest,
+  signal?: AbortSignal
+): RequestInit {
+  return buildJsonPostRequestInit({
+    body: request,
+    signal,
+  });
+}
 
 export function fetchMarketsBySelection(
   request: MarketsSelectionRequest,
   signal?: AbortSignal
 ): Promise<MarketsSelectionResult> {
-  const requestInit: RequestInit = {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-    },
-    body: JSON.stringify(request),
-  };
+  return apiGetJson(
+    buildMarketsSelectionRoute(),
+    MarketsSelectionResponseSchema,
+    buildMarketsSelectionRequestInit(request, signal)
+  );
+}
 
-  if (signal) {
-    requestInit.signal = signal;
-  }
-
-  return apiGetJson(buildMarketsSelectionRoute(), MarketsSelectionResponseSchema, requestInit);
+export function fetchMarketsBySelectionEffect(
+  request: MarketsSelectionRequest,
+  signal?: AbortSignal
+): Effect.Effect<
+  ApiEffectSuccess<typeof MarketsSelectionResponseSchema._type>,
+  ApiEffectError,
+  never
+> {
+  return apiGetJsonEffect(
+    buildMarketsSelectionRoute(),
+    MarketsSelectionResponseSchema,
+    buildMarketsSelectionRequestInit(request, signal)
+  );
 }
