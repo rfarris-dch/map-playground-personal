@@ -9,6 +9,20 @@ phases:
     runtime-versions:
       nodejs: 20
     commands:
+      - |
+        set -eu
+        if command -v apt-get >/dev/null 2>&1; then
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get install -y --no-install-recommends perl ripgrep rsync
+        elif command -v dnf >/dev/null 2>&1; then
+          dnf install -y perl ripgrep rsync
+        elif command -v yum >/dev/null 2>&1; then
+          yum install -y perl ripgrep rsync
+        else
+          echo "[build] no supported package manager found for dependency install" >&2
+          exit 1
+        fi
       - curl -fsSL https://bun.sh/install | bash -s -- "bun-v${BUN_VERSION}"
       - /root/.bun/bin/bun --version
       - |
