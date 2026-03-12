@@ -87,7 +87,7 @@ phases:
       - cp apps/docs/package.json artifact/apps/docs/
       - cp apps/pipeline-monitor/package.json artifact/apps/pipeline-monitor/
       - |
-        set -euo pipefail
+        set -eu
         for package in bench contracts core-runtime fixtures geo-sql geo-tiles map-engine map-layer-catalog map-style ops; do
           mkdir -p "artifact/packages/${package}"
           cp "packages/${package}/package.json" "artifact/packages/${package}/"
