@@ -1,6 +1,9 @@
 import { Effect } from "effect";
 import { computed, onBeforeUnmount, shallowRef } from "vue";
-import { cloneSelectionRing } from "@/features/selection/selection-analysis-request.service";
+import {
+  cloneSelectionRing,
+  resolveSelectionAnalysisBlockedReason,
+} from "@/features/selection/selection-analysis-request.service";
 import {
   buildEmptySelectionToolSummary,
   exportSelectionToolSummary,
@@ -64,6 +67,17 @@ export function useSelectionTool(options: UseSelectionToolOptions) {
     }
 
     const nextSelectionRing = cloneSelectionRing(draft);
+    const blockedReason = resolveSelectionAnalysisBlockedReason(nextSelectionRing);
+    if (blockedReason !== null) {
+      await selectionRunner.interrupt();
+      isSelectionLoading.value = false;
+      selectionError.value = blockedReason;
+      selectionProgress.value = null;
+      selectionGeometry.value = cloneSelectionRing(nextSelectionRing);
+      selectionSummary.value = buildEmptySelectionToolSummary(nextSelectionRing);
+      return;
+    }
+
     isSelectionLoading.value = true;
     selectionError.value = null;
     selectionProgress.value = null;

@@ -1,6 +1,13 @@
-import type { FacilitiesSelectionRequest, ParcelEnrichRequest } from "@map-migration/contracts";
+import type {
+  BBox,
+  FacilitiesSelectionRequest,
+  ParcelEnrichRequest,
+} from "@map-migration/contracts";
 
 type SelectionRing = readonly [number, number][];
+
+const SELECTION_ANALYSIS_MAX_BBOX_WIDTH_DEGREES = 2;
+const SELECTION_ANALYSIS_MAX_BBOX_HEIGHT_DEGREES = 2;
 
 interface SelectionApiFailure {
   readonly code?: string;
@@ -48,6 +55,63 @@ export function selectionAoiFromRing(selectionRing: SelectionRing): ParcelEnrich
     type: "polygon",
     geometry: selectionGeometryFromRing(selectionRing),
   };
+}
+
+function normalizeEastLongitude(west: number, east: number): number {
+  if (east >= west) {
+    return east;
+  }
+
+  return east + 360;
+}
+
+export function buildSelectionRingBbox(selectionRing: SelectionRing): BBox | null {
+  const firstVertex = selectionRing[0];
+  if (typeof firstVertex === "undefined") {
+    return null;
+  }
+
+  let west = firstVertex[0];
+  let east = firstVertex[0];
+  let south = firstVertex[1];
+  let north = firstVertex[1];
+
+  for (const [longitude, latitude] of selectionRing) {
+    west = Math.min(west, longitude);
+    east = Math.max(east, longitude);
+    south = Math.min(south, latitude);
+    north = Math.max(north, latitude);
+  }
+
+  return {
+    west,
+    south,
+    east,
+    north,
+  };
+}
+
+export function selectionRingExceedsFastAnalysisLimits(selectionRing: SelectionRing): boolean {
+  const bbox = buildSelectionRingBbox(selectionRing);
+  if (bbox === null) {
+    return false;
+  }
+
+  const width = normalizeEastLongitude(bbox.west, bbox.east) - bbox.west;
+  const height = bbox.north - bbox.south;
+
+  return (
+    width > SELECTION_ANALYSIS_MAX_BBOX_WIDTH_DEGREES ||
+    height > SELECTION_ANALYSIS_MAX_BBOX_HEIGHT_DEGREES
+  );
+}
+
+export function resolveSelectionAnalysisBlockedReason(selectionRing: SelectionRing): string | null {
+  if (!selectionRingExceedsFastAnalysisLimits(selectionRing)) {
+    return null;
+  }
+
+  return "Zoom in to analyze a smaller selection area.";
 }
 
 function describeSelectionApiFailure(result: SelectionApiFailure): string {
