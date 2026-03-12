@@ -25,6 +25,21 @@ import { jsonError, jsonOk } from "@/http/api-response";
 import { fromApiRequest, runEffectRoute } from "@/http/effect-route";
 import { isDatasetQueryAllowed } from "@/http/spatial-analysis-policy.service";
 
+function isResponseLike(value: unknown): value is Response {
+  if (typeof Response !== "undefined" && value instanceof Response) {
+    return true;
+  }
+
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  return (
+    typeof Reflect.get(value, "status") === "number" &&
+    typeof Reflect.get(value, "headers") === "object"
+  );
+}
+
 async function readParcelDetailFeature(args: {
   readonly includeGeometry: NonNullable<ReturnType<typeof parseIncludeGeometryParam>>;
   readonly parcelId: string;
@@ -114,7 +129,7 @@ export function registerParcelDetailRoute<E extends Env>(app: Hono<E>): void {
           parcelId,
           requestId,
         });
-        if (featureOrResponse instanceof Response) {
+        if (isResponseLike(featureOrResponse)) {
           return featureOrResponse;
         }
 
