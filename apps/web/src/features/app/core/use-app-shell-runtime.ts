@@ -2,6 +2,7 @@ import type { MapContextTransfer } from "@map-migration/contracts";
 import { computed } from "vue";
 import { useAppShellFiber } from "@/features/app/fiber/use-app-shell-fiber";
 import { useAppShellMapLifecycle } from "@/features/app/lifecycle/use-app-shell-map-lifecycle";
+import { resolveScannerParcelsBlockedReason } from "@/features/app/overlays/map-overlays.service";
 import { useMapOverlays } from "@/features/app/overlays/use-map-overlays";
 import { useAppShellSelection } from "@/features/app/selection/use-app-shell-selection";
 import { useAppShellSelectionAnalysis } from "@/features/app/selection/use-app-shell-selection-analysis";
@@ -44,6 +45,11 @@ export function useAppShellRuntime(
     layerRuntime: state.layerRuntime,
     setViewportFacilities: state.setViewportFacilities,
   });
+  const includeParcelsInAnalysis = computed(
+    () =>
+      visibility.parcelsVisible.value &&
+      resolveScannerParcelsBlockedReason(state.parcelsStatus.value) === null
+  );
 
   const fiber = useAppShellFiber({
     map: state.map,
@@ -67,6 +73,7 @@ export function useAppShellRuntime(
 
   const selectionAnalysis = useAppShellSelectionAnalysis({
     expectedParcelsIngestionRunId: status.expectedParcelsIngestionRunId,
+    includeParcels: includeParcelsInAnalysis,
     selectionGeometry: state.selectionGeometry,
     visiblePerspectives: visibility.visiblePerspectives,
   });

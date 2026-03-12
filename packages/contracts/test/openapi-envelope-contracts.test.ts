@@ -74,17 +74,17 @@ describe("openapi runtime alignment", () => {
     expect(apiErrorResponseType).toBe("object");
   });
 
-  it("uses the runtime route surface instead of the legacy /api server prefix split", async () => {
+  it("uses the runtime route surface without the old /api server prefix split", async () => {
     const document = await loadOpenApiDocument();
     const serverUrl = stringAtPath(document, ["servers", "0", "url"]);
     const parcelDetailPath = valueAtPath(document, ["paths", `${ApiRoutes.parcels}/{parcelId}`]);
     const facilitiesPath = valueAtPath(document, ["paths", ApiRoutes.facilities]);
-    const legacyAnalysisPath = valueAtPath(document, ["paths", "/analysis/parcels/score"]);
+    const removedAnalysisPath = valueAtPath(document, ["paths", "/analysis/parcels/score"]);
 
     expect(serverUrl).toBe("/");
     expect(parcelDetailPath).not.toBeUndefined();
     expect(facilitiesPath).not.toBeUndefined();
-    expect(legacyAnalysisPath).toBeUndefined();
+    expect(removedAnalysisPath).toBeUndefined();
   });
 
   it("documents shared headers and query defaults for parcel detail", async () => {

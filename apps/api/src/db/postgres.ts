@@ -8,6 +8,7 @@ declare const Bun: {
 };
 
 const CONNECTION_CLOSED_RE = /connection closed/i;
+const POSTGRES_READY_QUERY = "select 1 as db_ready";
 
 function getConnectionString(): string {
   const connectionString = process.env.DATABASE_URL ?? process.env.POSTGRES_URL;
@@ -46,11 +47,11 @@ function runQueryWithClient<T extends object>(
   return sqlClient.unsafe<T>(text, values);
 }
 
-export async function runQuery<T extends object>(
+async function runQueryWithReconnect<T extends object>(
+  sqlClient: BunSqlClient,
   text: string,
   values: ReadonlyArray<number | string>
 ): Promise<T[]> {
-  const sqlClient = getSqlClient();
   try {
     return await runQueryWithClient<T>(sqlClient, text, values);
   } catch (error) {
@@ -60,6 +61,19 @@ export async function runQuery<T extends object>(
 
     return runQueryWithClient<T>(getSqlClient(), text, values);
   }
+}
+
+export function runQuery<T extends object>(
+  text: string,
+  values: ReadonlyArray<number | string>
+): Promise<T[]> {
+  const sqlClient = getSqlClient();
+  return runQueryWithReconnect<T>(sqlClient, text, values);
+}
+
+export async function assertPostgresReady(): Promise<void> {
+  const sqlClient = getSqlClient();
+  await runQueryWithReconnect<{ readonly db_ready: number }>(sqlClient, POSTGRES_READY_QUERY, []);
 }
 
 export async function closePostgresPool(): Promise<void> {

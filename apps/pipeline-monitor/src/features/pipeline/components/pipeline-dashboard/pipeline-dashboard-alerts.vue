@@ -21,7 +21,9 @@
     <p class="mt-1 text-xs text-red-800">{{ props.noActiveSyncWarning }}</p>
     <p class="mt-2 text-xs text-red-800">
       Start a full run to see live movement:
-      <code class="rounded bg-red-100 px-1 py-0.5 font-mono">bun run sync:parcels</code>
+      <code class="rounded bg-red-100 px-1 py-0.5 font-mono">
+        {{ props.dataset === "flood" ? "bun run sync:environmental-flood" : "bun run sync:parcels" }}
+      </code>
     </p>
   </div>
 </template>

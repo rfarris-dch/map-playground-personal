@@ -67,13 +67,13 @@ export function useSelectionTool(options: UseSelectionToolOptions) {
     isSelectionLoading.value = true;
     selectionError.value = null;
     selectionProgress.value = null;
-    selectionGeometry.value = nextSelectionRing;
+    selectionGeometry.value = cloneSelectionRing(nextSelectionRing);
     selectionSummary.value = buildEmptySelectionToolSummary(nextSelectionRing);
 
     await selectionRunner.run(
       querySelectionToolSummaryEffect({
         expectedParcelsIngestionRunId: options.expectedParcelsIngestionRunId.value,
-        includeParcels: true,
+        includeParcels: options.includeParcels.value,
         onProgress(progress) {
           selectionProgress.value = progress;
         },

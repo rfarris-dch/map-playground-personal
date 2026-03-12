@@ -1,0 +1,27 @@
+version: 0.0
+os: linux
+file_exists_behavior: OVERWRITE
+files:
+  - source: /
+    destination: /home/deploy/map
+hooks:
+  ApplicationStop:
+    - location: aws/app/hooks/application-stop.sh
+      runas: root
+      timeout: 60
+  BeforeInstall:
+    - location: aws/app/hooks/before-install.sh
+      runas: root
+      timeout: 120
+  AfterInstall:
+    - location: aws/app/hooks/after-install.sh
+      runas: root
+      timeout: 900
+  ApplicationStart:
+    - location: aws/app/hooks/application-start.sh
+      runas: root
+      timeout: 120
+  ValidateService:
+    - location: aws/app/hooks/validate-service.sh
+      runas: root
+      timeout: 180

@@ -1,6 +1,7 @@
 import type {
   FeatureStateTarget,
   IMap,
+  LngLat,
   LngLatBounds,
   MapClickEvent,
   MapControl,
@@ -17,7 +18,10 @@ import type {
 } from "@map-migration/map-engine";
 
 interface FakeMapOptions {
+  readonly bearing?: number;
   readonly bounds?: LngLatBounds;
+  readonly center?: LngLat;
+  readonly pitch?: number;
   readonly projection?: MapProjectionSpecification;
   readonly style?: MapStyleSpecification;
   readonly zoom?: number;
@@ -67,13 +71,19 @@ export class FakeMap implements IMap {
   readonly removedSources: string[] = [];
   readonly sourceDataCalls: Array<{ readonly data: unknown; readonly sourceId: string }> = [];
   terrain: MapTerrainSpecification | null = null;
+  private bearing: number;
   private bounds: LngLatBounds;
+  private center: LngLat;
+  private pitch: number;
   private projection: MapProjectionSpecification;
   private style: MapStyleSpecification;
   private zoom: number;
 
   constructor(options: FakeMapOptions = {}) {
     this.bounds = options.bounds ?? createDefaultBounds();
+    this.center = options.center ?? [-98, 40];
+    this.bearing = options.bearing ?? 0;
+    this.pitch = options.pitch ?? 0;
     this.projection = options.projection ?? { type: "mercator" };
     this.style = options.style ?? createDefaultStyle();
     this.zoom = options.zoom ?? 5;
@@ -114,6 +124,18 @@ export class FakeMap implements IMap {
       width: 1024,
       height: 768,
     };
+  }
+
+  getBearing(): number {
+    return this.bearing;
+  }
+
+  getCenter(): LngLat {
+    return this.center;
+  }
+
+  getPitch(): number {
+    return this.pitch;
   }
 
   getProjection(): MapProjectionSpecification {
@@ -223,6 +245,35 @@ export class FakeMap implements IMap {
 
   setTerrain(terrain: MapTerrainSpecification | null): void {
     this.terrain = terrain;
+  }
+
+  setViewport(viewport: {
+    readonly bearing?: number;
+    readonly bounds?: LngLatBounds;
+    readonly center?: LngLat;
+    readonly pitch?: number;
+    readonly type: "bounds" | "center";
+    readonly zoom?: number;
+  }): void {
+    if (viewport.type === "bounds" && typeof viewport.bounds !== "undefined") {
+      this.bounds = viewport.bounds;
+    }
+
+    if (viewport.type === "center" && typeof viewport.center !== "undefined") {
+      this.center = viewport.center;
+    }
+
+    if (typeof viewport.bearing === "number") {
+      this.bearing = viewport.bearing;
+    }
+
+    if (typeof viewport.pitch === "number") {
+      this.pitch = viewport.pitch;
+    }
+
+    if (typeof viewport.zoom === "number") {
+      this.zoom = viewport.zoom;
+    }
   }
 
   setZoom(zoom: number): void {

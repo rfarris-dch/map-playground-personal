@@ -22,6 +22,17 @@ export interface SpatialAnalysisOverviewProviderSummary {
 
 export interface SpatialAnalysisOverviewSummary {
   readonly colocation: SpatialAnalysisOverviewPerspectiveSummary;
+  readonly flood?: {
+    readonly flood100AreaSqKm: number;
+    readonly flood100SelectionShare: number;
+    readonly flood500AreaSqKm: number;
+    readonly flood500SelectionShare: number;
+    readonly parcelCountIntersectingFlood100: number;
+    readonly parcelCountIntersectingFlood500: number;
+    readonly parcelCountOutsideMappedFlood: number;
+    readonly selectionAreaSqKm: number;
+    readonly unavailableReason: string | null;
+  };
   readonly hyperscale: SpatialAnalysisOverviewPerspectiveSummary;
   readonly topColocationProviders: readonly SpatialAnalysisOverviewProviderSummary[];
   readonly topHyperscaleProviders: readonly SpatialAnalysisOverviewProviderSummary[];

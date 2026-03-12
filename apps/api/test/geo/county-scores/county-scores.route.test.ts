@@ -155,7 +155,6 @@ function createDeferredCountyRow(): CountyScore {
     gasPipelinePresenceFlag: null,
     gasPipelineMileageCounty: null,
     fiberPresenceFlag: null,
-    waterStressScore: 3.5,
     primaryMarketId: "silicon-valley",
     isSeamCounty: false,
     formulaVersion: "county-market-pressure-v1",
@@ -259,7 +258,7 @@ describe("county scores route", () => {
         publishedAt: "2026-03-07T00:00:00.000Z",
         methodologyId: "county-market-pressure-v1",
         dataVersion: "2026-03-07",
-        inputDataVersion: "dc_pipeline=2026-03-07;water=mirror.water_stress_basins",
+        inputDataVersion: "dc_pipeline=2026-03-07",
         formulaVersion: "county-market-pressure-v1",
         rowCount: 3221,
         sourceCountyCount: 3221,
@@ -270,7 +269,13 @@ describe("county scores route", () => {
         mediumConfidenceCount: 0,
         lowConfidenceCount: 3221,
         freshCountyCount: 3221,
-        availableFeatureFamilies: ["demand", "history", "market_seams", "narratives", "water"],
+        availableFeatureFamilies: [
+          "demand",
+          "history",
+          "infrastructure",
+          "market_seams",
+          "narratives",
+        ],
         missingFeatureFamilies: ["grid_friction", "policy", "supply_timeline"],
         featureCoverage: {
           demand: true,
@@ -295,9 +300,9 @@ describe("county scores route", () => {
     expect(payload.availableFeatureFamilies).toEqual([
       "demand",
       "history",
+      "infrastructure",
       "market_seams",
       "narratives",
-      "water",
     ]);
     expect(payload.featureCoverage.demand).toBe(true);
   });

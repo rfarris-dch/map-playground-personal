@@ -9,6 +9,7 @@ const apiProxyTarget =
   process.env.VITE_API_PROXY_TARGET ??
   defaultApiProxyTarget;
 const mapWebPort = Number(process.env.MAP_WEB_PORT ?? "5143");
+const useExternalTileManifests = process.env.VITE_TILE_MANIFEST_MODE === "external";
 
 export default defineConfig({
   plugins: [vue(), tailwindcss()],
@@ -20,6 +21,7 @@ export default defineConfig({
   build: {
     target: "esnext",
   },
+  publicDir: useExternalTileManifests ? "public-static" : "public",
   resolve: {
     dedupe: ["maplibre-gl"],
     alias: {

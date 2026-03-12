@@ -4,7 +4,9 @@ import { createApiApp } from "@/app";
 
 describe("api hardening middleware", () => {
   it("keeps the health endpoint contract stable under the effect adapter", async () => {
-    const app = createApiApp();
+    const app = createApiApp({
+      readinessCheck: () => Promise.resolve(),
+    });
     const requestId = "health-123";
 
     const response = await app.request(ApiRoutes.health, {
@@ -19,6 +21,18 @@ describe("api hardening middleware", () => {
     expect(payload.status).toBe("ok");
     expect(payload.service).toBe("@map-migration/api");
     expect(payload.requestId).toBeUndefined();
+  });
+
+  it("returns 503 when the readiness check fails", async () => {
+    const app = createApiApp({
+      readinessCheck: () => Promise.reject(new Error("connect ECONNREFUSED")),
+    });
+
+    const response = await app.request(ApiRoutes.health);
+    const payload = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(payload.error.code).toBe("DATABASE_UNAVAILABLE");
   });
 
   it("propagates inbound request ids to response headers and envelopes", async () => {

@@ -2,9 +2,13 @@
 
 interface ImportMetaEnv {
   readonly VITE_DISABLE_PARCELS_GUARDRAILS?: string;
+  readonly VITE_ENVIRONMENTAL_FLOOD_MANIFEST_URL?: string;
+  readonly VITE_ENVIRONMENTAL_HYDRO_BASINS_MANIFEST_URL?: string;
+  readonly VITE_PARCELS_MANIFEST_URL?: string;
   readonly VITE_SATELLITE_BASEMAP_URL?: string;
   readonly VITE_SATELLITE_BASEMAP_URLS?: string;
   readonly VITE_SATELLITE_MAX_ZOOM?: string;
+  readonly VITE_TILE_MANIFEST_MODE?: string;
 }
 
 interface ImportMeta {

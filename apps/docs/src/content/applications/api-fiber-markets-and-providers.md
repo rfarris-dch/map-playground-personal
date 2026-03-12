@@ -66,7 +66,7 @@ That is consistent with the repo rule to fail fast rather than degrade to fixtur
 
 1. `markets.route.ts` validates `page`, `pageSize`, `sortBy`, and `sortOrder`.
 2. `markets-query.service.ts` orchestrates `countMarkets()` plus `listMarketsPage()`.
-3. `markets.repo.ts` executes the SQL against `mirror."HAWK_MARKET"`.
+3. `markets.repo.ts` executes the SQL against local `market_current.market_boundaries`.
 4. `markets.mapper.ts` normalizes nullable database fields into `MarketTableRow` contracts.
 
 ### What the query service adds
@@ -87,12 +87,12 @@ This is the cleanest example of the table-service pattern shared with providers.
 
 1. `providers.route.ts` validates pagination and sort parameters.
 2. `providers-query.service.ts` composes the count + page reads.
-3. `providers.repo.ts` reads from `mirror."HAWK_PROVIDER_PROFILE"`.
+3. `providers.repo.ts` aggregates the local facility serving tables.
 4. `providers.mapper.ts` normalizes nullable text, listing counts, boolean flags, and timestamps.
 
 ### Why the mapper matters
 
-The repo returns raw DB values like `HYPERSCALE`, `RETAIL`, and `WHOLESALE` flags. The mapper is where those become stable booleans in the shared contract. That keeps route code free of row-shape cleanup.
+The repo returns raw aggregate flags and counts from the local serving tables. The mapper is where those become stable booleans in the shared contract. That keeps route code free of row-shape cleanup.
 
 ## Reporting-slice rules
 

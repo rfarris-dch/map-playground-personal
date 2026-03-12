@@ -17,7 +17,6 @@ export const BASEMAP_COUNTRY_LAYER_IDS: readonly string[] = ["boundary_2", "boun
 export function initialBoundaryLayerState(): BoundaryLayerState {
   return {
     allFeatures: [],
-    abortController: null,
     basemapLayersSuppressed: false,
     dataLoaded: false,
     hoveredFeatureId: null,

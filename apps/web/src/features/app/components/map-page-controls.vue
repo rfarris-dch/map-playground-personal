@@ -138,6 +138,8 @@
   />
 
   <MapOverlayActions
+    :is-map-exporting="props.isMapExporting"
+    :map-export-disabled-reason="props.mapExportDisabledReason"
     :sketch-measure-active="props.isSketchMeasurePanelOpen || props.sketchMeasureState.mode !== 'off'"
     :selection-active="props.isSelectionPanelOpen"
     :selection-disabled-reason="props.selectionDisabledReason"
@@ -149,6 +151,7 @@
     @toggle-scanner="emit('toggle-scanner')"
     @toggle-sketch-measure-panel="handleToggleSketchMeasurePanel"
     @toggle-selection-panel="emit('toggle-selection-panel')"
+    @export-map-view="emit('export-map-view', $event)"
   />
 
   <MapSketchMeasureTools

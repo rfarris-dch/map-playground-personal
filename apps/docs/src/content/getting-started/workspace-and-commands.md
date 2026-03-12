@@ -103,7 +103,6 @@ bun x ultracite check apps/docs docs
 | `bun run typecheck:docs` | Typecheck only the docs app through Turbo filtering. |
 | `bun run build:pipeline-monitor` | Build only the pipeline monitor. |
 | `bun run typecheck:pipeline-monitor` | Typecheck only the pipeline monitor. |
-| `bun run sync:hyperscale` | Refresh the hyperscale dataset inputs used by the parcel workflow. |
 | `bun run init:parcels-schema` | Create or repair the parcel schema before canonical loads. |
 | `bun run load:parcels-canonical` | Load canonical parcel data into the serving schema. |
 | `bun run tiles:build:parcels` | Build the parcels PMTiles file set. |

@@ -1,9 +1,4 @@
-import type {
-  BoundaryPowerFeature,
-  BoundaryPowerFeatureCollection,
-  BoundaryPowerLevel,
-} from "@map-migration/contracts";
-import type { ApiResult } from "@map-migration/core-runtime/api";
+import type { BoundaryPowerFeature, BoundaryPowerLevel } from "@map-migration/contracts";
 import type { LayerVisibilityController } from "@/features/layers/layer-runtime.types";
 
 export type BoundaryLayerId = BoundaryPowerLevel;
@@ -40,7 +35,6 @@ export interface BoundaryLayerController extends LayerVisibilityController {
 }
 
 export interface BoundaryLayerState {
-  abortController: AbortController | null;
   allFeatures: readonly BoundaryPowerFeature[];
   basemapLayersSuppressed: boolean;
   dataLoaded: boolean;
@@ -55,5 +49,3 @@ export interface BoundarySourceData {
   readonly features: readonly unknown[];
   readonly type: "FeatureCollection";
 }
-
-export type BoundaryPowerFetchResult = ApiResult<BoundaryPowerFeatureCollection>;

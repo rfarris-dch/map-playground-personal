@@ -31,7 +31,7 @@ function createPublishedStatusRow() {
     published_at: "2026-03-07T00:00:00.000Z",
     methodology_id: "county-market-pressure-v1",
     data_version: "2026-03-06",
-    input_data_version: "dc_pipeline=2026-03-07;water=mirror.water_stress_basins",
+    input_data_version: "dc_pipeline=2026-03-07",
     formula_version: "county-market-pressure-v1",
     row_count: 3221,
     source_county_count: 3221,
@@ -42,7 +42,13 @@ function createPublishedStatusRow() {
     medium_confidence_count: 0,
     low_confidence_count: 3221,
     fresh_county_count: 3221,
-    available_feature_families: ["demand", "history", "market_seams", "narratives", "water"],
+    available_feature_families: [
+      "demand",
+      "history",
+      "infrastructure",
+      "market_seams",
+      "narratives",
+    ],
     missing_feature_families: ["grid_friction", "policy", "supply_timeline"],
   };
 }
@@ -107,7 +113,6 @@ function createDeferredCountyRow(
     gasPipelinePresenceFlag: null,
     gasPipelineMileageCounty: null,
     fiberPresenceFlag: null,
-    waterStressScore: 3.5,
     primaryMarketId: "silicon-valley",
     isSeamCounty: false,
     formulaVersion: "county-market-pressure-v1",
@@ -281,9 +286,9 @@ describe("queryCountyScores", () => {
     expect(result.value.availableFeatureFamilies).toEqual([
       "demand",
       "history",
+      "infrastructure",
       "market_seams",
       "narratives",
-      "water",
     ]);
     expect(result.value.featureCoverage.demand).toBe(true);
     expect(result.value.featureCoverage.gridFriction).toBe(false);

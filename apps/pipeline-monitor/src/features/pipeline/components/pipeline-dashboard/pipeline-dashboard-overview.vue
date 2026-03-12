@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { computed } from "vue";
   import type { PipelineDashboardOverviewProps } from "@/features/pipeline/components/pipeline-dashboard/pipeline-dashboard.types";
   import {
     formatBuildRate,
@@ -29,6 +30,103 @@
 
     emit("toggleAutoRefresh", target.checked);
   }
+
+  const phaseLabel = computed(() => {
+    if (props.run === null) {
+      return "Idle";
+    }
+
+    if (props.dataset === "flood" && props.run.phase === "extracting") {
+      const extractState = props.run.states.find((stateRow) => stateRow.state === "extract");
+      const normalizeState = props.run.states.find((stateRow) => stateRow.state === "normalize");
+
+      if (extractState?.isCompleted === true && normalizeState?.isCompleted !== true) {
+        return "Normalizing";
+      }
+    }
+
+    return formatPhaseLabel(props.run.phase, props.dataset, props.run.summary);
+  });
+
+  const isBuilding = computed(() => props.run?.phase === "building");
+  const isFloodMaterializing = computed(() => {
+    return props.dataset === "flood" && props.dbLoadProgress?.stepKey === "materialize";
+  });
+
+  const throughputHeading = computed(() => {
+    return isBuilding.value ? "Build Rate" : "Rows Per Second";
+  });
+
+  const throughputValue = computed(() => {
+    if (isFloodMaterializing.value) {
+      return props.dbLoadProgress?.stepLabel ?? "Materializing canonical rows";
+    }
+
+    if (isBuilding.value) {
+      return formatBuildRate(
+        props.buildRateEstimate.percentPerSecond,
+        props.buildRateEstimate.rateBasis
+      );
+    }
+
+    return formatRate(props.rateEstimate.rowsPerSecond, props.rateEstimate.rateBasis);
+  });
+
+  const throughputDetails = computed(() => {
+    if (isFloodMaterializing.value) {
+      return `Current batch: ${props.dbLoadProgress?.currentFile ?? "n/a"}`;
+    }
+
+    if (isBuilding.value) {
+      return `recent: ${formatBuildRate(
+        props.buildRateEstimate.recentPercentPerSecond,
+        "recent"
+      )} · avg: ${formatBuildRate(props.buildRateEstimate.averagePercentPerSecond, "average")}`;
+    }
+
+    return `recent: ${formatRowsPerSecondValue(props.rateEstimate.recentRowsPerSecond)} · avg: ${formatRowsPerSecondValue(props.rateEstimate.averageRowsPerSecond)}`;
+  });
+
+  const remainingHeading = computed(() => {
+    return isBuilding.value ? "Build ETA" : "Remaining ETA";
+  });
+
+  const remainingValue = computed(() => {
+    if (isFloodMaterializing.value) {
+      return props.dbLoadPercentLabel;
+    }
+
+    if (isBuilding.value) {
+      return formatEta(props.buildRateEstimate.etaMs);
+    }
+
+    return formatEta(props.rateEstimate.etaMs);
+  });
+
+  const remainingDetails = computed(() => {
+    if (isFloodMaterializing.value) {
+      return `active worker: ${props.dbLoadProgress?.activeWorkers[0] ?? "n/a"}`;
+    }
+
+    if (isBuilding.value) {
+      const remainingPercent = props.buildRateEstimate.remainingPercent;
+      if (remainingPercent === null) {
+        return props.run?.summary ?? "tiles:building";
+      }
+
+      return `remaining build: ${remainingPercent.toFixed(2)}%`;
+    }
+
+    return `remaining rows: ${props.rateEstimate.remainingRows === null ? "n/a" : formatCount(props.rateEstimate.remainingRows)}`;
+  });
+
+  const lastMovementMs = computed(() => {
+    if (isBuilding.value) {
+      return props.buildRateEstimate.stalledMs ?? props.rateEstimate.stalledMs;
+    }
+
+    return props.rateEstimate.stalledMs;
+  });
 </script>
 
 <template>
@@ -49,7 +147,7 @@
       <p class="m-0 text-xs uppercase tracking-wide text-muted-foreground">Phase</p>
       <div class="mt-2 flex items-center justify-between gap-2">
         <span class="rounded-full px-2 py-1 text-xs font-semibold" :class="props.phaseTone">
-          {{ props.run === null ? "Idle" : formatPhaseLabel(props.run.phase) }}
+          {{ phaseLabel }}
         </span>
         <span class="text-xs text-muted-foreground">
           {{ props.isRunning ? "running" : "not running" }}
@@ -65,37 +163,39 @@
     </article>
 
     <article class="rounded-xl border border-border/80 bg-card/95 p-3 shadow-sm">
-      <p class="m-0 text-xs uppercase tracking-wide text-muted-foreground">Rows Per Second</p>
-      <p class="mt-2 text-sm font-semibold">
-        {{ formatRate(props.rateEstimate.rowsPerSecond, props.rateEstimate.rateBasis) }}
+      <p class="m-0 text-xs uppercase tracking-wide text-muted-foreground">
+        {{ throughputHeading }}
       </p>
-      <p class="mt-1 text-xs text-muted-foreground">
-        recent: {{ formatRowsPerSecondValue(props.rateEstimate.recentRowsPerSecond) }} · avg:
-        {{ formatRowsPerSecondValue(props.rateEstimate.averageRowsPerSecond) }}
+      <p class="mt-2 text-sm font-semibold">{{ throughputValue }}</p>
+      <p class="mt-1 text-xs text-muted-foreground">{{ throughputDetails }}</p>
+      <p v-if="lastMovementMs !== null" class="mt-1 text-xs text-muted-foreground">
+        last movement: {{ formatRelativeDuration(lastMovementMs) }} ago
       </p>
-      <p v-if="props.rateEstimate.stalledMs !== null" class="mt-1 text-xs text-muted-foreground">
-        last movement: {{ formatRelativeDuration(props.rateEstimate.stalledMs) }} ago
+      <p
+        v-if="props.dataset === 'flood' && props.stageSizeLabel !== null && !isBuilding"
+        class="mt-1 text-xs text-muted-foreground"
+      >
+        load metric: {{ props.stageSizeLabel }}
       </p>
     </article>
 
     <article class="rounded-xl border border-border/80 bg-card/95 p-3 shadow-sm">
-      <p class="m-0 text-xs uppercase tracking-wide text-muted-foreground">Remaining ETA</p>
-      <p class="mt-2 text-sm font-semibold">{{ formatEta(props.rateEstimate.etaMs) }}</p>
-      <p class="mt-1 text-xs text-muted-foreground">
-        remaining rows:
-        {{ props.rateEstimate.remainingRows === null ? "n/a" : formatCount(props.rateEstimate.remainingRows) }}
+      <p class="m-0 text-xs uppercase tracking-wide text-muted-foreground">
+        {{ remainingHeading }}
       </p>
+      <p class="mt-2 text-sm font-semibold">{{ remainingValue }}</p>
+      <p class="mt-1 text-xs text-muted-foreground">{{ remainingDetails }}</p>
       <p
-        v-if="props.isLikelyStalled && props.run?.phase !== 'building'"
+        v-if="!(isFloodMaterializing || isBuilding) && props.isLikelyStalled"
         class="mt-1 text-xs text-amber-700"
       >
         No row movement detected recently; ETA is based on average rate.
       </p>
-      <p
-        v-else-if="props.isLikelyStalled && props.run?.phase === 'building'"
-        class="mt-1 text-xs text-amber-700"
-      >
+      <p v-else-if="isBuilding && props.isBuildLikelyStalled" class="mt-1 text-xs text-amber-700">
         Build progress has not advanced recently; monitor remains live.
+      </p>
+      <p v-else-if="isFloodMaterializing" class="mt-1 text-xs text-amber-700">
+        Finalizing canonical transaction. Row ETA is no longer meaningful.
       </p>
     </article>
 

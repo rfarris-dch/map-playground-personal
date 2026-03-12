@@ -1,0 +1,92 @@
+version: 0.2
+
+env:
+  variables:
+    BUN_VERSION: 1.2.22
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 20
+    commands:
+      - curl -fsSL https://bun.sh/install | bash -s -- "bun-v${BUN_VERSION}"
+      - /root/.bun/bin/bun --version
+      - |
+        set -eu
+        for dependency in perl rg rsync; do
+          if ! command -v "${dependency}" >/dev/null 2>&1; then
+            echo "[build] missing required dependency: ${dependency}" >&2
+            exit 1
+          fi
+        done
+  build:
+    commands:
+      - |
+        set -eu
+        export VITE_TILE_MANIFEST_MODE=external
+        for env_name in VITE_PARCELS_MANIFEST_URL; do
+          eval "env_value=\${$env_name:-}"
+          if [ -z "${env_value}" ]; then
+            echo "[build] missing required env: ${env_name}" >&2
+            exit 1
+          fi
+          case "${env_value}" in
+            https://*) ;;
+            *)
+              echo "[build] ${env_name} must be an https latest.json URL for CloudFront delivery" >&2
+              exit 1
+              ;;
+          esac
+        done
+      - /root/.bun/bin/bun install --frozen-lockfile
+      - /root/.bun/bin/bun run build:deploy:app
+  post_build:
+    commands:
+      - rm -rf artifact
+      - mkdir -p artifact/apps/api/dist artifact/apps/web/dist artifact/apps/docs artifact/apps/pipeline-monitor artifact/packages artifact/aws/app
+      - cp package.json bun.lock turbo.json artifact/
+      - cp apps/api/package.json apps/api/.env.example artifact/apps/api/
+      - rsync -a apps/api/dist/ artifact/apps/api/dist/
+      - cp apps/web/package.json apps/web/.env.example artifact/apps/web/
+      - rsync -a apps/web/dist/ artifact/apps/web/dist/
+      - |
+        cat > artifact/aws/app/tile-delivery.env <<EOF
+        MAP_TILE_MANIFEST_CACHE_CONTROL=public,max-age=60
+        MAP_TILE_PMTILES_CACHE_CONTROL=public,max-age=31536000,immutable
+        MAP_TILE_PARCELS_DATASET=parcels-draw-v1
+        MAP_TILE_PARCELS_MANIFEST_URL=${VITE_PARCELS_MANIFEST_URL}
+        EOF
+        if [ -n "${VITE_ENVIRONMENTAL_FLOOD_MANIFEST_URL:-}" ]; then
+          cat >> artifact/aws/app/tile-delivery.env <<EOF
+        MAP_TILE_ENVIRONMENTAL_FLOOD_DATASET=environmental-flood
+        MAP_TILE_ENVIRONMENTAL_FLOOD_MANIFEST_URL=${VITE_ENVIRONMENTAL_FLOOD_MANIFEST_URL}
+        EOF
+        fi
+        if [ -n "${VITE_ENVIRONMENTAL_HYDRO_BASINS_MANIFEST_URL:-}" ]; then
+          cat >> artifact/aws/app/tile-delivery.env <<EOF
+        MAP_TILE_ENVIRONMENTAL_HYDRO_BASINS_DATASET=environmental-hydro-basins
+        MAP_TILE_ENVIRONMENTAL_HYDRO_BASINS_MANIFEST_URL=${VITE_ENVIRONMENTAL_HYDRO_BASINS_MANIFEST_URL}
+        EOF
+        fi
+      - cp apps/docs/package.json artifact/apps/docs/
+      - cp apps/pipeline-monitor/package.json artifact/apps/pipeline-monitor/
+      - |
+        set -euo pipefail
+        for package in bench contracts core-runtime fixtures geo-sql geo-tiles map-engine map-layer-catalog map-style ops; do
+          mkdir -p "artifact/packages/${package}"
+          cp "packages/${package}/package.json" "artifact/packages/${package}/"
+          if [[ ! -d "packages/${package}/dist" ]]; then
+            continue
+          fi
+          mkdir -p "artifact/packages/${package}/dist"
+          rsync -a "packages/${package}/dist/" "artifact/packages/${package}/dist/"
+        done
+      - rsync -a scripts/ artifact/scripts/
+      - rsync -a aws/app/ artifact/aws/app/
+      - cp aws/app/appspec.yml artifact/appspec.yml
+
+artifacts:
+  base-directory: artifact
+  enable-symlinks: yes
+  files:
+    - "**/*"

@@ -179,6 +179,7 @@ export function querySelectionToolSummaryEffect(
     const perspectives = listVisiblePerspectives(args.visiblePerspectives);
     const request: SpatialAnalysisSummaryRequest = {
       geometry: selectionGeometryFromRing(args.selectionRing),
+      includeFlood: true,
       includeParcels,
       limitPerPerspective: 5000,
       minimumMarketSelectionOverlapPercent: args.minimumMarketSelectionOverlapPercent ?? 0,

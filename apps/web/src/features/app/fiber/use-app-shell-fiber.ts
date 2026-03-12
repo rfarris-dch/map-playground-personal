@@ -57,6 +57,9 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
   const selectedFiberSourceLayerNames = shallowRef<FiberSourceLayerSelectionState>(
     initialFiberSourceLayerSelectionState()
   );
+  const pendingSelectedFiberSourceLayerNames = shallowRef<FiberSourceLayerSelectionState | null>(
+    null
+  );
   const hasInitializedFiberSourceLayerSelection = shallowRef<boolean>(false);
   const fiberInViewAbortController = shallowRef<AbortController | null>(null);
   const fiberInViewRequestVersion = shallowRef<number>(0);
@@ -72,6 +75,16 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
     selectedFiberSourceLayerNames.value = {
       ...selectedFiberSourceLayerNames.value,
       [lineId]: selectedLayerNames,
+    };
+  }
+
+  function setPendingFiberSourceLayerSelection(
+    lineId: FiberLocatorLineId,
+    selectedLayerNames: readonly string[]
+  ): void {
+    pendingSelectedFiberSourceLayerNames.value = {
+      ...(pendingSelectedFiberSourceLayerNames.value ?? selectedFiberSourceLayerNames.value),
+      [lineId]: [...selectedLayerNames],
     };
   }
 
@@ -95,6 +108,7 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
   }
 
   function applyFiberSourceLayerOptions(nextOptions: FiberSourceLayerOptionsState): void {
+    const pendingSelection = pendingSelectedFiberSourceLayerNames.value;
     const shouldAutoSelectAllMetro =
       !hasInitializedFiberSourceLayerSelection.value ||
       areAllFiberSourceLayersSelected(
@@ -108,24 +122,42 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
         selectedFiberLayerNamesForLine(selectedFiberSourceLayerNames.value, "longhaul")
       );
 
-    const nextSelectedMetroLayerNames = shouldAutoSelectAllMetro
-      ? nextOptions.metro.map((option) => option.layerName)
-      : normalizeSelectedFiberLayerNamesForOptions(
-          nextOptions.metro,
-          selectedFiberLayerNamesForLine(selectedFiberSourceLayerNames.value, "metro")
-        );
-    const nextSelectedLonghaulLayerNames = shouldAutoSelectAllLonghaul
-      ? nextOptions.longhaul.map((option) => option.layerName)
-      : normalizeSelectedFiberLayerNamesForOptions(
-          nextOptions.longhaul,
-          selectedFiberLayerNamesForLine(selectedFiberSourceLayerNames.value, "longhaul")
-        );
+    let nextSelectedMetroLayerNames: readonly string[];
+    if (pendingSelection !== null) {
+      nextSelectedMetroLayerNames = normalizeSelectedFiberLayerNamesForOptions(
+        nextOptions.metro,
+        pendingSelection.metro
+      );
+    } else if (shouldAutoSelectAllMetro) {
+      nextSelectedMetroLayerNames = nextOptions.metro.map((option) => option.layerName);
+    } else {
+      nextSelectedMetroLayerNames = normalizeSelectedFiberLayerNamesForOptions(
+        nextOptions.metro,
+        selectedFiberLayerNamesForLine(selectedFiberSourceLayerNames.value, "metro")
+      );
+    }
+
+    let nextSelectedLonghaulLayerNames: readonly string[];
+    if (pendingSelection !== null) {
+      nextSelectedLonghaulLayerNames = normalizeSelectedFiberLayerNamesForOptions(
+        nextOptions.longhaul,
+        pendingSelection.longhaul
+      );
+    } else if (shouldAutoSelectAllLonghaul) {
+      nextSelectedLonghaulLayerNames = nextOptions.longhaul.map((option) => option.layerName);
+    } else {
+      nextSelectedLonghaulLayerNames = normalizeSelectedFiberLayerNamesForOptions(
+        nextOptions.longhaul,
+        selectedFiberLayerNamesForLine(selectedFiberSourceLayerNames.value, "longhaul")
+      );
+    }
 
     fiberSourceLayerOptions.value = nextOptions;
     selectedFiberSourceLayerNames.value = {
       metro: nextSelectedMetroLayerNames,
       longhaul: nextSelectedLonghaulLayerNames,
     };
+    pendingSelectedFiberSourceLayerNames.value = null;
     hasInitializedFiberSourceLayerSelection.value = true;
 
     syncFiberControllerSourceLayers("metro");
@@ -227,7 +259,31 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
     const nextSelectedLayerNames = visible ? optionsForLine.map((option) => option.layerName) : [];
 
     setSelectedFiberLayerNames(lineId, nextSelectedLayerNames);
+    setPendingFiberSourceLayerSelection(lineId, nextSelectedLayerNames);
     syncFiberControllerSourceLayers(lineId);
+    clearFiberHover();
+  }
+
+  function setFiberSourceLayerSelection(
+    lineId: FiberLocatorLineId,
+    selectedLayerNames: readonly string[]
+  ): void {
+    const normalizedSelection =
+      fiberSourceLayerOptions.value[lineId].length === 0
+        ? [...selectedLayerNames]
+        : normalizeSelectedFiberLayerNamesForOptions(
+            fiberSourceLayerOptions.value[lineId],
+            selectedLayerNames
+          );
+
+    setSelectedFiberLayerNames(lineId, normalizedSelection);
+    setPendingFiberSourceLayerSelection(lineId, normalizedSelection);
+    hasInitializedFiberSourceLayerSelection.value = true;
+
+    if (fiberSourceLayerOptions.value[lineId].length > 0) {
+      syncFiberControllerSourceLayers(lineId);
+    }
+
     clearFiberHover();
   }
 
@@ -257,6 +313,10 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
         normalizedLayerName,
         visible
       )
+    );
+    setPendingFiberSourceLayerSelection(
+      lineId,
+      selectedFiberLayerNamesForLine(selectedFiberSourceLayerNames.value, lineId)
     );
     syncFiberControllerSourceLayers(lineId);
     clearFiberHover();
@@ -341,6 +401,7 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
     selectedFiberSourceLayerNames,
     visibleFiberLayers,
     setFiberLayerVisibility,
+    setFiberSourceLayerSelection,
     setFiberSourceLayerVisible,
     setAllFiberSourceLayers,
     clearFiberHover,

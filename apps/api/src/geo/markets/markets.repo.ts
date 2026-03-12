@@ -16,11 +16,14 @@ function parseCount(value: number | string): number {
 export async function countMarkets(): Promise<number> {
   const rows = await runQuery<MarketCountRow>(
     `
+WITH active_markets AS (
+  SELECT market_id
+  FROM market_current.markets
+  WHERE market_id IS NOT NULL
+)
 SELECT
   COUNT(*)::bigint AS total_count
-FROM mirror."HAWK_MARKET"
-WHERE "NAME" IS NOT NULL
-  AND COALESCE("SEARCH_PAGE", 0) = 1;
+FROM active_markets;
 `,
     []
   );
@@ -34,13 +37,13 @@ WHERE "NAME" IS NOT NULL
 }
 
 const marketSortSqlByField: Record<MarketSortBy, string> = {
-  name: `"NAME"`,
-  region: `NULLIF("REGION", '')`,
-  country: `NULLIF("COUNTRY", '')`,
-  state: `NULLIF("STATE", '')`,
-  absorption: `"ABSORPTION"`,
-  vacancy: `"VACANCY"`,
-  updatedAt: `"DATE_UPDATED"`,
+  name: "name",
+  region: "region",
+  country: "country",
+  state: "state",
+  absorption: "absorption",
+  vacancy: "vacancy",
+  updatedAt: "updated_at",
 };
 
 export function listMarketsPage(query: MarketPageQuery): Promise<MarketListRow[]> {
@@ -49,19 +52,30 @@ export function listMarketsPage(query: MarketPageQuery): Promise<MarketListRow[]
 
   return runQuery<MarketListRow>(
     `
+WITH active_markets AS (
+  SELECT
+    market.market_id,
+    COALESCE(NULLIF(BTRIM(market.name), ''), market.market_id) AS name,
+    NULLIF(BTRIM(market.region), '') AS region,
+    NULLIF(BTRIM(market.country), '') AS country,
+    NULLIF(BTRIM(market.state), '') AS state,
+    market.absorption,
+    market.vacancy,
+    market.updated_at
+  FROM market_current.markets AS market
+  WHERE market.market_id IS NOT NULL
+)
 SELECT
-  "MARKET_ID"::text AS market_id,
-  "NAME" AS name,
-  NULLIF("REGION", '') AS region,
-  NULLIF("COUNTRY", '') AS country,
-  NULLIF("STATE", '') AS state,
-  "ABSORPTION" AS absorption,
-  "VACANCY" AS vacancy,
-  "DATE_UPDATED" AS updated_at
-FROM mirror."HAWK_MARKET"
-WHERE "NAME" IS NOT NULL
-  AND COALESCE("SEARCH_PAGE", 0) = 1
-ORDER BY ${sortColumn} ${sortDirection} NULLS LAST, "NAME" ASC, "MARKET_ID" ASC
+  market_id,
+  name,
+  region,
+  country,
+  state,
+  absorption,
+  vacancy,
+  updated_at
+FROM active_markets
+ORDER BY ${sortColumn} ${sortDirection} NULLS LAST, name ASC, market_id ASC
 LIMIT $1
 OFFSET $2;
 `,

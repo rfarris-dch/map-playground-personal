@@ -10,6 +10,7 @@ import type { MeasureState } from "@/features/measure/measure.types";
 export interface UseAppShellMeasureSelectionOptions {
   readonly expectedParcelsIngestionRunId: ShallowRef<string | null>;
   readonly imageSubject: ShallowRef<MeasureSelectionImageSubject>;
+  readonly includeParcels: ShallowRef<boolean>;
   readonly map: ShallowRef<IMap | null>;
   readonly measureState: ShallowRef<MeasureState>;
   readonly outputMode: ShallowRef<MeasureSelectionOutputMode>;

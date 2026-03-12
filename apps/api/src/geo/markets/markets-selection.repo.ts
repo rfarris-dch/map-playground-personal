@@ -16,26 +16,25 @@ WITH selection AS (
 ),
 matches AS (
   SELECT
-    market."MARKET_ID"::text AS market_id,
-    market."NAME" AS name,
-    NULLIF(market."REGION", '') AS region,
-    NULLIF(market."COUNTRY", '') AS country,
-    NULLIF(market."STATE", '') AS state,
-    market."ABSORPTION" AS absorption,
-    market."VACANCY" AS vacancy,
-    market."DATE_UPDATED" AS updated_at,
-    market."LONGITUDE" AS longitude,
-    market."LATITUDE" AS latitude,
+    boundary.market_id,
+    COALESCE(NULLIF(BTRIM(market.name), ''), boundary.market_id) AS name,
+    NULLIF(BTRIM(market.region), '') AS region,
+    NULLIF(BTRIM(market.country), '') AS country,
+    NULLIF(BTRIM(market.state), '') AS state,
+    market.absorption,
+    market.vacancy,
+    COALESCE(market.updated_at, boundary.imported_at) AS updated_at,
+    COALESCE(ST_X(boundary.center), ST_X(ST_PointOnSurface(boundary.geom))) AS longitude,
+    COALESCE(ST_Y(boundary.center), ST_Y(ST_PointOnSurface(boundary.geom))) AS latitude,
     selection.selection_area_sq_km AS selection_area_sq_km,
     ST_Area(ST_Transform(boundary.geom, 3857)) / 1000000.0 AS market_area_sq_km,
     ST_Area(ST_Transform(ST_Intersection(boundary.geom, selection.geom_4326), 3857)) / 1000000.0
       AS intersection_area_sq_km
   FROM market_current.market_boundaries AS boundary
-  INNER JOIN mirror."HAWK_MARKET" AS market
-    ON market."MARKET_ID"::text = boundary.market_id
+  LEFT JOIN market_current.markets AS market
+    ON market.market_id = boundary.market_id
   CROSS JOIN selection
-  WHERE market."NAME" IS NOT NULL
-    AND COALESCE(market."SEARCH_PAGE", 0) = 1
+  WHERE boundary.market_id IS NOT NULL
     AND ST_Intersects(boundary.geom, selection.geom_4326)
 )
 SELECT

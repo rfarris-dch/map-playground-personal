@@ -10,11 +10,22 @@ import {
   MapContextViewportSchema,
   parseBboxParam,
 } from "@map-migration/contracts";
+import { LAYER_IDS } from "@map-migration/map-layer-catalog";
 import type {
   LocationQueryRaw,
   LocationQueryValue,
   RouteLocationNormalizedLoaded,
 } from "vue-router";
+import {
+  FLOOD_100_LAYER_ID,
+  FLOOD_500_LAYER_ID,
+  fiberLayerId,
+  HYDRO_BASINS_LAYER_ID,
+  PARCELS_LAYER_ID,
+  powerLayerId,
+  WATER_FEATURES_LAYER_ID,
+} from "@/features/app/core/app-shell.constants";
+import { basemapLayerIds } from "@/features/basemap/basemap.service";
 import type { BoundaryLayerId } from "@/features/boundaries/boundaries.types";
 import type {
   ApplyMapContextTransferToAppShellArgs,
@@ -38,14 +49,19 @@ const boundaryLayerIds: readonly BoundaryLayerId[] = ["country", "state", "count
 const facilityPerspectives: readonly FacilityPerspective[] = ["colocation", "hyperscale"];
 
 type MapContextQueryKey =
+  | "basemapLayerIds"
   | "companyIds"
   | "contextToken"
   | "countryIds"
   | "countyIds"
   | "facilityIds"
+  | "fiberLonghaulSourceLayerNames"
+  | "fiberMetroSourceLayerNames"
   | "highlightTarget"
+  | "mapBearing"
   | "mapBounds"
   | "mapCenter"
+  | "mapPitch"
   | "mapZoom"
   | "marketIds"
   | "perspectives"
@@ -54,17 +70,23 @@ type MapContextQueryKey =
   | "sourceSurface"
   | "stateIds"
   | "targetSurface"
+  | "visibleLayerIds"
   | "version";
 
 const mapContextQueryKeys: Record<MapContextQueryKey, string> = {
+  basemapLayerIds: "basemapLayerIds",
   companyIds: "companyIds",
   contextToken: "mapContextToken",
   countryIds: "countryIds",
   countyIds: "countyIds",
   facilityIds: "facilityIds",
+  fiberLonghaulSourceLayerNames: "fiberLonghaulSourceLayerNames",
+  fiberMetroSourceLayerNames: "fiberMetroSourceLayerNames",
   highlightTarget: "highlightTarget",
+  mapBearing: "mapBearing",
   mapBounds: "mapBounds",
   mapCenter: "mapCenter",
+  mapPitch: "mapPitch",
   mapZoom: "mapZoom",
   marketIds: "marketIds",
   perspectives: "perspectives",
@@ -73,6 +95,7 @@ const mapContextQueryKeys: Record<MapContextQueryKey, string> = {
   sourceSurface: "mapSource",
   stateIds: "stateIds",
   targetSurface: "mapTarget",
+  visibleLayerIds: "visibleLayerIds",
   version: "mapContextVersion",
 };
 
@@ -196,14 +219,22 @@ function formatHighlightTarget(target: MapContextHighlightTarget | undefined): s
 function parseViewport(
   route: RouteLocationNormalizedLoaded
 ): MapContextTransfer["viewport"] | undefined {
+  const bearing = parseFiniteNumber(
+    readFirstQueryValue(route.query[mapContextQueryKeys.mapBearing])
+  );
+  const pitch = parseFiniteNumber(readFirstQueryValue(route.query[mapContextQueryKeys.mapPitch]));
   const bounds = readFirstQueryValue(route.query[mapContextQueryKeys.mapBounds]);
   if (bounds !== null) {
     const parsedBounds = parseBboxParam(bounds);
     if (parsedBounds !== null) {
-      return {
+      const viewport = {
         bounds: parsedBounds,
         type: "bounds",
+        ...(bearing === null ? {} : { bearing }),
+        ...(pitch === null ? {} : { pitch }),
       };
+      const parsedViewport = MapContextViewportSchema.safeParse(viewport);
+      return parsedViewport.success ? parsedViewport.data : undefined;
     }
   }
 
@@ -226,7 +257,9 @@ function parseViewport(
   const longitude = centerParts[0];
   const latitude = centerParts[1];
   const parsedCenterViewport = MapContextViewportSchema.safeParse({
+    ...(bearing === null ? {} : { bearing }),
     center: [longitude, latitude],
+    ...(pitch === null ? {} : { pitch }),
     type: "center",
     zoom,
   });
@@ -235,22 +268,35 @@ function parseViewport(
 }
 
 function formatViewport(context: MapContextTransfer): {
+  readonly mapBearing?: string;
   readonly mapBounds?: string;
   readonly mapCenter?: string;
+  readonly mapPitch?: string;
   readonly mapZoom?: string;
 } {
   if (typeof context.viewport === "undefined") {
     return {};
   }
 
+  const cameraFields = {
+    ...(typeof context.viewport.bearing === "number"
+      ? { mapBearing: context.viewport.bearing.toString() }
+      : {}),
+    ...(typeof context.viewport.pitch === "number"
+      ? { mapPitch: context.viewport.pitch.toString() }
+      : {}),
+  };
+
   if (context.viewport.type === "bounds") {
     const bounds = context.viewport.bounds;
     return {
+      ...cameraFields,
       mapBounds: `${bounds.west},${bounds.south},${bounds.east},${bounds.north}`,
     };
   }
 
   return {
+    ...cameraFields,
     mapCenter: `${context.viewport.center[0]},${context.viewport.center[1]}`,
     mapZoom: context.viewport.zoom.toString(),
   };
@@ -289,37 +335,100 @@ function isRouteScopedMapSurface(
   return surface === "company-map" || surface === "market-map";
 }
 
+function assignMapContextField<
+  TOutput extends Partial<MapContextTransfer>,
+  TKey extends keyof TOutput,
+>(output: TOutput, key: TKey, value: TOutput[TKey] | undefined): void {
+  if (typeof value === "undefined") {
+    return;
+  }
+
+  output[key] = value;
+}
+
+function assignMapContextStringField<
+  TOutput extends Partial<MapContextTransfer>,
+  TKey extends keyof TOutput,
+>(output: TOutput, key: TKey, value: string | undefined): void {
+  if (typeof value !== "string") {
+    return;
+  }
+
+  output[key] = value as TOutput[TKey];
+}
+
 function buildMergedOptionalMapContextFields(
   storedContext: MapContextTransfer | null,
   shortContext: Partial<MapContextTransfer>
 ): Omit<MapContextTransfer, "schemaVersion" | "sourceSurface" | "targetSurface"> {
-  const companyIds = shortContext.companyIds ?? storedContext?.companyIds;
-  const marketIds = shortContext.marketIds ?? storedContext?.marketIds;
-  const providerIds = shortContext.providerIds ?? storedContext?.providerIds;
-  const facilityIds = shortContext.facilityIds ?? storedContext?.facilityIds;
-  const activePerspectives = shortContext.activePerspectives ?? storedContext?.activePerspectives;
-  const selectedBoundaryIds = mergeSelectedBoundaryIds(
-    storedContext?.selectedBoundaryIds,
-    shortContext.selectedBoundaryIds
-  );
-  const viewport = shortContext.viewport ?? storedContext?.viewport;
-  const selectionGeometryToken =
-    shortContext.selectionGeometryToken ?? storedContext?.selectionGeometryToken;
-  const highlightTarget = shortContext.highlightTarget ?? storedContext?.highlightTarget;
-  const contextToken = shortContext.contextToken ?? storedContext?.contextToken;
+  const mergedFields: Omit<
+    MapContextTransfer,
+    "schemaVersion" | "sourceSurface" | "targetSurface"
+  > = {};
 
-  return {
-    ...(typeof companyIds === "undefined" ? {} : { companyIds }),
-    ...(typeof marketIds === "undefined" ? {} : { marketIds }),
-    ...(typeof providerIds === "undefined" ? {} : { providerIds }),
-    ...(typeof facilityIds === "undefined" ? {} : { facilityIds }),
-    ...(typeof activePerspectives === "undefined" ? {} : { activePerspectives }),
-    ...(typeof selectedBoundaryIds === "undefined" ? {} : { selectedBoundaryIds }),
-    ...(typeof viewport === "undefined" ? {} : { viewport }),
-    ...(typeof selectionGeometryToken === "string" ? { selectionGeometryToken } : {}),
-    ...(typeof highlightTarget === "undefined" ? {} : { highlightTarget }),
-    ...(typeof contextToken === "string" ? { contextToken } : {}),
-  };
+  assignMapContextField(
+    mergedFields,
+    "companyIds",
+    shortContext.companyIds ?? storedContext?.companyIds
+  );
+  assignMapContextField(
+    mergedFields,
+    "marketIds",
+    shortContext.marketIds ?? storedContext?.marketIds
+  );
+  assignMapContextField(
+    mergedFields,
+    "providerIds",
+    shortContext.providerIds ?? storedContext?.providerIds
+  );
+  assignMapContextField(
+    mergedFields,
+    "facilityIds",
+    shortContext.facilityIds ?? storedContext?.facilityIds
+  );
+  assignMapContextField(
+    mergedFields,
+    "activePerspectives",
+    shortContext.activePerspectives ?? storedContext?.activePerspectives
+  );
+  assignMapContextField(
+    mergedFields,
+    "visibleLayerIds",
+    shortContext.visibleLayerIds ?? storedContext?.visibleLayerIds
+  );
+  assignMapContextField(
+    mergedFields,
+    "visibleBasemapLayerIds",
+    shortContext.visibleBasemapLayerIds ?? storedContext?.visibleBasemapLayerIds
+  );
+  assignMapContextField(
+    mergedFields,
+    "selectedBoundaryIds",
+    mergeSelectedBoundaryIds(storedContext?.selectedBoundaryIds, shortContext.selectedBoundaryIds)
+  );
+  assignMapContextField(
+    mergedFields,
+    "selectedFiberSourceLayerNames",
+    shortContext.selectedFiberSourceLayerNames ?? storedContext?.selectedFiberSourceLayerNames
+  );
+  assignMapContextField(mergedFields, "viewport", shortContext.viewport ?? storedContext?.viewport);
+  assignMapContextStringField(
+    mergedFields,
+    "selectionGeometryToken",
+    shortContext.selectionGeometryToken ?? storedContext?.selectionGeometryToken
+  );
+  assignMapContextField(
+    mergedFields,
+    "highlightTarget",
+    shortContext.highlightTarget ?? storedContext?.highlightTarget
+  );
+  assignMapContextStringField(
+    mergedFields,
+    "contextToken",
+    shortContext.contextToken ?? storedContext?.contextToken
+  );
+
+  return mergedFields;
 }
 
 function mergeMapContextTransfer(
@@ -379,63 +488,107 @@ function buildRouteSelectedBoundaryIds(
   };
 }
 
+function buildRouteSelectedFiberSourceLayerNames(
+  route: RouteLocationNormalizedLoaded
+): MapContextTransfer["selectedFiberSourceLayerNames"] | undefined {
+  const metroFiberSourceLayerNames = readStringList(
+    route.query[mapContextQueryKeys.fiberMetroSourceLayerNames]
+  );
+  const longhaulFiberSourceLayerNames = readStringList(
+    route.query[mapContextQueryKeys.fiberLonghaulSourceLayerNames]
+  );
+
+  if (
+    typeof metroFiberSourceLayerNames === "undefined" &&
+    typeof longhaulFiberSourceLayerNames === "undefined"
+  ) {
+    return undefined;
+  }
+
+  return {
+    ...(typeof longhaulFiberSourceLayerNames === "undefined"
+      ? {}
+      : { longhaul: [...longhaulFiberSourceLayerNames] }),
+    ...(typeof metroFiberSourceLayerNames === "undefined"
+      ? {}
+      : { metro: [...metroFiberSourceLayerNames] }),
+  };
+}
+
 function buildShortContextFieldsFromRoute(
   route: RouteLocationNormalizedLoaded
 ): Partial<MapContextTransfer> {
-  const selectedBoundaryIds = buildRouteSelectedBoundaryIds(route);
-  const sourceSurface = parseSurface(
-    readFirstQueryValue(route.query[mapContextQueryKeys.sourceSurface])
-  );
-  const targetSurface = parseSurface(
-    readFirstQueryValue(route.query[mapContextQueryKeys.targetSurface])
-  );
-  const marketIds = readStringList(route.query[mapContextQueryKeys.marketIds]);
-  const companyIds = readStringList(route.query[mapContextQueryKeys.companyIds]);
-  const providerIds = readStringList(route.query[mapContextQueryKeys.providerIds]);
-  const facilityIds = readStringList(route.query[mapContextQueryKeys.facilityIds]);
-  const activePerspectives = parsePerspectives(route.query[mapContextQueryKeys.perspectives]);
-  const viewport = parseViewport(route);
-  const selectionGeometryToken = readFirstQueryValue(
-    route.query[mapContextQueryKeys.selectionGeometryToken]
-  );
-  const highlightTarget = parseHighlightTarget(
-    readFirstQueryValue(route.query[mapContextQueryKeys.highlightTarget])
-  );
-  const contextToken = readFirstQueryValue(route.query[mapContextQueryKeys.contextToken]);
+  const shortContext: Partial<MapContextTransfer> = {};
 
-  return {
-    ...(typeof sourceSurface === "undefined" ? {} : { sourceSurface }),
-    ...(typeof targetSurface === "undefined" ? {} : { targetSurface }),
-    ...(typeof marketIds === "undefined" ? {} : { marketIds: [...marketIds] }),
-    ...(typeof companyIds === "undefined" ? {} : { companyIds: [...companyIds] }),
-    ...(typeof providerIds === "undefined" ? {} : { providerIds: [...providerIds] }),
-    ...(typeof facilityIds === "undefined" ? {} : { facilityIds: [...facilityIds] }),
-    ...(typeof activePerspectives === "undefined"
-      ? {}
-      : { activePerspectives: [...activePerspectives] }),
-    ...(typeof selectedBoundaryIds === "undefined"
-      ? {}
-      : {
-          selectedBoundaryIds: {
-            country:
-              typeof selectedBoundaryIds.country === "undefined"
-                ? undefined
-                : [...selectedBoundaryIds.country],
-            county:
-              typeof selectedBoundaryIds.county === "undefined"
-                ? undefined
-                : [...selectedBoundaryIds.county],
-            state:
-              typeof selectedBoundaryIds.state === "undefined"
-                ? undefined
-                : [...selectedBoundaryIds.state],
-          },
-        }),
-    ...(typeof viewport === "undefined" ? {} : { viewport }),
-    ...(typeof selectionGeometryToken === "string" ? { selectionGeometryToken } : {}),
-    ...(typeof highlightTarget === "undefined" ? {} : { highlightTarget }),
-    ...(typeof contextToken === "string" ? { contextToken } : {}),
-  };
+  assignMapContextField(
+    shortContext,
+    "sourceSurface",
+    parseSurface(readFirstQueryValue(route.query[mapContextQueryKeys.sourceSurface]))
+  );
+  assignMapContextField(
+    shortContext,
+    "targetSurface",
+    parseSurface(readFirstQueryValue(route.query[mapContextQueryKeys.targetSurface]))
+  );
+  assignMapContextField(
+    shortContext,
+    "marketIds",
+    readStringList(route.query[mapContextQueryKeys.marketIds])?.slice()
+  );
+  assignMapContextField(
+    shortContext,
+    "companyIds",
+    readStringList(route.query[mapContextQueryKeys.companyIds])?.slice()
+  );
+  assignMapContextField(
+    shortContext,
+    "providerIds",
+    readStringList(route.query[mapContextQueryKeys.providerIds])?.slice()
+  );
+  assignMapContextField(
+    shortContext,
+    "facilityIds",
+    readStringList(route.query[mapContextQueryKeys.facilityIds])?.slice()
+  );
+  assignMapContextField(
+    shortContext,
+    "activePerspectives",
+    parsePerspectives(route.query[mapContextQueryKeys.perspectives])?.slice()
+  );
+  assignMapContextField(
+    shortContext,
+    "visibleLayerIds",
+    readStringList(route.query[mapContextQueryKeys.visibleLayerIds])?.slice()
+  );
+  assignMapContextField(
+    shortContext,
+    "visibleBasemapLayerIds",
+    readStringList(route.query[mapContextQueryKeys.basemapLayerIds])?.slice()
+  );
+  assignMapContextField(shortContext, "selectedBoundaryIds", buildRouteSelectedBoundaryIds(route));
+  assignMapContextField(
+    shortContext,
+    "selectedFiberSourceLayerNames",
+    buildRouteSelectedFiberSourceLayerNames(route)
+  );
+  assignMapContextField(shortContext, "viewport", parseViewport(route));
+  assignMapContextStringField(
+    shortContext,
+    "selectionGeometryToken",
+    readFirstQueryValue(route.query[mapContextQueryKeys.selectionGeometryToken]) ?? undefined
+  );
+  assignMapContextField(
+    shortContext,
+    "highlightTarget",
+    parseHighlightTarget(readFirstQueryValue(route.query[mapContextQueryKeys.highlightTarget]))
+  );
+  assignMapContextStringField(
+    shortContext,
+    "contextToken",
+    readFirstQueryValue(route.query[mapContextQueryKeys.contextToken]) ?? undefined
+  );
+
+  return shortContext;
 }
 
 function buildShortContextFromRoute(
@@ -569,11 +722,23 @@ export function buildMapContextTransferQuery(
   const inlineCompanyIds = inlineOrOmit(context.companyIds);
   const inlineProviderIds = inlineOrOmit(context.providerIds);
   const inlineFacilityIds = inlineOrOmit(context.facilityIds);
+  const inlineVisibleLayerIds = inlineOrOmit(context.visibleLayerIds);
+  const inlineVisibleBasemapLayerIds = inlineOrOmit(context.visibleBasemapLayerIds);
+  const inlineMetroFiberSourceLayerNames = inlineOrOmit(
+    context.selectedFiberSourceLayerNames?.metro
+  );
+  const inlineLonghaulFiberSourceLayerNames = inlineOrOmit(
+    context.selectedFiberSourceLayerNames?.longhaul
+  );
   const requiresStoredContext =
     inlineMarketIds !== context.marketIds ||
     inlineCompanyIds !== context.companyIds ||
     inlineProviderIds !== context.providerIds ||
-    inlineFacilityIds !== context.facilityIds;
+    inlineFacilityIds !== context.facilityIds ||
+    inlineVisibleLayerIds !== context.visibleLayerIds ||
+    inlineVisibleBasemapLayerIds !== context.visibleBasemapLayerIds ||
+    inlineMetroFiberSourceLayerNames !== context.selectedFiberSourceLayerNames?.metro ||
+    inlineLonghaulFiberSourceLayerNames !== context.selectedFiberSourceLayerNames?.longhaul;
   let contextToken: string | undefined;
   if (typeof context.contextToken === "string") {
     contextToken = context.contextToken;
@@ -591,16 +756,74 @@ export function buildMapContextTransferQuery(
     [mapContextQueryKeys.providerIds]: formatStringList(inlineProviderIds),
     [mapContextQueryKeys.facilityIds]: formatStringList(inlineFacilityIds),
     [mapContextQueryKeys.perspectives]: formatPerspectives(context.activePerspectives),
+    [mapContextQueryKeys.visibleLayerIds]: formatStringList(inlineVisibleLayerIds),
+    [mapContextQueryKeys.basemapLayerIds]: formatStringList(inlineVisibleBasemapLayerIds),
     [mapContextQueryKeys.countryIds]: formatStringList(context.selectedBoundaryIds?.country),
     [mapContextQueryKeys.countyIds]: formatStringList(context.selectedBoundaryIds?.county),
     [mapContextQueryKeys.stateIds]: formatStringList(context.selectedBoundaryIds?.state),
+    [mapContextQueryKeys.fiberMetroSourceLayerNames]: formatStringList(
+      inlineMetroFiberSourceLayerNames
+    ),
+    [mapContextQueryKeys.fiberLonghaulSourceLayerNames]: formatStringList(
+      inlineLonghaulFiberSourceLayerNames
+    ),
     [mapContextQueryKeys.selectionGeometryToken]: context.selectionGeometryToken,
     [mapContextQueryKeys.highlightTarget]: formatHighlightTarget(context.highlightTarget),
     [mapContextQueryKeys.contextToken]: contextToken,
+    [mapContextQueryKeys.mapBearing]: viewportQuery.mapBearing,
     [mapContextQueryKeys.mapBounds]: viewportQuery.mapBounds,
     [mapContextQueryKeys.mapCenter]: viewportQuery.mapCenter,
+    [mapContextQueryKeys.mapPitch]: viewportQuery.mapPitch,
     [mapContextQueryKeys.mapZoom]: viewportQuery.mapZoom,
   };
+}
+
+export function replaceMapContextTransferQuery(
+  currentQuery: LocationQueryRaw,
+  nextMapContextQuery: LocationQueryRaw
+): LocationQueryRaw {
+  const nextQuery = {
+    ...currentQuery,
+  };
+
+  for (const queryKey of Object.values(mapContextQueryKeys)) {
+    delete nextQuery[queryKey];
+  }
+
+  for (const [queryKey, queryValue] of Object.entries(nextMapContextQuery)) {
+    if (typeof queryValue === "undefined") {
+      continue;
+    }
+
+    nextQuery[queryKey] = queryValue;
+  }
+
+  return nextQuery;
+}
+
+export function normalizeMapContextTransferQuery(
+  query: LocationQueryRaw
+): Readonly<Record<string, string>> {
+  const normalizedQuery: Record<string, string> = {};
+
+  for (const queryKey of Object.values(mapContextQueryKeys)) {
+    const rawQueryValue = query[queryKey];
+    let queryValue: string | null = null;
+    if (typeof rawQueryValue === "string") {
+      queryValue = rawQueryValue;
+    } else if (Array.isArray(rawQueryValue)) {
+      queryValue =
+        rawQueryValue.find((value): value is string => typeof value === "string") ?? null;
+    }
+
+    if (queryValue === null) {
+      continue;
+    }
+
+    normalizedQuery[queryKey] = queryValue;
+  }
+
+  return normalizedQuery;
 }
 
 function selectedBoundaryIdsPresent(
@@ -635,6 +858,164 @@ function roundViewportValue(value: number): number {
   return Number(value.toFixed(6));
 }
 
+function resolveVisibleLayerIds(
+  snapshot: BuildMapContextTransferFromAppShellArgs["layerRuntimeSnapshot"]
+): readonly string[] | undefined {
+  if (snapshot === null || typeof snapshot === "undefined") {
+    return undefined;
+  }
+
+  const visibleLayerIds = Object.entries(snapshot.userVisibility)
+    .filter((entry): entry is [string, boolean] => entry[1] === true)
+    .map(([layerId]) => layerId)
+    .sort();
+
+  return visibleLayerIds.length > 0 ? visibleLayerIds : undefined;
+}
+
+function applyBooleanVisibilityLayer(
+  visibleLayerIds: Set<string>,
+  layerId: string,
+  visible: boolean | undefined
+): void {
+  if (typeof visible !== "boolean") {
+    return;
+  }
+
+  if (visible) {
+    visibleLayerIds.add(layerId);
+    return;
+  }
+
+  visibleLayerIds.delete(layerId);
+}
+
+function applyBoundaryVisibilityLayers(
+  visibleLayerIds: Set<string>,
+  boundaryVisibility: BuildMapContextTransferFromAppShellArgs["boundaryVisibility"]
+): void {
+  if (typeof boundaryVisibility === "undefined") {
+    return;
+  }
+
+  for (const boundaryId of boundaryLayerIds) {
+    applyBooleanVisibilityLayer(visibleLayerIds, boundaryId, boundaryVisibility[boundaryId]);
+  }
+}
+
+function applyPerspectiveVisibilityLayers(
+  visibleLayerIds: Set<string>,
+  visiblePerspectives: BuildMapContextTransferFromAppShellArgs["visiblePerspectives"]
+): void {
+  applyBooleanVisibilityLayer(
+    visibleLayerIds,
+    "facilities.colocation",
+    visiblePerspectives.colocation
+  );
+  applyBooleanVisibilityLayer(
+    visibleLayerIds,
+    "facilities.hyperscale",
+    visiblePerspectives.hyperscale
+  );
+}
+
+function applyFloodVisibilityLayers(
+  visibleLayerIds: Set<string>,
+  floodVisibility: BuildMapContextTransferFromAppShellArgs["floodVisibility"]
+): void {
+  if (typeof floodVisibility === "undefined") {
+    return;
+  }
+
+  applyBooleanVisibilityLayer(visibleLayerIds, FLOOD_100_LAYER_ID, floodVisibility.flood100);
+  applyBooleanVisibilityLayer(visibleLayerIds, FLOOD_500_LAYER_ID, floodVisibility.flood500);
+}
+
+function applyPowerVisibilityLayers(
+  visibleLayerIds: Set<string>,
+  powerVisibility: BuildMapContextTransferFromAppShellArgs["powerVisibility"]
+): void {
+  if (typeof powerVisibility === "undefined") {
+    return;
+  }
+
+  for (const powerId of ["transmission", "substations", "plants"] as const) {
+    applyBooleanVisibilityLayer(visibleLayerIds, powerLayerId(powerId), powerVisibility[powerId]);
+  }
+}
+
+function applyFiberVisibilityLayers(
+  visibleLayerIds: Set<string>,
+  fiberVisibility: BuildMapContextTransferFromAppShellArgs["fiberVisibility"]
+): void {
+  if (typeof fiberVisibility === "undefined") {
+    return;
+  }
+
+  for (const lineId of ["metro", "longhaul"] as const) {
+    applyBooleanVisibilityLayer(visibleLayerIds, fiberLayerId(lineId), fiberVisibility[lineId]);
+  }
+}
+
+function resolveVisibleLayerIdsFromAppShell(
+  args: BuildMapContextTransferFromAppShellArgs
+): readonly string[] | undefined {
+  const visibleLayerIds = new Set<string>(resolveVisibleLayerIds(args.layerRuntimeSnapshot) ?? []);
+
+  applyBoundaryVisibilityLayers(visibleLayerIds, args.boundaryVisibility);
+  applyPerspectiveVisibilityLayers(visibleLayerIds, args.visiblePerspectives);
+  applyFloodVisibilityLayers(visibleLayerIds, args.floodVisibility);
+  applyBooleanVisibilityLayer(visibleLayerIds, HYDRO_BASINS_LAYER_ID, args.hydroBasinsVisible);
+  applyBooleanVisibilityLayer(visibleLayerIds, PARCELS_LAYER_ID, args.parcelsVisible);
+  applyBooleanVisibilityLayer(visibleLayerIds, WATER_FEATURES_LAYER_ID, args.waterVisible);
+  applyPowerVisibilityLayers(visibleLayerIds, args.powerVisibility);
+  applyFiberVisibilityLayers(visibleLayerIds, args.fiberVisibility);
+
+  const nextVisibleLayerIds = [...visibleLayerIds].sort((left, right) => left.localeCompare(right));
+  return nextVisibleLayerIds.length > 0 ? nextVisibleLayerIds : undefined;
+}
+
+function resolveVisibleBasemapLayerIds(
+  basemapVisibility: BuildMapContextTransferFromAppShellArgs["basemapVisibility"]
+): readonly string[] | undefined {
+  if (typeof basemapVisibility === "undefined") {
+    return undefined;
+  }
+
+  const visibleBasemapLayerIds = Object.entries(basemapVisibility)
+    .filter((entry): entry is [string, boolean] => entry[1] === true)
+    .map(([layerId]) => layerId)
+    .sort();
+
+  return visibleBasemapLayerIds.length > 0 ? visibleBasemapLayerIds : undefined;
+}
+
+function resolveSelectedFiberSourceLayerNames(
+  selectedFiberSourceLayerNames: BuildMapContextTransferFromAppShellArgs["selectedFiberSourceLayerNames"]
+): MapContextTransfer["selectedFiberSourceLayerNames"] | undefined {
+  if (typeof selectedFiberSourceLayerNames === "undefined") {
+    return undefined;
+  }
+
+  const longhaul =
+    selectedFiberSourceLayerNames.longhaul.length > 0
+      ? [...selectedFiberSourceLayerNames.longhaul].sort((left, right) => left.localeCompare(right))
+      : undefined;
+  const metro =
+    selectedFiberSourceLayerNames.metro.length > 0
+      ? [...selectedFiberSourceLayerNames.metro].sort((left, right) => left.localeCompare(right))
+      : undefined;
+
+  if (typeof longhaul === "undefined" && typeof metro === "undefined") {
+    return undefined;
+  }
+
+  return {
+    ...(typeof longhaul === "undefined" ? {} : { longhaul }),
+    ...(typeof metro === "undefined" ? {} : { metro }),
+  };
+}
+
 function resolveViewportFromMap(
   map: BuildMapContextTransferFromAppShellArgs["map"]
 ): MapContextTransfer["viewport"] | undefined {
@@ -642,19 +1023,11 @@ function resolveViewportFromMap(
     return undefined;
   }
 
-  const bounds = map.getBounds();
-  const longitudeSpan = bounds.east - bounds.west;
-  const latitudeSpan = bounds.north - bounds.south;
-
-  const center: [number, number] = [
-    roundViewportValue(bounds.west + longitudeSpan / 2),
-    roundViewportValue(bounds.south + latitudeSpan / 2),
-  ];
-  const type = "center";
-
   return {
-    center,
-    type,
+    bearing: roundViewportValue(map.getBearing()),
+    center: [roundViewportValue(map.getCenter()[0]), roundViewportValue(map.getCenter()[1])],
+    pitch: roundViewportValue(map.getPitch()),
+    type: "center",
     zoom: roundViewportValue(map.getZoom()),
   };
 }
@@ -665,7 +1038,12 @@ export function buildMapContextTransferFromAppShell(
   const activePerspectives = facilityPerspectives.filter(
     (perspective) => args.visiblePerspectives[perspective]
   );
+  const visibleLayerIds = resolveVisibleLayerIdsFromAppShell(args);
+  const visibleBasemapLayerIds = resolveVisibleBasemapLayerIds(args.basemapVisibility);
   const selectedBoundaryIds = buildSelectedBoundaryIds(args.boundaryFacetSelection);
+  const selectedFiberSourceLayerNames = resolveSelectedFiberSourceLayerNames(
+    args.selectedFiberSourceLayerNames
+  );
   const viewport = resolveViewportFromMap(args.map);
   const context: MapContextTransfer = {
     schemaVersion: MAP_CONTEXT_TRANSFER_SCHEMA_VERSION,
@@ -677,8 +1055,20 @@ export function buildMapContextTransferFromAppShell(
     context.activePerspectives = activePerspectives;
   }
 
+  if (typeof visibleLayerIds !== "undefined") {
+    context.visibleLayerIds = [...visibleLayerIds];
+  }
+
+  if (typeof visibleBasemapLayerIds !== "undefined") {
+    context.visibleBasemapLayerIds = [...visibleBasemapLayerIds];
+  }
+
   if (typeof selectedBoundaryIds !== "undefined") {
     context.selectedBoundaryIds = selectedBoundaryIds;
+  }
+
+  if (typeof selectedFiberSourceLayerNames !== "undefined") {
+    context.selectedFiberSourceLayerNames = selectedFiberSourceLayerNames;
   }
 
   if (typeof viewport !== "undefined") {
@@ -712,23 +1102,109 @@ export function buildMapContextTransferFromAppShell(
   return context;
 }
 
-export function applyMapContextTransferToAppShell(
-  args: ApplyMapContextTransferToAppShellArgs
-): void {
-  if (args.context === null) {
+function applyMapViewportContext(args: ApplyMapContextTransferToAppShellArgs): void {
+  if (args.context === null || typeof args.context.viewport === "undefined") {
     return;
   }
 
-  if (typeof args.context.activePerspectives !== "undefined") {
-    for (const perspective of facilityPerspectives) {
-      args.setPerspectiveVisibility(
-        perspective,
-        args.context.activePerspectives.includes(perspective)
-      );
-    }
+  args.setMapViewport?.(args.context.viewport);
+}
+
+function applyBasemapVisibilityContext(args: ApplyMapContextTransferToAppShellArgs): void {
+  if (args.context === null || typeof args.context.visibleBasemapLayerIds === "undefined") {
+    return;
   }
 
-  if (typeof args.context.selectedBoundaryIds === "undefined") {
+  const visibleBasemapLayerIds = new Set(args.context.visibleBasemapLayerIds);
+  for (const layerId of basemapLayerIds()) {
+    args.setBasemapLayerVisible?.(layerId, visibleBasemapLayerIds.has(layerId));
+  }
+}
+
+function applyPerspectiveVisibilityContext(args: ApplyMapContextTransferToAppShellArgs): void {
+  if (args.context === null || typeof args.context.activePerspectives === "undefined") {
+    return;
+  }
+
+  for (const perspective of facilityPerspectives) {
+    args.setPerspectiveVisibility(
+      perspective,
+      args.context.activePerspectives.includes(perspective)
+    );
+  }
+}
+
+const mapContextLayerVisibilityAppliers = {
+  [FLOOD_100_LAYER_ID]: (args: ApplyMapContextTransferToAppShellArgs, visible: boolean) => {
+    args.setFloodLayerVisible?.("flood100", visible);
+  },
+  [FLOOD_500_LAYER_ID]: (args: ApplyMapContextTransferToAppShellArgs, visible: boolean) => {
+    args.setFloodLayerVisible?.("flood500", visible);
+  },
+  [HYDRO_BASINS_LAYER_ID]: (args: ApplyMapContextTransferToAppShellArgs, visible: boolean) => {
+    args.setHydroBasinsVisible?.(visible);
+  },
+  [PARCELS_LAYER_ID]: (args: ApplyMapContextTransferToAppShellArgs, visible: boolean) => {
+    args.setParcelsVisible?.(visible);
+  },
+  [WATER_FEATURES_LAYER_ID]: (args: ApplyMapContextTransferToAppShellArgs, visible: boolean) => {
+    args.setWaterVisible?.(visible);
+  },
+  [powerLayerId("transmission")]: (
+    args: ApplyMapContextTransferToAppShellArgs,
+    visible: boolean
+  ) => {
+    args.setPowerLayerVisible?.("transmission", visible);
+  },
+  [powerLayerId("substations")]: (
+    args: ApplyMapContextTransferToAppShellArgs,
+    visible: boolean
+  ) => {
+    args.setPowerLayerVisible?.("substations", visible);
+  },
+  [powerLayerId("plants")]: (args: ApplyMapContextTransferToAppShellArgs, visible: boolean) => {
+    args.setPowerLayerVisible?.("plants", visible);
+  },
+  [fiberLayerId("metro")]: (args: ApplyMapContextTransferToAppShellArgs, visible: boolean) => {
+    args.setFiberLayerVisibility?.("metro", visible);
+  },
+  [fiberLayerId("longhaul")]: (args: ApplyMapContextTransferToAppShellArgs, visible: boolean) => {
+    args.setFiberLayerVisibility?.("longhaul", visible);
+  },
+} satisfies Partial<
+  Record<string, (args: ApplyMapContextTransferToAppShellArgs, visible: boolean) => void>
+>;
+
+function applyLayerVisibilityContext(args: ApplyMapContextTransferToAppShellArgs): void {
+  if (args.context === null || typeof args.context.visibleLayerIds === "undefined") {
+    return;
+  }
+
+  const visibleLayerIds = new Set(args.context.visibleLayerIds);
+  for (const layerId of LAYER_IDS) {
+    mapContextLayerVisibilityAppliers[layerId]?.(args, visibleLayerIds.has(layerId));
+  }
+}
+
+function applyFiberSourceLayerSelectionContext(args: ApplyMapContextTransferToAppShellArgs): void {
+  if (args.context === null || typeof args.context.selectedFiberSourceLayerNames === "undefined") {
+    return;
+  }
+
+  if (typeof args.context.selectedFiberSourceLayerNames.metro !== "undefined") {
+    args.setFiberSourceLayerSelection?.("metro", args.context.selectedFiberSourceLayerNames.metro);
+  }
+
+  if (typeof args.context.selectedFiberSourceLayerNames.longhaul !== "undefined") {
+    args.setFiberSourceLayerSelection?.(
+      "longhaul",
+      args.context.selectedFiberSourceLayerNames.longhaul
+    );
+  }
+}
+
+function applySelectedBoundaryIdsContext(args: ApplyMapContextTransferToAppShellArgs): void {
+  if (args.context === null || typeof args.context.selectedBoundaryIds === "undefined") {
     return;
   }
 
@@ -741,6 +1217,21 @@ export function applyMapContextTransferToAppShell(
     args.setBoundaryVisible(boundaryId, true);
     args.setBoundarySelectedRegionIds(boundaryId, selectedRegionIds);
   }
+}
+
+export function applyMapContextTransferToAppShell(
+  args: ApplyMapContextTransferToAppShellArgs
+): void {
+  if (args.context === null) {
+    return;
+  }
+
+  applyMapViewportContext(args);
+  applyBasemapVisibilityContext(args);
+  applyPerspectiveVisibilityContext(args);
+  applyLayerVisibilityContext(args);
+  applyFiberSourceLayerSelectionContext(args);
+  applySelectedBoundaryIdsContext(args);
 }
 
 export function inferMapContextSurfaceFromRoute(

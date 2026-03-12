@@ -39,7 +39,9 @@
     selectionSummary,
     selectionError,
     isSelectionLoading,
+    isMapExporting,
     selectionDisabledReason,
+    mapExportDisabledReason,
     quickViewActive,
     scannerActive,
     scannerSummary,
@@ -75,6 +77,7 @@
     setSketchMeasureAreaShape,
     finishSketchMeasureArea,
     useCompletedSketchAsSelection,
+    exportMapView,
     exportSelection,
     exportScannerSelection,
     openSelectionDashboard,
@@ -139,7 +142,9 @@
         :selection-summary="selectionSummary"
         :selection-error="selectionError"
         :is-loading="isSelectionLoading"
+        :is-map-exporting="isMapExporting"
         :selection-disabled-reason="selectionDisabledReason"
+        :map-export-disabled-reason="mapExportDisabledReason"
         :quick-view-active="quickViewActive"
         :quick-view-disabled-reason="quickViewDisabledReason"
         :scanner-active="scannerActive"
@@ -167,6 +172,7 @@
         @clear="clearSketchMeasure"
         @use-as-selection="useCompletedSketchAsSelection"
         @clear-selection="clearSelectionGeometry"
+        @export-map-view="exportMapView"
         @export="exportSelection"
         @open-dashboard="openSelectionDashboard"
         @select-facility="selectFacilityFromAnalysis"

@@ -1,9 +1,8 @@
 ---
 title: API Sync Runtime
-description: The background-worker side of apps/api that owns hyperscale sync, parcel sync orchestration, and filesystem-backed status snapshots.
+description: The background-worker side of apps/api that owns parcel sync orchestration and filesystem-backed status snapshots.
 sources:
   - apps/api/src/sync-worker.ts
-  - apps/api/src/sync/hyperscale-sync.service.ts
   - apps/api/src/sync/parcels-sync.service.ts
   - apps/api/src/sync/parcels-sync/application/parcels-sync-loop.application.service.ts
   - apps/api/src/sync/parcels-sync/application/parcels-sync-status-query.service.ts
@@ -13,7 +12,6 @@ sources:
 searchTerms:
   - sync worker
   - parcels sync loop
-  - hyperscale sync
   - status snapshots
 ---
 
@@ -28,17 +26,11 @@ This page is about the second process only.
 
 `apps/api/src/sync-worker.ts` is the composition root for background sync behavior. Its job is not to parse HTTP requests. Its job is to start the long-lived controllers, keep them running, and stop them cleanly on shutdown.
 
-The worker currently starts:
-
-- the hyperscale sync loop
-- the parcels sync loop
-
-Both are treated as runtime services with explicit lifecycle control.
+The worker currently starts the parcels sync loop. It is treated as a runtime service with explicit lifecycle control.
 
 ```mermaid
 flowchart LR
-  WORKER[sync-worker.ts] --> HYPER[hyperscale-sync.service.ts]
-  WORKER --> PARCELS[parcels-sync.service.ts]
+  WORKER[sync-worker.ts] --> PARCELS[parcels-sync.service.ts]
   PARCELS --> LOOP[parcels-sync-loop.application.service.ts]
   PARCELS --> SNAPSHOT[snapshot-read.service.ts]
   PARCELS --> MUTATIONS[run-status-mutations.service.ts]
@@ -46,15 +38,6 @@ flowchart LR
   STATUS --> API[status APIs]
   STATUS --> MONITOR[pipeline monitor]
 ```
-
-## Hyperscale sync boundary
-
-`apps/api/src/sync/hyperscale-sync.service.ts` owns the hyperscale side of the worker. It is the separate operational path that keeps mirrored hyperscale data fresh before that data is served back through geo routes.
-
-The important boundary is that hyperscale sync is a worker concern, not an HTTP concern:
-
-- route handlers can read served data
-- the worker keeps the underlying mirrored data current
 
 ## Parcels sync boundary
 

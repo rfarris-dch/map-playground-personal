@@ -3,9 +3,12 @@ import type {
   FacilitiesFeatureCollection,
   FacilityPerspective,
 } from "@map-migration/contracts";
+import { getApiErrorMessage, getApiErrorReason } from "@map-migration/core-runtime/api";
+import { runEffectPromise } from "@map-migration/core-runtime/effect";
 import type { IMap, MapClickEvent } from "@map-migration/map-engine";
 import { getFacilitiesStyleLayerIds } from "@map-migration/map-style";
-import { fetchFacilitiesByBbox } from "@/features/facilities/api";
+import { Effect, Either } from "effect";
+import { fetchFacilitiesByBboxEffect } from "@/features/facilities/api";
 import {
   bboxContains,
   emptyFacilitiesSourceData,
@@ -60,7 +63,6 @@ export function mountFacilitiesLayer(
     cachedFeatures: [],
     ready: false,
     debounceTimer: null,
-    abortController: null,
     fetchedBbox: null,
     lastRequestId: null,
     lastTruncated: false,
@@ -345,8 +347,6 @@ export function mountFacilitiesLayer(
     const zoom = map.getZoom();
     if (zoom < minZoom) {
       state.requestSequence += 1;
-      state.abortController?.abort();
-      state.abortController = null;
       clearCachedViewport();
       map.setGeoJSONSourceData(sourceId, emptyFacilitiesSourceData());
       clearSelection();
@@ -383,27 +383,27 @@ export function mountFacilitiesLayer(
     state.requestSequence += 1;
     const sequence = state.requestSequence;
 
-    state.abortController?.abort();
-    state.abortController = new AbortController();
-
     setStatus({
       state: "loading",
       perspective,
     });
 
-    const result = await fetchFacilitiesByBbox({
-      bbox: fetchBbox,
-      perspective,
-      limit,
-      signal: state.abortController.signal,
-    });
+    const result = await runEffectPromise(
+      Effect.either(
+        fetchFacilitiesByBboxEffect({
+          bbox: fetchBbox,
+          perspective,
+          limit,
+        })
+      )
+    );
 
     if (sequence !== state.requestSequence) {
       return;
     }
 
-    if (!result.ok) {
-      if (result.reason === "aborted") {
+    if (Either.isLeft(result)) {
+      if (getApiErrorReason(result.left) === "aborted") {
         return;
       }
 
@@ -411,31 +411,31 @@ export function mountFacilitiesLayer(
       clearCachedViewport();
       clearSelection();
       state.lastFetchKey = null;
-      emitViewportUpdate([], result.requestId, false);
+      emitViewportUpdate([], result.left.requestId, false);
       setStatus({
         state: "error",
         perspective,
-        requestId: result.requestId,
-        reason: result.reason,
+        requestId: result.left.requestId,
+        reason: getApiErrorMessage(result.left, "refresh failed"),
       });
       return;
     }
 
-    map.setGeoJSONSourceData(sourceId, facilitiesCollectionToSourceData(result.data));
-    state.cachedFeatures = result.data.features;
+    map.setGeoJSONSourceData(sourceId, facilitiesCollectionToSourceData(result.right.data));
+    state.cachedFeatures = result.right.data.features;
     state.fetchedBbox = fetchBbox;
-    state.lastRequestId = result.requestId;
-    state.lastTruncated = result.data.meta.truncated;
-    syncSelectionForFeatures(result.data.features);
-    const viewportFeatures = filterFacilitiesFeaturesToBbox(result.data.features, bbox);
-    emitViewportUpdate(viewportFeatures, result.requestId, result.data.meta.truncated);
+    state.lastRequestId = result.right.requestId;
+    state.lastTruncated = result.right.data.meta.truncated;
+    syncSelectionForFeatures(result.right.data.features);
+    const viewportFeatures = filterFacilitiesFeaturesToBbox(result.right.data.features, bbox);
+    emitViewportUpdate(viewportFeatures, result.right.requestId, result.right.data.meta.truncated);
 
     setStatus({
       state: "ok",
       perspective,
-      requestId: result.requestId,
+      requestId: result.right.requestId,
       count: viewportFeatures.length,
-      truncated: result.data.meta.truncated,
+      truncated: result.right.data.meta.truncated,
     });
   };
 
@@ -446,8 +446,6 @@ export function mountFacilitiesLayer(
 
     state.visible = visible;
     state.requestSequence += 1;
-    state.abortController?.abort();
-    state.abortController = null;
     clearCachedViewport();
     state.lastFetchKey = null;
 
@@ -491,8 +489,6 @@ export function mountFacilitiesLayer(
     setVisible,
     destroy(): void {
       state.requestSequence += 1;
-      state.abortController?.abort();
-      state.abortController = null;
       clearSelection();
 
       if (state.debounceTimer) {

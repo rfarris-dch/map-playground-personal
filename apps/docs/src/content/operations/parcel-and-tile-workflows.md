@@ -3,7 +3,6 @@ title: Parcel And Tile Workflows
 description: The repo-level operational commands, generated files, and production-path flow for parcel ingestion, canonical load, PMTiles build, publish, and rollback.
 sources:
   - package.json
-  - scripts/refresh-hyperscale.sh
   - scripts/init-parcels-schema.sh
   - scripts/refresh-parcels.sh
   - scripts/refresh-parcels.ts
@@ -24,7 +23,6 @@ The root `package.json` scripts are the preferred operator-facing entrypoints be
 | Command | Type | Underlying entrypoint | Current role |
 | --- | --- | --- | --- |
 | `bun run init:parcels-schema` | setup | `scripts/init-parcels-schema.sh` | Applies `scripts/sql/parcels-canonical-schema.sql` so the parcel schemas and core tables exist before a load. |
-| `bun run sync:hyperscale` | operational | `scripts/refresh-hyperscale.sh` | Refreshes mirrored hyperscale inputs and rebuilds the derived spatial serving tables. |
 | `bun run sync:parcels` | operational | `scripts/refresh-parcels.sh` | Primary parcel run wrapper: extract, canonical load, PMTiles build, and manifest publish. |
 | `bun run load:parcels-canonical` | operational | `scripts/load-parcels-canonical.sh` | Re-runs only the database load and swap phase from an extracted snapshot. |
 | `bun run tiles:build:parcels` | operational | `scripts/build-parcels-draw-pmtiles.sh` | Rebuilds the `parcels-draw-v1` PMTiles file from `parcel_current.parcels`. |
@@ -39,7 +37,6 @@ The root `package.json` scripts are the preferred operator-facing entrypoints be
 Treat these as the real operational path:
 
 - `bun run init:parcels-schema`
-- `bun run sync:hyperscale`
 - `bun run sync:parcels`
 - `bun run load:parcels-canonical`
 - `bun run tiles:build:parcels`
@@ -91,17 +88,7 @@ bun run init:parcels-schema
 
 `scripts/init-parcels-schema.sh` fails fast unless `DATABASE_URL` or `POSTGRES_URL` is available, then applies `scripts/sql/parcels-canonical-schema.sql` through `psql`.
 
-### 1. Optional upstream sync before parcel work
-
-The repo also has a separate sync path for mirrored hyperscale inputs:
-
-```bash
-bun run sync:hyperscale
-```
-
-`scripts/refresh-hyperscale.sh` is not part of the parcel-draw PMTiles loop, but it is part of the repo-level operational inventory. It mirrors specific hyperscale tables from the external MySQL source, rebuilds the spatial schema in Postgres, refreshes `serve.hyperscale_site`, and updates mirror-sync checkpoints. Treat it as an adjacent sync workflow, not as a fallback for parcel ingestion.
-
-### 2. Parcel extraction and resume-safe snapshot creation
+### 1. Parcel extraction and resume-safe snapshot creation
 
 ```bash
 bun run sync:parcels

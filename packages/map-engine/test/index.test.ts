@@ -11,6 +11,9 @@ class ProtocolMock {
 }
 
 class MapMock {
+  bearing = 0;
+  center = { lat: 32, lng: -96 };
+  pitch = 0;
   projection: unknown = null;
   removed = false;
 
@@ -34,6 +37,12 @@ class MapMock {
       getSouth: () => 30,
       getWest: () => -100,
     };
+  }
+  getBearing() {
+    return this.bearing;
+  }
+  getCenter() {
+    return this.center;
   }
   getCanvas() {
     return {
@@ -59,6 +68,9 @@ class MapMock {
   }
   getStyle() {
     return { version: 8 };
+  }
+  getPitch() {
+    return this.pitch;
   }
   getZoom() {
     return 5;
@@ -101,6 +113,26 @@ class MapMock {
   }
   setProjection(projection: unknown): void {
     this.projection = projection;
+  }
+  setViewport(viewport: {
+    readonly bearing?: number;
+    readonly center?: [number, number];
+    readonly pitch?: number;
+    readonly type: "bounds" | "center";
+    readonly zoom?: number;
+  }): void {
+    if (typeof viewport.bearing === "number") {
+      this.bearing = viewport.bearing;
+    }
+    if (typeof viewport.pitch === "number") {
+      this.pitch = viewport.pitch;
+    }
+    if (Array.isArray(viewport.center)) {
+      this.center = {
+        lng: viewport.center[0],
+        lat: viewport.center[1],
+      };
+    }
   }
   setStyle(): void {
     /* noop */
@@ -190,11 +222,13 @@ describe("map-engine", () => {
   it("maps MapLibre options and applies projections through the adapter", async () => {
     const adapter = createMapLibreAdapter();
     const map = adapter.createMap({} as HTMLElement, {
+      bearing: 25,
       center: [-96, 32],
       hash: true,
       maxPitch: 85,
       maxZoom: 18,
       minZoom: 3,
+      pitch: 40,
       preserveDrawingBuffer: true,
       projection: { type: "mercator" },
       style: "mapbox://styles/test",
@@ -205,10 +239,12 @@ describe("map-engine", () => {
     await Promise.resolve();
 
     expect(lastMapOptions).toMatchObject({
+      bearing: 25,
       hash: true,
       maxPitch: 85,
       maxZoom: 18,
       minZoom: 3,
+      pitch: 40,
       style: "mapbox://styles/test",
       zoom: 6,
     });

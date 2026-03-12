@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { join, resolve } from "node:path";
 import {
+  buildPmtilesPath,
   buildTileLatestManifestPath,
   createPublishManifest,
   parseTileDataset,
@@ -46,6 +47,10 @@ function normalizeOutputRelativePath(pathValue: string): string {
   return normalized;
 }
 
+function resolveArtifactRelativePath(dataset: TileDataset, version: string): string {
+  return normalizeOutputRelativePath(buildPmtilesPath(dataset, version));
+}
+
 function main(): void {
   const args = parseArgs();
 
@@ -64,7 +69,7 @@ function main(): void {
 
   const rollbackTargetPath = join(
     args.outputRoot,
-    normalizeOutputRelativePath(manifest.previous.url)
+    resolveArtifactRelativePath(manifest.previous.dataset, manifest.previous.version)
   );
   if (!fileExists(rollbackTargetPath)) {
     throw new Error(`Rollback target PMTiles does not exist: ${rollbackTargetPath}`);

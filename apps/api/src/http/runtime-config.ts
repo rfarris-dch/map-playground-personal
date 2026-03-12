@@ -14,6 +14,14 @@ function assertPostgisServingMode(envKey: string, mode: SourceMode): void {
   throw new Error(`[api] ${envKey} must be "postgis" for this API build (received "${mode}")`);
 }
 
+function assertExternalXyzServingMode(envKey: string, mode: SourceMode): void {
+  if (mode === "external-xyz") {
+    return;
+  }
+
+  throw new Error(`[api] ${envKey} must be "external-xyz" for this API build (received "${mode}")`);
+}
+
 function readSourceMode(
   env: Readonly<Record<string, string | undefined>>,
   envKey: string,
@@ -55,10 +63,16 @@ function createApiRuntimeConfig(
     "PARCELS_SOURCE_MODE",
     ApiDefaults.parcelsSourceMode
   );
+  const fiberLocatorSourceMode = readSourceMode(
+    env,
+    "FIBER_LOCATOR_SOURCE_MODE",
+    ApiDefaults.fiberLocatorSourceMode
+  );
 
   assertPostgisServingMode("BOUNDARIES_SOURCE_MODE", boundariesSourceMode);
   assertPostgisServingMode("FACILITIES_SOURCE_MODE", facilitiesSourceMode);
   assertPostgisServingMode("PARCELS_SOURCE_MODE", parcelsSourceMode);
+  assertExternalXyzServingMode("FIBER_LOCATOR_SOURCE_MODE", fiberLocatorSourceMode);
 
   return Object.freeze<ApiRuntimeConfig>({
     boundariesSourceMode,
@@ -67,11 +81,7 @@ function createApiRuntimeConfig(
       fallback: ApiDefaults.dataVersion,
     }),
     facilitiesSourceMode,
-    fiberLocatorSourceMode: readSourceMode(
-      env,
-      "FIBER_LOCATOR_SOURCE_MODE",
-      ApiDefaults.fiberLocatorSourceMode
-    ),
+    fiberLocatorSourceMode,
     parcelsSourceMode,
   });
 }

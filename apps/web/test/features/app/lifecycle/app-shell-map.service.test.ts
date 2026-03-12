@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import type { MapControl, MapRequestParameters } from "@map-migration/map-engine";
+import type { MapControl } from "@map-migration/map-engine";
 import { Effect, Exit, Scope } from "effect";
 import {
   type AppShellMapDependencies,
@@ -22,7 +22,6 @@ describe("app-shell-map service", () => {
     const calls = {
       adapterCreated: 0,
       basemapDestroyed: false,
-      createMapOptions: null as MapRequestParameters | null,
       disposePmtilesProtocolCalled: false,
       navigationControlOptions: null as Record<string, unknown> | null,
     };
@@ -43,10 +42,11 @@ describe("app-shell-map service", () => {
             expect(adapter).toEqual({
               adapterId: "maplibre-test-adapter",
             });
-            calls.createMapOptions =
-              options.transformRequest?.("https://tiles.openfreemap.org/fonts/Inter/0-255.pbf") ??
-              null;
-            expect(options.style).toBe("mapbox://styles/test-style");
+            expect(options.style).toEqual({
+              version: 8,
+              sources: {},
+              layers: [],
+            });
             expect(options.center[0]).toBeCloseTo(-96.8, 10);
             expect(options.center[1]).toBeCloseTo(32.75, 10);
             expect(options.maxPitch).toBe(85);
@@ -76,6 +76,14 @@ describe("app-shell-map service", () => {
       },
       defaultBasemapStyleUrl() {
         return "mapbox://styles/test-style";
+      },
+      loadBasemapStyle(styleUrl) {
+        expect(styleUrl).toBe("mapbox://styles/test-style");
+        return Promise.resolve({
+          version: 8,
+          sources: {},
+          layers: [],
+        });
       },
       mountBasemapLayerVisibility(map) {
         expect(map).toBe(fakeMap);
@@ -114,9 +122,6 @@ describe("app-shell-map service", () => {
       );
 
       expect(calls.adapterCreated).toBe(1);
-      expect(calls.createMapOptions).toEqual({
-        url: "https://demotiles.maplibre.org/font/Inter/0-255.pbf",
-      });
       expect(fakeMap.addControlCalls).toEqual([
         { control: controls.navigation, position: "top-right" },
         { control: controls.scale, position: "bottom-right" },
@@ -141,5 +146,91 @@ describe("app-shell-map service", () => {
     expect(fakeMap.destroyed).toBe(true);
     expect(calls.basemapDestroyed).toBe(true);
     expect(calls.disposePmtilesProtocolCalled).toBe(true);
+  });
+
+  it("passes center viewport camera settings through map initialization", async () => {
+    const fakeMap = new FakeMap();
+    let capturedOptions: Record<string, unknown> | null = null;
+
+    const dependencies: AppShellMapDependencies = {
+      createFullscreenControl() {
+        return createTestMapControl("fullscreen");
+      },
+      createMapScoped(_adapter, _container, options) {
+        return Effect.acquireRelease(
+          Effect.sync(() => {
+            capturedOptions = options;
+            return fakeMap;
+          }),
+          () =>
+            Effect.sync(() => {
+              fakeMap.destroy();
+            })
+        );
+      },
+      createMapLibreAdapter() {
+        return {
+          adapterId: "maplibre-test-adapter",
+        };
+      },
+      createNavigationControl() {
+        return createTestMapControl("navigation");
+      },
+      createScaleControl() {
+        return createTestMapControl("scale");
+      },
+      defaultBasemapStyleUrl() {
+        return "mapbox://styles/test-style";
+      },
+      loadBasemapStyle(styleUrl) {
+        expect(styleUrl).toBe("mapbox://styles/test-style");
+        return Promise.resolve({
+          version: 8,
+          sources: {},
+          layers: [],
+        });
+      },
+      mountBasemapLayerVisibility() {
+        return {
+          destroy: noop,
+          setVisible: noop,
+        };
+      },
+      registerPmtilesProtocolScoped() {
+        return Effect.acquireRelease(
+          Effect.sync(() => undefined),
+          () => Effect.void
+        );
+      },
+    };
+
+    const initializeMap = createAppShellMapInitializer(dependencies);
+    const scope = await Effect.runPromise(Scope.make());
+
+    try {
+      await Effect.runPromise(
+        Scope.extend(
+          initializeMap({} as HTMLDivElement, {
+            initialViewport: {
+              bearing: 22,
+              center: [-95.5, 29.75],
+              pitch: 48,
+              type: "center",
+              zoom: 8.4,
+            },
+          }),
+          scope
+        )
+      );
+    } finally {
+      await Effect.runPromise(Scope.close(scope, Exit.succeed(undefined)));
+    }
+
+    expect(capturedOptions).toMatchObject({
+      bearing: 22,
+      center: [-95.5, 29.75],
+      pitch: 48,
+      zoom: 8.4,
+    });
   });
 });

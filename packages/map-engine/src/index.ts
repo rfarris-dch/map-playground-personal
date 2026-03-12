@@ -31,6 +31,7 @@ import type {
   MapSourceSpecification,
   MapStyleSpecification,
   MapTerrainSpecification,
+  MapViewport,
   NavigationControlOptions,
   PmtilesProtocolRuntime,
   ScaleControlOptions,
@@ -63,6 +64,7 @@ export type {
   MapStyleLayer,
   MapStyleSpecification,
   MapTerrainSpecification,
+  MapViewport,
   NavigationControlOptions,
   ScaleControlOptions,
   StyleInput,
@@ -118,6 +120,16 @@ function normalizeViewportLongitudes(
   return {
     west: MIN_LONGITUDE,
     east: MAX_LONGITUDE,
+  };
+}
+
+function buildViewportCameraOptions(viewport: MapViewport): {
+  readonly bearing?: number;
+  readonly pitch?: number;
+} {
+  return {
+    ...(typeof viewport.bearing === "number" ? { bearing: viewport.bearing } : {}),
+    ...(typeof viewport.pitch === "number" ? { pitch: viewport.pitch } : {}),
   };
 }
 
@@ -249,6 +261,19 @@ class MapLibreEngine implements IMap {
     return this.map.getZoom();
   }
 
+  getCenter(): LngLat {
+    const center = this.map.getCenter();
+    return [center.lng, center.lat];
+  }
+
+  getBearing(): number {
+    return this.map.getBearing();
+  }
+
+  getPitch(): number {
+    return this.map.getPitch();
+  }
+
   getStyle(): MapStyleSpecification {
     return this.map.getStyle();
   }
@@ -269,6 +294,30 @@ class MapLibreEngine implements IMap {
 
   setTerrain(terrain: MapTerrainSpecification | null): void {
     this.map.setTerrain(terrain);
+  }
+
+  setViewport(viewport: MapViewport): void {
+    const cameraOptions = buildViewportCameraOptions(viewport);
+
+    if (viewport.type === "bounds") {
+      this.map.fitBounds(
+        [
+          [viewport.bounds.west, viewport.bounds.south],
+          [viewport.bounds.east, viewport.bounds.north],
+        ],
+        {
+          animate: false,
+          ...cameraOptions,
+        }
+      );
+      return;
+    }
+
+    this.map.jumpTo({
+      center: viewport.center,
+      ...cameraOptions,
+      zoom: viewport.zoom,
+    });
   }
 
   setGeoJSONSourceData(sourceId: string, data: unknown): void {
@@ -524,16 +573,18 @@ export function createMapLibreAdapter(): MapAdapter {
   return {
     createMap(container: HTMLElement, options: MapCreateOptions): IMap {
       const {
+        bearing,
         center,
-        zoom,
-        minZoom,
-        maxZoom,
+        hash,
         maxPitch,
+        maxZoom,
+        minZoom,
+        pitch,
         preserveDrawingBuffer,
         projection,
         style,
-        hash,
         transformRequest,
+        zoom,
       } = options;
       const mapOptions: MapOptions = {
         container,
@@ -541,6 +592,14 @@ export function createMapLibreAdapter(): MapAdapter {
         zoom,
         style,
       };
+
+      if (typeof bearing === "number") {
+        mapOptions.bearing = bearing;
+      }
+
+      if (typeof pitch === "number") {
+        mapOptions.pitch = pitch;
+      }
       if (typeof minZoom === "number") {
         mapOptions.minZoom = minZoom;
       }

@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, mock } from "bun:test";
-import { ApiHeaders } from "@map-migration/contracts";
-import { fetchPipelineStatus } from "../../../src/features/pipeline/pipeline.service";
+import { ApiHeaders, buildFloodSyncStatusRoute } from "@map-migration/contracts";
+import { Effect } from "effect";
+import {
+  createFetchPipelineStatusEffect,
+  fetchPipelineStatus,
+} from "../../../src/features/pipeline/pipeline.service";
 
 const originalFetch = globalThis.fetch;
 
@@ -173,5 +177,27 @@ describe("fetchPipelineStatus", () => {
 
     expect(result.payload.requestId).toBe("req-success");
     expect(result.payload.response.run.states[0]?.isCompleted).toBe(true);
+  });
+
+  it("targets the flood sync-status route for flood monitor requests", async () => {
+    let capturedUrl = "";
+
+    globalThis.fetch = mock((input: RequestInfo | URL) => {
+      capturedUrl = String(input);
+      return Promise.resolve(
+        new Response(JSON.stringify(createSuccessResponseBody()), {
+          headers: {
+            [ApiHeaders.requestId]: "req-flood",
+            "content-type": "application/json",
+          },
+          status: 200,
+        })
+      );
+    });
+
+    const result = await Effect.runPromise(createFetchPipelineStatusEffect("flood"));
+
+    expect(result.ok).toBe(true);
+    expect(capturedUrl).toBe(buildFloodSyncStatusRoute());
   });
 });

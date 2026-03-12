@@ -1,6 +1,7 @@
 import type { ParcelsSyncStatusResponse } from "@map-migration/contracts";
 import type { ComputedRef } from "vue";
 import type {
+  PipelineDataset,
   PipelineFetchFailure,
   PipelineLiveEvent,
   PipelineStatusController,
@@ -58,6 +59,7 @@ export interface PipelineDashboardFetchErrorAlertProps {
 }
 
 export interface PipelineDashboardRunAlertsProps {
+  readonly dataset: PipelineDataset;
   readonly noActiveSyncWarning: string | null;
   readonly partialStateWarning: string | null;
 }
@@ -73,7 +75,14 @@ export interface PipelineDashboardSharedStatus {
 }
 
 export interface PipelineDashboardOverviewProps {
+  readonly buildProgress: BuildProgress | null;
+  readonly buildRateEstimate: PipelineBuildRateEstimate;
+  readonly dataset: PipelineDataset;
+  readonly dbLoadPercentLabel: string;
+  readonly dbLoadProgress: DbLoadProgress | null;
+  readonly isBuildLikelyStalled: boolean;
   readonly isLikelyStalled: boolean;
+  readonly isMaterializeFinalizing: boolean;
   readonly isRunning: boolean;
   readonly lastSuccessAgeMs: number | null;
   readonly lastSuccessfulRefreshAt: string | null;
@@ -86,6 +95,7 @@ export interface PipelineDashboardOverviewProps {
   readonly responseAgeMs: number | null;
   readonly run: PipelineDashboardRun | null;
   readonly sharedStatus: PipelineDashboardSharedStatus;
+  readonly stageSizeLabel: string | null;
   readonly successRatePercent: number;
 }
 
@@ -94,6 +104,7 @@ export interface PipelineDashboardProgressProps {
   readonly buildProgress: BuildProgress | null;
   readonly buildProgressPercent: number;
   readonly buildRateEstimate: PipelineBuildRateEstimate;
+  readonly dataset: PipelineDataset;
   readonly dbLoadDetailLabel: string;
   readonly dbLoadPercentLabel: string;
   readonly dbLoadProgress: DbLoadProgress | null;
@@ -102,9 +113,11 @@ export interface PipelineDashboardProgressProps {
   readonly displayedStatesTotal: number;
   readonly displayedWrittenCount: number;
   readonly isBuildLikelyStalled: boolean;
+  readonly isFloodLoading: boolean;
   readonly isMaterializeFinalizing: boolean;
   readonly rowProgressPercent: number;
   readonly run: PipelineDashboardRun | null;
+  readonly stageSizeLabel: string | null;
   readonly stateProgressPercent: number;
 }
 
@@ -114,7 +127,9 @@ export interface PipelineDashboardDetailsProps {
 }
 
 export interface PipelineDashboardStateEventsProps {
+  readonly dataset: PipelineDataset;
   readonly eventFeedRows: readonly PipelineLiveEvent[];
+  readonly stageSizeLabel: string | null;
   readonly stateRows: readonly PipelineDashboardStateRow[];
 }
 
@@ -127,6 +142,7 @@ export interface PipelineDashboardModel {
   readonly buildProgress: ComputedRef<BuildProgress | null>;
   readonly buildProgressPercent: ComputedRef<number>;
   readonly buildRateEstimate: ComputedRef<PipelineBuildRateEstimate>;
+  readonly dataset: PipelineDataset;
   readonly dbLoadDetailLabel: ComputedRef<string>;
   readonly dbLoadPercentLabel: ComputedRef<string>;
   readonly dbLoadProgress: ComputedRef<DbLoadProgress | null>;
@@ -156,6 +172,7 @@ export interface PipelineDashboardModel {
   readonly responseAgeMs: ComputedRef<number | null>;
   readonly rowProgressPercent: ComputedRef<number>;
   readonly run: ComputedRef<PipelineDashboardRun | null>;
+  readonly stageSizeLabel: ComputedRef<string | null>;
   readonly stateProgressPercent: ComputedRef<number>;
   readonly stateRows: ComputedRef<readonly PipelineDashboardStateRow[]>;
   readonly successRatePercent: ComputedRef<number>;

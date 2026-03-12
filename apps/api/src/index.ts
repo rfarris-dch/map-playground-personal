@@ -2,9 +2,10 @@ import { execFileSync } from "node:child_process";
 import { type ServerType, serve } from "@hono/node-server";
 import { Effect } from "effect";
 import { createApiApp } from "@/app";
-import { closePostgresPool } from "@/db/postgres";
+import { assertPostgresReady, closePostgresPool } from "@/db/postgres";
 import { describeEffectDevToolsConnection, runApiEffect } from "@/effect/api-effect-runtime";
 import { recordRuntimeEffectFailure } from "@/effect/effect-failure-trail.service";
+import { readFiberLocatorConfig } from "@/geo/fiber-locator/fiber-locator.service";
 
 const app = createApiApp();
 let server: ServerType | null = null;
@@ -112,7 +113,12 @@ function shutdown(signal: string): Promise<void> {
     Effect.gen(function* () {
       yield* closeServerEffect();
       yield* Effect.tryPromise(() => closePostgresPool());
-    })
+    }),
+    {
+      failureMetadata: {
+        source: "api-server-shutdown",
+      },
+    }
   );
   return shutdownPromise;
 }
@@ -149,6 +155,14 @@ process.on("SIGTERM", () => {
 
 function startServerEffect(): Effect.Effect<void, Error> {
   return Effect.gen(function* () {
+    yield* Effect.tryPromise({
+      try: assertPostgresReady,
+      catch: (error) => (error instanceof Error ? error : new Error(String(error))),
+    });
+    yield* Effect.try({
+      try: () => readFiberLocatorConfig(),
+      catch: (error) => (error instanceof Error ? error : new Error(String(error))),
+    });
     yield* forceClearPortBeforeStartEffect(port);
     yield* Effect.sync(() => {
       if (effectDevToolsConnection !== null) {
@@ -168,7 +182,11 @@ function startServerEffect(): Effect.Effect<void, Error> {
   });
 }
 
-runApiEffect(startServerEffect()).catch((error) => {
+runApiEffect(startServerEffect(), {
+  failureMetadata: {
+    source: "api-server-startup",
+  },
+}).catch((error) => {
   recordRuntimeEffectFailure({
     cause: error instanceof Error && typeof error.stack === "string" ? error.stack : String(error),
     code: "API_STARTUP_FAILURE",

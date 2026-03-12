@@ -109,8 +109,8 @@ export function deriveRunProgress(
   });
 
   return {
-    writtenCount: aggregated.writtenCount,
-    expectedCount: aggregated.hasExpectedGap ? null : aggregated.expectedCount,
+    writtenCount: run.writtenCount,
+    expectedCount: run.expectedCount,
     statesCompleted: aggregated.statesCompleted,
     statesTotal: aggregated.statesTotal,
   };

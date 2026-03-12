@@ -1,6 +1,8 @@
 import type { ParcelsSyncStatusResponse } from "@map-migration/contracts";
 import type { Ref } from "vue";
 
+export type PipelineDataset = "parcels" | "flood";
+
 export interface PipelineStatusPayload {
   readonly requestId: string;
   readonly response: ParcelsSyncStatusResponse;
@@ -20,16 +22,20 @@ export interface PipelineLiveSample {
   readonly buildLogBytes: number | null;
   readonly buildProgressPercent: number | null;
   readonly capturedAt: string;
+  readonly counterMode: "default" | "flood-staging-rows";
   readonly expectedCount: number | null;
   readonly isRunning: boolean;
   readonly lastStateUpdatedAt: string | null;
   readonly phase: ParcelsSyncStatusResponse["run"]["phase"];
+  readonly rawWrittenCount: number;
   readonly requestId: string;
   readonly runId: string | null;
   readonly runStartedAt: string | null;
+  readonly stageBytes: number | null;
   readonly statesCompleted: number;
   readonly statesTotal: number;
   readonly writtenCount: number;
+  readonly writtenUnit: "rows";
 }
 
 export type PipelineLiveEventTone = "critical" | "info" | "success";

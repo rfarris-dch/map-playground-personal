@@ -57,18 +57,18 @@ function computeAverageRowsPerSecond(
   latestTimestamp: number | null,
   runStartedAtMs: number | null
 ): number | null {
-  if (
-    runStartedAtMs !== null &&
-    latestTimestamp !== null &&
-    latestTimestamp > runStartedAtMs &&
-    latestSample.writtenCount > 0
-  ) {
-    return latestSample.writtenCount / ((latestTimestamp - runStartedAtMs) / 1000);
-  }
-
   const earliestSample = allSameRunSamples[0];
   const latestRunSample = allSameRunSamples.at(-1);
   if (!(earliestSample && latestRunSample)) {
+    if (
+      runStartedAtMs !== null &&
+      latestTimestamp !== null &&
+      latestTimestamp > runStartedAtMs &&
+      latestSample.writtenCount > 0
+    ) {
+      return latestSample.writtenCount / ((latestTimestamp - runStartedAtMs) / 1000);
+    }
+
     return null;
   }
 
@@ -80,12 +80,53 @@ function computeAverageRowsPerSecond(
     latestMs <= earliestMs ||
     latestRunSample.writtenCount <= earliestSample.writtenCount
   ) {
+    if (
+      runStartedAtMs !== null &&
+      latestTimestamp !== null &&
+      latestTimestamp > runStartedAtMs &&
+      latestSample.writtenCount > 0
+    ) {
+      return latestSample.writtenCount / ((latestTimestamp - runStartedAtMs) / 1000);
+    }
+
     return null;
   }
 
   return (
     (latestRunSample.writtenCount - earliestSample.writtenCount) / ((latestMs - earliestMs) / 1000)
   );
+}
+
+function sliceFloodLoadingSegment(
+  allSameRunSamples: readonly PipelineLiveSample[]
+): readonly PipelineLiveSample[] {
+  const latestSample = allSameRunSamples.at(-1);
+  if (
+    !latestSample ||
+    latestSample.counterMode !== "flood-staging-rows" ||
+    latestSample.phase !== "loading"
+  ) {
+    return allSameRunSamples;
+  }
+
+  let segmentStartIndex = 0;
+  for (let index = 1; index < allSameRunSamples.length; index += 1) {
+    const previousSample = allSameRunSamples[index - 1];
+    const currentSample = allSameRunSamples[index];
+    if (!(previousSample && currentSample)) {
+      continue;
+    }
+
+    if (
+      currentSample.counterMode !== "flood-staging-rows" ||
+      currentSample.phase !== "loading" ||
+      currentSample.writtenCount < previousSample.writtenCount
+    ) {
+      segmentStartIndex = index;
+    }
+  }
+
+  return allSameRunSamples.slice(segmentStartIndex);
 }
 
 function inferLastProgressTimestamp(
@@ -189,36 +230,42 @@ function selectRowsPerSecond(
 
 export function estimatePipelineRate(history: readonly PipelineLiveSample[]): PipelineRateEstimate {
   const latestSample = history.at(-1);
-  if (!latestSample || latestSample.expectedCount === null) {
+  if (!latestSample) {
     return emptyRateEstimate();
   }
 
-  const remainingRows = Math.max(0, latestSample.expectedCount - latestSample.writtenCount);
+  const remainingRows =
+    latestSample.expectedCount === null
+      ? null
+      : Math.max(0, latestSample.expectedCount - latestSample.writtenCount);
   if (remainingRows === 0) {
     return completedRateEstimate();
   }
 
   const allSameRunSamples = history.filter((sample) => sample.runId === latestSample.runId);
-  const recentRowsPerSecond = computeRecentRowsPerSecond(allSameRunSamples);
+  const rateWindowSamples = sliceFloodLoadingSegment(allSameRunSamples);
+  const recentRowsPerSecond = computeRecentRowsPerSecond(rateWindowSamples);
 
   const latestTimestamp = parseIsoToTimestamp(latestSample.capturedAt);
   const runStartedAtMs = parseNullableIsoToTimestamp(latestSample.runStartedAt);
   const averageRowsPerSecond = computeAverageRowsPerSecond(
     latestSample,
-    allSameRunSamples,
+    rateWindowSamples,
     latestTimestamp,
     runStartedAtMs
   );
   const stalledMs = computeStalledMs(
     latestSample,
-    allSameRunSamples,
+    rateWindowSamples,
     latestTimestamp,
     runStartedAtMs
   );
   const selectedRate = selectRowsPerSecond(recentRowsPerSecond, averageRowsPerSecond);
 
   const etaMs =
-    typeof selectedRate.rowsPerSecond === "number" && selectedRate.rowsPerSecond > 0
+    typeof selectedRate.rowsPerSecond === "number" &&
+    selectedRate.rowsPerSecond > 0 &&
+    typeof remainingRows === "number"
       ? Math.round((remainingRows / selectedRate.rowsPerSecond) * 1000)
       : null;
 

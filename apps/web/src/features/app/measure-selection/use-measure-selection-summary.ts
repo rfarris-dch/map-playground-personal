@@ -6,6 +6,7 @@ import {
 } from "@/features/app/measure-selection/measure-selection.service";
 import type { UseAppShellMeasureSelectionOptions } from "@/features/app/measure-selection/use-app-shell-measure-selection.types";
 import type { MeasureSelectionSummary } from "@/features/measure/measure-analysis.types";
+import { cloneSelectionRing } from "@/features/selection/selection-analysis-request.service";
 import { createLatestRunner } from "@/lib/effect/latest-runner";
 
 export function useMeasureSelectionSummary(options: UseAppShellMeasureSelectionOptions) {
@@ -44,16 +45,19 @@ export function useMeasureSelectionSummary(options: UseAppShellMeasureSelectionO
       return;
     }
 
+    const nextSelectionRing = cloneSelectionRing(selectionRing);
+
     isMeasureSelectionLoading.value = true;
     measureSelectionError.value = null;
-    measureSelectionSummary.value = buildEmptyMeasureSelectionSummary(selectionRing);
+    measureSelectionSummary.value = buildEmptyMeasureSelectionSummary(nextSelectionRing);
 
     await measureSelectionRunner.run(
       Effect.tryPromise({
         try: (signal) =>
           queryMeasureSelectionSummary({
             expectedParcelsIngestionRunId: options.expectedParcelsIngestionRunId.value,
-            selectionRing,
+            includeParcels: options.includeParcels.value,
+            selectionRing: nextSelectionRing,
             visiblePerspectives: options.visiblePerspectives.value,
             signal,
           }),
@@ -79,6 +83,7 @@ export function useMeasureSelectionSummary(options: UseAppShellMeasureSelectionO
     [
       () => options.measureState.value.selectionRing,
       () => options.expectedParcelsIngestionRunId.value,
+      () => options.includeParcels.value,
       () => options.outputMode.value,
       () => options.visiblePerspectives.value.colocation,
       () => options.visiblePerspectives.value.hyperscale,

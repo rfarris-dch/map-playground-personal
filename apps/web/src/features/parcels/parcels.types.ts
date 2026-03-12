@@ -66,16 +66,10 @@ export interface ParcelsLayerState {
   ready: boolean;
   selectedFeatureId: number | string | null;
   selectedParcelId: string | null;
-  sourceInitializationAbortController: AbortController | null;
   sourceInitializationPromise: Promise<void> | null;
   sourceInitialized: boolean;
   stressBlocked: boolean;
   visible: boolean;
-}
-
-export interface LoadParcelsManifestArgs {
-  readonly manifestPath: string;
-  readonly signal?: AbortSignal;
 }
 
 export interface EvaluateParcelsGuardrailsArgs {

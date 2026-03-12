@@ -61,6 +61,7 @@ export interface ApiRoutesTable {
   readonly fiberLocatorLayersInView: string;
   readonly fiberLocatorTile: string;
   readonly fiberLocatorVectorTile: string;
+  readonly floodSyncStatus: string;
   readonly health: string;
   readonly markets: string;
   readonly marketsSelection: string;
@@ -107,6 +108,7 @@ export const ApiRoutes = Object.freeze<ApiRoutesTable>({
   boundariesPower: "/api/geo/boundaries/power",
   countyScores: "/api/geo/counties/scores",
   countyScoresStatus: "/api/geo/counties/scores/status",
+  floodSyncStatus: "/api/geo/flood/sync/status",
   fiberLocatorLayers: "/api/geo/fiber-locator/layers",
   fiberLocatorLayersInView: "/api/geo/fiber-locator/layers/inview",
   fiberLocatorTile: "/api/geo/fiber-locator/tile",
@@ -289,6 +291,10 @@ export function buildFiberLocatorVectorTileRoute(
 
 export function buildParcelsSyncStatusRoute(): string {
   return ApiRoutes.parcelsSyncStatus;
+}
+
+export function buildFloodSyncStatusRoute(): string {
+  return ApiRoutes.floodSyncStatus;
 }
 
 export const ApiHeaders = Object.freeze<ApiHeadersTable>({

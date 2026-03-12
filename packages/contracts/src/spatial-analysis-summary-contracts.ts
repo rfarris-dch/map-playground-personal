@@ -19,6 +19,7 @@ const CountyFipsSchema = z.string().regex(/^[0-9]{5}$/);
 
 export const SpatialAnalysisSummaryRequestSchema = z.object({
   geometry: PolygonGeometrySchema,
+  includeFlood: z.boolean().default(true),
   includeParcels: z.boolean().default(true),
   limitPerPerspective: z.number().int().positive().max(100_000).default(5000),
   minimumMarketSelectionOverlapPercent: z.number().min(0).max(1).default(0),
@@ -94,10 +95,23 @@ export const SpatialAnalysisMarketSelectionSummarySchema = z.object({
   unavailableReason: z.string().nullable(),
 });
 
+export const SpatialAnalysisFloodSummarySchema = z.object({
+  flood100AreaSqKm: z.number().nonnegative(),
+  flood100SelectionShare: z.number().min(0).max(1),
+  flood500AreaSqKm: z.number().nonnegative(),
+  flood500SelectionShare: z.number().min(0).max(1),
+  parcelCountIntersectingFlood100: z.number().int().nonnegative(),
+  parcelCountIntersectingFlood500: z.number().int().nonnegative(),
+  parcelCountOutsideMappedFlood: z.number().int().nonnegative(),
+  selectionAreaSqKm: z.number().nonnegative(),
+  unavailableReason: z.string().nullable(),
+});
+
 export const SpatialAnalysisSelectionSummarySchema = z.object({
   colocation: SpatialAnalysisPerspectiveSummarySchema,
   countyIds: z.array(CountyFipsSchema),
   facilities: z.array(SpatialAnalysisSummaryFacilityRecordSchema),
+  flood: SpatialAnalysisFloodSummarySchema,
   hyperscale: SpatialAnalysisPerspectiveSummarySchema,
   marketSelection: SpatialAnalysisMarketSelectionSummarySchema,
   parcelSelection: SpatialAnalysisParcelSelectionSummarySchema,
@@ -124,6 +138,11 @@ export const SpatialAnalysisSummaryCoverageSchema = z.object({
     datasetAvailable: z.boolean(),
     missingFeatureFamilies: z.array(z.string().min(1)),
   }),
+  flood: z.object({
+    datasetAvailable: z.boolean(),
+    included: z.boolean(),
+    unavailableReason: z.string().nullable(),
+  }),
   markets: z.object({
     boundarySourceAvailable: z.boolean(),
     unavailableReason: z.string().nullable(),
@@ -143,6 +162,14 @@ export const SpatialAnalysisSummaryProvenanceSchema = z.object({
     methodologyId: z.string().nullable(),
     publicationRunId: z.string().nullable(),
     publishedAt: z.string().datetime().nullable(),
+  }),
+  flood: z.object({
+    dataVersion: z.string().nullable(),
+    runId: z.string().nullable(),
+    sourceMode: ResponseMetaSchema.shape.sourceMode.nullable(),
+    sourceVersion: z.string().nullable(),
+    unavailableReason: z.string().nullable(),
+    warnings: z.array(WarningSchema),
   }),
   facilities: z.object({
     countsByPerspective: z.object({
@@ -186,6 +213,7 @@ export const SpatialAnalysisSummaryResponseSchema = z.object({
   meta: ResponseMetaSchema,
   policy: z.object({
     countyIntelligence: SpatialAnalysisPolicyEntrySchema,
+    flood: SpatialAnalysisPolicyEntrySchema,
     facilities: SpatialAnalysisPolicyEntrySchema,
     parcels: SpatialAnalysisPolicyEntrySchema,
   }),
@@ -204,6 +232,7 @@ export type SpatialAnalysisPerspectiveSummary = z.infer<
 >;
 export type SpatialAnalysisProviderSummary = z.infer<typeof SpatialAnalysisProviderSummarySchema>;
 export type SpatialAnalysisParcelRecord = z.infer<typeof SpatialAnalysisParcelRecordSchema>;
+export type SpatialAnalysisFloodSummary = z.infer<typeof SpatialAnalysisFloodSummarySchema>;
 export type SpatialAnalysisSelectionSummary = z.infer<typeof SpatialAnalysisSelectionSummarySchema>;
 export type SpatialAnalysisCountyIntelligence = z.infer<
   typeof SpatialAnalysisCountyIntelligenceSchema

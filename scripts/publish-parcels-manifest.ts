@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { join, resolve } from "node:path";
 import {
+  buildPmtilesPath,
   buildTileLatestManifestPath,
   createManifestEntry,
   createPublishManifest,
@@ -44,6 +45,9 @@ function parseArgs(): CliArgs {
   const dataset = parseDataset(findCliArgValue(argv, "dataset"));
   const pmtilesPath = findCliArgValue(argv, "pmtiles-path");
   const outputRoot = findCliArgValue(argv, "output-root") ?? "apps/web/public";
+  const publicBaseUrl =
+    trimToNull(findCliArgValue(argv, "public-base-url")) ??
+    trimToNull(process.env.TILES_PUBLIC_BASE_URL);
   const runId = trimToNull(findCliArgValue(argv, "run-id"));
   const ingestionRunId = trimToNull(findCliArgValue(argv, "ingestion-run-id"));
   const snapshotRoot =
@@ -56,6 +60,7 @@ function parseArgs(): CliArgs {
     ingestionRunId,
     pmtilesPath: typeof pmtilesPath === "string" ? resolve(pmtilesPath) : null,
     outputRoot: resolve(outputRoot),
+    publicBaseUrl,
     runId,
     snapshotRoot: resolve(snapshotRoot),
     tilesOutDir: resolve(tilesOutDir),
@@ -103,6 +108,10 @@ function writeManifest(path: string, manifest: TilePublishManifest): void {
 
 function copyPmtiles(sourcePath: string, destinationPath: string): void {
   copyFileEnsuringDirectory(sourcePath, destinationPath);
+}
+
+function resolveArtifactRelativePath(dataset: TileDataset, version: string): string {
+  return normalizeOutputRelativePath(buildPmtilesPath(dataset, version));
 }
 
 function readLatestRunId(snapshotRoot: string): string | null {
@@ -168,6 +177,7 @@ async function main(): Promise<void> {
   const checksum = await sha256Hex(resolvedInput.pmtilesPath);
   const entry = createManifestEntry(args.dataset, new Date(), checksum, {
     ingestionRunId: resolvedInput.ingestionRunId ?? undefined,
+    publicBaseUrl: args.publicBaseUrl ?? undefined,
   });
 
   const latestRelativePath = buildTileLatestManifestPath(args.dataset);
@@ -176,7 +186,10 @@ async function main(): Promise<void> {
   if (existingManifest !== null && existingManifest.current.checksum === checksum) {
     const currentDestinationPath = join(
       args.outputRoot,
-      normalizeOutputRelativePath(existingManifest.current.url)
+      resolveArtifactRelativePath(
+        existingManifest.current.dataset,
+        existingManifest.current.version
+      )
     );
     if (!fileExists(currentDestinationPath)) {
       copyPmtiles(resolvedInput.pmtilesPath, currentDestinationPath);
@@ -190,7 +203,10 @@ async function main(): Promise<void> {
     return;
   }
 
-  const destinationPath = join(args.outputRoot, normalizeOutputRelativePath(entry.url));
+  const destinationPath = join(
+    args.outputRoot,
+    resolveArtifactRelativePath(entry.dataset, entry.version)
+  );
   copyPmtiles(resolvedInput.pmtilesPath, destinationPath);
   const previous =
     existingManifest !== null && !manifestEntriesMatch(existingManifest.current, entry)

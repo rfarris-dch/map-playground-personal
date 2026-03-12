@@ -2,12 +2,9 @@ import { Effect } from "effect";
 import { closePostgresPool } from "@/db/postgres";
 import { describeEffectDevToolsConnection, runApiEffect } from "@/effect/api-effect-runtime";
 import { recordRuntimeEffectFailure } from "@/effect/effect-failure-trail.service";
-import { startHyperscaleSyncLoop } from "@/sync/hyperscale-sync.service";
-import type { HyperscaleSyncController } from "@/sync/hyperscale-sync.types";
 import { startParcelsSyncLoop } from "@/sync/parcels-sync.service";
 import type { ParcelsSyncController } from "@/sync/parcels-sync.types";
 
-let hyperscaleSyncController: HyperscaleSyncController | null = null;
 let parcelsSyncController: ParcelsSyncController | null = null;
 let isShuttingDown = false;
 const effectDevToolsConnection = describeEffectDevToolsConnection();
@@ -21,12 +18,6 @@ function shutdown(signal: string): Promise<void> {
   console.log(`[api-sync-worker] shutting down (${signal})`);
   return runApiEffect(
     Effect.gen(function* () {
-      if (hyperscaleSyncController !== null) {
-        const controller = hyperscaleSyncController;
-        yield* Effect.tryPromise(() => controller.stop());
-        hyperscaleSyncController = null;
-      }
-
       if (parcelsSyncController !== null) {
         const controller = parcelsSyncController;
         yield* Effect.tryPromise(() => controller.stop());
@@ -40,7 +31,12 @@ function shutdown(signal: string): Promise<void> {
           process.exit(0);
         })
       )
-    )
+    ),
+    {
+      failureMetadata: {
+        source: "api-sync-worker-shutdown",
+      },
+    }
   );
 }
 
@@ -103,32 +99,28 @@ function startSyncWorkerEffect(): Effect.Effect<void, Error> {
         console.log(`[api-sync-worker] Effect DevTools enabled (${effectDevToolsConnection})`);
       }
     });
-    const [hyperscaleController, parcelsController] = yield* Effect.all(
-      [
-        startLoopEffect<HyperscaleSyncController>("hyperscale", startHyperscaleSyncLoop),
-        startLoopEffect<ParcelsSyncController>("parcels", startParcelsSyncLoop),
-      ],
-      {
-        concurrency: "unbounded",
-      }
+    const parcelsController = yield* startLoopEffect<ParcelsSyncController>(
+      "parcels",
+      startParcelsSyncLoop
     );
 
-    hyperscaleSyncController = hyperscaleController;
     parcelsSyncController = parcelsController;
 
-    if (hyperscaleSyncController === null && parcelsSyncController === null) {
+    if (parcelsSyncController === null) {
       yield* Effect.fail(new Error("all sync loops failed to start"));
     }
 
     console.log(
-      `[api-sync-worker] loops started (hyperscale=${String(hyperscaleSyncController !== null)}, parcels=${String(
-        parcelsSyncController !== null
-      )})`
+      `[api-sync-worker] loops started (parcels=${String(parcelsSyncController !== null)})`
     );
   });
 }
 
-runApiEffect(startSyncWorkerEffect()).catch((error) => {
+runApiEffect(startSyncWorkerEffect(), {
+  failureMetadata: {
+    source: "api-sync-worker-startup",
+  },
+}).catch((error) => {
   recordRuntimeEffectFailure({
     cause: error instanceof Error && typeof error.stack === "string" ? error.stack : String(error),
     code: "SYNC_WORKER_STARTUP_FAILURE",

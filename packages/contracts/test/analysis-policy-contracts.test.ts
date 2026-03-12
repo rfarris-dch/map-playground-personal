@@ -35,6 +35,18 @@ describe("analysis policy contracts", () => {
       },
       licensing: [
         {
+          dataset: "environmental_flood",
+          sensitivityTier: "internal",
+          allowedQueryGranularities: ["polygon"],
+          allowedExportGranularities: ["none"],
+          minimumKAnonymity: null,
+          cacheTtlSeconds: 900,
+          retentionDays: 365,
+          redistribution: "internal",
+          owner: "product-geo",
+          dueDate: "2026-03-31",
+        },
+        {
           dataset: "parcels",
           sensitivityTier: "restricted",
           allowedQueryGranularities: ["bbox", "polygon", "county", "tileSet", "parcel"],

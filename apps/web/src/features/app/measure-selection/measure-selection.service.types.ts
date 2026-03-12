@@ -13,6 +13,7 @@ export type QueryMeasureSelectionSummaryResult =
 
 export interface QueryMeasureSelectionSummaryArgs {
   readonly expectedParcelsIngestionRunId: string | null;
+  readonly includeParcels: boolean;
   readonly selectionRing: readonly [number, number][];
   readonly signal: AbortSignal;
   readonly visiblePerspectives: PerspectiveVisibilityState;

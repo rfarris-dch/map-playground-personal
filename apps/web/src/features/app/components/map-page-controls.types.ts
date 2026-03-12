@@ -18,6 +18,8 @@ export interface MapPageControlsProps
     Omit<MapSelectionToolsProps, "countyIds">,
     MapSketchMeasureToolsProps {
   readonly countyIds: readonly string[];
+  readonly isMapExporting: boolean;
+  readonly mapExportDisabledReason: string | null;
   readonly overlaysBlockedReason: string | null;
   readonly quickViewActive: boolean;
   readonly quickViewDisabledReason: string | null;

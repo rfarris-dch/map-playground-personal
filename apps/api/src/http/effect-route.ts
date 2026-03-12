@@ -209,6 +209,12 @@ export async function runEffectRoute(
   );
 
   const exit = await runApiEffectExit(providedProgram, {
+    failureMetadata: {
+      method: c.req.method,
+      path: c.req.path,
+      requestId,
+      source: "api-effect-route-runtime",
+    },
     signal,
   });
 

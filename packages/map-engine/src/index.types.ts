@@ -35,8 +35,11 @@ export interface IMap {
   addSource(id: string, spec: MapSourceSpecification): void;
   captureImage(options?: MapCaptureImageOptions): Promise<Blob>;
   destroy(): void;
+  getBearing(): number;
   getBounds(): LngLatBounds;
   getCanvasSize(): { readonly height: number; readonly width: number };
+  getCenter(): LngLat;
+  getPitch(): number;
   getProjection(): MapProjectionSpecification;
   getStyle(): MapStyleSpecification;
   getZoom(): number;
@@ -64,6 +67,7 @@ export interface IMap {
   setProjection(projection: MapProjectionSpecification): void;
   setStyle(style: StyleInput): void;
   setTerrain(terrain: MapTerrainSpecification | null): void;
+  setViewport(viewport: MapViewport): void;
 }
 
 export interface MapPointerEvent {
@@ -89,11 +93,13 @@ export interface FeatureStateTarget {
 }
 
 export interface MapCreateOptions {
+  readonly bearing?: number;
   readonly center: LngLat;
   readonly hash?: boolean;
   readonly maxPitch?: number;
   readonly maxZoom?: number;
   readonly minZoom?: number;
+  readonly pitch?: number;
   readonly preserveDrawingBuffer?: boolean;
   readonly projection?: MapProjectionSpecification;
   readonly style: StyleInput;
@@ -133,6 +139,20 @@ export type MapProjectionSpecification = ProjectionSpecification;
 export type MapQueryRenderedFeaturesOptions = QueryRenderedFeaturesOptions;
 export type MapRenderedFeature = MapGeoJSONFeature;
 export type MapRequestParameters = RequestParameters;
+export type MapViewport =
+  | {
+      readonly bearing?: number;
+      readonly center: LngLat;
+      readonly pitch?: number;
+      readonly type: "center";
+      readonly zoom: number;
+    }
+  | {
+      readonly bearing?: number;
+      readonly bounds: LngLatBounds;
+      readonly pitch?: number;
+      readonly type: "bounds";
+    };
 
 export type MapRequestTransformFunction = (
   url: string,

@@ -142,7 +142,7 @@ export function createPipelineStatusController(
   const isLoading = ref<boolean>(true);
   const autoRefresh = ref<boolean>(true);
   const clockNowMs = ref<number>(deps.now());
-  const history = ref<readonly PipelineLiveSample[]>([]);
+  const history = ref<readonly PipelineLiveSample[]>(deps.loadPersistedHistory?.() ?? []);
   const events = ref<readonly PipelineLiveEvent[]>([]);
   const totalRequests = ref<number>(0);
   const successfulRequests = ref<number>(0);
@@ -187,6 +187,7 @@ export function createPipelineStatusController(
       const nextSample = buildPipelineLiveSample(result.payload, completedAt);
       const previousSample = history.value.at(-1) ?? null;
       history.value = appendPipelineLiveSample(history.value, nextSample);
+      deps.savePersistedHistory?.(history.value);
 
       const builtEvents = buildPipelineLiveEvents(previousSample, nextSample);
       events.value = appendPipelineLiveEvents(events.value, builtEvents);

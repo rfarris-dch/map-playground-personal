@@ -3,12 +3,12 @@ import {
   type BoundaryPowerLevel,
   buildBoundaryPowerRoute,
 } from "@map-migration/contracts";
-import { apiGetJson } from "@map-migration/core-runtime/api";
-import type { BoundaryPowerFetchResult } from "@/features/boundaries/boundaries.types";
+import { apiGetJsonEffect } from "@map-migration/core-runtime/api";
 
-export function fetchBoundaryPower(
-  level: BoundaryPowerLevel,
-  init: RequestInit = {}
-): Promise<BoundaryPowerFetchResult> {
-  return apiGetJson(buildBoundaryPowerRoute(level), BoundaryPowerFeatureCollectionSchema, init);
+export function fetchBoundaryPowerEffect(level: BoundaryPowerLevel, init: RequestInit = {}) {
+  return apiGetJsonEffect(
+    buildBoundaryPowerRoute(level),
+    BoundaryPowerFeatureCollectionSchema,
+    init
+  );
 }

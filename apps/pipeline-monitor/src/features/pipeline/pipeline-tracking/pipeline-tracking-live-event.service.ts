@@ -4,6 +4,29 @@ import type {
   PipelineLiveSample,
 } from "../pipeline.types";
 
+function formatProgressValue(value: number, _unit: PipelineLiveSample["writtenUnit"]): string {
+  return value.toLocaleString("en-US");
+}
+
+function formatByteProgressValue(value: number): string {
+  if (value < 1024) {
+    return `${String(value)} B`;
+  }
+
+  const kib = value / 1024;
+  if (kib < 1024) {
+    return `${kib.toFixed(1)} KiB`;
+  }
+
+  const mib = kib / 1024;
+  if (mib < 1024) {
+    return `${mib.toFixed(1)} MiB`;
+  }
+
+  const gib = mib / 1024;
+  return `${gib.toFixed(1)} GiB`;
+}
+
 function buildEventToneFromPhase(phase: PipelineLiveSample["phase"]): PipelineLiveEvent["tone"] {
   if (phase === "failed") {
     return "critical";
@@ -68,13 +91,28 @@ export function buildPipelineLiveEvents(
     });
   }
 
+  if (
+    nextSample.counterMode === "flood-staging-rows" &&
+    typeof nextSample.stageBytes === "number" &&
+    typeof previousSample.stageBytes === "number" &&
+    nextSample.stageBytes > previousSample.stageBytes
+  ) {
+    const stageDelta = nextSample.stageBytes - previousSample.stageBytes;
+    events.push({
+      capturedAt: nextSample.capturedAt,
+      requestId: nextSample.requestId,
+      tone: "info",
+      message: `Stage size +${formatByteProgressValue(stageDelta)} (total ${formatByteProgressValue(nextSample.stageBytes)})`,
+    });
+  }
+
   if (nextSample.writtenCount > previousSample.writtenCount) {
     const writtenDelta = nextSample.writtenCount - previousSample.writtenCount;
     events.push({
       capturedAt: nextSample.capturedAt,
       requestId: nextSample.requestId,
       tone: "info",
-      message: `Rows written +${writtenDelta.toLocaleString("en-US")} (total ${nextSample.writtenCount.toLocaleString("en-US")})`,
+      message: `Rows written +${formatProgressValue(writtenDelta, "rows")} (total ${formatProgressValue(nextSample.writtenCount, "rows")})`,
     });
   }
 

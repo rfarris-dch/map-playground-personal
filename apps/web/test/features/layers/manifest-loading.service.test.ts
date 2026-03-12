@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, mock } from "bun:test";
 import { createPmtilesSourceUrl } from "@map-migration/geo-tiles";
 import { loadTilePublishManifest } from "@map-migration/geo-tiles/effect";
-import { loadParcelsManifest } from "@/features/parcels/parcels.service";
 
 const validManifest = {
   dataset: "parcels-draw-v1",
@@ -38,27 +37,25 @@ describe("manifest loading services", () => {
     ).rejects.toThrow("[flood] failed to load tile manifest");
   });
 
-  it("keeps parcels manifest network errors surfaced as the original thrown error", async () => {
-    const thrown = new Error("socket hang up");
-    globalThis.fetch = mock(() => Promise.reject(thrown));
-
-    await expect(
-      loadParcelsManifest({
-        manifestPath: "manifests/parcels.json",
-      })
-    ).rejects.toBe(thrown);
-  });
-
-  it("normalizes relative manifest paths and PMTiles asset URLs for both manifest consumers", async () => {
+  it("resolves relative PMTiles asset paths against the manifest origin", async () => {
     const fetchMock = mock((input: RequestInfo | URL) => {
-      expect(input).toBe("/manifests/parcels.json");
+      expect(input).toBe("https://tiles.example.com/tiles/parcels-draw-v1/latest.json");
       return Promise.resolve(
-        new Response(JSON.stringify(validManifest), {
-          headers: {
-            "content-type": "application/json",
-          },
-          status: 200,
-        })
+        new Response(
+          JSON.stringify({
+            ...validManifest,
+            current: {
+              ...validManifest.current,
+              url: "20260308.deadbeef.pmtiles",
+            },
+          }),
+          {
+            headers: {
+              "content-type": "application/json",
+            },
+            status: 200,
+          }
+        )
       );
     });
 
@@ -67,27 +64,23 @@ describe("manifest loading services", () => {
       configurable: true,
       value: {
         location: {
-          origin: "https://example.com",
+          origin: "https://app.example.com",
         },
       },
     });
 
-    const parcelsManifest = await loadParcelsManifest({
-      manifestPath: "manifests/parcels.json",
-    });
-    const vectorManifest = await loadTilePublishManifest({
+    const manifest = await loadTilePublishManifest({
       contextLabel: "parcels",
-      manifestPath: "manifests/parcels.json",
+      manifestPath: "https://tiles.example.com/tiles/parcels-draw-v1/latest.json",
     });
 
-    expect(parcelsManifest.current.version).toBe("20260308.deadbeef");
-    expect(vectorManifest.current.version).toBe("20260308.deadbeef");
-    expect(createPmtilesSourceUrl(parcelsManifest)).toBe(
-      "pmtiles://https://example.com/tiles/parcels/20260308.deadbeef.pmtiles"
-    );
-    expect(createPmtilesSourceUrl(vectorManifest)).toBe(
-      "pmtiles://https://example.com/tiles/parcels/20260308.deadbeef.pmtiles"
-    );
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(manifest.current.version).toBe("20260308.deadbeef");
+    expect(
+      createPmtilesSourceUrl(
+        manifest,
+        "https://tiles.example.com/tiles/parcels-draw-v1/latest.json"
+      )
+    ).toBe("pmtiles://https://tiles.example.com/tiles/parcels-draw-v1/20260308.deadbeef.pmtiles");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

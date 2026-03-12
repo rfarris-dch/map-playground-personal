@@ -15,7 +15,15 @@ const DEFAULT_EFFECT_DEVTOOLS_URL = "ws://localhost:34437";
 const API_REQUEST_CONTEXT_KEY = "ApiRequestContext";
 
 interface RunApiEffectOptions {
+  readonly failureMetadata?: RuntimeFailureMetadata;
   readonly signal?: AbortSignal;
+}
+
+interface RuntimeFailureMetadata {
+  readonly method?: string;
+  readonly path?: string;
+  readonly requestId?: string;
+  readonly source: string;
 }
 
 interface HonoRequestSnapshot {
@@ -143,6 +151,27 @@ function buildFailureSummary(cause: Cause.Cause<unknown>): {
   };
 }
 
+function recordFailureExit(
+  exit: Exit.Exit<unknown, unknown>,
+  metadata?: RuntimeFailureMetadata
+): void {
+  if (!Exit.isFailure(exit) || Cause.isInterruptedOnly(exit.cause)) {
+    return;
+  }
+
+  const failure = buildFailureSummary(exit.cause);
+  recordRuntimeEffectFailure({
+    cause: Cause.pretty(exit.cause, { renderErrorCause: true }),
+    code: failure.code,
+    ...(typeof failure.details === "undefined" ? {} : { details: failure.details }),
+    message: failure.message,
+    ...(typeof metadata?.method === "string" ? { method: metadata.method } : {}),
+    ...(typeof metadata?.path === "string" ? { path: metadata.path } : {}),
+    ...(typeof metadata?.requestId === "string" ? { requestId: metadata.requestId } : {}),
+    source: metadata?.source ?? "api-runtime",
+  });
+}
+
 class RuntimeFailureSupervisor extends Supervisor.AbstractSupervisor<void> {
   readonly value = Effect.void;
 
@@ -217,12 +246,25 @@ export function runApiEffect<TValue, TError>(
   program: Effect.Effect<TValue, TError, never>,
   options: RunApiEffectOptions = {}
 ): Promise<TValue> {
-  return apiEffectRuntime.runPromise(program, options);
+  return runApiEffectExit(program, options).then((exit) => {
+    if (Exit.isSuccess(exit)) {
+      return exit.value;
+    }
+
+    throw Cause.squash(exit.cause);
+  });
 }
 
 export function runApiEffectExit<TValue, TError>(
   program: Effect.Effect<TValue, TError, never>,
   options: RunApiEffectOptions = {}
 ) {
-  return apiEffectRuntime.runPromiseExit(program, options);
+  return apiEffectRuntime
+    .runPromiseExit(program, {
+      signal: options.signal,
+    })
+    .then((exit) => {
+      recordFailureExit(exit, options.failureMetadata);
+      return exit;
+    });
 }

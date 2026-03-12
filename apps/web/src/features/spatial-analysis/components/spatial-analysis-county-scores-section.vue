@@ -241,7 +241,6 @@
                 <div>Policy momentum: {{ formatMetric(row.policyMomentumScore) }}</div>
                 <div>Policy events: {{ formatCount(row.policyEventCount) }}</div>
                 <div>Primary market: {{ row.primaryMarketId ?? "-" }}</div>
-                <div>Water stress: {{ formatMetric(row.waterStressScore, 2) }}</div>
               </dd>
             </div>
           </dl>

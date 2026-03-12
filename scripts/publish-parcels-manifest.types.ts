@@ -5,6 +5,7 @@ export interface CliArgs {
   readonly ingestionRunId: string | null;
   readonly outputRoot: string;
   readonly pmtilesPath: string | null;
+  readonly publicBaseUrl: string | null;
   readonly runId: string | null;
   readonly snapshotRoot: string;
   readonly tilesOutDir: string;

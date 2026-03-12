@@ -177,7 +177,6 @@ That inventory belongs here as runtime orientation, but the per-domain details b
 
 The worker process exists for long-running operational work that should not be coupled to HTTP latency:
 
-- `apps/api/src/sync/hyperscale-sync.service.ts` starts the hyperscale sync loop
 - `apps/api/src/sync/parcels-sync.service.ts` delegates to the parcels sync application service
 - `apps/api/src/sync/parcels-sync/application/parcels-sync-loop.application.service.ts` owns the parcels loop orchestration
 

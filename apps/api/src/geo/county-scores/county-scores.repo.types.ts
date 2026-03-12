@@ -51,7 +51,6 @@ export interface CountyScoreRow {
   readonly top_drivers_json: unknown;
   readonly transmission_miles_69kv_plus: number | string | null | undefined;
   readonly transmission_miles_230kv_plus: number | string | null | undefined;
-  readonly water_stress_score: number | string | null | undefined;
   readonly what_changed_30d_json: unknown;
   readonly what_changed_60d_json: unknown;
   readonly what_changed_90d_json: unknown;

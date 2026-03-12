@@ -67,6 +67,26 @@ export type ApiEffectError =
   | ApiPolicyRejectedError
   | ApiSchemaError;
 
+const API_GET_RETRY_ATTEMPTS = 3;
+const API_GET_RETRY_BASE_DELAY_MS = 150;
+
+function retryApiGetDelayMs(attempt: number): number {
+  return API_GET_RETRY_BASE_DELAY_MS * (attempt + 1);
+}
+
+function shouldRetryApiGetResponse(response: Response): boolean {
+  if (response.status < 500 || response.status > 504) {
+    return false;
+  }
+
+  const requestId = response.headers.get(ApiHeaders.requestId);
+  if (typeof requestId === "string" && requestId.trim().length > 0) {
+    return false;
+  }
+
+  return true;
+}
+
 function parseApiError(details: unknown): ParsedApiError | null {
   const parsed = ApiErrorResponseSchema.safeParse(details);
   if (!parsed.success) {
@@ -165,9 +185,13 @@ export function apiGetJsonEffect<TValue>(
 ): Effect<ApiEffectSuccess<TValue>, ApiEffectError, never> {
   return fetchJsonEffect({
     init,
+    maxAttempts: API_GET_RETRY_ATTEMPTS,
     requestIdHeaderName: ApiHeaders.requestId,
     requestIdPrefix: options.requestIdPrefix ?? "web",
+    retryDelayMs: retryApiGetDelayMs,
     schema,
+    shouldRetryError: (error) => error._tag === "RequestNetworkError",
+    shouldRetryResponse: shouldRetryApiGetResponse,
     url,
   }).pipe(
     map(

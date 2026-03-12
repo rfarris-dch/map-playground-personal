@@ -1,19 +1,21 @@
+import { runEffectPromise } from "@map-migration/core-runtime/effect";
 import {
   assertTileManifestMatchesDataset,
   createPmtilesSourceUrl,
   type VectorTilesetSchemaContract,
 } from "@map-migration/geo-tiles";
+import { loadTilePublishManifestEffect } from "@map-migration/geo-tiles/effect";
 import type { IMap, MapClickEvent, MapPointerEvent } from "@map-migration/map-engine";
 import {
   getFacilitiesStyleLayerIds,
   getParcelsStyleLayerIds,
   validateLayerOrder,
 } from "@map-migration/map-style";
+import { Effect, Either } from "effect";
 import type { ParcelFeatureTarget } from "@/features/parcels/parcels.layer.types";
 import {
   createStressGovernor,
   evaluateParcelsGuardrails,
-  loadParcelsManifest,
 } from "@/features/parcels/parcels.service";
 import type {
   ParcelsGuardrailReason,
@@ -22,6 +24,7 @@ import type {
   ParcelsLayerState,
   ParcelsStatus,
 } from "@/features/parcels/parcels.types";
+import { resolveParcelsManifestPath } from "@/features/tiles/tile-manifest-config.service";
 
 const PARCELS_DRAW_TILESET_SCHEMA = Object.freeze<VectorTilesetSchemaContract>({
   dataset: "parcels-draw-v1",
@@ -34,7 +37,6 @@ function initialState(): ParcelsLayerState {
     destroyed: false,
     ready: false,
     sourceInitialized: false,
-    sourceInitializationAbortController: null,
     sourceInitializationPromise: null,
     visible: false,
     stressBlocked: false,
@@ -113,7 +115,7 @@ export function mountParcelsLayer(
   const parcelsStyleLayerIds = getParcelsStyleLayerIds();
   const fillLayerId = parcelsStyleLayerIds.fillLayerId;
   const outlineLayerId = parcelsStyleLayerIds.outlineLayerId;
-  const manifestPath = options.manifestPath ?? "/tiles/parcels-draw-v1/latest.json";
+  const manifestPath = resolveParcelsManifestPath(options.manifestPath);
   const disableGuardrails = options.disableGuardrails ?? false;
   const maxViewportWidthKm = options.maxViewportWidthKm ?? 40;
   const maxPredictedTiles = options.maxPredictedTiles ?? 120;
@@ -352,7 +354,7 @@ export function mountParcelsLayer(
 
     map.addSource(sourceId, {
       type: "vector",
-      url: createPmtilesSourceUrl(manifest),
+      url: createPmtilesSourceUrl(manifest, manifestPath),
       promoteId: PARCELS_DRAW_TILESET_SCHEMA.featureIdProperty,
     });
   };
@@ -439,15 +441,10 @@ export function mountParcelsLayer(
     console.error(`[parcels] layer order invariant failures: ${layerOrderFailures.join(" | ")}`);
   };
 
-  const isSourceInitializationCanceled = (abortController: AbortController): boolean => {
-    return state.destroyed || abortController.signal.aborted;
-  };
-
   const completeSourceInitialization = (
-    manifest: Awaited<ReturnType<typeof loadParcelsManifest>>,
-    abortController: AbortController
+    manifest: NonNullable<ParcelsLayerState["manifest"]>
   ): void => {
-    if (isSourceInitializationCanceled(abortController)) {
+    if (state.destroyed) {
       return;
     }
 
@@ -460,10 +457,6 @@ export function mountParcelsLayer(
     ensureSource(manifest);
     ensureFillLayer();
     ensureOutlineLayer();
-
-    if (isSourceInitializationCanceled(abortController)) {
-      return;
-    }
 
     logLayerOrderFailures();
     state.sourceInitialized = true;
@@ -480,15 +473,22 @@ export function mountParcelsLayer(
     }
 
     const sourceInitializationPromise = (async (): Promise<void> => {
-      state.sourceInitializationAbortController?.abort();
-      const abortController = new AbortController();
-      state.sourceInitializationAbortController = abortController;
       setStatus({ state: "loading-manifest" });
-      const manifest = await loadParcelsManifest({
-        manifestPath,
-        signal: abortController.signal,
-      });
-      completeSourceInitialization(manifest, abortController);
+      const result = await runEffectPromise(
+        Effect.either(
+          loadTilePublishManifestEffect({
+            contextLabel: "parcels",
+            manifestPath,
+            preserveNetworkErrorCause: true,
+          })
+        )
+      );
+
+      if (Either.isLeft(result)) {
+        throw result.left;
+      }
+
+      completeSourceInitialization(result.right.data);
     })()
       .catch((error: unknown) => {
         if (state.destroyed) {
@@ -501,7 +501,6 @@ export function mountParcelsLayer(
         throw error;
       })
       .finally(() => {
-        state.sourceInitializationAbortController = null;
         state.sourceInitializationPromise = null;
       });
 
@@ -621,8 +620,6 @@ export function mountParcelsLayer(
     },
     destroy(): void {
       state.destroyed = true;
-      state.sourceInitializationAbortController?.abort();
-      state.sourceInitializationAbortController = null;
       clearHover();
       clearSelection();
 

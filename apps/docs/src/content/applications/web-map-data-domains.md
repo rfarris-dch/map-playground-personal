@@ -10,6 +10,7 @@ sources:
   - apps/web/src/features/facilities/facility-detail/detail.ts
   - apps/web/src/features/fiber-locator/fiber-locator.layer.ts
   - apps/web/src/features/fiber-locator/api.ts
+  - apps/web/src/features/flood/flood.layer.ts
   - apps/web/src/features/parcels/parcels.layer.ts
   - apps/web/src/features/parcels/parcels.service.ts
   - apps/web/src/features/parcels/parcel-detail/detail.ts
@@ -74,6 +75,20 @@ The shell decides whether a boundary level is visible and which region IDs are s
 
 The shell-owned `use-app-shell-fiber.ts` decides when to fetch in-view layers, which line families are visible, and which source layers are selected. The feature itself stays focused on rendering and hover behavior.
 
+## Flood
+
+### What the feature owns
+
+`features/flood` stays an overlay-first map-data domain:
+
+- `flood.layer.ts` mounts the published `environmental-flood` PMTiles source and the flood hazard layers.
+- `flood-style.service.ts` and `flood-zone-classification.service.ts` keep the style-facing flood band logic aligned with the normalized tile schema.
+- `flood.service.ts` exposes the shell-facing catalog metadata for the overlay.
+
+### Boundary with analysis
+
+The web flood feature still owns runtime overlay mounting only. Server-backed flood exposure metrics now come from the spatial-analysis summary route, not by reading rendered overlay tiles in the browser. That keeps the overlay contract stable while letting reporting and dashboard views query a PostGIS-backed flood analysis dataset built from the same normalized source.
+
 ## Parcels
 
 ### What the feature owns
@@ -130,7 +145,7 @@ Selected-object detail queries and hover translators should stay outside the lay
 | [`packages/contracts`](/docs/packages/contracts) | Shared route builders and payload schemas for boundaries, facilities, fiber, and parcel detail queries. |
 | [`packages/map-style`](/docs/packages/map-style) | Style-layer ID helpers for boundaries, facilities, parcels, and power. |
 | [`packages/map-engine`](/docs/packages/map-engine) | The map abstraction all layer controllers depend on. |
-| [`packages/geo-tiles`](/docs/packages/geo-tiles) | Parcel manifest assertions and PMTiles dataset metadata. |
+| [`packages/geo-tiles`](/docs/packages/geo-tiles) | Parcel and environmental manifest assertions plus PMTiles dataset metadata. |
 
 ## Related docs
 

@@ -68,6 +68,33 @@ export function toDebugDetails(error: unknown): unknown {
     };
   }
 
+  if (
+    error === null ||
+    typeof error === "boolean" ||
+    typeof error === "number" ||
+    typeof error === "string"
+  ) {
+    return error;
+  }
+
+  if (typeof error === "bigint") {
+    return error.toString();
+  }
+
+  if (Array.isArray(error)) {
+    return error.map((value) => toDebugDetails(value));
+  }
+
+  if (typeof error === "object") {
+    try {
+      return JSON.parse(JSON.stringify(error));
+    } catch {
+      return Object.fromEntries(
+        Object.entries(error).map(([key, value]) => [key, toDebugDetails(value)])
+      );
+    }
+  }
+
   return String(error);
 }
 

@@ -49,6 +49,7 @@ RUN_ID_SUFFIX="${RUN_ID_SANITIZED:0:45}"
 STAGE_TABLE_NAME="parcels_stage_raw_${RUN_ID_SUFFIX}"
 STAGE_TABLE_FQN="parcel_build.${STAGE_TABLE_NAME}"
 REUSE_STAGE="${PARCELS_DB_LOAD_REUSE_STAGE:-1}"
+readonly PARCEL_HISTORY_RETAIN_COUNT=3
 
 RUN_SUMMARY_PATH=""
 if [[ -d "${INPUT}" ]]; then
@@ -1066,12 +1067,59 @@ BEGIN
 
     EXECUTE 'ALTER TABLE parcel_current.parcels SET SCHEMA parcel_history';
     EXECUTE format('ALTER TABLE parcel_history.parcels RENAME TO %I', archived_table_name);
+
+    FOR index_record IN
+      SELECT cls.relname
+      FROM pg_class AS cls
+      INNER JOIN pg_index AS idx ON idx.indexrelid = cls.oid
+      WHERE idx.indrelid = format('parcel_history.%I', archived_table_name)::regclass
+        AND NOT idx.indisprimary
+        AND pg_get_indexdef(idx.indexrelid) NOT LIKE '%USING gist (geom_3857)%'
+    LOOP
+      EXECUTE format('DROP INDEX IF EXISTS parcel_history.%I', index_record.relname);
+    END LOOP;
   END IF;
 END
 \$\$;
 ALTER TABLE parcel_build.parcels SET SCHEMA parcel_current;
 SELECT pg_advisory_unlock(hashtext('parcel_swap_lock'));
 COMMIT;
+SQL
+
+echo "[parcels] refreshing planner stats for parcel_current.parcels"
+update_active_status "db-load:analyze-current"
+psql "$DB_URL" -v ON_ERROR_STOP=1 <<SQL
+ALTER TABLE parcel_current.parcels
+  SET (autovacuum_analyze_scale_factor = 0.02, autovacuum_analyze_threshold = 5000);
+
+ANALYZE parcel_current.parcels;
+SQL
+
+echo "[parcels] pruning parcel history to newest ${PARCEL_HISTORY_RETAIN_COUNT} snapshots"
+update_active_status "db-load:prune-history"
+psql "$DB_URL" -v ON_ERROR_STOP=1 <<SQL
+DO \$\$
+DECLARE
+  archived_record record;
+  retained_count integer := 0;
+  keep_limit integer := ${PARCEL_HISTORY_RETAIN_COUNT};
+BEGIN
+  FOR archived_record IN
+    SELECT cls.relname
+    FROM pg_class AS cls
+    INNER JOIN pg_namespace AS ns ON ns.oid = cls.relnamespace
+    WHERE ns.nspname = 'parcel_history'
+      AND cls.relkind = 'r'
+      AND cls.relname LIKE 'parcels_prev_%'
+    ORDER BY cls.relname DESC
+  LOOP
+    retained_count := retained_count + 1;
+    IF retained_count > keep_limit THEN
+      EXECUTE format('DROP TABLE parcel_history.%I', archived_record.relname);
+    END IF;
+  END LOOP;
+END
+\$\$;
 SQL
 
 echo "[parcels] recording parcel_meta.ingestion_runs + checkpoint state"

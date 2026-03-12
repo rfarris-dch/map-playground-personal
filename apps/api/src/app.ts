@@ -8,12 +8,14 @@ import { HTTPException } from "hono/http-exception";
 import { requestId } from "hono/request-id";
 import { timeout } from "hono/timeout";
 import { parsePositiveIntFlag } from "@/config/env-parsing.service";
+import { assertPostgresReady } from "@/db/postgres";
 import { registerEffectMetricsRoute } from "@/effect/effect-metrics.route";
 import { registerAnalysisSummaryRoute } from "@/geo/analysis-summary/analysis-summary.route";
 import { registerBoundariesRoute } from "@/geo/boundaries/boundaries.route";
 import { registerCountyScoresRoute } from "@/geo/county-scores/county-scores.route";
 import { registerFacilitiesRoute } from "@/geo/facilities/facilities.route";
 import { registerFiberLocatorRoute } from "@/geo/fiber-locator/fiber-locator.route";
+import { registerFloodSyncStatusRoute } from "@/geo/flood/flood-sync-status.route";
 import { registerMarketsRoute } from "@/geo/markets/markets.route";
 import { registerParcelsRoute } from "@/geo/parcels/parcels.route";
 import { registerProvidersRoute } from "@/geo/providers/providers.route";
@@ -24,7 +26,7 @@ import {
   resolveRequestId,
   toDebugDetails,
 } from "@/http/api-response";
-import { ApiRequestContext, runEffectRoute } from "@/http/effect-route";
+import { ApiRequestContext, routeError, runEffectRoute } from "@/http/effect-route";
 import { registerTilesRoute } from "@/http/tiles.route";
 import type { ApiAppOptions, CreateApiAppOptions } from "./app.types";
 
@@ -62,6 +64,7 @@ function resolvePositiveIntOverride(value: number | undefined, fallback: number)
 
 function resolveApiAppOptions(options: CreateApiAppOptions): ApiAppOptions {
   return {
+    readinessCheck: options.readinessCheck ?? assertPostgresReady,
     requestBodyLimitBytes: resolvePositiveIntOverride(
       options.requestBodyLimitBytes,
       DEFAULT_REQUEST_BODY_LIMIT_BYTES
@@ -111,11 +114,21 @@ function healthPayload(): HealthResponse {
   };
 }
 
-function healthRouteProgram(): Effect.Effect<Response, never, ApiRequestContext> {
-  return Effect.gen(function* () {
-    const request = yield* ApiRequestContext;
-    return jsonOk(request.honoContext, HealthSchema, healthPayload(), request.requestId);
-  });
+function healthRouteProgram(readinessCheck: () => Promise<void>) {
+  return Effect.flatMap(ApiRequestContext, (request) =>
+    Effect.tryPromise({
+      try: readinessCheck,
+      catch: (error) =>
+        routeError({
+          httpStatus: 503,
+          code: "DATABASE_UNAVAILABLE",
+          message: "database is not ready",
+          details: toDebugDetails(error),
+        }),
+    }).pipe(
+      Effect.as(jsonOk(request.honoContext, HealthSchema, healthPayload(), request.requestId))
+    )
+  );
 }
 
 export function createApiApp(options: CreateApiAppOptions = {}): Hono {
@@ -191,13 +204,16 @@ export function createApiApp(options: CreateApiAppOptions = {}): Hono {
     });
   });
 
-  app.get("/health", (c) => runEffectRoute(c, healthRouteProgram()));
+  app.get("/health", (c) => runEffectRoute(c, healthRouteProgram(resolvedOptions.readinessCheck)));
 
-  app.get(ApiRoutes.health, (c) => runEffectRoute(c, healthRouteProgram()));
+  app.get(ApiRoutes.health, (c) =>
+    runEffectRoute(c, healthRouteProgram(resolvedOptions.readinessCheck))
+  );
 
   registerEffectMetricsRoute(app);
   registerFacilitiesRoute(app);
   registerAnalysisSummaryRoute(app);
+  registerFloodSyncStatusRoute(app);
   registerFiberLocatorRoute(app);
   registerParcelsRoute(app);
   registerBoundariesRoute(app);

@@ -9,13 +9,14 @@ sources:
   - apps/api/src/geo/parcels/route
   - apps/api/src/sync-worker.ts
   - apps/api/src/sync/parcels-sync.service.ts
-  - apps/api/src/sync/hyperscale-sync.service.ts
   - apps/api/src/sync/parcels-sync/application/parcels-sync-loop.application.service.ts
   - apps/api/src/sync/parcels-sync/application/parcels-sync-status-query.service.ts
   - apps/api/src/sync/parcels-sync/application/parcels-sync-store.service.ts
 ---
 
 `apps/api/src/geo/parcels` is the most operationally sensitive geo slice in the repository. It serves parcel detail and enrichment requests, but it also exposes sync state and enforces coherency rules that tie HTTP reads back to the worker runtime.
+
+That parcel lineage model is intentionally stronger than the newer environmental flood analysis path. Flood now participates in `/api/geo/analysis/summary` through its own PostGIS-backed dataset and provenance block, but it does not reuse the parcel-specific `x-parcel-ingestion-run-id` conflict contract.
 
 ## Route inventory
 
@@ -128,15 +129,6 @@ The parcel worker path is split into a public bounded-context entrypoint plus ap
 | `application/parcels-sync-store.service.ts` | Owns the singleton `ParcelsSyncStatusStore` and its config refresh lifecycle. |
 
 This is why the sync-status route can stay thin. The route does not inspect files or process logs directly.
-
-### Hyperscale sync intersection
-
-`apps/api/src/sync/hyperscale-sync.service.ts` does not expose an HTTP status route today, but it still intersects with geo serving in two ways:
-
-- the worker starts it beside parcel sync, so both operational loops share process lifecycle and shutdown behavior
-- the boundary and facilities SQL reads ultimately depend on the facility and hyperscale serving tables that those refresh scripts maintain
-
-That makes hyperscale sync part of the geo-serving story even without a dedicated `/api/geo/hyperscale/*` slice.
 
 ## Reading path for incidents and feature work
 

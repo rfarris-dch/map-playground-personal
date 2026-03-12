@@ -11,6 +11,23 @@
   const props = defineProps<PipelineDashboardProgressProps>();
 
   const buildStageLabel = computed(() => {
+    const summary = props.run?.summary ?? "";
+    if (summary.includes("phase=export")) {
+      return "Export Source Features";
+    }
+
+    if (summary.includes("phase=read")) {
+      return "Read Features";
+    }
+
+    if (summary.includes("phase=reorder")) {
+      return "Reorder Geometry";
+    }
+
+    if (summary.includes("phase=write")) {
+      return "Write Tiles";
+    }
+
     if (props.buildProgress?.stage === "read") {
       return "Read Features";
     }

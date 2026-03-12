@@ -3,6 +3,7 @@ import type { PipelineDashboardModel } from "@/features/pipeline/components/pipe
 import {
   parseBuildProgress,
   parseDbLoadProgress,
+  parseFloodStageSizeLabel,
   parseIsoTimestamp,
   stringifyUnknown,
 } from "@/features/pipeline/components/pipeline-dashboard/pipeline-dashboard-parse.service";
@@ -13,12 +14,13 @@ import {
   normalizeExpectedForDisplay,
 } from "@/features/pipeline/components/pipeline-dashboard/pipeline-dashboard-progress.service";
 import { formatPercent } from "@/features/pipeline/pipeline.service";
+import type { PipelineDataset } from "@/features/pipeline/pipeline.types";
 import { usePipelineStatus } from "@/features/pipeline/pipeline.view";
 import { estimateTileBuildRate } from "@/features/pipeline/pipeline-tracking/pipeline-tracking-build-rate.service";
 import { estimatePipelineRate } from "@/features/pipeline/pipeline-tracking/pipeline-tracking-rate.service";
 
-export function usePipelineDashboard(): PipelineDashboardModel {
-  const pipelineStatus = usePipelineStatus();
+export function usePipelineDashboard(dataset: PipelineDataset): PipelineDashboardModel {
+  const pipelineStatus = usePipelineStatus(dataset);
 
   const response = computed(() => pipelineStatus.payload.value?.response ?? null);
   const run = computed(() => response.value?.run ?? null);
@@ -42,6 +44,7 @@ export function usePipelineDashboard(): PipelineDashboardModel {
   const displayedStatesTotal = computed(() => normalizedRunProgress.value?.statesTotal ?? 0);
   const displayedWrittenCount = computed(() => normalizedRunProgress.value?.writtenCount ?? 0);
   const displayedExpectedCount = computed(() => normalizedRunProgress.value?.expectedCount ?? null);
+  const stageSizeLabel = computed(() => parseFloodStageSizeLabel(run.value?.summary ?? null));
 
   const stateProgressPercent = computed(() => {
     const progress = normalizedRunProgress.value;
@@ -190,6 +193,10 @@ export function usePipelineDashboard(): PipelineDashboardModel {
   });
 
   const dbLoadPercentLabel = computed(() => {
+    if (dataset === "flood" && run.value?.phase === "loading" && stageSizeLabel.value !== null) {
+      return stageSizeLabel.value ?? "live";
+    }
+
     const percent = dbLoadProgress.value?.percent;
     if (percent === null) {
       return "n/a";
@@ -210,7 +217,7 @@ export function usePipelineDashboard(): PipelineDashboardModel {
     }
 
     if (stepKey === "materialize") {
-      return "Metrics";
+      return dataset === "flood" ? "Current batch" : "Metrics";
     }
 
     return "Detail";
@@ -307,7 +314,9 @@ export function usePipelineDashboard(): PipelineDashboardModel {
     }
 
     if (currentRun.states.length <= 1 && !currentRun.isRunning) {
-      return "This run only exposes a partial checkpoint set (likely a smoke/single-state run). Full-state visibility appears only during a full sync run.";
+      return dataset === "flood"
+        ? "This flood run only exposes a partial checkpoint set. Full monitor detail appears during a full environmental sync run."
+        : "This run only exposes a partial checkpoint set (likely a smoke/single-state run). Full-state visibility appears only during a full sync run.";
     }
 
     return null;
@@ -325,7 +334,13 @@ export function usePipelineDashboard(): PipelineDashboardModel {
     }
 
     if (!currentResponse.enabled) {
-      return "No active parcels sync is running (AUTO_PARCELS_SYNC=false). Status values stay static until a new run starts.";
+      return dataset === "flood"
+        ? "No active flood sync is running. Status values stay static until a new flood refresh starts."
+        : "No active parcels sync is running (AUTO_PARCELS_SYNC=false). Status values stay static until a new run starts.";
+    }
+
+    if (dataset === "flood") {
+      return null;
     }
 
     const generatedAtMs = parseIsoTimestamp(currentResponse.generatedAt);
@@ -349,6 +364,7 @@ export function usePipelineDashboard(): PipelineDashboardModel {
   }
 
   return {
+    dataset,
     pipelineStatus,
     response,
     run,
@@ -372,6 +388,7 @@ export function usePipelineDashboard(): PipelineDashboardModel {
     dbLoadProgress,
     dbLoadPercentLabel,
     dbLoadDetailLabel,
+    stageSizeLabel,
     isMaterializeFinalizing,
     buildProgress,
     buildProgressPercent,

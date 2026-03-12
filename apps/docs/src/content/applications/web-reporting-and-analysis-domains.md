@@ -68,12 +68,14 @@ This is why `quick-view` and `scanner` are feature services, not route component
 
 `features/spatial-analysis` provides shared normalization helpers that support both measure and scanner workflows:
 
+- `spatial-analysis-summary.api.ts` calls the canonical `/api/geo/analysis/summary` composition route and carries parcel-ingestion expectations into that server-backed summary request.
+- `spatial-analysis-summary.service.ts` builds dashboard-safe summary models, including the server-backed flood exposure block when the API includes it.
 - `spatial-analysis-parcels-query.service.ts` paginates parcel-enrich responses, deduplicates parcels by ID, carries warnings forward, and detects ingestion-run mismatches across pages.
 - `spatial-analysis-parcels.service.ts` formats parcel field access and focus-field output for downstream summaries.
 - `spatial-analysis-facilities.service.ts` normalizes facility comparison and display labels.
 - `spatial-analysis-overview.service.ts` builds parcel-level summary output used by analysis-oriented overlays.
 
-These files are the right place for cross-feature analysis rules that should not live inside the map shell or a single overlay.
+These files are the right place for cross-feature analysis rules that should not live inside the map shell or a single overlay. Flood is the current example: the web overlay still mounts PMTiles locally, while the reporting and dashboard surfaces consume flood exposure from the server summary payload.
 
 ## Responsibility boundaries worth preserving
 

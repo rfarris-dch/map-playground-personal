@@ -1,6 +1,8 @@
+import { runEffectPromise } from "@map-migration/core-runtime/effect";
 import type { IMap } from "@map-migration/map-engine";
 import { getBoundaryStyleLayerIds } from "@map-migration/map-style";
-import { fetchBoundaryPower } from "@/features/boundaries/api";
+import { Effect, Either } from "effect";
+import { fetchBoundaryPowerEffect } from "@/features/boundaries/api";
 import {
   boundaryFillColorExpression,
   boundaryFillOpacity,
@@ -237,20 +239,14 @@ export function mountBoundaryLayer(
   async function refreshSourceData(): Promise<void> {
     state.requestSequence += 1;
     const requestSequence = state.requestSequence;
-
-    state.abortController?.abort();
-    state.abortController = new AbortController();
-
-    const result = await fetchBoundaryPower(layerId, {
-      signal: state.abortController.signal,
-    });
+    const result = await runEffectPromise(Effect.either(fetchBoundaryPowerEffect(layerId)));
 
     if (requestSequence !== state.requestSequence) {
       return;
     }
 
-    if (!result.ok) {
-      if (result.reason === "aborted") {
+    if (Either.isLeft(result)) {
+      if (result.left._tag === "ApiAbortedError") {
         return;
       }
 
@@ -263,7 +259,7 @@ export function mountBoundaryLayer(
     }
 
     clearHover();
-    state.allFeatures = result.data.features;
+    state.allFeatures = result.right.data.features;
     applySourceData();
     options.onFacetOptionsChange?.(layerId, toFacetOptions(state.allFeatures));
     state.dataLoaded = true;
@@ -365,11 +361,10 @@ export function mountBoundaryLayer(
       }
     },
     destroy(): void {
+      state.requestSequence += 1;
       map.off("load", onLoad);
       map.offPointerMove(onPointerMove);
       map.offPointerLeave(onPointerLeave);
-      state.abortController?.abort();
-      state.abortController = null;
       clearHover();
       restoreBasemapBoundaryLayers();
       if (map.hasLayer(fillLayerId)) {

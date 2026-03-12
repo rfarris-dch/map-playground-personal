@@ -45,61 +45,50 @@ WITH bounds AS (
 ),
 candidates AS (
   SELECT
-    s.facility_id,
-    s.facility_name,
-    s.provider_id,
-    s.county_fips,
-    s.state_abbrev,
-    s.commissioned_power_mw,
-    s.planned_power_mw,
-    s.under_construction_power_mw,
-    s.available_power_mw,
-    s.commissioned_semantic,
-    s.geom,
-    s.source_row_ids
-  FROM serve.facility_site AS s, bounds
-  WHERE s.geom_3857 && bounds.bbox_3857
-    AND ST_Intersects(s.geom_3857, bounds.bbox_3857)
-    AND s.provider_id IS NOT NULL
+    facility.facility_id,
+    facility.facility_name,
+    facility.provider_id,
+    facility.provider_slug,
+    facility.county_fips,
+    facility.state_abbrev,
+    facility.commissioned_power_mw,
+    facility.planned_power_mw,
+    facility.under_construction_power_mw,
+    facility.available_power_mw,
+    facility.commissioned_semantic,
+    facility.geom
+  FROM serve.facility_site AS facility, bounds
+  WHERE facility.geom_3857 && bounds.bbox_3857
+    AND ST_Intersects(facility.geom_3857, bounds.bbox_3857)
+    AND facility.provider_id IS NOT NULL
   LIMIT $5
 )
 SELECT
   c.facility_id,
   c.facility_name,
   c.provider_id,
-  COALESCE(NULLIF(BTRIM(p."NAME"), ''), c.provider_id::text) AS provider_name,
+  COALESCE(
+    NULLIF(BTRIM(provider.provider_name), ''),
+    NULLIF(INITCAP(REPLACE(c.provider_slug, '-', ' ')), ''),
+    c.provider_id
+  ) AS provider_name,
   COALESCE(c.county_fips, ''::text) AS county_fips,
-  COALESCE(NULLIF(BTRIM(c.state_abbrev), ''), NULLIF(BTRIM(l."STATE"), '')) AS state_abbrev,
+  NULLIF(BTRIM(c.state_abbrev), '') AS state_abbrev,
   c.commissioned_power_mw,
   c.planned_power_mw,
   c.under_construction_power_mw,
   c.available_power_mw,
-  psi."SQUARE_FOOTAGE"::numeric AS square_footage,
+  NULL::numeric AS square_footage,
   c.commissioned_semantic,
   NULL::text AS lease_or_own,
-  lc."SECONDARY_CLASSIFICATION"::text AS status_label,
-  l."ADDRESS_LINE1"::text AS address,
-  l."CITY"::text AS city,
-  l."STATE"::text AS state,
+  NULL::text AS status_label,
+  NULL::text AS address,
+  NULL::text AS city,
+  NULL::text AS state,
   ST_AsGeoJSON(c.geom)::jsonb AS geom_json
 FROM candidates AS c
-LEFT JOIN mirror."HAWK_PROVIDER_PROFILE" AS p
-  ON p."PROVIDER_PROFILE_ID"::text = c.provider_id::text
-LEFT JOIN LATERAL (
-  SELECT
-    MAX(entry->>'facility_location_id') FILTER (WHERE entry ? 'facility_location_id')
-      AS facility_location_id,
-    MAX(entry->>'power_space_info_id') FILTER (WHERE entry ? 'power_space_info_id')
-      AS power_space_info_id,
-    MAX(entry->>'product_id') FILTER (WHERE entry ? 'product_id') AS product_id
-  FROM jsonb_array_elements(COALESCE(c.source_row_ids, '[]'::jsonb)) AS entry
-) AS src ON TRUE
-LEFT JOIN mirror."HAWK_FACILITY_LOCATION" AS l
-  ON l."FACILITY_LOCATION_ID"::text = src.facility_location_id
-LEFT JOIN mirror."HAWK_POWER_SPACE_INFO" AS psi
-  ON psi."POWER_SPACE_INFO_ID"::text = src.power_space_info_id
-LEFT JOIN mirror."HAWK_LISTING_COLO" AS lc
-  ON lc."PRODUCT_ID"::text = src.product_id;`,
+LEFT JOIN facility_current.providers AS provider
+  ON provider.provider_id = c.provider_id;`,
   },
   facilities_bbox_hyperscale: {
     name: "facilities_bbox_hyperscale",
@@ -111,55 +100,50 @@ WITH bounds AS (
 ),
 candidates AS (
   SELECT
-    s.hyperscale_id,
-    s.facility_name,
-    s.provider_id,
-    s.county_fips,
-    s.state_abbrev,
-    s.commissioned_power_mw,
-    s.commissioned_semantic,
-    s.planned_power_mw,
-    s.under_construction_power_mw,
-    s.lease_or_own,
-    s.geom,
-    s.source_row_ids
-  FROM serve.hyperscale_site AS s, bounds
-  WHERE s.geom_3857 && bounds.bbox_3857
-    AND ST_Intersects(s.geom_3857, bounds.bbox_3857)
-    AND s.provider_id IS NOT NULL
+    facility.hyperscale_id,
+    facility.facility_name,
+    facility.provider_id,
+    facility.provider_slug,
+    facility.county_fips,
+    facility.state_abbrev,
+    facility.commissioned_power_mw,
+    facility.commissioned_semantic,
+    facility.planned_power_mw,
+    facility.under_construction_power_mw,
+    facility.lease_or_own,
+    facility.geom
+  FROM serve.hyperscale_site AS facility, bounds
+  WHERE facility.geom_3857 && bounds.bbox_3857
+    AND ST_Intersects(facility.geom_3857, bounds.bbox_3857)
+    AND facility.provider_id IS NOT NULL
   LIMIT $5
 )
 SELECT
   c.hyperscale_id AS facility_id,
   c.facility_name,
   c.provider_id,
-  COALESCE(NULLIF(BTRIM(p."NAME"), ''), c.provider_id::text) AS provider_name,
+  COALESCE(
+    NULLIF(BTRIM(provider.provider_name), ''),
+    NULLIF(INITCAP(REPLACE(c.provider_slug, '-', ' ')), ''),
+    c.provider_id
+  ) AS provider_name,
   COALESCE(c.county_fips, ''::text) AS county_fips,
-  COALESCE(NULLIF(BTRIM(c.state_abbrev), ''), NULLIF(BTRIM(hf."STATE"), '')) AS state_abbrev,
+  NULLIF(BTRIM(c.state_abbrev), '') AS state_abbrev,
   c.commissioned_power_mw,
   c.planned_power_mw,
   c.under_construction_power_mw,
   NULL::numeric AS available_power_mw,
-  hf."BUILDING_SQUARE_FOOTAGE"::numeric AS square_footage,
+  NULL::numeric AS square_footage,
   c.commissioned_semantic,
   c.lease_or_own,
-  hf."FACILITY_STATUS"::text AS status_label,
-  hf."ADDRESS"::text AS address,
-  hf."CITY"::text AS city,
-  hf."STATE"::text AS state,
+  NULL::text AS status_label,
+  NULL::text AS address,
+  NULL::text AS city,
+  NULL::text AS state,
   ST_AsGeoJSON(c.geom)::jsonb AS geom_json
 FROM candidates AS c
-LEFT JOIN mirror."HAWK_PROVIDER_PROFILE" AS p
-  ON p."PROVIDER_PROFILE_ID"::text = c.provider_id::text
-LEFT JOIN LATERAL (
-  SELECT (entry->>'id')::bigint AS mirror_id
-  FROM jsonb_array_elements(c.source_row_ids) AS entry
-  WHERE entry->>'table' = 'HYPERSCALE_FACILITY'
-    AND entry ? 'id'
-  LIMIT 1
-) AS src ON TRUE
-LEFT JOIN mirror."HYPERSCALE_FACILITY" AS hf
-  ON hf."ID" = src.mirror_id;`,
+LEFT JOIN facility_current.providers AS provider
+  ON provider.provider_id = c.provider_id;`,
   },
   facilities_polygon_colocation: {
     name: "facilities_polygon_colocation",
@@ -171,138 +155,50 @@ WITH aoi AS (
 ),
 candidates AS (
   SELECT
-    f.facility_id,
-    f.facility_name,
-    f.provider_id,
-    f.county_fips,
-    f.state_abbrev,
-    f.commissioned_power_mw,
-    f.planned_power_mw,
-    f.under_construction_power_mw,
-    f.available_power_mw,
-    f.commissioned_semantic,
-    f.geom,
-    f.source_row_ids
-  FROM serve.facility_site AS f, aoi
-  WHERE f.geom_3857 && aoi.geom_3857
-    AND ST_Intersects(f.geom_3857, aoi.geom_3857)
-    AND f.provider_id IS NOT NULL
+    facility.facility_id,
+    facility.facility_name,
+    facility.provider_id,
+    facility.provider_slug,
+    facility.county_fips,
+    facility.state_abbrev,
+    facility.commissioned_power_mw,
+    facility.planned_power_mw,
+    facility.under_construction_power_mw,
+    facility.available_power_mw,
+    facility.commissioned_semantic,
+    facility.geom
+  FROM serve.facility_site AS facility, aoi
+  WHERE facility.geom_3857 && aoi.geom_3857
+    AND ST_Intersects(facility.geom_3857, aoi.geom_3857)
+    AND facility.provider_id IS NOT NULL
   LIMIT $2
-),
-candidate_source_ids AS (
-  SELECT
-    c.facility_id,
-    MAX(
-      CASE
-        WHEN entry ? 'facility_location_id'
-          AND entry->>'facility_location_id' ~ '^[0-9]+$'
-          THEN (entry->>'facility_location_id')::bigint
-        ELSE NULL
-      END
-    ) AS facility_location_id,
-    MAX(
-      CASE
-        WHEN entry ? 'power_space_info_id'
-          AND entry->>'power_space_info_id' ~ '^[0-9]+$'
-          THEN (entry->>'power_space_info_id')::bigint
-        ELSE NULL
-      END
-    ) AS power_space_info_id,
-    MAX(
-      CASE
-        WHEN entry ? 'product_id'
-          AND entry->>'product_id' ~ '^[0-9]+$'
-          THEN (entry->>'product_id')::bigint
-        ELSE NULL
-      END
-    ) AS product_id
-  FROM candidates AS c
-  LEFT JOIN LATERAL jsonb_array_elements(COALESCE(c.source_row_ids, '[]'::jsonb)) AS entry ON TRUE
-  GROUP BY c.facility_id
-),
-provider_profiles AS (
-  SELECT
-    p."PROVIDER_PROFILE_ID",
-    p."NAME"
-  FROM mirror."HAWK_PROVIDER_PROFILE" AS p
-  JOIN (
-    SELECT DISTINCT c.provider_id::bigint AS provider_profile_id
-    FROM candidates AS c
-    WHERE c.provider_id ~ '^[0-9]+$'
-  ) AS ids
-    ON ids.provider_profile_id = p."PROVIDER_PROFILE_ID"
-),
-facility_locations AS (
-  SELECT
-    l."FACILITY_LOCATION_ID",
-    l."ADDRESS_LINE1",
-    l."CITY",
-    l."STATE"
-  FROM mirror."HAWK_FACILITY_LOCATION" AS l
-  JOIN (
-    SELECT DISTINCT src.facility_location_id
-    FROM candidate_source_ids AS src
-    WHERE src.facility_location_id IS NOT NULL
-  ) AS ids
-    ON ids.facility_location_id = l."FACILITY_LOCATION_ID"
-),
-power_space_infos AS (
-  SELECT
-    psi."POWER_SPACE_INFO_ID",
-    psi."SQUARE_FOOTAGE"
-  FROM mirror."HAWK_POWER_SPACE_INFO" AS psi
-  JOIN (
-    SELECT DISTINCT src.power_space_info_id
-    FROM candidate_source_ids AS src
-    WHERE src.power_space_info_id IS NOT NULL
-  ) AS ids
-    ON ids.power_space_info_id = psi."POWER_SPACE_INFO_ID"
-),
-listing_colo AS (
-  SELECT
-    lc."PRODUCT_ID",
-    lc."SECONDARY_CLASSIFICATION"
-  FROM mirror."HAWK_LISTING_COLO" AS lc
-  JOIN (
-    SELECT DISTINCT src.product_id
-    FROM candidate_source_ids AS src
-    WHERE src.product_id IS NOT NULL
-  ) AS ids
-    ON ids.product_id = lc."PRODUCT_ID"
 )
 SELECT
   c.facility_id,
   c.facility_name,
   c.provider_id,
-  COALESCE(NULLIF(BTRIM(p."NAME"), ''), c.provider_id::text) AS provider_name,
+  COALESCE(
+    NULLIF(BTRIM(provider.provider_name), ''),
+    NULLIF(INITCAP(REPLACE(c.provider_slug, '-', ' ')), ''),
+    c.provider_id
+  ) AS provider_name,
   COALESCE(c.county_fips, ''::text) AS county_fips,
-  COALESCE(NULLIF(BTRIM(c.state_abbrev), ''), NULLIF(BTRIM(l."STATE"), '')) AS state_abbrev,
+  NULLIF(BTRIM(c.state_abbrev), '') AS state_abbrev,
   c.commissioned_power_mw,
   c.planned_power_mw,
   c.under_construction_power_mw,
   c.available_power_mw,
-  psi."SQUARE_FOOTAGE"::numeric AS square_footage,
+  NULL::numeric AS square_footage,
   c.commissioned_semantic,
   NULL::text AS lease_or_own,
-  lc."SECONDARY_CLASSIFICATION"::text AS status_label,
-  l."ADDRESS_LINE1"::text AS address,
-  l."CITY"::text AS city,
-  l."STATE"::text AS state,
+  NULL::text AS status_label,
+  NULL::text AS address,
+  NULL::text AS city,
+  NULL::text AS state,
   ST_AsGeoJSON(c.geom)::jsonb AS geom_json
 FROM candidates AS c
-LEFT JOIN candidate_source_ids AS src
-  ON src.facility_id = c.facility_id
-LEFT JOIN provider_profiles AS p
-  ON p."PROVIDER_PROFILE_ID" = CASE
-    WHEN c.provider_id ~ '^[0-9]+$' THEN c.provider_id::bigint
-    ELSE NULL
-  END
-LEFT JOIN facility_locations AS l
-  ON l."FACILITY_LOCATION_ID" = src.facility_location_id
-LEFT JOIN power_space_infos AS psi
-  ON psi."POWER_SPACE_INFO_ID" = src.power_space_info_id
-LEFT JOIN listing_colo AS lc
-  ON lc."PRODUCT_ID" = src.product_id;`,
+LEFT JOIN facility_current.providers AS provider
+  ON provider.provider_id = c.provider_id;`,
   },
   facilities_polygon_hyperscale: {
     name: "facilities_polygon_hyperscale",
@@ -314,97 +210,50 @@ WITH aoi AS (
 ),
 candidates AS (
   SELECT
-    h.hyperscale_id,
-    h.facility_name,
-    h.provider_id,
-    h.county_fips,
-    h.state_abbrev,
-    h.commissioned_power_mw,
-    h.planned_power_mw,
-    h.under_construction_power_mw,
-    h.commissioned_semantic,
-    h.lease_or_own,
-    h.geom,
-    h.source_row_ids
-  FROM serve.hyperscale_site AS h, aoi
-  WHERE h.geom_3857 && aoi.geom_3857
-    AND ST_Intersects(h.geom_3857, aoi.geom_3857)
-    AND h.provider_id IS NOT NULL
+    facility.hyperscale_id,
+    facility.facility_name,
+    facility.provider_id,
+    facility.provider_slug,
+    facility.county_fips,
+    facility.state_abbrev,
+    facility.commissioned_power_mw,
+    facility.planned_power_mw,
+    facility.under_construction_power_mw,
+    facility.commissioned_semantic,
+    facility.lease_or_own,
+    facility.geom
+  FROM serve.hyperscale_site AS facility, aoi
+  WHERE facility.geom_3857 && aoi.geom_3857
+    AND ST_Intersects(facility.geom_3857, aoi.geom_3857)
+    AND facility.provider_id IS NOT NULL
   LIMIT $2
-),
-candidate_source_ids AS (
-  SELECT
-    c.hyperscale_id,
-    MAX(
-      CASE
-        WHEN entry->>'table' = 'HYPERSCALE_FACILITY'
-          AND entry ? 'id'
-          AND entry->>'id' ~ '^[0-9]+$'
-          THEN (entry->>'id')::bigint
-        ELSE NULL
-      END
-    ) AS mirror_id
-  FROM candidates AS c
-  LEFT JOIN LATERAL jsonb_array_elements(COALESCE(c.source_row_ids, '[]'::jsonb)) AS entry ON TRUE
-  GROUP BY c.hyperscale_id
-),
-provider_profiles AS (
-  SELECT
-    p."PROVIDER_PROFILE_ID",
-    p."NAME"
-  FROM mirror."HAWK_PROVIDER_PROFILE" AS p
-  JOIN (
-    SELECT DISTINCT c.provider_id::bigint AS provider_profile_id
-    FROM candidates AS c
-    WHERE c.provider_id ~ '^[0-9]+$'
-  ) AS ids
-    ON ids.provider_profile_id = p."PROVIDER_PROFILE_ID"
-),
-hyperscale_facilities AS (
-  SELECT
-    hf."ID",
-    hf."BUILDING_SQUARE_FOOTAGE",
-    hf."FACILITY_STATUS",
-    hf."ADDRESS",
-    hf."CITY",
-    hf."STATE"
-  FROM mirror."HYPERSCALE_FACILITY" AS hf
-  JOIN (
-    SELECT DISTINCT src.mirror_id
-    FROM candidate_source_ids AS src
-    WHERE src.mirror_id IS NOT NULL
-  ) AS ids
-    ON ids.mirror_id = hf."ID"
 )
 SELECT
   c.hyperscale_id AS facility_id,
   c.facility_name,
   c.provider_id,
-  COALESCE(NULLIF(BTRIM(p."NAME"), ''), c.provider_id::text) AS provider_name,
+  COALESCE(
+    NULLIF(BTRIM(provider.provider_name), ''),
+    NULLIF(INITCAP(REPLACE(c.provider_slug, '-', ' ')), ''),
+    c.provider_id
+  ) AS provider_name,
   COALESCE(c.county_fips, ''::text) AS county_fips,
-  COALESCE(NULLIF(BTRIM(c.state_abbrev), ''), NULLIF(BTRIM(hf."STATE"), '')) AS state_abbrev,
+  NULLIF(BTRIM(c.state_abbrev), '') AS state_abbrev,
   c.commissioned_power_mw,
   c.planned_power_mw,
   c.under_construction_power_mw,
   NULL::numeric AS available_power_mw,
-  hf."BUILDING_SQUARE_FOOTAGE"::numeric AS square_footage,
+  NULL::numeric AS square_footage,
   c.commissioned_semantic,
   c.lease_or_own,
-  hf."FACILITY_STATUS"::text AS status_label,
-  hf."ADDRESS"::text AS address,
-  hf."CITY"::text AS city,
-  hf."STATE"::text AS state,
+  NULL::text AS status_label,
+  NULL::text AS address,
+  NULL::text AS city,
+  NULL::text AS state,
   ST_AsGeoJSON(c.geom)::jsonb AS geom_json
 FROM candidates AS c
-LEFT JOIN candidate_source_ids AS src
-  ON src.hyperscale_id = c.hyperscale_id
-LEFT JOIN provider_profiles AS p
-  ON p."PROVIDER_PROFILE_ID" = CASE
-    WHEN c.provider_id ~ '^[0-9]+$' THEN c.provider_id::bigint
-    ELSE NULL
-  END
-LEFT JOIN hyperscale_facilities AS hf
-  ON hf."ID" = src.mirror_id;`,
+LEFT JOIN facility_current.providers AS provider
+  ON provider.provider_id = c.provider_id;`,
   },
   facility_detail_colocation: {
     name: "facility_detail_colocation",
@@ -412,45 +261,34 @@ LEFT JOIN hyperscale_facilities AS hf
     maxRows: 1,
     sql: `
 SELECT
-  s.facility_id,
-  s.facility_name,
-  s.provider_id,
-  COALESCE(NULLIF(BTRIM(p."NAME"), ''), s.provider_id::text) AS provider_name,
-  COALESCE(s.county_fips, ''::text) AS county_fips,
-  COALESCE(NULLIF(BTRIM(s.state_abbrev), ''), NULLIF(BTRIM(l."STATE"), '')) AS state_abbrev,
-  s.commissioned_power_mw,
-  s.planned_power_mw,
-  s.under_construction_power_mw,
-  s.available_power_mw,
-  psi."SQUARE_FOOTAGE"::numeric AS square_footage,
-  s.commissioned_semantic,
+  facility.facility_id,
+  facility.facility_name,
+  facility.provider_id,
+  COALESCE(
+    NULLIF(BTRIM(provider.provider_name), ''),
+    NULLIF(INITCAP(REPLACE(facility.provider_slug, '-', ' ')), ''),
+    facility.provider_id
+  ) AS provider_name,
+  COALESCE(facility.county_fips, ''::text) AS county_fips,
+  NULLIF(BTRIM(facility.state_abbrev), '') AS state_abbrev,
+  facility.commissioned_power_mw,
+  facility.planned_power_mw,
+  facility.under_construction_power_mw,
+  facility.available_power_mw,
+  NULL::numeric AS square_footage,
+  facility.commissioned_semantic,
   NULL::text AS lease_or_own,
-  lc."SECONDARY_CLASSIFICATION"::text AS status_label,
-  l."ADDRESS_LINE1"::text AS address,
-  l."CITY"::text AS city,
-  l."STATE"::text AS state,
-  ST_AsGeoJSON(s.geom)::jsonb AS geom_json
-FROM serve.facility_site AS s
-LEFT JOIN mirror."HAWK_PROVIDER_PROFILE" AS p
-  ON p."PROVIDER_PROFILE_ID"::text = s.provider_id::text
-LEFT JOIN LATERAL (
-  SELECT
-    MAX(entry->>'facility_location_id') FILTER (WHERE entry ? 'facility_location_id')
-      AS facility_location_id,
-    MAX(entry->>'power_space_info_id') FILTER (WHERE entry ? 'power_space_info_id')
-      AS power_space_info_id,
-    MAX(entry->>'product_id') FILTER (WHERE entry ? 'product_id') AS product_id
-  FROM jsonb_array_elements(COALESCE(s.source_row_ids, '[]'::jsonb)) AS entry
-) AS src ON TRUE
-LEFT JOIN mirror."HAWK_FACILITY_LOCATION" AS l
-  ON l."FACILITY_LOCATION_ID"::text = src.facility_location_id
-LEFT JOIN mirror."HAWK_POWER_SPACE_INFO" AS psi
-  ON psi."POWER_SPACE_INFO_ID"::text = src.power_space_info_id
-LEFT JOIN mirror."HAWK_LISTING_COLO" AS lc
-  ON lc."PRODUCT_ID"::text = src.product_id
-WHERE s.facility_id = $1
-  AND s.geom IS NOT NULL
-  AND s.provider_id IS NOT NULL
+  NULL::text AS status_label,
+  NULL::text AS address,
+  NULL::text AS city,
+  NULL::text AS state,
+  ST_AsGeoJSON(facility.geom)::jsonb AS geom_json
+FROM serve.facility_site AS facility
+LEFT JOIN facility_current.providers AS provider
+  ON provider.provider_id = facility.provider_id
+WHERE facility.facility_id = $1
+  AND facility.geom IS NOT NULL
+  AND facility.provider_id IS NOT NULL
 LIMIT 1;`,
   },
   facility_detail_hyperscale: {
@@ -459,39 +297,34 @@ LIMIT 1;`,
     maxRows: 1,
     sql: `
 SELECT
-  s.hyperscale_id AS facility_id,
-  s.facility_name,
-  s.provider_id,
-  COALESCE(NULLIF(BTRIM(p."NAME"), ''), s.provider_id::text) AS provider_name,
-  COALESCE(s.county_fips, ''::text) AS county_fips,
-  COALESCE(NULLIF(BTRIM(s.state_abbrev), ''), NULLIF(BTRIM(hf."STATE"), '')) AS state_abbrev,
-  s.commissioned_power_mw,
-  s.planned_power_mw,
-  s.under_construction_power_mw,
+  facility.hyperscale_id AS facility_id,
+  facility.facility_name,
+  facility.provider_id,
+  COALESCE(
+    NULLIF(BTRIM(provider.provider_name), ''),
+    NULLIF(INITCAP(REPLACE(facility.provider_slug, '-', ' ')), ''),
+    facility.provider_id
+  ) AS provider_name,
+  COALESCE(facility.county_fips, ''::text) AS county_fips,
+  NULLIF(BTRIM(facility.state_abbrev), '') AS state_abbrev,
+  facility.commissioned_power_mw,
+  facility.planned_power_mw,
+  facility.under_construction_power_mw,
   NULL::numeric AS available_power_mw,
-  hf."BUILDING_SQUARE_FOOTAGE"::numeric AS square_footage,
-  s.commissioned_semantic,
-  s.lease_or_own,
-  hf."FACILITY_STATUS"::text AS status_label,
-  hf."ADDRESS"::text AS address,
-  hf."CITY"::text AS city,
-  hf."STATE"::text AS state,
-  ST_AsGeoJSON(s.geom)::jsonb AS geom_json
-FROM serve.hyperscale_site AS s
-LEFT JOIN mirror."HAWK_PROVIDER_PROFILE" AS p
-  ON p."PROVIDER_PROFILE_ID"::text = s.provider_id::text
-LEFT JOIN LATERAL (
-  SELECT (entry->>'id')::bigint AS mirror_id
-  FROM jsonb_array_elements(s.source_row_ids) AS entry
-  WHERE entry->>'table' = 'HYPERSCALE_FACILITY'
-    AND entry ? 'id'
-  LIMIT 1
-) AS src ON TRUE
-LEFT JOIN mirror."HYPERSCALE_FACILITY" AS hf
-  ON hf."ID" = src.mirror_id
-WHERE s.hyperscale_id = $1
-  AND s.geom IS NOT NULL
-  AND s.provider_id IS NOT NULL
+  NULL::numeric AS square_footage,
+  facility.commissioned_semantic,
+  facility.lease_or_own,
+  NULL::text AS status_label,
+  NULL::text AS address,
+  NULL::text AS city,
+  NULL::text AS state,
+  ST_AsGeoJSON(facility.geom)::jsonb AS geom_json
+FROM serve.hyperscale_site AS facility
+LEFT JOIN facility_current.providers AS provider
+  ON provider.provider_id = facility.provider_id
+WHERE facility.hyperscale_id = $1
+  AND facility.geom IS NOT NULL
+  AND facility.provider_id IS NOT NULL
 LIMIT 1;`,
   },
   county_metrics: {
@@ -547,7 +380,6 @@ SELECT
   gas_pipeline_presence_flag,
   gas_pipeline_mileage_county,
   fiber_presence_flag,
-  water_stress_score,
   primary_market_id,
   is_seam_county,
   formula_version,

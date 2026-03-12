@@ -5,6 +5,8 @@ import type {
   TilePublishManifest,
 } from "./index.types";
 
+const TRAILING_SLASHES_RE = /\/+$/;
+
 export type {
   TileDataset,
   TileDecodeFailure,
@@ -234,27 +236,35 @@ export function normalizeManifestPath(manifestPath: string): string {
 }
 
 function resolveLocationOrigin(locationOrigin: string | undefined): string {
-  if (typeof locationOrigin === "string") {
+  if (typeof locationOrigin === "string" && isHttpUrl(locationOrigin)) {
     return locationOrigin;
   }
 
   return window.location.origin;
 }
 
-export function normalizePmtilesAssetUrl(assetUrl: string, locationOrigin?: string): string {
-  if (assetUrl.startsWith("http://") || assetUrl.startsWith("https://")) {
+function isHttpUrl(value: string): boolean {
+  return value.startsWith("http://") || value.startsWith("https://");
+}
+
+export function normalizePmtilesAssetUrl(assetUrl: string, resolutionBase?: string): string {
+  if (isHttpUrl(assetUrl)) {
     return assetUrl;
   }
 
+  if (typeof resolutionBase === "string" && isHttpUrl(resolutionBase)) {
+    return new URL(assetUrl, resolutionBase).toString();
+  }
+
   const normalizedPath = assetUrl.startsWith("/") ? assetUrl : `/${assetUrl}`;
-  return `${resolveLocationOrigin(locationOrigin)}${normalizedPath}`;
+  return `${resolveLocationOrigin(resolutionBase)}${normalizedPath}`;
 }
 
 export function createPmtilesSourceUrl(
   manifest: TilePublishManifest,
-  locationOrigin?: string
+  resolutionBase?: string
 ): string {
-  const absoluteAssetUrl = normalizePmtilesAssetUrl(manifest.current.url, locationOrigin);
+  const absoluteAssetUrl = normalizePmtilesAssetUrl(manifest.current.url, resolutionBase);
   return `pmtiles://${absoluteAssetUrl}`;
 }
 
@@ -262,14 +272,24 @@ export function createManifestEntry(
   dataset: TileDataset,
   date: Date,
   checksum: string,
-  options: { readonly ingestionRunId?: string } = {}
+  options: {
+    readonly ingestionRunId?: string;
+    readonly publicBaseUrl?: string;
+  } = {}
 ): TileManifestEntry {
   const version = createTileVersion(date, checksum);
+  const publicBaseUrl =
+    typeof options.publicBaseUrl === "string" && options.publicBaseUrl.trim().length > 0
+      ? `${options.publicBaseUrl.trim().replace(TRAILING_SLASHES_RE, "")}/`
+      : null;
   const nextEntry: TileManifestEntry = {
     dataset,
     version,
     checksum,
-    url: buildPmtilesPath(dataset, version),
+    url:
+      publicBaseUrl === null
+        ? buildPmtilesPath(dataset, version)
+        : new URL(buildPmtilesPath(dataset, version), publicBaseUrl).toString(),
   };
 
   if (typeof options.ingestionRunId === "string" && options.ingestionRunId.trim().length > 0) {

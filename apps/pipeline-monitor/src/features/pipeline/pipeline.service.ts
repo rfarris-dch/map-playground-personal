@@ -1,4 +1,5 @@
 import {
+  buildFloodSyncStatusRoute,
   buildParcelsSyncStatusRoute,
   type ParcelSyncPhase,
   ParcelsSyncStatusResponseSchema,
@@ -10,15 +11,31 @@ import {
 } from "@map-migration/core-runtime/api";
 import { Effect, Either } from "effect";
 import type {
+  PipelineDataset,
   PipelineStatusFetchResult,
   PipelineStatusPayload,
 } from "@/features/pipeline/pipeline.types";
 
-function phaseLabel(phase: ParcelSyncPhase): string {
+function resolvePipelineStatusRoute(dataset: PipelineDataset): string {
+  if (dataset === "flood") {
+    return buildFloodSyncStatusRoute();
+  }
+
+  return buildParcelsSyncStatusRoute();
+}
+
+function phaseLabel(
+  phase: ParcelSyncPhase,
+  dataset: PipelineDataset = "parcels",
+  summary: string | null = null
+): string {
   switch (phase) {
     case "idle":
       return "Idle";
     case "extracting":
+      if (dataset === "flood" && typeof summary === "string" && summary.startsWith("normalize ")) {
+        return "Normalizing";
+      }
       return "Extracting";
     case "loading":
       return "Loading Canonical";
@@ -159,6 +176,7 @@ function createPipelineStatusFailure(
 }
 
 export function createFetchPipelineStatusEffect(
+  dataset: PipelineDataset = "parcels",
   signal?: AbortSignal
 ): Effect.Effect<PipelineStatusFetchResult, never> {
   return Effect.gen(function* () {
@@ -167,7 +185,7 @@ export function createFetchPipelineStatusEffect(
       ApiEffectError,
       never
     > = apiGetJsonEffect(
-      buildParcelsSyncStatusRoute(),
+      resolvePipelineStatusRoute(dataset),
       ParcelsSyncStatusResponseSchema,
       {
         method: "GET",
@@ -198,11 +216,15 @@ export function createFetchPipelineStatusEffect(
 }
 
 export function fetchPipelineStatus(signal?: AbortSignal): Promise<PipelineStatusFetchResult> {
-  return Effect.runPromise(createFetchPipelineStatusEffect(signal));
+  return Effect.runPromise(createFetchPipelineStatusEffect("parcels", signal));
 }
 
-export function formatPhaseLabel(phase: ParcelSyncPhase): string {
-  return phaseLabel(phase);
+export function formatPhaseLabel(
+  phase: ParcelSyncPhase,
+  dataset: PipelineDataset = "parcels",
+  summary: string | null = null
+): string {
+  return phaseLabel(phase, dataset, summary);
 }
 
 export function formatCount(value: number): string {

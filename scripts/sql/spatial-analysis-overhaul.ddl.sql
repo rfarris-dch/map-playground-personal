@@ -11,6 +11,7 @@
 BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS postgis;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 CREATE SCHEMA IF NOT EXISTS parcel_meta;
 CREATE SCHEMA IF NOT EXISTS parcel_build;
@@ -145,39 +146,84 @@ CREATE TABLE IF NOT EXISTS facility_current.hyperscale_facilities (
 CREATE INDEX IF NOT EXISTS hyper_facilities_geom_3857_gist
   ON facility_current.hyperscale_facilities USING gist (geom_3857);
 
-CREATE OR REPLACE VIEW serve.facility_site AS
-SELECT
-  facility_id,
-  facility_name,
-  provider_id,
-  state_abbrev,
-  commissioned_semantic,
-  NULL::text AS lease_or_own,
-  commissioned_power_mw,
-  planned_power_mw,
-  under_construction_power_mw,
-  available_power_mw,
-  freshness_ts,
-  ST_AsGeoJSON(geom)::jsonb AS geom_json,
-  county_fips
-FROM facility_current.colocation_facilities;
+-- The live runtime now serves from indexed materialized tables instead of views.
+CREATE TABLE IF NOT EXISTS serve.facility_site (
+  facility_id text PRIMARY KEY,
+  facility_slug text NOT NULL UNIQUE,
+  facility_name text NOT NULL,
+  facility_name_norm text NOT NULL,
+  provider_id text,
+  provider_slug text,
+  county_fips text,
+  state_abbrev text,
+  commissioned_semantic text NOT NULL DEFAULT 'unknown',
+  commissioned_power_mw numeric(12, 2) NOT NULL DEFAULT 0,
+  planned_power_mw numeric(12, 2) NOT NULL DEFAULT 0,
+  under_construction_power_mw numeric(12, 2) NOT NULL DEFAULT 0,
+  available_power_mw numeric(12, 2) NOT NULL DEFAULT 0,
+  source_system text NOT NULL,
+  source_dataset_date date,
+  source_row_ids jsonb NOT NULL DEFAULT '[]'::jsonb,
+  ingest_run_id text NOT NULL,
+  transform_version text NOT NULL,
+  data_version text NOT NULL,
+  freshness_ts timestamptz NOT NULL,
+  quality_flags jsonb NOT NULL DEFAULT '{}'::jsonb,
+  geom geometry(Point, 4326),
+  geom_3857 geometry(Point, 3857),
+  geog geography(Point, 4326)
+);
 
-CREATE OR REPLACE VIEW serve.hyperscale_site AS
-SELECT
-  hyperscale_id,
-  facility_name,
-  provider_id,
-  state_abbrev,
-  commissioned_semantic,
-  lease_or_own,
-  commissioned_power_mw,
-  planned_power_mw,
-  under_construction_power_mw,
-  NULL::numeric AS available_power_mw,
-  freshness_ts,
-  ST_AsGeoJSON(geom)::jsonb AS geom_json,
-  county_fips
-FROM facility_current.hyperscale_facilities;
+CREATE INDEX IF NOT EXISTS facility_site_geom_3857_gix
+  ON serve.facility_site USING gist (geom_3857);
+CREATE INDEX IF NOT EXISTS facility_site_geog_gix
+  ON serve.facility_site USING gist (geog);
+CREATE INDEX IF NOT EXISTS facility_site_name_norm_trgm_idx
+  ON serve.facility_site USING gin (facility_name_norm gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS facility_site_county_provider_idx
+  ON serve.facility_site (county_fips, provider_id);
+CREATE INDEX IF NOT EXISTS facility_site_provider_semantic_idx
+  ON serve.facility_site (provider_id, commissioned_semantic);
+CREATE INDEX IF NOT EXISTS facility_site_state_county_idx
+  ON serve.facility_site (state_abbrev, county_fips);
+
+CREATE TABLE IF NOT EXISTS serve.hyperscale_site (
+  hyperscale_id text PRIMARY KEY,
+  facility_code text,
+  facility_name text NOT NULL,
+  facility_name_norm text NOT NULL,
+  provider_id text,
+  provider_slug text,
+  county_fips text,
+  state_abbrev text,
+  lease_or_own text NOT NULL DEFAULT 'unknown',
+  commissioned_semantic text NOT NULL DEFAULT 'operational',
+  commissioned_power_mw numeric(12, 2) NOT NULL DEFAULT 0,
+  planned_power_mw numeric(12, 2) NOT NULL DEFAULT 0,
+  under_construction_power_mw numeric(12, 2) NOT NULL DEFAULT 0,
+  source_system text NOT NULL,
+  source_dataset_date date,
+  source_row_ids jsonb NOT NULL DEFAULT '[]'::jsonb,
+  ingest_run_id text NOT NULL,
+  transform_version text NOT NULL,
+  data_version text NOT NULL,
+  freshness_ts timestamptz NOT NULL,
+  quality_flags jsonb NOT NULL DEFAULT '{}'::jsonb,
+  geom geometry(Point, 4326),
+  geom_3857 geometry(Point, 3857),
+  geog geography(Point, 4326)
+);
+
+CREATE INDEX IF NOT EXISTS hyperscale_site_geom_3857_gix
+  ON serve.hyperscale_site USING gist (geom_3857);
+CREATE INDEX IF NOT EXISTS hyperscale_site_geog_gix
+  ON serve.hyperscale_site USING gist (geog);
+CREATE INDEX IF NOT EXISTS hyperscale_site_name_norm_trgm_idx
+  ON serve.hyperscale_site USING gin (facility_name_norm gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS hyperscale_site_county_provider_idx
+  ON serve.hyperscale_site (county_fips, provider_id);
+CREATE INDEX IF NOT EXISTS hyperscale_site_state_lease_idx
+  ON serve.hyperscale_site (state_abbrev, lease_or_own);
 
 -- =========================================================
 -- 3) Boundary sets

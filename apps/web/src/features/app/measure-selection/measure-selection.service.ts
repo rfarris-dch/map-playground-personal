@@ -69,29 +69,33 @@ export async function queryMeasureSelectionSummary(
         } satisfies FacilitiesSelectionRequest)
       : null;
 
-  const parcelsRequest: ParcelEnrichRequest = {
-    aoi: selectionAoiFromRing(args.selectionRing),
-    profile: "analysis_v1",
-    includeGeometry: "centroid",
-    pageSize: MEASURE_PARCELS_PAGE_SIZE,
-    format: "json",
-  };
+  const parcelsRequest = args.includeParcels
+    ? ({
+        aoi: selectionAoiFromRing(args.selectionRing),
+        profile: "analysis_v1",
+        includeGeometry: "centroid",
+        pageSize: MEASURE_PARCELS_PAGE_SIZE,
+        format: "json",
+      } satisfies ParcelEnrichRequest)
+    : null;
 
   const [facilitiesResult, parcelsResult] = await Promise.all([
     facilitiesRequest === null
       ? Promise.resolve<Awaited<ReturnType<typeof fetchFacilitiesBySelection>> | null>(null)
       : fetchFacilitiesBySelection(facilitiesRequest, args.signal),
-    fetchSpatialAnalysisParcelsPages({
-      expectedIngestionRunId: args.expectedParcelsIngestionRunId,
-      request: parcelsRequest,
-      signal: args.signal,
-      cursorRepeatLogContext: "measure-selection",
-    }),
+    parcelsRequest === null
+      ? Promise.resolve<Awaited<ReturnType<typeof fetchSpatialAnalysisParcelsPages>> | null>(null)
+      : fetchSpatialAnalysisParcelsPages({
+          expectedIngestionRunId: args.expectedParcelsIngestionRunId,
+          request: parcelsRequest,
+          signal: args.signal,
+          cursorRepeatLogContext: "measure-selection",
+        }),
   ]);
 
   if (
     (facilitiesResult !== null && !facilitiesResult.ok && facilitiesResult.reason === "aborted") ||
-    (!parcelsResult.ok && parcelsResult.reason === "aborted")
+    (parcelsResult !== null && !parcelsResult.ok && parcelsResult.reason === "aborted")
   ) {
     return {
       ok: false,
@@ -115,7 +119,9 @@ export async function queryMeasureSelectionSummary(
   let parcelFeatures: ParcelsFeatureCollection["features"] = [];
   let parcelTruncated = false;
   let parcelNextCursor: string | null = null;
-  if (parcelsResult.ok) {
+  if (parcelsResult === null) {
+    parcelFeatures = [];
+  } else if (parcelsResult.ok) {
     parcelFeatures = parcelsResult.features;
     parcelTruncated = parcelsResult.truncated;
     parcelNextCursor = parcelsResult.nextCursor;

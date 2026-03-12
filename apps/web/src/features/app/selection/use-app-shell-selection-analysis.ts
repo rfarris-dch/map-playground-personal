@@ -1,6 +1,7 @@
 import { Effect } from "effect";
 import { onBeforeUnmount, shallowRef, watch } from "vue";
 import type { UseAppShellSelectionAnalysisOptions } from "@/features/app/selection/use-app-shell-selection-analysis.types";
+import { cloneSelectionRing } from "@/features/selection/selection-analysis-request.service";
 import {
   buildEmptySelectionToolSummary,
   exportSelectionToolSummary,
@@ -45,19 +46,21 @@ export function useAppShellSelectionAnalysis(options: UseAppShellSelectionAnalys
       return;
     }
 
+    const selectionRing = cloneSelectionRing(selectionGeometry.ring);
+
     isSelectionLoading.value = true;
     selectionError.value = null;
     selectionProgress.value = null;
-    selectionSummary.value = buildEmptySelectionToolSummary(selectionGeometry.ring);
+    selectionSummary.value = buildEmptySelectionToolSummary(selectionRing);
 
     await selectionRunner.run(
       querySelectionToolSummaryEffect({
         expectedParcelsIngestionRunId: options.expectedParcelsIngestionRunId.value,
-        includeParcels: true,
+        includeParcels: options.includeParcels.value,
         onProgress(progress) {
           selectionProgress.value = progress;
         },
-        selectionRing: selectionGeometry.ring,
+        selectionRing,
         visiblePerspectives: options.visiblePerspectives.value,
       }).pipe(
         Effect.flatMap((queryResult) =>
@@ -81,6 +84,7 @@ export function useAppShellSelectionAnalysis(options: UseAppShellSelectionAnalys
     [
       () => options.selectionGeometry.value,
       () => options.expectedParcelsIngestionRunId.value,
+      () => options.includeParcels.value,
       () => options.visiblePerspectives.value.colocation,
       () => options.visiblePerspectives.value.hyperscale,
     ],

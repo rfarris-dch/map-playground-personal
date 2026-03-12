@@ -23,6 +23,20 @@ function emptyMarketSelectionSummary() {
   };
 }
 
+function emptyFloodSummary() {
+  return {
+    flood100AreaSqKm: 0,
+    flood100SelectionShare: 0,
+    flood500AreaSqKm: 0,
+    flood500SelectionShare: 0,
+    parcelCountIntersectingFlood100: 0,
+    parcelCountIntersectingFlood500: 0,
+    parcelCountOutsideMappedFlood: 0,
+    selectionAreaSqKm: 0,
+    unavailableReason: null,
+  };
+}
+
 export function buildEmptySpatialAnalysisSummary(
   selectionRing: readonly [number, number][]
 ): SpatialAnalysisSummaryModel {
@@ -53,6 +67,7 @@ export function buildEmptySpatialAnalysisSummary(
         parcelTruncated: false,
         parcelNextCursor: null,
       }),
+      flood: emptyFloodSummary(),
       marketSelection: emptyMarketSelectionSummary(),
     },
     warnings: emptyWarnings(),
@@ -126,6 +141,7 @@ export function buildScannerSpatialAnalysisSummary(args: {
     request: null,
     summary: {
       ...args.summary,
+      flood: emptyFloodSummary(),
       marketSelection: args.marketSelection,
     },
     warnings: countyWarnings,

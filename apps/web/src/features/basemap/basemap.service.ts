@@ -1,4 +1,9 @@
-import type { IMap, MapProjectionSpecification } from "@map-migration/map-engine";
+import type {
+  IMap,
+  MapProjectionSpecification,
+  MapStyleLayer,
+  MapStyleSpecification,
+} from "@map-migration/map-engine";
 import type {
   BasemapLayerId,
   BasemapLayerVisibilityController,
@@ -57,6 +62,12 @@ const SATELLITE_LAYER_ID = "basemap.satellite";
 const OPENMAPTILES_SOURCE_ID = "openmaptiles";
 const LANDMARKS_POI_LAYER_ID = "basemap.landmarks.poi";
 const LANDMARKS_PEAK_LAYER_ID = "basemap.landmarks.peak";
+const MISSING_SPRITE_SHIELD_LAYER_IDS = [
+  "highway-shield-non-us",
+  "highway-shield-us-interstate",
+  "road_shield_us",
+] as const;
+const MISSING_SPRITE_SHIELD_LAYER_ID_SET = new Set<string>(MISSING_SPRITE_SHIELD_LAYER_IDS);
 const DEFAULT_SATELLITE_TILE_URLS = [
   "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
   "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
@@ -67,6 +78,116 @@ const DEFAULT_SATELLITE_MAX_ZOOM = 19;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function isMapStyleSpecification(value: unknown): value is MapStyleSpecification {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof Reflect.get(value, "version") === "number" && Array.isArray(Reflect.get(value, "layers"))
+  );
+}
+
+function isGetExpression(value: unknown): value is readonly ["get", string] {
+  return (
+    Array.isArray(value) && value.length === 2 && value[0] === "get" && typeof value[1] === "string"
+  );
+}
+
+function isNameFieldExpression(value: unknown): value is readonly ["get", string] {
+  return (
+    isGetExpression(value) && (value[1] === "name" || value[1] === "name_en" || value[1] === "ref")
+  );
+}
+
+function isNumericComparisonOperator(value: unknown): value is "<" | "<=" | ">" | ">=" {
+  return value === "<" || value === "<=" || value === ">" || value === ">=";
+}
+
+function fallbackComparisonValue(
+  operator: "<" | "<=" | ">" | ">=",
+  comparisonValue: number
+): number {
+  if (operator === ">" || operator === ">=") {
+    return comparisonValue - 1;
+  }
+
+  return comparisonValue + 1;
+}
+
+function sanitizeNumericComparisonOperand(
+  operand: unknown,
+  operator: "<" | "<=" | ">" | ">=",
+  comparisonValue: number
+): unknown {
+  if (!isGetExpression(operand)) {
+    return sanitizeStyleValue(operand);
+  }
+
+  return ["to-number", ["coalesce", operand, fallbackComparisonValue(operator, comparisonValue)]];
+}
+
+function sanitizeStyleValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    if (
+      value[0] === "case" &&
+      value.some((item) => isGetExpression(item) && item[1] === "name:nonlatin")
+    ) {
+      return ["coalesce", ["get", "name_en"], ["get", "name"], ["get", "ref"]];
+    }
+
+    if (
+      value[0] === "concat" &&
+      value.some((item) => isGetExpression(item) && item[1] === "name:nonlatin")
+    ) {
+      const textFields = value.filter((item) => isNameFieldExpression(item));
+      if (textFields.length > 0) {
+        return ["coalesce", ...textFields];
+      }
+
+      return ["coalesce", ["get", "name_en"], ["get", "name"], ["get", "ref"]];
+    }
+
+    if (
+      value.length === 3 &&
+      isNumericComparisonOperator(value[0]) &&
+      typeof value[2] === "number"
+    ) {
+      return [value[0], sanitizeNumericComparisonOperand(value[1], value[0], value[2]), value[2]];
+    }
+
+    if (
+      value.length === 3 &&
+      typeof value[1] === "number" &&
+      isNumericComparisonOperator(value[0])
+    ) {
+      return [value[0], value[1], sanitizeNumericComparisonOperand(value[2], value[0], value[1])];
+    }
+
+    return value.map((item) => sanitizeStyleValue(item));
+  }
+
+  if (!isRecord(value)) {
+    return value;
+  }
+
+  const nextValue: Record<string, unknown> = {};
+  for (const [entryKey, entryValue] of Object.entries(value)) {
+    nextValue[entryKey] = sanitizeStyleValue(entryValue);
+  }
+
+  return nextValue;
+}
+
+function sanitizeBasemapStyleLayer(layer: MapStyleLayer): MapStyleLayer {
+  const sanitizedLayer = sanitizeStyleValue(layer);
+  if (!isRecord(sanitizedLayer)) {
+    return layer;
+  }
+
+  return sanitizedLayer as MapStyleLayer;
 }
 
 function uniqueStrings(values: readonly string[]): readonly string[] {
@@ -335,6 +456,16 @@ function ensureSatelliteLayer(map: IMap): void {
   }
 }
 
+function suppressMissingSpriteShieldLayers(map: IMap): void {
+  for (const layerId of MISSING_SPRITE_SHIELD_LAYER_IDS) {
+    if (!map.hasLayer(layerId)) {
+      continue;
+    }
+
+    map.setLayerVisibility(layerId, false);
+  }
+}
+
 function ensureLandmarkLayers(map: IMap): void {
   if (!map.hasSource(OPENMAPTILES_SOURCE_ID)) {
     throw new Error(`[basemap] Missing "${OPENMAPTILES_SOURCE_ID}" vector source for landmarks.`);
@@ -353,7 +484,7 @@ function ensureLandmarkLayers(map: IMap): void {
         filter: [
           "all",
           ["has", "name"],
-          ["<=", ["coalesce", ["to-number", ["get", "rank"]], 99], 8],
+          ["<=", ["to-number", ["coalesce", ["get", "rank"], 99]], 8],
         ],
         layout: {
           "text-field": ["coalesce", ["get", "name_en"], ["get", "name"]],
@@ -383,7 +514,7 @@ function ensureLandmarkLayers(map: IMap): void {
         filter: [
           "all",
           ["has", "name"],
-          ["<=", ["coalesce", ["to-number", ["get", "rank"]], 99], 6],
+          ["<=", ["to-number", ["coalesce", ["get", "rank"], 99]], 6],
         ],
         layout: {
           "text-field": ["concat", "▲ ", ["coalesce", ["get", "name_en"], ["get", "name"]]],
@@ -570,6 +701,25 @@ export function defaultBasemapStyleUrl(): string {
   return DEFAULT_BASEMAP_PROFILE.styleUrl;
 }
 
+export async function loadBasemapStyle(styleUrl: string): Promise<MapStyleSpecification> {
+  const response = await fetch(styleUrl);
+  if (!response.ok) {
+    throw new Error(`[basemap] Failed to load style "${styleUrl}" (${response.status}).`);
+  }
+
+  const styleJson: unknown = await response.json();
+  if (!isMapStyleSpecification(styleJson)) {
+    throw new Error(`[basemap] Invalid style payload from "${styleUrl}".`);
+  }
+
+  return {
+    ...styleJson,
+    layers: (styleJson.layers ?? [])
+      .filter((layer) => !MISSING_SPRITE_SHIELD_LAYER_ID_SET.has(layer.id))
+      .map((layer) => sanitizeBasemapStyleLayer(layer)),
+  };
+}
+
 export function basemapLayerIds(): readonly BasemapLayerId[] {
   return BASEMAP_LAYER_IDS;
 }
@@ -619,6 +769,7 @@ export function mountBasemapLayerVisibility(
 
   const onLoad = (): void => {
     syncProjection();
+    suppressMissingSpriteShieldLayers(map);
     ensureSatelliteLayer(map);
     ensureLandmarkLayers(map);
     const buildingSourceId = findBuildingSourceId(map, profile);
@@ -645,7 +796,13 @@ export function mountBasemapLayerVisibility(
       if (nextProfile.id !== profile.id) {
         profile = nextProfile;
         groups = null;
-        map.setStyle(profile.styleUrl);
+        loadBasemapStyle(profile.styleUrl)
+          .then((style) => {
+            map.setStyle(style);
+          })
+          .catch((error: unknown) => {
+            console.error("[basemap] failed to switch basemap style", error);
+          });
         syncProjection();
         return;
       }

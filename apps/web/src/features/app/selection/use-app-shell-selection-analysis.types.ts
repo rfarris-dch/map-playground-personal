@@ -4,6 +4,7 @@ import type { SketchAreaGeometry } from "@/features/sketch-measure/sketch-measur
 
 export interface UseAppShellSelectionAnalysisOptions {
   readonly expectedParcelsIngestionRunId: ShallowRef<string | null>;
+  readonly includeParcels: ShallowRef<boolean>;
   readonly selectionGeometry: ShallowRef<SketchAreaGeometry | null>;
   readonly visiblePerspectives: ShallowRef<PerspectiveVisibilityState>;
 }

@@ -1,0 +1,21 @@
+[Unit]
+Description=Map API HTTP service
+After=network.target
+
+[Service]
+Type=simple
+User=deploy
+Group=deploy
+WorkingDirectory=/home/deploy/map/apps/api
+Environment=NODE_ENV=production
+Environment=PATH=/home/deploy/.bun/bin:/usr/local/bin:/usr/bin:/bin
+EnvironmentFile=/etc/map-app/map-api.env
+ExecStartPre=/usr/bin/test -f /etc/map-app/map-api.env
+ExecStartPre=/usr/bin/test -f /home/deploy/map/apps/api/dist/index.js
+ExecStart=/usr/bin/env PORT=3001 bun dist/index.js
+Restart=always
+RestartSec=5
+SyslogIdentifier=map-api
+
+[Install]
+WantedBy=multi-user.target

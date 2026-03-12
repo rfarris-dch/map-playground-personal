@@ -12,15 +12,15 @@ sources:
   - scripts/rollback-parcels-manifest.ts
 ---
 
-This page documents the current production path only. Environmental sync is a data-production swap ahead of the existing PMTiles builders. The web app contract stays fixed.
+This page documents the current production path only. Environmental sync still publishes PMTiles for the web runtime, but flood now also loads the normalized hazard polygons into PostGIS so server-side spatial analysis can query the same normalized source.
 
 ## Command inventory
 
 | Command | Role |
 | --- | --- |
-| `bun run sync:environmental-flood` | Full flood run: extract, normalize, build, publish. |
+| `bun run sync:environmental-flood` | Full flood run: extract, normalize, load to PostGIS, build, publish. |
 | `bun run sync:environmental-hydro-basins` | Full hydro-basin run: extract, normalize, build, publish. |
-| `bun run tiles:build:environmental-flood` | Rebuild flood PMTiles from an already-normalized `flood-hazard.geojson`. |
+| `bun run tiles:build:environmental-flood` | Rebuild flood PMTiles from an already-normalized `flood-hazard.geojson` or `flood-hazard.geojsonl`. |
 | `bun run tiles:publish:environmental-flood` | Publish the flood PMTiles artifact for `RUN_ID` or `sample`. |
 | `bun run tiles:rollback:environmental-flood` | Roll back the flood manifest by swapping `latest.json` to `previous`. |
 | `bun run tiles:build:environmental-hydro-basins` | Rebuild hydro PMTiles from an already-normalized source root. |
@@ -101,6 +101,7 @@ Each run directory contains:
 - `raw/`
 - `normalized/`
 - `active-run.json`
+- `normalize-complete.json`
 - `run-config.json`
 - `run-summary.json`
 - `load-complete.json`
@@ -120,19 +121,52 @@ Each dataset root also contains:
 The wrapper uses one shared phase sequence:
 
 1. `extracting`
-2. `loading`
-3. `building`
-4. `publishing`
-5. `completed`
-6. `failed`
+2. `normalizing`
+3. `loading`
+4. `building`
+5. `publishing`
+6. `completed`
+7. `failed`
 
-For environmental runs, `loading` means normalization into the builder-facing GeoJSON contract. It is not a database load.
+For flood runs, `normalizing` writes `normalized/flood-hazard.geojsonl` for the live ArcGIS path and `normalized/flood-hazard.geojson` for local `ogr2ogr` normalization. `loading` always resolves whichever normalized artifact exists and pushes that canonicalized output into `environmental_current.flood_hazard` plus `environmental_meta.flood_runs`. Hydro-basin runs stay normalization-only and write a synthetic `load-complete.json` marker so the shared wrapper can keep one marker contract.
 
 ## Output contracts
 
 Flood normalization writes:
 
+- `normalized/flood-hazard.geojsonl` for the live ArcGIS normalize path
 - `normalized/flood-hazard.geojson`
+
+Flood normalize resume state lives in:
+
+- `normalize-progress.json`
+
+The progress artifact records the last committed page boundary, including:
+
+- `writtenCount`
+- `processedCount`
+- `skippedCount`
+- `lastObjectId`
+- `pageSize`
+- `geometryBatchSize`
+- `outputBytes`
+- `skippedObjectIds`
+
+Resume is page-boundary-safe:
+
+- the normalizer only checkpoints after a full ArcGIS page is written
+- `outputBytes` is the durable resume cursor for `flood-hazard.geojsonl`
+- restarting the same `RUN_ID` truncates the GeoJSONL back to the last committed boundary before appending new rows
+- if an older run directory only has `writtenCount`, resume rewrites the sequence file back to that committed line count before continuing
+
+Before `load` can start, the ArcGIS normalize artifact must reconcile cleanly:
+
+- `normalized/flood-hazard.geojsonl` byte size must equal `normalize-progress.json.outputBytes`
+- durable GeoJSONL line count must equal `normalize-progress.json.writtenCount`
+- `processedCount` must equal `writtenCount + skippedCount`
+- for the live ArcGIS path, completed normalize also requires `processedCount == run-summary.featureCount`
+
+If any of those checks fail, normalize exits nonzero and `load` refuses to proceed for that `RUN_ID`.
 
 The flood normalizer preserves FEMA provenance fields and emits numeric style fields:
 
@@ -148,6 +182,20 @@ The flood normalizer preserves FEMA provenance fields and emits numeric style fi
 - `data_version`
 
 Phase 1 keeps the repo’s existing strict `is_flood_500` rule: zone `X` plus a subtype containing `0.2`.
+
+Flood load then copies that normalized file into PostGIS:
+
+- schema DDL: `scripts/sql/environmental-flood-schema.sql`
+- run metadata: `environmental_meta.flood_runs`
+- queryable polygons: `environmental_current.flood_hazard`
+
+That means the overlay PMTiles and the API flood-analysis summary now share one normalized upstream artifact instead of maintaining separate source transforms.
+
+## Operator visibility notes
+
+`/api/geo/flood/sync/status` still uses the shared parcel-style phase contract, so flood `normalizing` appears as `extracting` in the response shape. The route now treats progress-ahead-of-file normalize artifacts as failed instead of healthy, but it still is not a byte-for-byte validator for every request.
+
+The current pipeline-monitor app is still parcel-oriented in its mounted UI. Flood status can exist in code paths, but the shipped monitor surface is not yet a first-class flood operator dashboard.
 
 Hydro normalization writes:
 
@@ -192,3 +240,15 @@ bun run tiles:rollback:environmental-hydro-basins
 ```
 
 Rollback does not rebuild or delete PMTiles files. It only swaps `latest.json` back to the previous published entry.
+
+## Recovery for a bad in-flight run
+
+If an ArcGIS normalize run reports more progress than the durable GeoJSONL actually contains, do not let that run advance into `load`, `build`, or `publish`.
+
+Use one of these recovery paths:
+
+- stop the active wrapper and start a fresh `RUN_ID`
+- quarantine the suspect run directory so auto-resume will not pick it up
+- or delete/reset that run's `normalized/flood-hazard.geojsonl` plus `normalize-progress.json` before restarting normalize for the same `RUN_ID`
+
+Keep `environmental_current.flood_hazard` and `/tiles/environmental-flood/latest.json` on the last known good run until the new normalize artifact passes the reconciliation checks above.

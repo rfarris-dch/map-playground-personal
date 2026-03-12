@@ -205,7 +205,7 @@ LEFT JOIN seam_flags AS seam
 CREATE TEMP TABLE current_dc_pipeline_source ON COMMIT DROP AS
 SELECT
   facility.facility_id AS project_id,
-  'hawk.export.arcgis-colo'::text AS source_system,
+  'serve.facility_site'::text AS source_system,
   'colocation'::text AS project_type,
   facility.provider_id,
   COALESCE(NULLIF(facility.provider_slug, ''), facility.provider_id, facility.facility_name) AS provider_label,
@@ -223,7 +223,7 @@ FROM serve.facility_site AS facility
 UNION ALL
 SELECT
   hyperscale.hyperscale_id AS project_id,
-  'hawk.export.arcgis-hyperscale'::text AS source_system,
+  'serve.hyperscale_site'::text AS source_system,
   'hyperscale'::text AS project_type,
   hyperscale.provider_id,
   COALESCE(NULLIF(hyperscale.provider_slug, ''), hyperscale.provider_id, hyperscale.facility_name) AS provider_label,
@@ -728,34 +728,6 @@ gas_current AS (
   FROM analytics.fact_gas_snapshot AS snapshot
   WHERE snapshot.effective_date = (SELECT effective_date FROM latest_gas_effective)
 ),
-water_basins AS (
-  SELECT
-    basin.id,
-    basin.bws_score,
-    basin.min_lng,
-    basin.min_lat,
-    basin.max_lng,
-    basin.max_lat,
-    ST_SetSRID(ST_GeomFromGeoJSON(basin.geometry::text), 4326) AS geom
-  FROM mirror.water_stress_basins AS basin
-  WHERE basin.geometry IS NOT NULL
-    AND basin.bws_score IS NOT NULL
-),
-water_current AS (
-  SELECT
-    county.county_geoid,
-    ROUND(water.bws_score::numeric, 4) AS water_stress_score
-  FROM analytics.dim_county AS county
-  LEFT JOIN LATERAL (
-    SELECT basin.bws_score
-    FROM water_basins AS basin
-    WHERE ST_X(county.centroid) BETWEEN basin.min_lng AND basin.max_lng
-      AND ST_Y(county.centroid) BETWEEN basin.min_lat AND basin.max_lat
-      AND ST_Intersects(basin.geom, county.centroid)
-    ORDER BY basin.bws_score DESC
-    LIMIT 1
-  ) AS water ON TRUE
-),
 primary_market AS (
   SELECT
     market.county_geoid,
@@ -779,7 +751,6 @@ source_availability AS (
     ) AS grid_friction_available,
     (SELECT effective_date FROM latest_policy_effective) IS NOT NULL AS policy_available,
     (
-      EXISTS (SELECT 1 FROM water_current WHERE water_stress_score IS NOT NULL) OR
       (SELECT effective_date FROM latest_gas_effective) IS NOT NULL OR
       (SELECT COUNT(*) > 0 FROM analytics.bridge_county_market)
     ) AS infrastructure_available,
@@ -888,7 +859,6 @@ county_rollup AS (
       ELSE NULL::numeric
     END AS gas_pipeline_mileage_county,
     NULL::boolean AS fiber_presence_flag,
-    water.water_stress_score,
     market.primary_market_id,
     COALESCE(market.is_seam_county, false) AS is_seam_county,
     GREATEST(
@@ -935,8 +905,6 @@ county_rollup AS (
     ON policy.county_geoid = county.county_geoid
   LEFT JOIN gas_current AS gas
     ON gas.county_geoid = county.county_geoid
-  LEFT JOIN water_current AS water
-    ON water.county_geoid = county.county_geoid
   LEFT JOIN primary_market AS market
     ON market.county_geoid = county.county_geoid
 ),
@@ -1168,7 +1136,6 @@ final_rows AS (
     score.gas_pipeline_presence_flag,
     score.gas_pipeline_mileage_county,
     score.fiber_presence_flag,
-    score.water_stress_score,
     score.primary_market_id,
     score.is_seam_county
   FROM scored AS score
@@ -1250,22 +1217,7 @@ top_drivers AS (
           ELSE NULL
         END
       ),
-      (
-        5,
-        CASE
-          WHEN COALESCE(row.water_stress_score, 0) >= 4 THEN jsonb_build_object(
-            'code',
-            'WATER_STRESS',
-            'impact',
-            'headwind',
-            'label',
-            'Water stress',
-            'summary',
-            'Supporting infrastructure context shows elevated baseline water stress.'
-          )
-          ELSE NULL
-        END
-      )
+      (5, NULL)
   ) AS driver(ordinal, driver_json)
   GROUP BY row.county_geoid
 )
@@ -1318,7 +1270,6 @@ SELECT
   row.gas_pipeline_presence_flag,
   row.gas_pipeline_mileage_county,
   row.fiber_presence_flag,
-  row.water_stress_score,
   row.primary_market_id,
   row.is_seam_county
 FROM final_rows AS row
@@ -1375,7 +1326,6 @@ INSERT INTO analytics.fact_market_analysis_score_snapshot (
   gas_pipeline_presence_flag,
   gas_pipeline_mileage_county,
   fiber_presence_flag,
-  water_stress_score,
   primary_market_id,
   is_seam_county,
   formula_version,
@@ -1462,8 +1412,7 @@ WITH input_versions AS (
           )
         )
         ELSE NULL
-      END,
-      'water=mirror.water_stress_basins'
+      END
     ) AS input_data_version
 )
 SELECT
@@ -1516,7 +1465,6 @@ SELECT
   stage.gas_pipeline_presence_flag,
   stage.gas_pipeline_mileage_county,
   stage.fiber_presence_flag,
-  stage.water_stress_score,
   stage.primary_market_id,
   stage.is_seam_county,
   :'formula_version'::text,
@@ -1601,7 +1549,6 @@ INSERT INTO analytics.county_market_pressure_current (
   gas_pipeline_presence_flag,
   gas_pipeline_mileage_county,
   fiber_presence_flag,
-  water_stress_score,
   primary_market_id,
   is_seam_county,
   formula_version,
@@ -1658,7 +1605,6 @@ SELECT
   snapshot.gas_pipeline_presence_flag,
   snapshot.gas_pipeline_mileage_county,
   snapshot.fiber_presence_flag,
-  snapshot.water_stress_score,
   snapshot.primary_market_id,
   snapshot.is_seam_county,
   snapshot.formula_version,
@@ -1712,11 +1658,6 @@ WITH feature_families AS (
         CASE
           WHEN EXISTS (SELECT 1 FROM analytics.bridge_county_market)
             OR EXISTS (SELECT 1 FROM analytics.fact_gas_snapshot WHERE effective_date <= :'data_version'::date)
-            OR EXISTS (
-              SELECT 1
-              FROM county_market_pressure_stage
-              WHERE water_stress_score IS NOT NULL
-            )
             THEN 'infrastructure'
         END,
         'narratives'
@@ -1759,9 +1700,7 @@ publication_versions AS (
           SELECT MAX(source_as_of_date)::text
           FROM analytics.fact_gas_snapshot
           WHERE effective_date <= :'data_version'::date
-        ),
-        'water',
-        'mirror.water_stress_basins'
+        )
       )
     ) AS source_versions_json
 ),

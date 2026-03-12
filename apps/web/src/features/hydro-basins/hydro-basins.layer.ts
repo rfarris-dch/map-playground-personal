@@ -1,10 +1,13 @@
+import { runEffectPromise } from "@map-migration/core-runtime/effect";
 import {
   assertTileManifestMatchesDataset,
   createPmtilesSourceUrl,
   type TilePublishManifest,
 } from "@map-migration/geo-tiles";
-import { loadTilePublishManifest } from "@map-migration/geo-tiles/effect";
+import { loadTilePublishManifestEffect } from "@map-migration/geo-tiles/effect";
 import { getCatalogStyleLayerIds, getHydroBasinsStyleLayerIds } from "@map-migration/map-style";
+import { Effect, Either } from "effect";
+import { resolveEnvironmentalHydroBasinsManifestPath } from "@/features/tiles/tile-manifest-config.service";
 import type {
   HydroBasinsStressMode,
   HydroBasinsVisibilityController,
@@ -18,7 +21,6 @@ import {
 } from "./hydro-basins-style.service";
 
 const HYDRO_BASINS_DATASET = "environmental-hydro-basins";
-const HYDRO_BASINS_MANIFEST_PATH = "/tiles/environmental-hydro-basins/latest.json";
 const HYDRO_BASINS_SOURCE_ID = "environmental-hydro-basins";
 const HYDRO_BASINS_VISUAL_LEVEL = "huc6";
 const HYDRO_BASINS_VISUAL_MIN_ZOOM = 5;
@@ -32,9 +34,7 @@ const UPPER_BOUND_LAYER_ANCHORS: readonly string[] = [
 
 interface HydroBasinsState {
   destroyed: boolean;
-  manifest: TilePublishManifest | null;
   ready: boolean;
-  sourceInitializationAbortController: AbortController | null;
   sourceInitializationPromise: Promise<void> | null;
   sourceInitialized: boolean;
   stressMode: HydroBasinsStressMode;
@@ -44,10 +44,8 @@ interface HydroBasinsState {
 function initialState(): HydroBasinsState {
   return {
     destroyed: false,
-    manifest: null,
     ready: false,
     sourceInitialized: false,
-    sourceInitializationAbortController: null,
     sourceInitializationPromise: null,
     stressMode: "normal",
     visible: false,
@@ -80,7 +78,8 @@ function setLayerVisibility(
 
 function ensureHydroBasinsSource(
   map: MountHydroBasinsLayerOptions["map"],
-  manifest: TilePublishManifest
+  manifest: TilePublishManifest,
+  manifestPath: string
 ): void {
   if (map.hasSource(HYDRO_BASINS_SOURCE_ID)) {
     return;
@@ -88,7 +87,7 @@ function ensureHydroBasinsSource(
 
   map.addSource(HYDRO_BASINS_SOURCE_ID, {
     type: "vector",
-    url: createPmtilesSourceUrl(manifest),
+    url: createPmtilesSourceUrl(manifest, manifestPath),
   });
 }
 
@@ -174,7 +173,7 @@ export function mountHydroBasinsLayer(
   options: MountHydroBasinsLayerOptions
 ): HydroBasinsVisibilityController {
   const state = initialState();
-  const manifestPath = options.manifestPath ?? HYDRO_BASINS_MANIFEST_PATH;
+  const manifestPath = resolveEnvironmentalHydroBasinsManifestPath(options.manifestPath);
   const styleLayerIds = getHydroBasinsStyleLayerIds();
   const degradedLineLayerIds: readonly string[] = [];
   const degradedFillLayerIds: readonly string[] = [];
@@ -206,8 +205,7 @@ export function mountHydroBasinsLayer(
 
   function completeSourceInitialization(manifest: TilePublishManifest): void {
     assertTileManifestMatchesDataset(manifest, HYDRO_BASINS_DATASET, "hydro basins layer manifest");
-    state.manifest = manifest;
-    ensureHydroBasinsSource(options.map, manifest);
+    ensureHydroBasinsSource(options.map, manifest, manifestPath);
     ensureHydroBasinsLayers(options.map);
     state.sourceInitialized = true;
     applyVisibility();
@@ -223,22 +221,25 @@ export function mountHydroBasinsLayer(
     }
 
     const nextPromise = (async (): Promise<void> => {
-      state.sourceInitializationAbortController?.abort();
-      const abortController = new AbortController();
-      state.sourceInitializationAbortController = abortController;
-      const manifest = await loadTilePublishManifest({
-        contextLabel: "hydro-basins",
-        manifestPath,
-        signal: abortController.signal,
-      });
+      const result = await runEffectPromise(
+        Effect.either(
+          loadTilePublishManifestEffect({
+            contextLabel: "hydro-basins",
+            manifestPath,
+          })
+        )
+      );
 
-      if (state.destroyed || abortController.signal.aborted) {
+      if (state.destroyed) {
         return;
       }
 
-      completeSourceInitialization(manifest);
+      if (Either.isLeft(result)) {
+        throw result.left;
+      }
+
+      completeSourceInitialization(result.right.data);
     })().finally(() => {
-      state.sourceInitializationAbortController = null;
       state.sourceInitializationPromise = null;
     });
 
@@ -262,7 +263,7 @@ export function mountHydroBasinsLayer(
   };
 
   options.map.on("load", onLoad);
-  const existingStyleLayers = options.map.getStyle().layers;
+  const existingStyleLayers = options.map.getStyle()?.layers ?? [];
   if (existingStyleLayers.length > 0) {
     onLoad();
   }
@@ -285,9 +286,12 @@ export function mountHydroBasinsLayer(
     destroy(): void {
       state.destroyed = true;
       options.map.off("load", onLoad);
-      state.sourceInitializationAbortController?.abort();
 
-      for (const layerId of [...styleLayerIds.labelLayerIds, ...styleLayerIds.lineLayerIds]) {
+      for (const layerId of [
+        ...HYDRO_BASINS_FILL_LAYER_IDS,
+        ...styleLayerIds.labelLayerIds,
+        ...styleLayerIds.lineLayerIds,
+      ]) {
         if (options.map.hasLayer(layerId)) {
           options.map.removeLayer(layerId);
         }

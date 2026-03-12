@@ -11,12 +11,11 @@ import { createMapScoped, registerPmtilesProtocolScoped } from "@map-migration/m
 import { Effect, type Scope } from "effect";
 import {
   defaultBasemapStyleUrl,
+  loadBasemapStyle,
   mountBasemapLayerVisibility,
 } from "@/features/basemap/basemap.service";
 import type { BasemapLayerVisibilityController } from "@/features/basemap/basemap.types";
 
-const OPENFREEMAP_GLYPHS_PREFIX = "https://tiles.openfreemap.org/fonts/";
-const MAPLIBRE_DEMOTILES_GLYPHS_PREFIX = "https://demotiles.maplibre.org/font/";
 const DEFAULT_MAP_MAX_PITCH = 85;
 
 export interface AppShellMapSetup {
@@ -35,6 +34,7 @@ export interface AppShellMapDependencies {
   readonly createNavigationControl: typeof createNavigationControl;
   readonly createScaleControl: typeof createScaleControl;
   readonly defaultBasemapStyleUrl: typeof defaultBasemapStyleUrl;
+  readonly loadBasemapStyle: typeof loadBasemapStyle;
   readonly mountBasemapLayerVisibility: typeof mountBasemapLayerVisibility;
   readonly registerPmtilesProtocolScoped: typeof registerPmtilesProtocolScoped;
 }
@@ -46,17 +46,10 @@ const defaultAppShellMapDependencies: AppShellMapDependencies = {
   createNavigationControl,
   createScaleControl,
   defaultBasemapStyleUrl,
+  loadBasemapStyle,
   mountBasemapLayerVisibility,
   registerPmtilesProtocolScoped,
 };
-
-function rewriteGlyphRequestUrl(url: string): string {
-  if (!url.startsWith(OPENFREEMAP_GLYPHS_PREFIX)) {
-    return url;
-  }
-
-  return `${MAPLIBRE_DEMOTILES_GLYPHS_PREFIX}${url.slice(OPENFREEMAP_GLYPHS_PREFIX.length)}`;
-}
 
 function mountMapControls(
   nextMap: IMap,
@@ -131,6 +124,18 @@ function resolveInitialMapZoom(
   return initialViewport.zoom;
 }
 
+function resolveInitialMapBearing(
+  initialViewport: MapContextTransfer["viewport"] | undefined
+): number | undefined {
+  return initialViewport?.bearing;
+}
+
+function resolveInitialMapPitch(
+  initialViewport: MapContextTransfer["viewport"] | undefined
+): number | undefined {
+  return initialViewport?.pitch;
+}
+
 export function createAppShellMapInitializer(
   dependencies: AppShellMapDependencies
 ): (
@@ -140,26 +145,29 @@ export function createAppShellMapInitializer(
   return (container, options = {}) =>
     Effect.gen(function* () {
       yield* dependencies.registerPmtilesProtocolScoped();
+      const basemapStyle = yield* Effect.tryPromise({
+        try: () => dependencies.loadBasemapStyle(dependencies.defaultBasemapStyleUrl()),
+        catch: (error) =>
+          new Error("[basemap] failed to load initial basemap style", { cause: error }),
+      }).pipe(Effect.orDie);
+
+      const initialBearing = resolveInitialMapBearing(options.initialViewport);
+      const initialPitch = resolveInitialMapPitch(options.initialViewport);
+      const mapCreateOptions = {
+        style: basemapStyle,
+        center: resolveInitialMapCenter(options.initialViewport),
+        preserveDrawingBuffer: true,
+        maxPitch: DEFAULT_MAP_MAX_PITCH,
+        ...(typeof initialBearing === "number" ? { bearing: initialBearing } : {}),
+        ...(typeof initialPitch === "number" ? { pitch: initialPitch } : {}),
+        zoom: resolveInitialMapZoom(options.initialViewport),
+        projection: { type: "mercator" },
+      };
 
       const map = yield* dependencies.createMapScoped(
         dependencies.createMapLibreAdapter(),
         container,
-        {
-          style: dependencies.defaultBasemapStyleUrl(),
-          center: resolveInitialMapCenter(options.initialViewport),
-          preserveDrawingBuffer: true,
-          maxPitch: DEFAULT_MAP_MAX_PITCH,
-          zoom: resolveInitialMapZoom(options.initialViewport),
-          projection: { type: "mercator" },
-          transformRequest: (url) => {
-            const rewrittenUrl = rewriteGlyphRequestUrl(url);
-            if (rewrittenUrl === url) {
-              return undefined;
-            }
-
-            return { url: rewrittenUrl };
-          },
-        }
+        mapCreateOptions
       );
 
       yield* mountMapControlsScoped(map, dependencies);

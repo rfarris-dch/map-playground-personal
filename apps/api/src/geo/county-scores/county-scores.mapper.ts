@@ -121,7 +121,12 @@ function readNullableVersion(
     return String(value);
   }
 
-  return readNullableText(value);
+  const normalized = readNullableText(value);
+  if (normalized === null) {
+    return null;
+  }
+
+  return normalized;
 }
 
 function readNullableIsoDateTime(
@@ -471,7 +476,6 @@ export function mapCountyScoreRow(row: CountyScoreRow): CountyScore {
     ),
     gasPipelineMileageCounty: readNullableNumber(row.gas_pipeline_mileage_county),
     fiberPresenceFlag: readNullableBoolean(row.fiber_presence_flag, "fiber_presence_flag"),
-    waterStressScore: readNullableNumber(row.water_stress_score),
     primaryMarketId: readNullableText(row.primary_market_id),
     isSeamCounty: readNullableBoolean(row.is_seam_county, "is_seam_county") ?? false,
     formulaVersion: readNullableVersion(row.formula_version, "formula_version"),

@@ -3,8 +3,13 @@ import { createBrowserEffectRuntime } from "@map-migration/core-runtime/browser"
 import { Effect } from "effect";
 import type { PipelineStatusFetchResult } from "../../../src/features/pipeline/pipeline.types";
 import { createPipelineStatusController } from "../../../src/features/pipeline/pipeline.view.service";
+import { buildPipelineLiveSample } from "../../../src/features/pipeline/pipeline-tracking/pipeline-tracking-live-sample.service";
 import { FakeClock } from "../../support/fake-clock";
-import { createPipelineStatusFetchSuccess } from "../../support/pipeline-status-fixtures";
+import {
+  createPipelineState,
+  createPipelineStatusFetchSuccess,
+  createPipelineStatusPayload,
+} from "../../support/pipeline-status-fixtures";
 
 function createFailureResult(requestId: string, message: string): PipelineStatusFetchResult {
   return {
@@ -33,7 +38,13 @@ function msUntil(nextPollAt: string | null, clock: FakeClock): number | null {
 
 function createControllerHarness(
   effects: Array<() => Effect.Effect<PipelineStatusFetchResult, never>>,
-  clock = new FakeClock()
+  clock = new FakeClock(),
+  options: {
+    readonly loadPersistedHistory?: () => readonly import("../../../src/features/pipeline/pipeline.types").PipelineLiveSample[];
+    readonly savePersistedHistory?: (
+      history: readonly import("../../../src/features/pipeline/pipeline.types").PipelineLiveSample[]
+    ) => void;
+  } = {}
 ) {
   let callCount = 0;
 
@@ -49,8 +60,14 @@ function createControllerHarness(
 
       return nextEffect();
     },
+    ...(typeof options.loadPersistedHistory === "function"
+      ? { loadPersistedHistory: options.loadPersistedHistory }
+      : {}),
     now: () => clock.now(),
     runtime: createBrowserEffectRuntime(),
+    ...(typeof options.savePersistedHistory === "function"
+      ? { savePersistedHistory: options.savePersistedHistory }
+      : {}),
     setInterval: clock.setInterval,
     setTimeout: clock.setTimeout,
   });
@@ -217,5 +234,60 @@ describe("createPipelineStatusController", () => {
 
     expect(harness.getCallCount()).toBe(1);
     expect(harness.controller.nextPollAt.value).toBeNull();
+  });
+
+  it("continues flood staging counts from persisted history after reconnect", async () => {
+    const persistedSample = buildPipelineLiveSample(
+      createPipelineStatusPayload({
+        phase: "loading",
+        isRunning: true,
+        runId: "full-us-real-flood-20260307",
+        summary: "flood-load staging tuples=90000 percent=2% stage=120MB",
+        states: [
+          createPipelineState({
+            state: "load",
+            expectedCount: 4_524_255,
+            writtenCount: 90_000,
+          }),
+        ],
+      }),
+      "2026-03-10T15:00:00.000Z"
+    );
+    let savedHistory: readonly import("../../../src/features/pipeline/pipeline.types").PipelineLiveSample[] =
+      [];
+
+    const harness = createControllerHarness(
+      [
+        () =>
+          Effect.succeed(
+            createPipelineStatusFetchSuccess({
+              phase: "loading",
+              isRunning: true,
+              runId: "full-us-real-flood-20260307",
+              summary: "flood-load staging tuples=5000 percent=2% stage=140MB",
+              states: [
+                createPipelineState({
+                  state: "load",
+                  expectedCount: 4_524_255,
+                  writtenCount: 5000,
+                }),
+              ],
+            })
+          ),
+      ],
+      new FakeClock(),
+      {
+        loadPersistedHistory: () => [persistedSample],
+        savePersistedHistory: (history) => {
+          savedHistory = history;
+        },
+      }
+    );
+
+    harness.controllerInstance.start();
+    await flushAsyncWork();
+
+    expect(harness.controller.history.value.at(-1)?.writtenCount).toBe(95_000);
+    expect(savedHistory.at(-1)?.writtenCount).toBe(95_000);
   });
 });

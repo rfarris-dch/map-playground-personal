@@ -1,14 +1,11 @@
-import { loadTilePublishManifest } from "@map-migration/geo-tiles/effect";
 import type {
   StressGovernorController,
   StressGovernorOptions,
 } from "@/features/parcels/parcels.service.types";
 import type {
   EvaluateParcelsGuardrailsArgs,
-  LoadParcelsManifestArgs,
   ParcelsGuardrailResult,
   ParcelsStatus,
-  TilePublishManifest,
 } from "@/features/parcels/parcels.types";
 
 function toRadians(value: number): number {
@@ -58,14 +55,6 @@ function normalizeEastLongitude(west: number, east: number): number {
   }
 
   return east + 360;
-}
-
-export function loadParcelsManifest(args: LoadParcelsManifestArgs): Promise<TilePublishManifest> {
-  return loadTilePublishManifest({
-    manifestPath: args.manifestPath,
-    preserveNetworkErrorCause: true,
-    ...(args.signal instanceof AbortSignal ? { signal: args.signal } : {}),
-  });
 }
 
 function estimateViewportWidthKm(bounds: {

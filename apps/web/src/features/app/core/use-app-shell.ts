@@ -1,14 +1,15 @@
-import { computed } from "vue";
+import { computed, shallowRef } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   FLOOD_100_LAYER_ID,
   FLOOD_500_LAYER_ID,
   HYDRO_BASINS_LAYER_ID,
 } from "@/features/app/core/app-shell.constants";
+import { exportMapView } from "@/features/app/map-export/map-export.service";
+import type { MapViewExportFormat } from "@/features/app/map-export/map-export.types";
 import { useCountyScores } from "@/features/county-scores/use-county-scores";
 import type { LayerRuntimeSnapshot } from "@/features/layers/layer-runtime.types";
 import {
-  applyMapContextTransferToAppShell,
   buildMapContextTransferFromAppShell,
   inferMapContextSurfaceFromRoute,
   readMapContextTransferFromRoute,
@@ -17,6 +18,7 @@ import { saveSpatialAnalysisDashboardState } from "@/features/spatial-analysis/s
 import { buildScannerSpatialAnalysisSummary } from "@/features/spatial-analysis/spatial-analysis-summary.service";
 import type { BoundaryFacetSelectionState } from "./app-shell.types";
 import { useAppShellRuntime } from "./use-app-shell-runtime";
+import { useAppShellUrlState } from "./use-app-shell-url-state";
 
 function resolveDashboardBoundaryFacetSelection(args: {
   readonly boundaryFacetSelection: BoundaryFacetSelectionState;
@@ -50,7 +52,7 @@ export function useAppShell() {
   const route = useRoute();
   const router = useRouter();
   const initialMapContext = readMapContextTransferFromRoute({ route });
-  const currentSurface = inferMapContextSurfaceFromRoute(route) ?? "global-map";
+  const currentSurface = computed(() => inferMapContextSurfaceFromRoute(route) ?? "global-map");
   const runtime = useAppShellRuntime({
     initialViewport: initialMapContext?.viewport,
   });
@@ -65,16 +67,32 @@ export function useAppShell() {
     mapLifecycle,
   } = runtime;
 
-  applyMapContextTransferToAppShell({
-    context: initialMapContext,
-    setBoundarySelectedRegionIds(boundaryId, selectedRegionIds) {
-      state.boundaryFacetSelection.value = {
-        ...state.boundaryFacetSelection.value,
-        [boundaryId]: selectedRegionIds,
-      };
-    },
+  useAppShellUrlState({
+    basemapVisibility: visibility.basemapVisibility,
+    boundaryFacetSelection: state.boundaryFacetSelection,
+    boundaryVisibility: visibility.boundaryVisibility,
+    currentSurface,
+    fiberVisibility: fiber.visibleFiberLayers,
+    floodVisibility: visibility.floodVisibility,
+    hydroBasinsVisible: visibility.hydroBasinsVisible,
+    layerRuntimeSnapshot: state.layerRuntimeSnapshot,
+    map: state.map,
+    parcelsVisible: visibility.parcelsVisible,
+    powerVisibility: visibility.powerVisibility,
+    selectedFiberSourceLayerNames: fiber.selectedFiberSourceLayerNames,
+    setBasemapLayerVisible: visibility.setBasemapLayerVisible,
+    setBoundarySelectedRegionIds: mapLifecycle.setBoundarySelectedRegionIds,
     setBoundaryVisible: visibility.setBoundaryVisible,
+    setFiberLayerVisibility: fiber.setFiberLayerVisibility,
+    setFiberSourceLayerSelection: fiber.setFiberSourceLayerSelection,
+    setFloodLayerVisible: visibility.setFloodLayerVisible,
+    setHydroBasinsVisible: visibility.setHydroBasinsVisible,
+    setParcelsVisible: visibility.setParcelsVisible,
     setPerspectiveVisibility: visibility.setPerspectiveVisibility,
+    setPowerLayerVisible: visibility.setPowerLayerVisible,
+    setWaterVisible: visibility.setWaterVisible,
+    visiblePerspectives: visibility.visiblePerspectives,
+    waterVisible: visibility.waterVisible,
   });
 
   const selectionDisabledReason = computed(() =>
@@ -98,6 +116,7 @@ export function useAppShell() {
   } = useCountyScores({
     countyIds: scannerCountyIds,
   });
+  const isMapExporting = shallowRef(false);
   const scannerAnalysisSummary = computed(() =>
     buildScannerSpatialAnalysisSummary({
       countyIds: scannerCountyIds.value,
@@ -133,10 +152,20 @@ export function useAppShell() {
           boundaryFacetSelection: state.boundaryFacetSelection.value,
           countyIds: summary.area.countyIds,
         }),
+        basemapVisibility: visibility.basemapVisibility.value,
+        layerRuntimeSnapshot: state.layerRuntimeSnapshot.value,
         map: state.map.value,
-        sourceSurface: currentSurface,
+        boundaryVisibility: visibility.boundaryVisibility.value,
+        fiberVisibility: fiber.visibleFiberLayers.value,
+        floodVisibility: visibility.floodVisibility.value,
+        hydroBasinsVisible: visibility.hydroBasinsVisible.value,
+        parcelsVisible: visibility.parcelsVisible.value,
+        powerVisibility: visibility.powerVisibility.value,
+        selectedFiberSourceLayerNames: fiber.selectedFiberSourceLayerNames.value,
+        sourceSurface: currentSurface.value,
         targetSurface: "global-map",
         visiblePerspectives: visibility.visiblePerspectives.value,
+        waterVisible: visibility.waterVisible.value,
       }),
       source: "selection",
       summary,
@@ -165,10 +194,20 @@ export function useAppShell() {
           boundaryFacetSelection: state.boundaryFacetSelection.value,
           countyIds: summary.area.countyIds,
         }),
+        basemapVisibility: visibility.basemapVisibility.value,
+        layerRuntimeSnapshot: state.layerRuntimeSnapshot.value,
         map: state.map.value,
-        sourceSurface: currentSurface,
+        boundaryVisibility: visibility.boundaryVisibility.value,
+        fiberVisibility: fiber.visibleFiberLayers.value,
+        floodVisibility: visibility.floodVisibility.value,
+        hydroBasinsVisible: visibility.hydroBasinsVisible.value,
+        parcelsVisible: visibility.parcelsVisible.value,
+        powerVisibility: visibility.powerVisibility.value,
+        selectedFiberSourceLayerNames: fiber.selectedFiberSourceLayerNames.value,
+        sourceSurface: currentSurface.value,
         targetSurface: "global-map",
         visiblePerspectives: visibility.visiblePerspectives.value,
+        waterVisible: visibility.waterVisible.value,
       }),
       source: "scanner",
       summary,
@@ -177,6 +216,27 @@ export function useAppShell() {
 
     await router.push({ name: "spatial-analysis-dashboard" });
   }
+
+  async function exportCurrentMapView(format: MapViewExportFormat): Promise<void> {
+    const map = state.map.value;
+    if (map === null || isMapExporting.value) {
+      return;
+    }
+
+    isMapExporting.value = true;
+
+    try {
+      await exportMapView({ format, map });
+    } catch (error: unknown) {
+      console.error("[map] current map export failed", error);
+    } finally {
+      isMapExporting.value = false;
+    }
+  }
+
+  const mapExportDisabledReason = computed(() =>
+    state.map.value === null ? "Map is still initializing." : null
+  );
 
   return {
     mapContainer: state.mapContainer,
@@ -213,6 +273,7 @@ export function useAppShell() {
     selectionSummary: selectionAnalysis.selectionSummary,
     selectionError: selectionAnalysis.selectionError,
     isSelectionLoading: selectionAnalysis.isSelectionLoading,
+    isMapExporting,
     selectionDisabledReason,
     quickViewActive: mapOverlays.quickViewActive,
     scannerActive: mapOverlays.scannerActive,
@@ -221,6 +282,7 @@ export function useAppShell() {
     scannerFacilities: mapOverlays.scannerFacilities,
     scannerTotalCount: mapOverlays.scannerTotalCount,
     scannerIsFiltered: mapOverlays.scannerIsFiltered,
+    mapExportDisabledReason,
     overlaysBlockedReason: mapOverlays.overlaysBlockedReason,
     quickViewDisabledReason: mapOverlays.quickViewDisabledReason,
     scannerEmptyMessage: mapOverlays.scannerEmptyMessage,
@@ -251,6 +313,7 @@ export function useAppShell() {
     setSketchMeasureMode: state.setSketchMeasureMode,
     setSketchMeasureAreaShape: state.setSketchMeasureAreaShape,
     finishSketchMeasureArea: state.finishSketchMeasureArea,
+    exportMapView: exportCurrentMapView,
     exportSelection: selectionAnalysis.exportSelection,
     openSelectionDashboard,
     exportScannerSelection: mapOverlays.exportScannerSelection,

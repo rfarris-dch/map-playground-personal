@@ -6,10 +6,12 @@ import {
 import { createMemoryHistory, createRouter, type LocationQueryRaw } from "vue-router";
 import {
   applyMapContextTransferToAppShell,
+  buildMapContextTransferFromAppShell,
   buildMapContextTransferQuery,
   inferMapContextSurfaceFromRoute,
   readMapContextTransferFromRoute,
 } from "@/features/map-context-transfer/map-context-transfer.service";
+import { FakeMap } from "../../support/fake-map";
 
 const TestPage = {
   template: "<div />",
@@ -167,14 +169,98 @@ describe("map-context-transfer service", () => {
     });
   });
 
+  it("builds query state with camera, layer, basemap, and fiber selections", () => {
+    const context = buildMapContextTransferFromAppShell({
+      basemapVisibility: {
+        boundaries: false,
+        buildings3d: true,
+        color: false,
+        globe: false,
+        labels: true,
+        landmarks: false,
+        roads: true,
+        satellite: false,
+      },
+      boundaryFacetSelection: {
+        country: null,
+        county: ["48113"],
+        state: ["tx"],
+      },
+      layerRuntimeSnapshot: {
+        effectiveVisibility: {},
+        stressBlocked: {},
+        userVisibility: {
+          "facilities.colocation": true,
+          "facilities.hyperscale": false,
+          "fiber-locator.metro": true,
+          "fiber-locator.longhaul": false,
+          "power.plants": true,
+        },
+      },
+      map: new FakeMap({
+        bearing: 18,
+        center: [-96.8, 32.78],
+        pitch: 50,
+        zoom: 9.25,
+      }),
+      selectedFiberSourceLayerNames: {
+        longhaul: [],
+        metro: ["att", "zayo"],
+      },
+      sourceSurface: "global-map",
+      targetSurface: "global-map",
+      visiblePerspectives: {
+        colocation: true,
+        hyperscale: false,
+      },
+    });
+
+    expect(context.viewport).toEqual({
+      bearing: 18,
+      center: [-96.8, 32.78],
+      pitch: 50,
+      type: "center",
+      zoom: 9.25,
+    });
+    expect(context.visibleLayerIds).toEqual([
+      "facilities.colocation",
+      "fiber-locator.metro",
+      "power.plants",
+    ]);
+    expect(context.visibleBasemapLayerIds).toEqual(["buildings3d", "labels", "roads"]);
+    expect(context.selectedFiberSourceLayerNames).toEqual({
+      metro: ["att", "zayo"],
+    });
+
+    const query = buildMapContextTransferQuery(context);
+    expect(query.mapBearing).toBe("18");
+    expect(query.mapPitch).toBe("50");
+    expect(query.mapCenter).toBe("-96.8,32.78");
+    expect(query.visibleLayerIds).toBe("facilities.colocation,fiber-locator.metro,power.plants");
+    expect(query.basemapLayerIds).toBe("buildings3d,labels,roads");
+    expect(query.fiberMetroSourceLayerNames).toBe("att,zayo");
+  });
+
   it("applies perspective and boundary visibility without changing current UI-side behavior", () => {
     const calls = {
+      basemapVisible: [] as Array<{ readonly layerId: string; readonly visible: boolean }>,
       boundarySelected: [] as Array<{
         readonly boundaryId: string;
         readonly regionIds: readonly string[] | null;
       }>,
       boundaryVisible: [] as Array<{ readonly boundaryId: string; readonly visible: boolean }>,
+      fiberLayerVisible: [] as Array<{ readonly lineId: string; readonly visible: boolean }>,
+      fiberSourceLayerSelection: [] as Array<{
+        readonly lineId: string;
+        readonly selectedLayerNames: readonly string[];
+      }>,
+      floodVisible: [] as Array<{ readonly layerId: string; readonly visible: boolean }>,
+      hydroBasinsVisible: [] as boolean[],
+      mapViewport: [] as unknown[],
+      parcelsVisible: [] as boolean[],
       perspectiveVisible: [] as Array<{ readonly perspective: string; readonly visible: boolean }>,
+      powerVisible: [] as Array<{ readonly layerId: string; readonly visible: boolean }>,
+      waterVisible: [] as boolean[],
     };
 
     applyMapContextTransferToAppShell({
@@ -183,10 +269,31 @@ describe("map-context-transfer service", () => {
         sourceSurface: "global-map",
         targetSurface: "company-map",
         activePerspectives: ["colocation"],
+        visibleBasemapLayerIds: ["labels", "roads"],
+        visibleLayerIds: [
+          "environmental.flood-100",
+          "fiber-locator.metro",
+          "power.plants",
+          "property.parcels",
+          "environmental.water-features",
+        ],
         selectedBoundaryIds: {
           county: ["48113"],
           state: ["tx"],
         },
+        selectedFiberSourceLayerNames: {
+          metro: ["att"],
+        },
+        viewport: {
+          bearing: 12,
+          center: [-96.8, 32.78],
+          pitch: 40,
+          type: "center",
+          zoom: 9,
+        },
+      },
+      setBasemapLayerVisible(layerId, visible) {
+        calls.basemapVisible.push({ layerId, visible });
       },
       setBoundarySelectedRegionIds(boundaryId, selectedRegionIds) {
         calls.boundarySelected.push({ boundaryId, regionIds: selectedRegionIds });
@@ -194,15 +301,77 @@ describe("map-context-transfer service", () => {
       setBoundaryVisible(boundaryId, visible) {
         calls.boundaryVisible.push({ boundaryId, visible });
       },
+      setFiberLayerVisibility(lineId, visible) {
+        calls.fiberLayerVisible.push({ lineId, visible });
+      },
+      setFiberSourceLayerSelection(lineId, selectedLayerNames) {
+        calls.fiberSourceLayerSelection.push({ lineId, selectedLayerNames });
+      },
+      setFloodLayerVisible(layerId, visible) {
+        calls.floodVisible.push({ layerId, visible });
+      },
+      setHydroBasinsVisible(visible) {
+        calls.hydroBasinsVisible.push(visible);
+      },
+      setMapViewport(viewport) {
+        calls.mapViewport.push(viewport);
+      },
+      setParcelsVisible(visible) {
+        calls.parcelsVisible.push(visible);
+      },
       setPerspectiveVisibility(perspective, visible) {
         calls.perspectiveVisible.push({ perspective, visible });
       },
+      setPowerLayerVisible(layerId, visible) {
+        calls.powerVisible.push({ layerId, visible });
+      },
+      setWaterVisible(visible) {
+        calls.waterVisible.push(visible);
+      },
     });
 
+    expect(calls.mapViewport).toEqual([
+      {
+        bearing: 12,
+        center: [-96.8, 32.78],
+        pitch: 40,
+        type: "center",
+        zoom: 9,
+      },
+    ]);
+    expect(calls.basemapVisible).toEqual([
+      { layerId: "color", visible: false },
+      { layerId: "globe", visible: false },
+      { layerId: "satellite", visible: false },
+      { layerId: "landmarks", visible: false },
+      { layerId: "labels", visible: true },
+      { layerId: "roads", visible: true },
+      { layerId: "boundaries", visible: false },
+      { layerId: "buildings3d", visible: false },
+    ]);
     expect(calls.perspectiveVisible).toEqual([
       { perspective: "colocation", visible: true },
       { perspective: "hyperscale", visible: false },
     ]);
+    expect(calls.fiberLayerVisible).toEqual([
+      { lineId: "metro", visible: true },
+      { lineId: "longhaul", visible: false },
+    ]);
+    expect(calls.fiberSourceLayerSelection).toEqual([
+      { lineId: "metro", selectedLayerNames: ["att"] },
+    ]);
+    expect(calls.floodVisible).toEqual([
+      { layerId: "flood100", visible: true },
+      { layerId: "flood500", visible: false },
+    ]);
+    expect(calls.hydroBasinsVisible).toEqual([false]);
+    expect(calls.powerVisible).toEqual([
+      { layerId: "transmission", visible: false },
+      { layerId: "substations", visible: false },
+      { layerId: "plants", visible: true },
+    ]);
+    expect(calls.parcelsVisible).toEqual([true]);
+    expect(calls.waterVisible).toEqual([true]);
     expect(calls.boundaryVisible).toEqual([
       { boundaryId: "state", visible: true },
       { boundaryId: "county", visible: true },

@@ -116,7 +116,6 @@ export const CountyScoreSchema = z.object({
   gasPipelinePresenceFlag: z.boolean().nullable(),
   gasPipelineMileageCounty: z.number().finite().nullable(),
   fiberPresenceFlag: z.boolean().nullable(),
-  waterStressScore: z.number().finite().nullable(),
   primaryMarketId: z.string().min(1).nullable(),
   isSeamCounty: z.boolean(),
   formulaVersion: z.string().min(1).nullable(),

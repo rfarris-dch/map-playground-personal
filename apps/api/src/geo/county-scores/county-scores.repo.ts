@@ -73,7 +73,6 @@ SELECT
   county_metrics.gas_pipeline_presence_flag,
   county_metrics.gas_pipeline_mileage_county,
   county_metrics.fiber_presence_flag,
-  county_metrics.water_stress_score,
   county_metrics.primary_market_id,
   county_metrics.is_seam_county,
   county_metrics.formula_version,

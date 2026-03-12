@@ -43,9 +43,6 @@ resolve_port() {
     docs)
       printf '%s\n' "${MAP_DOCS_PORT:-5145}"
       ;;
-    legacy)
-      printf '%s\n' "3000"
-      ;;
     ''|*[!0-9]*)
       echo "[dev] unknown port target: ${target}" >&2
       exit 1

@@ -11,6 +11,7 @@ describe("spatial analysis policy service", () => {
     expect(datasets).toContain("county_scores");
     expect(datasets).toContain("parcels");
     expect(datasets).toContain("facilities");
+    expect(datasets).toContain("environmental_flood");
     expect(datasets).toContain("power");
     expect(datasets).toContain("fiber");
     expect(datasets).toContain("market_metrics");
@@ -24,5 +25,10 @@ describe("spatial analysis policy service", () => {
   it("enforces export granularity policy", () => {
     expect(isDatasetExportAllowed("parcels", "parcel")).toBe(true);
     expect(isDatasetExportAllowed("parcels", "market")).toBe(false);
+  });
+
+  it("enforces flood query granularity policy", () => {
+    expect(isDatasetQueryAllowed("environmental_flood", "polygon")).toBe(true);
+    expect(isDatasetQueryAllowed("environmental_flood", "county")).toBe(false);
   });
 });

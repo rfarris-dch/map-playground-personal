@@ -1,11 +1,14 @@
+import { runEffectPromise } from "@map-migration/core-runtime/effect";
 import {
   assertTileManifestMatchesDataset,
   createPmtilesSourceUrl,
   type TilePublishManifest,
 } from "@map-migration/geo-tiles";
-import { loadTilePublishManifest } from "@map-migration/geo-tiles/effect";
+import { loadTilePublishManifestEffect } from "@map-migration/geo-tiles/effect";
 import type { IMap } from "@map-migration/map-engine";
 import { getCatalogStyleLayerIds, getFloodStyleLayerIds } from "@map-migration/map-style";
+import { Effect, Either } from "effect";
+import { resolveEnvironmentalFloodManifestPath } from "@/features/tiles/tile-manifest-config.service";
 import type {
   FloodLayerMountResult,
   FloodLayerVisibilityController,
@@ -19,7 +22,6 @@ import {
 } from "./flood-style.service";
 
 const FLOOD_DATASET = "environmental-flood";
-const FLOOD_MANIFEST_PATH = "/tiles/environmental-flood/latest.json";
 const FLOOD_SOURCE_ID = "environmental-flood";
 const DEFAULT_SOURCE_LAYER = "flood-hazard";
 const UPPER_BOUND_LAYER_ANCHORS: readonly string[] = [
@@ -32,9 +34,7 @@ interface FloodLayerState {
   destroyed: boolean;
   flood100Visible: boolean;
   flood500Visible: boolean;
-  manifest: TilePublishManifest | null;
   ready: boolean;
-  sourceInitializationAbortController: AbortController | null;
   sourceInitializationPromise: Promise<void> | null;
   sourceInitialized: boolean;
 }
@@ -44,10 +44,8 @@ function initialState(): FloodLayerState {
     destroyed: false,
     flood100Visible: false,
     flood500Visible: false,
-    manifest: null,
     ready: false,
     sourceInitialized: false,
-    sourceInitializationAbortController: null,
     sourceInitializationPromise: null,
   };
 }
@@ -65,6 +63,7 @@ function resolveBeforeLayerId(map: IMap): string | undefined {
 function ensureFloodSource(
   map: IMap,
   manifest: TilePublishManifest,
+  manifestPath: string,
   sourceId: string = FLOOD_SOURCE_ID
 ): void {
   if (map.hasSource(sourceId)) {
@@ -73,7 +72,7 @@ function ensureFloodSource(
 
   map.addSource(sourceId, {
     type: "vector",
-    url: createPmtilesSourceUrl(manifest),
+    url: createPmtilesSourceUrl(manifest, manifestPath),
   });
 }
 
@@ -128,7 +127,7 @@ function setLayerVisibility(map: IMap, layerId: string, visible: boolean): void 
 
 export function mountFloodLayers(options: MountFloodLayersOptions): FloodLayerMountResult {
   const state = initialState();
-  const manifestPath = options.manifestPath ?? FLOOD_MANIFEST_PATH;
+  const manifestPath = resolveEnvironmentalFloodManifestPath(options.manifestPath);
   const sourceLayer = options.sourceLayer ?? DEFAULT_SOURCE_LAYER;
   const styleLayerIds = getFloodStyleLayerIds("environmental.flood-100");
 
@@ -145,8 +144,7 @@ export function mountFloodLayers(options: MountFloodLayersOptions): FloodLayerMo
 
   function completeSourceInitialization(manifest: TilePublishManifest): void {
     assertTileManifestMatchesDataset(manifest, FLOOD_DATASET, "flood layer manifest");
-    state.manifest = manifest;
-    ensureFloodSource(options.map, manifest);
+    ensureFloodSource(options.map, manifest, manifestPath);
     ensureFloodLayers(options.map, sourceLayer);
     state.sourceInitialized = true;
     applyVisibility();
@@ -162,21 +160,24 @@ export function mountFloodLayers(options: MountFloodLayersOptions): FloodLayerMo
     }
 
     const nextPromise = (async (): Promise<void> => {
-      state.sourceInitializationAbortController?.abort();
-      const abortController = new AbortController();
-      state.sourceInitializationAbortController = abortController;
-      const manifest = await loadTilePublishManifest({
-        contextLabel: "flood",
-        manifestPath,
-        signal: abortController.signal,
-      });
-      if (state.destroyed || abortController.signal.aborted) {
+      const result = await runEffectPromise(
+        Effect.either(
+          loadTilePublishManifestEffect({
+            contextLabel: "flood",
+            manifestPath,
+          })
+        )
+      );
+      if (state.destroyed) {
         return;
       }
 
-      completeSourceInitialization(manifest);
+      if (Either.isLeft(result)) {
+        throw result.left;
+      }
+
+      completeSourceInitialization(result.right.data);
     })().finally(() => {
-      state.sourceInitializationAbortController = null;
       state.sourceInitializationPromise = null;
     });
 
@@ -243,7 +244,6 @@ export function mountFloodLayers(options: MountFloodLayersOptions): FloodLayerMo
     destroy(): void {
       state.destroyed = true;
       options.map.off("load", onLoad);
-      state.sourceInitializationAbortController?.abort();
 
       for (const layerId of [
         styleLayerIds.outline100LayerId,

@@ -105,3 +105,7 @@ export function recordRuntimeEffectFailure(args: {
 export function getRecentEffectFailures(): readonly EffectFailureEvent[] {
   return effectFailureEvents.map((event) => ({ ...event }));
 }
+
+export function clearRecentEffectFailures(): void {
+  effectFailureEvents.length = 0;
+}

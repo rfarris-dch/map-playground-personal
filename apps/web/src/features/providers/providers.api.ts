@@ -4,13 +4,9 @@ import type {
   ProvidersTableRequest,
   ProvidersTableResult,
 } from "@/features/providers/providers.types";
+import { buildApiRequestInit } from "@/lib/api/api-request-init.service";
 
 export function fetchProvidersTable(request: ProvidersTableRequest): Promise<ProvidersTableResult> {
-  const requestInit: RequestInit = {};
-  if (request.signal) {
-    requestInit.signal = request.signal;
-  }
-
   return apiGetJson(
     buildProvidersRoute({
       page: request.page,
@@ -19,6 +15,8 @@ export function fetchProvidersTable(request: ProvidersTableRequest): Promise<Pro
       sortOrder: request.sortOrder,
     }),
     ProvidersTableResponseSchema,
-    requestInit
+    buildApiRequestInit({
+      signal: request.signal,
+    })
   );
 }

@@ -4,15 +4,11 @@ import type {
   FacilitiesTableRequest,
   FacilitiesTableResult,
 } from "@/features/facilities/facilities-table.types";
+import { buildApiRequestInit } from "@/lib/api/api-request-init.service";
 
 export function fetchFacilitiesTable(
   request: FacilitiesTableRequest
 ): Promise<FacilitiesTableResult> {
-  const requestInit: RequestInit = {};
-  if (request.signal) {
-    requestInit.signal = request.signal;
-  }
-
   return apiGetJson(
     buildFacilitiesTableRoute(request.perspective, {
       page: request.page,
@@ -21,6 +17,8 @@ export function fetchFacilitiesTable(
       sortOrder: request.sortOrder,
     }),
     FacilitiesTableResponseSchema,
-    requestInit
+    buildApiRequestInit({
+      signal: request.signal,
+    })
   );
 }

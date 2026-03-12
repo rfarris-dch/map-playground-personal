@@ -14,6 +14,7 @@ const ENDPOINT_CLASSES = new Set([
   "boundary-aggregation",
   "proximity-enrichment",
 ]);
+const LOCAL_FACILITY_TABLE_RE = /serve\.(facility_site|hyperscale_site)/;
 
 describe("geo-sql query specs", () => {
   it("keeps each public query spec internally consistent", () => {
@@ -47,6 +48,22 @@ describe("geo-sql query specs", () => {
 
     expect(query.params).toEqual([-100, 30, -90, 40, 250]);
     expect(query.sql).toContain("serve.facility_site");
+  });
+
+  it("keeps facilities queries on local Postgres tables only", () => {
+    const specs = [
+      getFacilitiesBboxQuerySpec("colocation"),
+      getFacilitiesBboxQuerySpec("hyperscale"),
+      getFacilitiesPolygonQuerySpec("colocation"),
+      getFacilitiesPolygonQuerySpec("hyperscale"),
+      getFacilityDetailQuerySpec("colocation"),
+      getFacilityDetailQuerySpec("hyperscale"),
+    ];
+
+    for (const spec of specs) {
+      expect(spec.sql).toMatch(LOCAL_FACILITY_TABLE_RE);
+      expect(spec.sql).not.toContain("source_row_ids");
+    }
   });
 
   it("keeps facilities bbox row budgets aligned across perspectives", () => {
@@ -96,7 +113,8 @@ describe("geo-sql query specs", () => {
 
     for (const spec of specs) {
       expect(spec.sql).toContain("provider_id IS NOT NULL");
-      expect(spec.sql).toContain("COALESCE(NULLIF(BTRIM(");
+      expect(spec.sql).toContain("provider.provider_name");
+      expect(spec.sql).toContain("INITCAP(REPLACE(");
     }
   });
 });

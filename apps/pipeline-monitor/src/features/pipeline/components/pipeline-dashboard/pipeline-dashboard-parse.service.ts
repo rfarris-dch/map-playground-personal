@@ -7,6 +7,7 @@ import { formatPercent } from "@/features/pipeline/pipeline.service";
 const DB_LOAD_SUMMARY_RE = /^db-load:([a-z0-9-]+)(?:\s+([0-9]+)\/([0-9]+))?(?:\s+(.+))?$/i;
 const DB_LOAD_STATES_RE = /\bstates=([0-9]+)\/([0-9]+)\b/i;
 const DB_LOAD_ACTIVE_RE = /\bactive=([^ ]+)/i;
+const FLOOD_STAGE_SIZE_RE = /\bstage=([0-9]+(?:\.[0-9]+)?(?:MB|GB|KB|B))\b/i;
 const BUILD_PERCENT_RE = /([0-9]+(?:\.[0-9]+)?)%/;
 const BUILD_READ_RE = /\bread=([0-9]+)\/([0-9]+)\b/;
 const BUILD_LOG_BYTES_RE = /\blog=([0-9]+)\b/;
@@ -161,7 +162,9 @@ function parseBuildProgressFromStructured(progress: unknown): BuildProgress | nu
 
   const stageRaw = Reflect.get(tileBuild, "stage");
   let stage: "read" | "write" | "convert" | "complete" | null = null;
-  if (stageRaw === "convert") {
+  if (stageRaw === "build") {
+    stage = "write";
+  } else if (stageRaw === "convert") {
     stage = "convert";
   } else if (stageRaw === "ready") {
     stage = "complete";
@@ -397,4 +400,13 @@ export function parseBuildProgress(
     workLeft: work.workLeft,
     workTotal: work.workTotal,
   };
+}
+
+export function parseFloodStageSizeLabel(summary: string | null | undefined): string | null {
+  if (typeof summary !== "string") {
+    return null;
+  }
+
+  const stageSizeLabel = FLOOD_STAGE_SIZE_RE.exec(summary.trim())?.[1];
+  return typeof stageSizeLabel === "string" && stageSizeLabel.length > 0 ? stageSizeLabel : null;
 }

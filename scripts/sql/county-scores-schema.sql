@@ -306,6 +306,9 @@ CREATE TABLE IF NOT EXISTS analytics.fact_market_analysis_score_snapshot (
 CREATE INDEX IF NOT EXISTS fact_market_analysis_score_snapshot_publication_idx
   ON analytics.fact_market_analysis_score_snapshot (publication_run_id, rank_status, market_pressure_index DESC);
 
+COMMENT ON COLUMN analytics.fact_market_analysis_score_snapshot.water_stress_score
+  IS 'Deprecated storage-only field retained for backward-compatible live tables; the county score API no longer publishes water stress.';
+
 CREATE TABLE IF NOT EXISTS analytics.fact_narrative_snapshot (
   publication_run_id text NOT NULL,
   county_geoid text NOT NULL,
@@ -403,5 +406,8 @@ CREATE TABLE IF NOT EXISTS analytics.county_market_pressure_current (
 
 CREATE INDEX IF NOT EXISTS county_market_pressure_current_rank_idx
   ON analytics.county_market_pressure_current (rank_status, market_pressure_index DESC);
+
+COMMENT ON COLUMN analytics.county_market_pressure_current.water_stress_score
+  IS 'Deprecated storage-only field retained for backward-compatible live tables; the county score API no longer publishes water stress.';
 
 COMMIT;

@@ -40,6 +40,7 @@ import type {
 import type { ParcelsLayerController, ParcelsStatus } from "@/features/parcels/parcels.types";
 import type { PowerLayerVisibilityController } from "@/features/power/power.types";
 import type { PowerHoverController, PowerHoverState } from "@/features/power/power-hover.types";
+import { cloneSelectionRing } from "@/features/selection/selection-analysis-request.service";
 import type {
   SketchAreaGeometry,
   SketchMeasureAreaShape,
@@ -130,7 +131,12 @@ export function useAppShellState(): UseAppShellStateResult {
       return;
     }
 
-    selectionGeometry.value = completedGeometry;
+    selectionGeometry.value = {
+      areaShape: completedGeometry.areaShape,
+      areaSqKm: completedGeometry.areaSqKm,
+      distanceKm: completedGeometry.distanceKm,
+      ring: cloneSelectionRing(completedGeometry.ring),
+    };
     activeToolPanel.value = "selection";
   }
 

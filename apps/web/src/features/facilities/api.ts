@@ -2,25 +2,18 @@ import {
   buildFacilitiesBboxRoute,
   FacilitiesFeatureCollectionSchema,
 } from "@map-migration/contracts";
-import { apiGetJson } from "@map-migration/core-runtime/api";
-import type {
-  FacilitiesBboxRequest,
-  FacilitiesFetchResult,
-} from "@/features/facilities/facilities.types";
+import { apiGetJsonEffect } from "@map-migration/core-runtime/api";
+import type { FacilitiesBboxRequest } from "@/features/facilities/facilities.types";
+import { buildApiRequestInit } from "@/lib/api/api-request-init.service";
 
-export function fetchFacilitiesByBbox(args: FacilitiesBboxRequest): Promise<FacilitiesFetchResult> {
-  const requestInit: RequestInit = {};
-  if (args.signal) {
-    requestInit.signal = args.signal;
-  }
-
-  return apiGetJson(
+export function fetchFacilitiesByBboxEffect(args: FacilitiesBboxRequest) {
+  return apiGetJsonEffect(
     buildFacilitiesBboxRoute({
       bbox: args.bbox,
       perspective: args.perspective,
       limit: args.limit,
     }),
     FacilitiesFeatureCollectionSchema,
-    requestInit
+    buildApiRequestInit()
   );
 }

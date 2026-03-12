@@ -1,5 +1,6 @@
 import type { Effect, Exit, Fiber } from "effect";
 import type {
+  PipelineLiveSample,
   PipelineStatusController,
   PipelineStatusFetchResult,
 } from "@/features/pipeline/pipeline.types";
@@ -16,8 +17,10 @@ export interface PipelineStatusControllerDeps {
   clearInterval(handle: PipelineSchedulerHandle): void;
   clearTimeout(handle: PipelineSchedulerHandle): void;
   fetchPipelineStatus(): Effect.Effect<PipelineStatusFetchResult, never>;
+  loadPersistedHistory?(): readonly PipelineLiveSample[];
   now(): number;
   readonly runtime: PipelineEffectRuntime;
+  savePersistedHistory?(history: readonly PipelineLiveSample[]): void;
   setInterval(callback: () => void, delayMs: number): PipelineSchedulerHandle;
   setTimeout(callback: () => void, delayMs: number): PipelineSchedulerHandle;
 }

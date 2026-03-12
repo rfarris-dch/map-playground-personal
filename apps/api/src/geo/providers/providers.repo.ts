@@ -16,12 +16,43 @@ function parseCount(value: number | string): number {
 export async function countProviders(): Promise<number> {
   const rows = await runQuery<ProviderCountRow>(
     `
+WITH provider_metrics AS (
+  SELECT
+    facility.provider_id,
+    MAX(NULLIF(BTRIM(facility.provider_slug), '')) AS provider_slug,
+    MAX(NULLIF(BTRIM(facility.state_abbrev), '')) AS state_abbrev,
+    COUNT(*) FILTER (WHERE facility.perspective = 'colocation')::bigint AS colocation_listing_count,
+    COUNT(*) FILTER (WHERE facility.perspective = 'hyperscale')::bigint AS hyperscale_listing_count,
+    MAX(facility.updated_at) AS latest_facility_updated_at
+  FROM (
+    SELECT
+      provider_id,
+      provider_slug,
+      state_abbrev,
+      freshness_ts AS updated_at,
+      'colocation'::text AS perspective
+    FROM serve.facility_site
+    WHERE provider_id IS NOT NULL
+    UNION ALL
+    SELECT
+      provider_id,
+      provider_slug,
+      state_abbrev,
+      freshness_ts AS updated_at,
+      'hyperscale'::text AS perspective
+    FROM serve.hyperscale_site
+    WHERE provider_id IS NOT NULL
+  ) AS facility
+  GROUP BY facility.provider_id
+),
+active_providers AS (
+  SELECT
+    metrics.provider_id
+  FROM provider_metrics AS metrics
+)
 SELECT
   COUNT(*)::bigint AS total_count
-FROM mirror."HAWK_PROVIDER_PROFILE"
-WHERE "NAME" IS NOT NULL
-  AND COALESCE("SHOW_PAGE", 0) = 1
-  AND COALESCE("ARCHIVED", 'N') = 'N';
+FROM active_providers;
 `,
     []
   );
@@ -35,12 +66,12 @@ WHERE "NAME" IS NOT NULL
 }
 
 const providerSortSqlByField: Record<ProviderSortBy, string> = {
-  name: `"NAME"`,
-  category: `NULLIF("PROVIDER_CATEGORY", '')`,
-  country: `NULLIF("COUNTRY", '')`,
-  state: `NULLIF("STATE", '')`,
-  listingCount: `"NUM_LISTINGS"`,
-  updatedAt: `"DATE_UPDATED"`,
+  name: "name",
+  category: "category",
+  country: "country",
+  state: "state",
+  listingCount: "listing_count",
+  updatedAt: "updated_at",
 };
 
 export function listProvidersPage(query: ProvidersPageQuery): Promise<ProviderListRow[]> {
@@ -49,22 +80,68 @@ export function listProvidersPage(query: ProvidersPageQuery): Promise<ProviderLi
 
   return runQuery<ProviderListRow>(
     `
+WITH provider_metrics AS (
+  SELECT
+    facility.provider_id,
+    MAX(NULLIF(BTRIM(facility.provider_slug), '')) AS provider_slug,
+    MAX(NULLIF(BTRIM(facility.state_abbrev), '')) AS state_abbrev,
+    COUNT(*) FILTER (WHERE facility.perspective = 'colocation')::bigint AS colocation_listing_count,
+    COUNT(*) FILTER (WHERE facility.perspective = 'hyperscale')::bigint AS hyperscale_listing_count,
+    MAX(facility.updated_at) AS latest_facility_updated_at
+  FROM (
+    SELECT
+      provider_id,
+      provider_slug,
+      state_abbrev,
+      freshness_ts AS updated_at,
+      'colocation'::text AS perspective
+    FROM serve.facility_site
+    WHERE provider_id IS NOT NULL
+    UNION ALL
+    SELECT
+      provider_id,
+      provider_slug,
+      state_abbrev,
+      freshness_ts AS updated_at,
+      'hyperscale'::text AS perspective
+    FROM serve.hyperscale_site
+    WHERE provider_id IS NOT NULL
+  ) AS facility
+  GROUP BY facility.provider_id
+),
+active_providers AS (
+  SELECT
+    metrics.provider_id,
+    COALESCE(
+      NULLIF(BTRIM(provider.provider_name), ''),
+      NULLIF(INITCAP(REPLACE(metrics.provider_slug, '-', ' ')), ''),
+      metrics.provider_id
+    ) AS name,
+    provider.category,
+    provider.country,
+    COALESCE(provider.state, metrics.state_abbrev) AS state,
+    (metrics.colocation_listing_count + metrics.hyperscale_listing_count)::bigint AS listing_count,
+    (metrics.hyperscale_listing_count > 0) AS supports_hyperscale,
+    (metrics.colocation_listing_count > 0) AS supports_retail,
+    false AS supports_wholesale,
+    COALESCE(provider.updated_at, metrics.latest_facility_updated_at) AS updated_at
+  FROM provider_metrics AS metrics
+  LEFT JOIN facility_current.providers AS provider
+    ON provider.provider_id = metrics.provider_id
+)
 SELECT
-  "PROVIDER_PROFILE_ID"::text AS provider_id,
-  "NAME" AS name,
-  NULLIF("PROVIDER_CATEGORY", '') AS category,
-  NULLIF("COUNTRY", '') AS country,
-  NULLIF("STATE", '') AS state,
-  "NUM_LISTINGS" AS listing_count,
-  COALESCE("HYPERSCALE", 0) AS supports_hyperscale,
-  COALESCE("RETAIL", 0) AS supports_retail,
-  COALESCE("WHOLESALE", 0) AS supports_wholesale,
-  "DATE_UPDATED" AS updated_at
-FROM mirror."HAWK_PROVIDER_PROFILE"
-WHERE "NAME" IS NOT NULL
-  AND COALESCE("SHOW_PAGE", 0) = 1
-  AND COALESCE("ARCHIVED", 'N') = 'N'
-ORDER BY ${sortColumn} ${sortDirection} NULLS LAST, "NAME" ASC, "PROVIDER_PROFILE_ID" ASC
+  provider_id,
+  name,
+  category,
+  country,
+  state,
+  listing_count,
+  supports_hyperscale,
+  supports_retail,
+  supports_wholesale,
+  updated_at
+FROM active_providers
+ORDER BY ${sortColumn} ${sortDirection} NULLS LAST, name ASC, provider_id ASC
 LIMIT $1
 OFFSET $2;
 `,

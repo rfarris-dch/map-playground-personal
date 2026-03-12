@@ -5,6 +5,7 @@ import { parseIsoToTimestamp } from "./pipeline-tracking-time.service";
 const BUILD_PERCENT_RE = /([0-9]+(?:\.[0-9]+)?)%/;
 const BUILD_READ_RE = /\bread=([0-9]+)\/([0-9]+)\b/;
 const BUILD_LOG_BYTES_RE = /\blog=([0-9]+)\b/;
+const FLOOD_STAGE_SIZE_RE = /\bstage=([0-9]+(?:\.[0-9]+)?)(MB|GB|KB|B)\b/;
 
 function isStateCompleted(state: unknown): boolean {
   if (typeof state !== "object" || state === null) {
@@ -162,6 +163,19 @@ function deriveRunProgressTotals(run: PipelineStatusPayload["response"]["run"]):
   };
 }
 
+function findStateByName(
+  run: PipelineStatusPayload["response"]["run"],
+  stateName: PipelineStatusPayload["response"]["run"]["states"][number]["state"]
+): PipelineStatusPayload["response"]["run"]["states"][number] | null {
+  for (const state of run.states) {
+    if (state.state === stateName) {
+      return state;
+    }
+  }
+
+  return null;
+}
+
 function findLatestStateUpdatedAt(payload: PipelineStatusPayload): string | null {
   const states = payload.response.run.states;
   let latestTimestampMs: number | null = null;
@@ -187,6 +201,37 @@ function findLatestStateUpdatedAt(payload: PipelineStatusPayload): string | null
   return latestIso;
 }
 
+function parseFloodStageSizeBytes(summary: string | null | undefined): number | null {
+  if (typeof summary !== "string") {
+    return null;
+  }
+
+  const match = FLOOD_STAGE_SIZE_RE.exec(summary.trim());
+  const rawValue = match?.[1];
+  const unit = match?.[2];
+  if (typeof rawValue !== "string" || typeof unit !== "string") {
+    return null;
+  }
+
+  const value = Number.parseFloat(rawValue);
+  if (!Number.isFinite(value) || value < 0) {
+    return null;
+  }
+
+  switch (unit) {
+    case "GB":
+      return Math.round(value * 1024 * 1024 * 1024);
+    case "MB":
+      return Math.round(value * 1024 * 1024);
+    case "KB":
+      return Math.round(value * 1024);
+    case "B":
+      return Math.round(value);
+    default:
+      return null;
+  }
+}
+
 export function buildPipelineLiveSample(
   payload: PipelineStatusPayload,
   capturedAt: string
@@ -196,18 +241,27 @@ export function buildPipelineLiveSample(
   const runProgress =
     typeof run === "object" && run !== null ? Reflect.get(run, "progress") : undefined;
   const buildSummary = parseBuildSummary(run.summary, runProgress);
+  const floodStageSizeBytes =
+    run.phase === "loading" ? parseFloodStageSizeBytes(run.summary) : null;
+  const floodLoadState = floodStageSizeBytes === null ? null : findStateByName(run, "load");
+  const floodLoadExpectedCount =
+    floodLoadState === null ? null : normalizeStateExpectedCount(floodLoadState);
   return {
     buildLogBytes: buildSummary?.logBytes ?? null,
     buildProgressPercent: buildSummary?.percent ?? null,
     capturedAt,
+    counterMode: floodStageSizeBytes === null ? "default" : "flood-staging-rows",
     requestId: payload.requestId,
     runId: run.runId,
     phase: run.phase,
     isRunning: run.isRunning,
     statesCompleted: progressTotals.statesCompleted,
     statesTotal: progressTotals.statesTotal,
-    writtenCount: progressTotals.writtenCount,
-    expectedCount: progressTotals.expectedCount,
+    rawWrittenCount: run.writtenCount,
+    stageBytes: floodStageSizeBytes,
+    writtenCount: run.writtenCount,
+    expectedCount: floodLoadExpectedCount ?? run.expectedCount,
+    writtenUnit: "rows",
     runStartedAt: run.startedAt,
     lastStateUpdatedAt: findLatestStateUpdatedAt(payload),
   };

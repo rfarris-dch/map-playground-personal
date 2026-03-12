@@ -232,7 +232,7 @@
       <Badge>Markets</Badge>
       <h1 class="text-xl font-semibold tracking-tight">Markets</h1>
       <p class="text-sm text-muted-foreground">
-        Live table from Postgres (`mirror."HAWK_MARKET"`, `SEARCH_PAGE = 1`).
+        Live table from Postgres (`market_current.markets`, `search_page = true`).
       </p>
     </header>
 

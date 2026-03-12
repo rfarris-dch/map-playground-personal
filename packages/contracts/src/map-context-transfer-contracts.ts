@@ -17,16 +17,28 @@ export const MapContextHighlightTargetSchema = z.object({
   kind: z.enum(["market", "company", "provider", "facility"]),
 });
 
+const MapContextCameraSchema = z.object({
+  bearing: z.number().finite().min(-180).max(180).optional(),
+  pitch: z.number().finite().min(0).max(85).optional(),
+});
+
 export const MapContextViewportSchema = z.union([
-  z.object({
-    center: z.tuple([z.number().finite().min(-180).max(180), z.number().finite().min(-90).max(90)]),
-    type: z.literal("center"),
-    zoom: z.number().finite().min(0).max(24),
-  }),
-  z.object({
-    bounds: BBoxSchema,
-    type: z.literal("bounds"),
-  }),
+  z
+    .object({
+      center: z.tuple([
+        z.number().finite().min(-180).max(180),
+        z.number().finite().min(-90).max(90),
+      ]),
+      type: z.literal("center"),
+      zoom: z.number().finite().min(0).max(24),
+    })
+    .merge(MapContextCameraSchema),
+  z
+    .object({
+      bounds: BBoxSchema,
+      type: z.literal("bounds"),
+    })
+    .merge(MapContextCameraSchema),
 ]);
 
 export const MapContextTransferSchema = z.object({
@@ -38,11 +50,19 @@ export const MapContextTransferSchema = z.object({
   providerIds: z.array(z.string().min(1)).optional(),
   facilityIds: z.array(z.string().min(1)).optional(),
   activePerspectives: z.array(FacilityPerspectiveSchema).optional(),
+  visibleLayerIds: z.array(z.string().min(1)).optional(),
+  visibleBasemapLayerIds: z.array(z.string().min(1)).optional(),
   selectedBoundaryIds: z
     .object({
       country: z.array(z.string().min(1)).optional(),
       county: z.array(z.string().min(1)).optional(),
       state: z.array(z.string().min(1)).optional(),
+    })
+    .optional(),
+  selectedFiberSourceLayerNames: z
+    .object({
+      longhaul: z.array(z.string().min(1)).optional(),
+      metro: z.array(z.string().min(1)).optional(),
     })
     .optional(),
   viewport: MapContextViewportSchema.optional(),

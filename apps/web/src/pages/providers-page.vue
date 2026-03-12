@@ -245,7 +245,8 @@
       <Badge>Providers</Badge>
       <h1 class="text-xl font-semibold tracking-tight">Providers</h1>
       <p class="text-sm text-muted-foreground">
-        Live table from Postgres (`mirror."HAWK_PROVIDER_PROFILE"` active rows).
+        Live provider rollup from `serve.facility_site`, `serve.hyperscale_site`, and
+        `facility_current.providers`.
       </p>
     </header>
 

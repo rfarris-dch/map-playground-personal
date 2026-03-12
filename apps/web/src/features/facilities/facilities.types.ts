@@ -3,16 +3,12 @@ import type {
   FacilitiesFeatureCollection,
   FacilityPerspective,
 } from "@map-migration/contracts";
-import type { ApiResult } from "@map-migration/core-runtime/api";
 
 export interface FacilitiesBboxRequest {
   readonly bbox: BBox;
   limit?: number;
   readonly perspective: FacilityPerspective;
-  signal?: AbortSignal;
 }
-
-export type FacilitiesFetchResult = ApiResult<FacilitiesFeatureCollection>;
 
 export interface FacilitiesViewportSnapshot {
   readonly features: FacilitiesFeatureCollection["features"];
@@ -70,7 +66,6 @@ export interface FacilitiesLayerController {
 }
 
 export interface FacilitiesLayerState {
-  abortController: AbortController | null;
   cachedFeatures: FacilitiesFeatureCollection["features"];
   debounceTimer: number | null;
   fetchedBbox: BBox | null;

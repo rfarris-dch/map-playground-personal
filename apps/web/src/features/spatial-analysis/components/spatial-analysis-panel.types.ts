@@ -23,6 +23,17 @@ export interface SpatialAnalysisPanelPerspectiveSummary {
 export interface SpatialAnalysisPanelSummary {
   readonly colocation: SpatialAnalysisPanelPerspectiveSummary;
   readonly facilities: readonly SpatialAnalysisFacilityRecord[];
+  readonly flood?: {
+    readonly flood100AreaSqKm: number;
+    readonly flood100SelectionShare: number;
+    readonly flood500AreaSqKm: number;
+    readonly flood500SelectionShare: number;
+    readonly parcelCountIntersectingFlood100: number;
+    readonly parcelCountIntersectingFlood500: number;
+    readonly parcelCountOutsideMappedFlood: number;
+    readonly selectionAreaSqKm: number;
+    readonly unavailableReason: string | null;
+  };
   readonly hyperscale: SpatialAnalysisPanelPerspectiveSummary;
   readonly marketSelection?: {
     readonly markets: readonly MarketSelectionMatch[];

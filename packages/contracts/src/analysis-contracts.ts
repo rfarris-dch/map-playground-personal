@@ -128,6 +128,7 @@ export const PolicyDatasetSchema = z.enum([
   "county_scores",
   "parcels",
   "facilities",
+  "environmental_flood",
   "power",
   "fiber",
   "market_metrics",

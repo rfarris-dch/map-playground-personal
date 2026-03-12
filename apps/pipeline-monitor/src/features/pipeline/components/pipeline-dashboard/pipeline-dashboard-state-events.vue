@@ -10,15 +10,29 @@
   <div class="grid gap-4 xl:grid-cols-[2fr_1fr]">
     <article class="rounded-xl border border-border/80 bg-card/95 p-4 shadow-sm">
       <header class="mb-2 flex items-center justify-between">
-        <h2 class="m-0 text-sm font-semibold">State Checkpoints</h2>
-        <span class="text-xs text-muted-foreground">{{ props.stateRows.length }} states</span>
+        <h2 class="m-0 text-sm font-semibold">
+          {{ props.dataset === "flood" ? "Phase Checkpoints" : "State Checkpoints" }}
+        </h2>
+        <span class="text-xs text-muted-foreground"
+          >{{ props.dataset === "flood" ? `${String(props.stateRows.length)} phases` : `${String(props.stateRows.length)} states` }}</span
+        >
       </header>
+
+      <p
+        v-if="props.dataset === 'flood' && props.stageSizeLabel !== null"
+        class="mb-2 text-xs text-muted-foreground"
+      >
+        Flood load progress uses {{ props.stageSizeLabel }} while the canonical table is
+        materializing.
+      </p>
 
       <div class="max-h-[30rem] overflow-auto rounded border border-border/60">
         <table class="min-w-full border-collapse text-xs">
           <thead class="sticky top-0 bg-muted/90 backdrop-blur">
             <tr>
-              <th class="px-2 py-1 text-left font-semibold">State</th>
+              <th class="px-2 py-1 text-left font-semibold">
+                {{ props.dataset === "flood" ? "Phase" : "State" }}
+              </th>
               <th class="px-2 py-1 text-right font-semibold">Completion</th>
               <th class="px-2 py-1 text-right font-semibold">Written</th>
               <th class="px-2 py-1 text-right font-semibold">Remaining</th>

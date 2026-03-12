@@ -55,6 +55,7 @@ export type QuerySelectionToolSummaryResult =
 
 export interface UseSelectionToolOptions {
   readonly expectedParcelsIngestionRunId: ShallowRef<string | null>;
+  readonly includeParcels: ShallowRef<boolean>;
   readonly measureState: ShallowRef<MeasureState>;
   readonly visiblePerspectives: ShallowRef<PerspectiveVisibilityState>;
 }

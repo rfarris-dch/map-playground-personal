@@ -66,8 +66,41 @@ describe("geo-tiles publish manifest invariants", () => {
     expect(normalizePmtilesAssetUrl("tiles/parcels.pmtiles", "https://example.com")).toBe(
       "https://example.com/tiles/parcels.pmtiles"
     );
+    expect(
+      normalizePmtilesAssetUrl(
+        "20260308.deadbeef.pmtiles",
+        "https://tiles.example.com/tiles/parcels-draw-v1/latest.json"
+      )
+    ).toBe("https://tiles.example.com/tiles/parcels-draw-v1/20260308.deadbeef.pmtiles");
     expect(createPmtilesSourceUrl(decoded.value, "https://example.com")).toBe(
       "pmtiles://https://example.com/tiles/parcels/20260308.deadbeef.pmtiles"
+    );
+    expect(
+      createPmtilesSourceUrl(
+        {
+          ...decoded.value,
+          current: {
+            ...decoded.value.current,
+            url: "20260308.deadbeef.pmtiles",
+          },
+        },
+        "https://tiles.example.com/tiles/parcels-draw-v1/latest.json"
+      )
+    ).toBe("pmtiles://https://tiles.example.com/tiles/parcels-draw-v1/20260308.deadbeef.pmtiles");
+  });
+
+  it("creates absolute PMTiles URLs when a public base URL is provided", () => {
+    const entry = createManifestEntry(
+      "parcels-draw-v1",
+      new Date("2026-03-05T00:00:00.000Z"),
+      "deadbeef",
+      {
+        publicBaseUrl: "https://tiles.example.com/tiles",
+      }
+    );
+
+    expect(entry.url).toBe(
+      "https://tiles.example.com/tiles/parcels-draw-v1/20260305.deadbeef.pmtiles"
     );
   });
 });
