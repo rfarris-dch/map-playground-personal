@@ -1,10 +1,7 @@
 import { Effect } from "effect";
 import { onBeforeUnmount, shallowRef, watch } from "vue";
 import type { UseAppShellSelectionAnalysisOptions } from "@/features/app/selection/use-app-shell-selection-analysis.types";
-import {
-  cloneSelectionRing,
-  resolveSelectionAnalysisBlockedReason,
-} from "@/features/selection/selection-analysis-request.service";
+import { cloneSelectionRing } from "@/features/selection/selection-analysis-request.service";
 import {
   buildEmptySelectionToolSummary,
   exportSelectionToolSummary,
@@ -50,15 +47,6 @@ export function useAppShellSelectionAnalysis(options: UseAppShellSelectionAnalys
     }
 
     const selectionRing = cloneSelectionRing(selectionGeometry.ring);
-    const blockedReason = resolveSelectionAnalysisBlockedReason(selectionRing);
-    if (blockedReason !== null) {
-      await selectionRunner.interrupt();
-      isSelectionLoading.value = false;
-      selectionError.value = blockedReason;
-      selectionProgress.value = null;
-      selectionSummary.value = buildEmptySelectionToolSummary(selectionRing);
-      return;
-    }
 
     isSelectionLoading.value = true;
     selectionError.value = null;

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import {
   buildSelectionRingBbox,
-  resolveSelectionAnalysisBlockedReason,
   selectionRingExceedsFastAnalysisLimits,
 } from "@/features/selection/selection-analysis-request.service";
 
@@ -22,7 +21,6 @@ describe("selection analysis request service", () => {
       north: 33.1,
     });
     expect(selectionRingExceedsFastAnalysisLimits(ring)).toBe(false);
-    expect(resolveSelectionAnalysisBlockedReason(ring)).toBeNull();
   });
 
   it("blocks oversized selection rings", () => {
@@ -35,8 +33,5 @@ describe("selection analysis request service", () => {
     ];
 
     expect(selectionRingExceedsFastAnalysisLimits(ring)).toBe(true);
-    expect(resolveSelectionAnalysisBlockedReason(ring)).toBe(
-      "Zoom in to analyze a smaller selection area."
-    );
   });
 });

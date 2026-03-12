@@ -1,4 +1,8 @@
 import type {
+  FacilitiesFeatureCollection,
+  FacilitiesSelectionRequest,
+  MarketSelectionMatch,
+  MarketsSelectionRequest,
   SpatialAnalysisSummaryRequest,
   SpatialAnalysisSummaryResponse,
 } from "@map-migration/contracts";
@@ -10,8 +14,14 @@ import {
 } from "@map-migration/core-runtime/api";
 import { Effect, Either } from "effect";
 import { exportMeasureSelectionSummary } from "@/features/app/measure-selection/measure-selection-export.service";
+import { fetchFacilitiesBySelectionEffect } from "@/features/measure/measure-analysis.api";
+import { buildMeasureSelectionSummary } from "@/features/measure/measure-analysis.service";
 import type { MeasureSelectionSummary } from "@/features/measure/measure-analysis.types";
-import { selectionGeometryFromRing } from "@/features/selection/selection-analysis-request.service";
+import {
+  selectionGeometryFromRing,
+  selectionRingExceedsFastAnalysisLimits,
+} from "@/features/selection/selection-analysis-request.service";
+import { fetchMarketsBySelectionEffect } from "@/features/selection-tool/selection-tool.api";
 import type {
   QuerySelectionToolSummaryArgs,
   QuerySelectionToolSummaryResult,
@@ -165,6 +175,158 @@ function readSelectionWarningMessage(response: SpatialAnalysisSummaryResponse): 
   return parcelWarning?.message ?? null;
 }
 
+function partitionSelectionFacilities(features: FacilitiesFeatureCollection["features"]): {
+  readonly colocationFeatures: FacilitiesFeatureCollection["features"];
+  readonly hyperscaleFeatures: FacilitiesFeatureCollection["features"];
+} {
+  const colocationFeatures: FacilitiesFeatureCollection["features"] = [];
+  const hyperscaleFeatures: FacilitiesFeatureCollection["features"] = [];
+
+  for (const feature of features) {
+    if (feature.properties.perspective === "colocation") {
+      colocationFeatures.push(feature);
+      continue;
+    }
+
+    if (feature.properties.perspective === "hyperscale") {
+      hyperscaleFeatures.push(feature);
+    }
+  }
+
+  return {
+    colocationFeatures,
+    hyperscaleFeatures,
+  };
+}
+
+function buildLargeSelectionFallbackSummary(args: {
+  readonly facilitiesFeatures: FacilitiesFeatureCollection["features"];
+  readonly marketSelection: {
+    readonly markets: readonly MarketSelectionMatch[];
+    readonly matchCount: number;
+    readonly minimumSelectionOverlapPercent: number;
+    readonly primaryMarket: MarketSelectionMatch | null;
+    readonly selectionAreaSqKm: number;
+    readonly unavailableReason: string | null;
+  };
+  readonly selectionRing: readonly [number, number][];
+}): SelectionToolAnalysisSummary {
+  const baseSummary = buildEmptySpatialAnalysisSummary(args.selectionRing);
+  const facilitiesByPerspective = partitionSelectionFacilities(args.facilitiesFeatures);
+  const measureSummary = buildMeasureSelectionSummary({
+    ring: args.selectionRing,
+    colocationFeatures: facilitiesByPerspective.colocationFeatures,
+    hyperscaleFeatures: facilitiesByPerspective.hyperscaleFeatures,
+    parcelFeatures: [],
+    parcelNextCursor: null,
+    parcelTruncated: false,
+  });
+
+  return {
+    ...baseSummary,
+    area: {
+      countyIds: measureSummary.countyIds,
+      selectionAreaSqKm: args.marketSelection.selectionAreaSqKm,
+    },
+    summary: {
+      ...measureSummary,
+      flood: baseSummary.summary.flood,
+      marketSelection: args.marketSelection,
+    },
+  };
+}
+
+function queryLargeSelectionToolSummaryEffect(
+  args: QuerySelectionToolSummaryArgs
+): Effect.Effect<QuerySelectionToolSummaryResult, never, never> {
+  return Effect.gen(function* () {
+    const perspectives = listVisiblePerspectives(args.visiblePerspectives);
+    const geometry = selectionGeometryFromRing(args.selectionRing);
+
+    const facilitiesRequest: FacilitiesSelectionRequest = {
+      geometry,
+      limitPerPerspective: 5000,
+      perspectives,
+    };
+    const marketsRequest: MarketsSelectionRequest = {
+      geometry,
+      limit: 25,
+      minimumSelectionOverlapPercent: args.minimumMarketSelectionOverlapPercent ?? 0,
+    };
+
+    const [facilitiesResult, marketsResult] = yield* Effect.all([
+      Effect.either(fetchFacilitiesBySelectionEffect(facilitiesRequest, args.signal)),
+      Effect.either(fetchMarketsBySelectionEffect(marketsRequest, args.signal)),
+    ]);
+
+    if (Either.isLeft(facilitiesResult) && facilitiesResult.left instanceof ApiAbortedError) {
+      return {
+        ok: false,
+        reason: "aborted",
+      } satisfies QuerySelectionToolSummaryResult;
+    }
+
+    if (Either.isLeft(marketsResult) && marketsResult.left instanceof ApiAbortedError) {
+      return {
+        ok: false,
+        reason: "aborted",
+      } satisfies QuerySelectionToolSummaryResult;
+    }
+
+    const facilitiesFeatures = Either.isRight(facilitiesResult)
+      ? facilitiesResult.right.data.features
+      : [];
+    const marketSelection = Either.isRight(marketsResult)
+      ? {
+          markets: marketsResult.right.data.matchedMarkets,
+          matchCount: marketsResult.right.data.selection.matchCount,
+          minimumSelectionOverlapPercent:
+            marketsResult.right.data.selection.minimumSelectionOverlapPercent,
+          primaryMarket: marketsResult.right.data.primaryMarket,
+          selectionAreaSqKm: marketsResult.right.data.selection.selectionAreaSqKm,
+          unavailableReason: null,
+        }
+      : {
+          markets: [],
+          matchCount: 0,
+          minimumSelectionOverlapPercent: args.minimumMarketSelectionOverlapPercent ?? 0,
+          primaryMarket: null,
+          selectionAreaSqKm: 0,
+          unavailableReason: getApiErrorMessage(
+            marketsResult.left,
+            "Market selection is unavailable for this large selection."
+          ),
+        };
+
+    const summary = buildLargeSelectionFallbackSummary({
+      facilitiesFeatures,
+      marketSelection,
+      selectionRing: args.selectionRing,
+    });
+
+    yield* Effect.sync(() => {
+      publishSelectionProgress(
+        args,
+        completedSelectionProgress({
+          includeParcels: false,
+          marketCount: summary.summary.marketSelection?.matchCount ?? 0,
+          parcelCount: 0,
+          perspectiveCount: perspectives.length,
+          totalFacilityCount: summary.summary.totalCount,
+        })
+      );
+    });
+
+    return {
+      ok: true,
+      value: {
+        errorMessage: null,
+        summary,
+      },
+    } satisfies QuerySelectionToolSummaryResult;
+  });
+}
+
 export function buildEmptySelectionToolSummary(
   selectionRing: readonly [number, number][]
 ): SelectionToolAnalysisSummary {
@@ -175,7 +337,10 @@ export function querySelectionToolSummaryEffect(
   args: QuerySelectionToolSummaryArgs
 ): Effect.Effect<QuerySelectionToolSummaryResult, never, never> {
   return Effect.gen(function* () {
-    const includeParcels = args.includeParcels === true;
+    const selectionExceedsFastAnalysisLimits = selectionRingExceedsFastAnalysisLimits(
+      args.selectionRing
+    );
+    const includeParcels = args.includeParcels === true && !selectionExceedsFastAnalysisLimits;
     const perspectives = listVisiblePerspectives(args.visiblePerspectives);
     const request: SpatialAnalysisSummaryRequest = {
       geometry: selectionGeometryFromRing(args.selectionRing),
@@ -193,6 +358,13 @@ export function querySelectionToolSummaryEffect(
         createInitialSelectionProgress(perspectives.length, includeParcels)
       );
     });
+
+    if (selectionExceedsFastAnalysisLimits) {
+      return yield* queryLargeSelectionToolSummaryEffect({
+        ...args,
+        includeParcels: false,
+      });
+    }
 
     const summaryOptions =
       typeof args.signal === "undefined"

@@ -106,14 +106,6 @@ export function selectionRingExceedsFastAnalysisLimits(selectionRing: SelectionR
   );
 }
 
-export function resolveSelectionAnalysisBlockedReason(selectionRing: SelectionRing): string | null {
-  if (!selectionRingExceedsFastAnalysisLimits(selectionRing)) {
-    return null;
-  }
-
-  return "Zoom in to analyze a smaller selection area.";
-}
-
 function describeSelectionApiFailure(result: SelectionApiFailure): string {
   if (typeof result.message === "string" && result.message.trim().length > 0) {
     return result.message;
