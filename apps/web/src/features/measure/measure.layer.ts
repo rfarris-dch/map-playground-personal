@@ -88,10 +88,48 @@ export function mountMeasureLayer(
     options.onStateChange?.(buildMeasureState(state));
   };
 
-  const syncSource = (): void => {
-    if (!state.ready) {
-      return;
+  const ensureReady = (): void => {
+    if (!map.hasSource(sourceId)) {
+      map.addSource(sourceId, {
+        type: "geojson",
+        data: emptyMeasureSourceData(),
+      });
     }
+
+    if (!map.hasLayer(lineLayerId)) {
+      map.addLayer({
+        id: lineLayerId,
+        type: "line",
+        source: sourceId,
+        filter: ["==", ["get", "kind"], "line"],
+        paint: {
+          "line-color": "#0e7490",
+          "line-width": 2.25,
+          "line-dasharray": [2, 1],
+        },
+      });
+    }
+
+    if (!map.hasLayer(vertexLayerId)) {
+      map.addLayer({
+        id: vertexLayerId,
+        type: "circle",
+        source: sourceId,
+        filter: ["==", ["get", "kind"], "vertex"],
+        paint: {
+          "circle-color": "#0f766e",
+          "circle-radius": 4,
+          "circle-stroke-color": "#ecfeff",
+          "circle-stroke-width": 1.5,
+        },
+      });
+    }
+
+    state.ready = true;
+  };
+
+  const syncSource = (): void => {
+    ensureReady();
 
     map.setGeoJSONSourceData(sourceId, buildMeasureSourceData(state));
     emitState();
@@ -155,38 +193,7 @@ export function mountMeasureLayer(
   };
 
   const onLoad = (): void => {
-    state.ready = true;
-
-    map.addSource(sourceId, {
-      type: "geojson",
-      data: emptyMeasureSourceData(),
-    });
-
-    map.addLayer({
-      id: lineLayerId,
-      type: "line",
-      source: sourceId,
-      filter: ["==", ["get", "kind"], "line"],
-      paint: {
-        "line-color": "#0e7490",
-        "line-width": 2.25,
-        "line-dasharray": [2, 1],
-      },
-    });
-
-    map.addLayer({
-      id: vertexLayerId,
-      type: "circle",
-      source: sourceId,
-      filter: ["==", ["get", "kind"], "vertex"],
-      paint: {
-        "circle-color": "#0f766e",
-        "circle-radius": 4,
-        "circle-stroke-color": "#ecfeff",
-        "circle-stroke-width": 1.5,
-      },
-    });
-
+    ensureReady();
     syncSource();
   };
 
