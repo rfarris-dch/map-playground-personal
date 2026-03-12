@@ -91,7 +91,7 @@ phases:
         for package in bench contracts core-runtime fixtures geo-sql geo-tiles map-engine map-layer-catalog map-style ops; do
           mkdir -p "artifact/packages/${package}"
           cp "packages/${package}/package.json" "artifact/packages/${package}/"
-          if [[ ! -d "packages/${package}/dist" ]]; then
+          if [ ! -d "packages/${package}/dist" ]; then
             continue
           fi
           mkdir -p "artifact/packages/${package}/dist"
