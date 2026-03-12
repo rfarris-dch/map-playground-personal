@@ -292,10 +292,7 @@ function queryLargeSelectionToolSummaryEffect(
           minimumSelectionOverlapPercent: args.minimumMarketSelectionOverlapPercent ?? 0,
           primaryMarket: null,
           selectionAreaSqKm: 0,
-          unavailableReason: getApiErrorMessage(
-            marketsResult.left,
-            "Market selection is unavailable for this large selection."
-          ),
+          unavailableReason: null,
         };
 
     const summary = buildLargeSelectionFallbackSummary({
