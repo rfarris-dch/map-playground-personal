@@ -25,6 +25,7 @@ interface SafeParseSchema<T> {
 
 export interface FetchResponseEffectArgs {
   readonly fetchImplementation?: typeof fetch;
+  readonly includeRequestIdHeader?: boolean;
   readonly init?: RequestInit;
   readonly maxAttempts?: number;
   readonly requestIdHeaderName?: string;
@@ -162,11 +163,16 @@ function normalizeAttemptCount(value: number | undefined): number {
 
 function buildFetchHeaders(
   init: RequestInit | undefined,
+  includeRequestIdHeader: boolean,
   requestIdHeaderName: string,
   requestId: string
 ): Headers {
   const headers = new Headers(init?.headers);
-  headers.set(requestIdHeaderName, requestId);
+
+  if (includeRequestIdHeader) {
+    headers.set(requestIdHeaderName, requestId);
+  }
+
   return headers;
 }
 
@@ -281,7 +287,12 @@ function retryFetchResponseEffect(
 export function fetchResponseEffect(args: FetchResponseEffectArgs) {
   const requestIdHeaderName = args.requestIdHeaderName ?? DEFAULT_REQUEST_ID_HEADER_NAME;
   const generatedRequestId = createRequestId(args.requestIdPrefix ?? "req");
-  const headers = buildFetchHeaders(args.init, requestIdHeaderName, generatedRequestId);
+  const headers = buildFetchHeaders(
+    args.init,
+    args.includeRequestIdHeader !== false,
+    requestIdHeaderName,
+    generatedRequestId
+  );
   return retryFetchResponseEffect(args, generatedRequestId, requestIdHeaderName, headers, 0);
 }
 

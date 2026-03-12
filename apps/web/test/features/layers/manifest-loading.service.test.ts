@@ -38,8 +38,12 @@ describe("manifest loading services", () => {
   });
 
   it("resolves relative PMTiles asset paths against the manifest origin", async () => {
-    const fetchMock = mock((input: RequestInfo | URL) => {
+    const fetchMock = mock((input: RequestInfo | URL, init?: RequestInit) => {
       expect(input).toBe("https://tiles.example.com/tiles/parcels-draw-v1/latest.json");
+      expect(init?.headers).toBeDefined();
+      const headers = new Headers(init?.headers);
+      expect(headers.get("accept")).toBe("application/json");
+      expect(headers.has("x-request-id")).toBe(false);
       return Promise.resolve(
         new Response(
           JSON.stringify({

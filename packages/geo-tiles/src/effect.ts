@@ -39,6 +39,7 @@ export function loadTilePublishManifestEffect(args: LoadTilePublishManifestEffec
     ...(typeof args.fetchImplementation === "undefined"
       ? {}
       : { fetchImplementation: args.fetchImplementation }),
+    includeRequestIdHeader: false,
     init: {
       headers: {
         accept: "application/json",
