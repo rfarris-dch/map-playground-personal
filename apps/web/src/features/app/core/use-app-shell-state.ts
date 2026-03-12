@@ -93,6 +93,15 @@ export function useAppShellState(): UseAppShellStateResult {
   const isSketchMeasurePanelOpen = computed(() => activeToolPanel.value === "sketch-measure");
   const isSelectionPanelOpen = computed(() => activeToolPanel.value === "selection");
 
+  function resetSketchMeasureState(mode: SketchMeasureMode): void {
+    const initialState = initialSketchMeasureState();
+    sketchMeasureState.value = {
+      ...initialState,
+      areaShape: sketchMeasureState.value.areaShape,
+      mode,
+    };
+  }
+
   function setViewportFacilities(
     perspective: FacilityPerspective,
     features: FacilitiesFeatureCollection["features"]
@@ -110,10 +119,15 @@ export function useAppShellState(): UseAppShellStateResult {
   }
 
   function setSketchMeasureMode(mode: SketchMeasureMode): void {
+    resetSketchMeasureState(mode);
     sketchMeasureController.value?.setMode(mode);
   }
 
   function setSketchMeasureAreaShape(shape: SketchMeasureAreaShape): void {
+    sketchMeasureState.value = {
+      ...sketchMeasureState.value,
+      areaShape: shape,
+    };
     sketchMeasureController.value?.setAreaShape(shape);
   }
 
@@ -122,6 +136,7 @@ export function useAppShellState(): UseAppShellStateResult {
   }
 
   function clearSketchMeasure(): void {
+    sketchMeasureState.value = initialSketchMeasureState();
     sketchMeasureController.value?.clear();
   }
 
