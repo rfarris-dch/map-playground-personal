@@ -14,10 +14,12 @@ import {
 } from "@map-migration/core-runtime/api";
 import { Effect, Either } from "effect";
 import { exportMeasureSelectionSummary } from "@/features/app/measure-selection/measure-selection-export.service";
-import { fetchFacilitiesBySelectionEffect } from "@/features/measure/measure-analysis.api";
+import { fetchFacilitiesByBboxEffect } from "@/features/facilities/api";
 import { buildMeasureSelectionSummary } from "@/features/measure/measure-analysis.service";
+import type { FacilitiesBboxRequest } from "@/features/facilities/facilities.types";
 import type { MeasureSelectionSummary } from "@/features/measure/measure-analysis.types";
 import {
+  buildSelectionRingBbox,
   selectionGeometryFromRing,
   selectionRingExceedsFastAnalysisLimits,
 } from "@/features/selection/selection-analysis-request.service";
@@ -242,28 +244,37 @@ function queryLargeSelectionToolSummaryEffect(
   return Effect.gen(function* () {
     const perspectives = listVisiblePerspectives(args.visiblePerspectives);
     const geometry = selectionGeometryFromRing(args.selectionRing);
+    const selectionBbox = buildSelectionRingBbox(args.selectionRing);
 
-    const facilitiesRequest: FacilitiesSelectionRequest = {
-      geometry,
-      limitPerPerspective: 5000,
-      perspectives,
-    };
     const marketsRequest: MarketsSelectionRequest = {
       geometry,
       limit: 25,
       minimumSelectionOverlapPercent: args.minimumMarketSelectionOverlapPercent ?? 0,
     };
 
-    const [facilitiesResult, marketsResult] = yield* Effect.all([
-      Effect.either(fetchFacilitiesBySelectionEffect(facilitiesRequest, args.signal)),
-      Effect.either(fetchMarketsBySelectionEffect(marketsRequest, args.signal)),
-    ]);
+    const facilitiesResults =
+      selectionBbox === null
+        ? []
+        : yield* Effect.all(
+            perspectives.map((perspective) =>
+              Effect.either(
+                fetchFacilitiesByBboxEffect({
+                  bbox: selectionBbox,
+                  limit: 2000,
+                  perspective,
+                } satisfies FacilitiesBboxRequest)
+              )
+            )
+          );
+    const marketsResult = yield* Effect.either(fetchMarketsBySelectionEffect(marketsRequest, args.signal));
 
-    if (Either.isLeft(facilitiesResult) && facilitiesResult.left instanceof ApiAbortedError) {
-      return {
-        ok: false,
-        reason: "aborted",
-      } satisfies QuerySelectionToolSummaryResult;
+    for (const facilitiesResult of facilitiesResults) {
+      if (Either.isLeft(facilitiesResult) && facilitiesResult.left instanceof ApiAbortedError) {
+        return {
+          ok: false,
+          reason: "aborted",
+        } satisfies QuerySelectionToolSummaryResult;
+      }
     }
 
     if (Either.isLeft(marketsResult) && marketsResult.left instanceof ApiAbortedError) {
@@ -273,9 +284,9 @@ function queryLargeSelectionToolSummaryEffect(
       } satisfies QuerySelectionToolSummaryResult;
     }
 
-    const facilitiesFeatures = Either.isRight(facilitiesResult)
-      ? facilitiesResult.right.data.features
-      : [];
+    const facilitiesFeatures = facilitiesResults.flatMap((facilitiesResult) =>
+      Either.isRight(facilitiesResult) ? facilitiesResult.right.data.features : []
+    );
     const marketSelection = Either.isRight(marketsResult)
       ? {
           markets: marketsResult.right.data.matchedMarkets,
