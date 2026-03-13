@@ -27,6 +27,7 @@ const app = createApiApp();
 let server: ServerType | null = null;
 let shutdownPromise: Promise<void> | null = null;
 const whitespacePattern = /\s+/;
+const portInUsePattern = /port.*in use|EADDRINUSE/i;
 const effectDevToolsConnection = describeEffectDevToolsConnection();
 const importMetaHot = import.meta.hot;
 
@@ -66,18 +67,58 @@ function listListeningPids(port: number): number[] {
   }
 }
 
-function killListeningPids(pids: readonly number[]): void {
+function listOtherListeningPids(port: number): number[] {
+  return listListeningPids(port).filter((pid) => pid !== process.pid);
+}
+
+function signalListeningPids(pids: readonly number[], signal: NodeJS.Signals): void {
   for (const pid of pids) {
     if (pid === process.pid) {
       continue;
     }
 
     try {
-      process.kill(pid, "SIGKILL");
+      process.kill(pid, signal);
     } catch {
       // Ignore pids that have already exited between discovery and kill.
     }
   }
+}
+
+function clearPortWithSignalEffect(
+  port: number,
+  signal: "SIGTERM" | "SIGKILL"
+): Effect.Effect<boolean, never, never> {
+  return Effect.gen(function* () {
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      const otherPids = listOtherListeningPids(port);
+      if (otherPids.length === 0) {
+        return true;
+      }
+
+      console.warn(
+        `[api] force clearing port ${String(port)} (${signal}): ${otherPids.join(", ")}`
+      );
+      signalListeningPids(otherPids, signal);
+      yield* Effect.sleep("500 millis");
+    }
+
+    return listOtherListeningPids(port).length === 0;
+  });
+}
+
+function waitForPortReleaseEffect(port: number): Effect.Effect<boolean, never, never> {
+  return Effect.gen(function* () {
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      if (listOtherListeningPids(port).length === 0) {
+        return true;
+      }
+
+      yield* Effect.sleep("300 millis");
+    }
+
+    return listOtherListeningPids(port).length === 0;
+  });
 }
 
 function forceClearPortBeforeStartEffect(port: number): Effect.Effect<void, Error> {
@@ -86,46 +127,19 @@ function forceClearPortBeforeStartEffect(port: number): Effect.Effect<void, Erro
   }
 
   return Effect.gen(function* () {
-    // Phase 1: Send SIGTERM to give the old process a chance to clean up gracefully.
-    for (let attempt = 0; attempt < 6; attempt += 1) {
-      const otherPids = listListeningPids(port).filter((pid) => pid !== process.pid);
-      if (otherPids.length === 0) {
-        return;
-      }
-
-      console.warn(`[api] force clearing port ${String(port)} (SIGTERM): ${otherPids.join(", ")}`);
-      for (const pid of otherPids) {
-        try {
-          process.kill(pid, "SIGTERM");
-        } catch {
-          // already exited
-        }
-      }
-      yield* Effect.sleep("500 millis");
+    if (yield* clearPortWithSignalEffect(port, "SIGTERM")) {
+      return;
     }
 
-    // Phase 2: SIGKILL anything still lingering.
-    for (let attempt = 0; attempt < 6; attempt += 1) {
-      const otherPids = listListeningPids(port).filter((pid) => pid !== process.pid);
-      if (otherPids.length === 0) {
-        return;
-      }
-
-      console.warn(`[api] force clearing port ${String(port)} (SIGKILL): ${otherPids.join(", ")}`);
-      killListeningPids(otherPids);
-      yield* Effect.sleep("500 millis");
+    if (yield* clearPortWithSignalEffect(port, "SIGKILL")) {
+      return;
     }
 
-    // Phase 3: Wait for the OS to release the port even after processes are gone.
-    for (let attempt = 0; attempt < 10; attempt += 1) {
-      const otherPids = listListeningPids(port).filter((pid) => pid !== process.pid);
-      if (otherPids.length === 0) {
-        return;
-      }
-      yield* Effect.sleep("300 millis");
+    if (yield* waitForPortReleaseEffect(port)) {
+      return;
     }
 
-    const remainingPids = listListeningPids(port).filter((pid) => pid !== process.pid);
+    const remainingPids = listOtherListeningPids(port);
     if (remainingPids.length > 0) {
       yield* Effect.fail(
         new Error(`Failed to clear port ${String(port)} before start: ${remainingPids.join(", ")}`)
@@ -251,8 +265,7 @@ function startServerWithRetry(
         );
         return;
       } catch (error) {
-        const isPortInUse =
-          error instanceof Error && /port.*in use|EADDRINUSE/i.test(error.message);
+        const isPortInUse = error instanceof Error && portInUsePattern.test(error.message);
         if (!isPortInUse || attempt === maxAttempts - 1) {
           yield* Effect.fail(error instanceof Error ? error : new Error(String(error)));
         }

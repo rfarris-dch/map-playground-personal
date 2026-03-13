@@ -6,6 +6,7 @@ import type {
   LngLatBounds,
   MapClickEvent,
   MapControl,
+  MapExpression,
   MapLayerSpecification,
   MapPointerEvent,
   MapPointLike,
@@ -15,6 +16,7 @@ import type {
   MapSourceSpecification,
   MapStyleSpecification,
   MapTerrainSpecification,
+  MapViewport,
   StyleInput,
 } from "@map-migration/map-engine";
 
@@ -48,6 +50,7 @@ function createDefaultBounds(): LngLatBounds {
 export class FakeMap implements IMap {
   readonly addControlCalls: Array<{ readonly control: MapControl; readonly position?: string }> =
     [];
+  readonly addedImages = new Map<string, ImageBitmap | HTMLImageElement | ImageData>();
   readonly addedLayers = new Map<
     string,
     { readonly beforeId?: string; readonly spec: MapLayerSpecification }
@@ -67,6 +70,10 @@ export class FakeMap implements IMap {
   readonly featureStateCalls: Array<{
     readonly state: Record<string, unknown>;
     readonly target: FeatureStateTarget;
+  }> = [];
+  readonly layerFilterCalls: Array<{
+    readonly filter: MapExpression | null;
+    readonly layerId: string;
   }> = [];
   readonly layerVisibilityCalls: Array<{ readonly layerId: string; readonly visible: boolean }> =
     [];
@@ -97,6 +104,10 @@ export class FakeMap implements IMap {
 
   addControl(control: MapControl, position?: string): void {
     this.addControlCalls.push({ control, position });
+  }
+
+  addImage(id: string, image: ImageBitmap | HTMLImageElement | ImageData): void {
+    this.addedImages.set(id, image);
   }
 
   addLayer(layerSpec: MapLayerSpecification, beforeId?: string): void {
@@ -163,6 +174,14 @@ export class FakeMap implements IMap {
     return this.center;
   }
 
+  getClusterExpansionZoom(): Promise<number> {
+    return Promise.resolve(this.zoom + 1);
+  }
+
+  getClusterLeaves(): Promise<MapRenderedFeature[]> {
+    return Promise.resolve([]);
+  }
+
   getPitch(): number {
     return this.pitch;
   }
@@ -179,12 +198,20 @@ export class FakeMap implements IMap {
     return this.zoom;
   }
 
+  hasImage(id: string): boolean {
+    return this.addedImages.has(id);
+  }
+
   hasLayer(layerId: string): boolean {
     return this.addedLayers.has(layerId);
   }
 
   hasSource(sourceId: string): boolean {
     return this.addedSources.has(sourceId);
+  }
+
+  loadImage(): Promise<ImageBitmap | HTMLImageElement | ImageData> {
+    return Promise.reject(new Error("loadImage not implemented in FakeMap"));
   }
 
   off(event: "load" | "moveend", handler: () => void): void {
@@ -256,6 +283,10 @@ export class FakeMap implements IMap {
     this.sourceDataCalls.push({ sourceId, data });
   }
 
+  setLayerFilter(layerId: string, filter: MapExpression | null): void {
+    this.layerFilterCalls.push({ layerId, filter });
+  }
+
   setLayerVisibility(layerId: string, visible: boolean): void {
     this.layerVisibilityCalls.push({ layerId, visible });
   }
@@ -276,20 +307,14 @@ export class FakeMap implements IMap {
     this.terrain = terrain;
   }
 
-  setViewport(viewport: {
-    readonly bearing?: number;
-    readonly bounds?: LngLatBounds;
-    readonly center?: LngLat;
-    readonly pitch?: number;
-    readonly type: "bounds" | "center";
-    readonly zoom?: number;
-  }): void {
-    if (viewport.type === "bounds" && typeof viewport.bounds !== "undefined") {
+  setViewport(viewport: MapViewport): void {
+    if (viewport.type === "bounds") {
       this.bounds = viewport.bounds;
     }
 
-    if (viewport.type === "center" && typeof viewport.center !== "undefined") {
+    if (viewport.type === "center") {
       this.center = viewport.center;
+      this.zoom = viewport.zoom;
     }
 
     if (typeof viewport.bearing === "number") {
@@ -299,14 +324,14 @@ export class FakeMap implements IMap {
     if (typeof viewport.pitch === "number") {
       this.pitch = viewport.pitch;
     }
-
-    if (typeof viewport.zoom === "number") {
-      this.zoom = viewport.zoom;
-    }
   }
 
   setZoom(zoom: number): void {
     this.zoom = zoom;
+  }
+
+  unproject(): LngLat {
+    return this.center;
   }
 }
 
