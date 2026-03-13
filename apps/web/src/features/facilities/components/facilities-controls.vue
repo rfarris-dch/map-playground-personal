@@ -53,7 +53,7 @@
   <aside :class="containerClass" aria-label="Facilities layers">
     <header v-if="!props.embedded" class="mb-2 flex items-center justify-between">
       <h2 class="m-0 text-xs font-semibold tracking-wide text-muted-foreground">Facilities</h2>
-      <span class="text-xs text-muted-foreground">Legend + toggles</span>
+      <span class="text-xs text-muted-foreground">Colocation and hyperscale visibility</span>
     </header>
 
     <div class="grid gap-2">

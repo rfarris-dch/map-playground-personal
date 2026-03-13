@@ -188,7 +188,7 @@
   <aside :class="containerClass" aria-label="Basemap layers">
     <header v-if="!props.embedded" class="mb-2 flex items-center justify-between">
       <h2 class="m-0 text-xs font-semibold tracking-wide text-muted-foreground">Basemap</h2>
-      <span class="text-xs text-muted-foreground">MapLibre style layer controls</span>
+      <span class="text-xs text-muted-foreground">Style and projection</span>
     </header>
 
     <div class="grid gap-2" role="group" aria-label="Basemap layer toggles">

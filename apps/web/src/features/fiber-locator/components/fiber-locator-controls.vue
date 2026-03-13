@@ -192,145 +192,128 @@
       </label>
     </div>
 
-    <div
-      class="mt-2 rounded-sm border border-border bg-card p-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+    <input
+      v-model="searchQuery"
+      type="text"
+      placeholder="Filter fiber lines..."
+      class="mt-2 h-[22px] w-full rounded-sm border border-border bg-card px-2 text-xs leading-5 text-muted-foreground outline-none placeholder:text-border focus-visible:border-border focus-visible:ring-2 focus-visible:ring-border"
     >
-      <div class="mb-2 flex items-center justify-between">
-        <h3 class="m-0 text-xs font-semibold tracking-wide text-muted-foreground">
-          Fiber ({{ totalSourceLayerCount }})
+
+    <p
+      v-if="totalSourceLayerCount === 0"
+      class="py-3 text-center text-xs text-muted-foreground animate-pulse"
+    >Loading fiber sources...</p>
+
+    <section v-if="props.metroVisible" class="mt-2">
+      <div class="mb-1 flex items-center justify-between">
+        <h3 class="m-0 text-xs font-semibold text-muted-foreground">
+          Metro ({{ filteredMetroSourceLayers.length }})
         </h3>
-        <span class="text-xs text-muted-foreground">Selectable + filterable</span>
+        <div class="flex items-center gap-2 text-xs">
+          <button
+            type="button"
+            class="h-[22px] rounded-sm border border-border bg-card px-2 text-xs font-normal text-muted-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-border hover:bg-background hover:text-foreground/70"
+            @click="emit('setAllSourceLayers', 'metro', true)"
+          >
+            All
+          </button>
+          <button
+            type="button"
+            class="h-[22px] rounded-sm border border-border bg-card px-2 text-xs font-normal text-muted-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-border hover:bg-background hover:text-foreground/70"
+            @click="emit('setAllSourceLayers', 'metro', false)"
+          >
+            None
+          </button>
+        </div>
       </div>
 
-      <input
-        v-model="searchQuery"
-        type="text"
-        placeholder="Filter fiber lines..."
-        class="mb-2 h-[22px] w-full rounded-sm border border-border bg-card px-2 text-xs leading-5 text-muted-foreground outline-none placeholder:text-border focus-visible:border-border focus-visible:ring-2 focus-visible:ring-border"
-      >
-
-      <p
-        v-if="totalSourceLayerCount === 0"
-        class="py-3 text-center text-xs text-[#94A3B8] animate-pulse"
-      >Loading fiber sources...</p>
-
-      <div v-else class="grid gap-2">
-        <section
-          class="rounded-sm border border-border bg-card p-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+      <div class="max-h-40 overflow-auto pr-1">
+        <label
+          v-for="layer in filteredMetroSourceLayers"
+          :key="layer.layerName"
+          class="mb-1 flex cursor-pointer items-start gap-2 rounded-sm border px-1 py-1 text-xs transition-colors"
+          :class="sourceLayerRowClass(isSourceLayerSelected('metro', layer.layerName))"
         >
-          <div class="mb-1 flex items-center justify-between">
-            <h4 class="m-0 text-xs font-semibold text-muted-foreground">
-              Metro ({{ filteredMetroSourceLayers.length }})
-            </h4>
-            <div class="flex items-center gap-2 text-xs">
-              <button
-                type="button"
-                class="h-[22px] rounded-sm border border-border bg-card px-2 text-xs font-normal text-muted-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-border hover:bg-background hover:text-foreground/70"
-                @click="emit('setAllSourceLayers', 'metro', true)"
-              >
-                All
-              </button>
-              <button
-                type="button"
-                class="h-[22px] rounded-sm border border-border bg-card px-2 text-xs font-normal text-muted-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-border hover:bg-background hover:text-foreground/70"
-                @click="emit('setAllSourceLayers', 'metro', false)"
-              >
-                None
-              </button>
-            </div>
-          </div>
-
-          <div class="max-h-40 overflow-auto pr-1">
-            <label
-              v-for="layer in filteredMetroSourceLayers"
-              :key="layer.layerName"
-              class="mb-1 flex cursor-pointer items-start gap-2 rounded-sm border px-1 py-1 text-xs transition-colors"
-              :class="sourceLayerRowClass(isSourceLayerSelected('metro', layer.layerName))"
-            >
-              <input
-                class="mt-[1px] h-4 w-4 shrink-0 rounded-sm border border-border accent-muted-foreground"
-                type="checkbox"
-                :checked="isSourceLayerSelected('metro', layer.layerName)"
-                @change="onToggleSourceLayer('metro', layer.layerName, $event)"
-              >
-              <span class="mt-[6px] h-[3px] w-4 rounded-full bg-pink-500" aria-hidden="true" />
-              <span
-                class="min-w-0 flex-1 truncate text-xs transition-colors"
-                :class="
-                  isSourceLayerSelected('metro', layer.layerName)
-                    ? 'font-medium text-foreground/70'
-                    : 'text-muted-foreground'
-                "
-                >{{ layer.label }}</span
-              >
-            </label>
-            <p
-              v-if="filteredMetroSourceLayers.length === 0"
-              class="m-0 px-1 py-1 text-xs text-muted-foreground"
-            >
-              No metro lines match this filter.
-            </p>
-          </div>
-        </section>
-
-        <section
-          class="rounded-sm border border-border bg-card p-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+          <input
+            class="mt-[1px] h-4 w-4 shrink-0 rounded-sm border border-border accent-muted-foreground"
+            type="checkbox"
+            :checked="isSourceLayerSelected('metro', layer.layerName)"
+            @change="onToggleSourceLayer('metro', layer.layerName, $event)"
+          >
+          <span class="mt-[6px] h-[3px] w-4 rounded-full bg-pink-500" aria-hidden="true" />
+          <span
+            class="min-w-0 flex-1 truncate text-xs transition-colors"
+            :class="
+              isSourceLayerSelected('metro', layer.layerName)
+                ? 'font-medium text-foreground/70'
+                : 'text-muted-foreground'
+            "
+            >{{ layer.label }}</span
+          >
+        </label>
+        <p
+          v-if="filteredMetroSourceLayers.length === 0"
+          class="m-0 px-1 py-1 text-xs text-muted-foreground"
         >
-          <div class="mb-1 flex items-center justify-between">
-            <h4 class="m-0 text-xs font-semibold text-muted-foreground">
-              Longhaul ({{ filteredLonghaulSourceLayers.length }})
-            </h4>
-            <div class="flex items-center gap-2 text-xs">
-              <button
-                type="button"
-                class="h-[22px] rounded-sm border border-border bg-card px-2 text-xs font-normal text-muted-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-border hover:bg-background hover:text-foreground/70"
-                @click="emit('setAllSourceLayers', 'longhaul', true)"
-              >
-                All
-              </button>
-              <button
-                type="button"
-                class="h-[22px] rounded-sm border border-border bg-card px-2 text-xs font-normal text-muted-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-border hover:bg-background hover:text-foreground/70"
-                @click="emit('setAllSourceLayers', 'longhaul', false)"
-              >
-                None
-              </button>
-            </div>
-          </div>
-
-          <div class="max-h-40 overflow-auto pr-1">
-            <label
-              v-for="layer in filteredLonghaulSourceLayers"
-              :key="layer.layerName"
-              class="mb-1 flex cursor-pointer items-start gap-2 rounded-sm border px-1 py-1 text-xs transition-colors"
-              :class="sourceLayerRowClass(isSourceLayerSelected('longhaul', layer.layerName))"
-            >
-              <input
-                class="mt-[1px] h-4 w-4 shrink-0 rounded-sm border border-border accent-muted-foreground"
-                type="checkbox"
-                :checked="isSourceLayerSelected('longhaul', layer.layerName)"
-                @change="onToggleSourceLayer('longhaul', layer.layerName, $event)"
-              >
-              <span class="mt-[6px] h-[3px] w-4 rounded-full bg-cyan-500" aria-hidden="true" />
-              <span
-                class="min-w-0 flex-1 truncate text-xs transition-colors"
-                :class="
-                  isSourceLayerSelected('longhaul', layer.layerName)
-                    ? 'font-medium text-foreground/70'
-                    : 'text-muted-foreground'
-                "
-                >{{ layer.label }}</span
-              >
-            </label>
-            <p
-              v-if="filteredLonghaulSourceLayers.length === 0"
-              class="m-0 px-1 py-1 text-xs text-muted-foreground"
-            >
-              No longhaul lines match this filter.
-            </p>
-          </div>
-        </section>
+          No metro lines match this filter.
+        </p>
       </div>
-    </div>
+    </section>
+
+    <section v-if="props.longhaulVisible" class="mt-2">
+      <div class="mb-1 flex items-center justify-between">
+        <h3 class="m-0 text-xs font-semibold text-muted-foreground">
+          Longhaul ({{ filteredLonghaulSourceLayers.length }})
+        </h3>
+        <div class="flex items-center gap-2 text-xs">
+          <button
+            type="button"
+            class="h-[22px] rounded-sm border border-border bg-card px-2 text-xs font-normal text-muted-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-border hover:bg-background hover:text-foreground/70"
+            @click="emit('setAllSourceLayers', 'longhaul', true)"
+          >
+            All
+          </button>
+          <button
+            type="button"
+            class="h-[22px] rounded-sm border border-border bg-card px-2 text-xs font-normal text-muted-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-border hover:bg-background hover:text-foreground/70"
+            @click="emit('setAllSourceLayers', 'longhaul', false)"
+          >
+            None
+          </button>
+        </div>
+      </div>
+
+      <div class="max-h-40 overflow-auto pr-1">
+        <label
+          v-for="layer in filteredLonghaulSourceLayers"
+          :key="layer.layerName"
+          class="mb-1 flex cursor-pointer items-start gap-2 rounded-sm border px-1 py-1 text-xs transition-colors"
+          :class="sourceLayerRowClass(isSourceLayerSelected('longhaul', layer.layerName))"
+        >
+          <input
+            class="mt-[1px] h-4 w-4 shrink-0 rounded-sm border border-border accent-muted-foreground"
+            type="checkbox"
+            :checked="isSourceLayerSelected('longhaul', layer.layerName)"
+            @change="onToggleSourceLayer('longhaul', layer.layerName, $event)"
+          >
+          <span class="mt-[6px] h-[3px] w-4 rounded-full bg-cyan-500" aria-hidden="true" />
+          <span
+            class="min-w-0 flex-1 truncate text-xs transition-colors"
+            :class="
+              isSourceLayerSelected('longhaul', layer.layerName)
+                ? 'font-medium text-foreground/70'
+                : 'text-muted-foreground'
+            "
+            >{{ layer.label }}</span
+          >
+        </label>
+        <p
+          v-if="filteredLonghaulSourceLayers.length === 0"
+          class="m-0 px-1 py-1 text-xs text-muted-foreground"
+        >
+          No longhaul lines match this filter.
+        </p>
+      </div>
+    </section>
   </aside>
 </template>

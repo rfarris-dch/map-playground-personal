@@ -44,7 +44,7 @@
 <template>
   <aside
     v-if="selectedParcel !== null"
-    class="map-glass-elevated pointer-events-auto absolute right-4 top-4 z-10 w-[min(32rem,calc(100%-2rem))] rounded-lg p-4"
+    class="map-glass-elevated pointer-events-auto absolute right-4 top-4 z-10 w-[min(28rem,calc(100%-2rem))] rounded-lg p-4"
     aria-label="Parcel detail"
   >
     <header class="mb-3 flex items-center gap-2">
