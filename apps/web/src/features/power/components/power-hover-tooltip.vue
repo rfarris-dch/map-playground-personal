@@ -48,11 +48,6 @@
         <dd class="m-0 break-words">{{ props.hoverState.name }}</dd>
       </template>
 
-      <template v-if="props.hoverState.featureId !== null">
-        <dt class="text-muted-foreground">Feature</dt>
-        <dd class="m-0 font-mono">{{ props.hoverState.featureId }}</dd>
-      </template>
-
       <template v-if="props.hoverState.operatorName !== null">
         <dt class="text-muted-foreground">Operator</dt>
         <dd class="m-0 break-words">{{ props.hoverState.operatorName }}</dd>
@@ -78,10 +73,6 @@
         <dd class="m-0">{{ formatKilovolts(props.hoverState.voltageKv) }}</dd>
       </template>
 
-      <template v-if="props.hoverState.sourceLayerName !== null">
-        <dt class="text-muted-foreground">Source Layer</dt>
-        <dd class="m-0 font-mono">{{ props.hoverState.sourceLayerName }}</dd>
-      </template>
     </dl>
   </aside>
 </template>
