@@ -278,6 +278,10 @@
             </div>
 
             <!-- Metro source layers -->
+            <p
+              v-if="props.fiberSourceLayerOptions.metro.length === 0 && props.visibleFiberLayers.metro"
+              class="py-3 text-center text-xs text-[#94A3B8] animate-pulse"
+            >Loading metro sources...</p>
             <div
               v-if="props.fiberSourceLayerOptions.metro.length > 0 && props.visibleFiberLayers.metro"
               class="flex flex-col gap-0.5 px-2 py-1 pl-7"
@@ -357,6 +361,10 @@
             </div>
 
             <!-- Longhaul source layers -->
+            <p
+              v-if="props.fiberSourceLayerOptions.longhaul.length === 0 && props.visibleFiberLayers.longhaul"
+              class="py-3 text-center text-xs text-[#94A3B8] animate-pulse"
+            >Loading longhaul sources...</p>
             <div
               v-if="props.fiberSourceLayerOptions.longhaul.length > 0 && props.visibleFiberLayers.longhaul"
               class="flex flex-col gap-0.5 px-2 py-1 pl-7"

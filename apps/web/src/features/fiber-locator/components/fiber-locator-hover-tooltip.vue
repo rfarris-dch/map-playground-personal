@@ -9,6 +9,10 @@
 </script>
 
 <template>
+  <Transition
+    enter-active-class="transition-opacity duration-100"
+    enter-from-class="opacity-0"
+  >
   <aside
     v-if="props.hoverState !== null"
     class="map-glass-panel-soft pointer-events-none absolute z-30 min-w-56 rounded-md p-2"
@@ -50,4 +54,5 @@
       </template>
     </dl>
   </aside>
+  </Transition>
 </template>

@@ -32,7 +32,7 @@
 
 <template>
   <div
-    class="flex h-10 items-center bg-white px-2 transition-colors"
+    class="flex h-10 items-center bg-white px-2 transition-colors duration-150"
     :class="props.actionable ? 'hover:bg-[#F8FAFC]' : ''"
   >
     <div class="flex w-full items-center justify-between">

@@ -134,6 +134,10 @@
 </script>
 
 <template>
+  <Transition
+    enter-active-class="transition-opacity duration-100"
+    enter-from-class="opacity-0"
+  >
   <aside
     v-if="displayState !== null"
     class="absolute z-30 rounded-[4px] p-[2px]"
@@ -261,4 +265,5 @@
       </div>
     </div>
   </aside>
+  </Transition>
 </template>

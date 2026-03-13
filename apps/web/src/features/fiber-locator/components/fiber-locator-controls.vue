@@ -209,7 +209,12 @@
         class="mb-2 h-[22px] w-full rounded-[4px] border border-[#E2E8F0] bg-white px-2 text-[10px] leading-5 text-[#94A3B8] outline-none placeholder:text-[#E2E8F0] focus-visible:border-[#CBD5E1] focus-visible:ring-2 focus-visible:ring-[#E2E8F0]"
       >
 
-      <div class="grid gap-2">
+      <p
+        v-if="totalSourceLayerCount === 0"
+        class="py-3 text-center text-xs text-[#94A3B8] animate-pulse"
+      >Loading fiber sources...</p>
+
+      <div v-else class="grid gap-2">
         <section
           class="rounded-[4px] border border-[#E2E8F0] bg-white p-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
         >

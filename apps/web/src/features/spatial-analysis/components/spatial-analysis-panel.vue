@@ -394,7 +394,7 @@
           <div
             v-for="stage in visibleProgressStages"
             :key="stage.key"
-            class="rounded-[4px] border border-[#E2E8F0] bg-white px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+            class="rounded-[4px] border border-[#E2E8F0] bg-white px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-300"
           >
             <div class="flex items-center justify-between gap-2">
               <div class="flex items-center gap-2">
