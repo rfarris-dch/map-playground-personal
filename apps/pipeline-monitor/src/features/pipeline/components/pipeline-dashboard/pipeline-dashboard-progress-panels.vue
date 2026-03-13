@@ -7,15 +7,19 @@
     formatEta,
   } from "@/features/pipeline/components/pipeline-dashboard/pipeline-dashboard-format.service";
   import { formatCount } from "@/features/pipeline/pipeline.service";
+  import { getPipelineDataset } from "@/features/pipeline/pipeline-registry.service";
 
   const BUILD_EXPORT_ELAPSED_PATTERN = /phase=export\s+([0-9]+)s\b/;
 
   const props = defineProps<PipelineDashboardProgressProps>();
+  const isEnvironmentalDataset = computed(
+    () => getPipelineDataset(props.dataset).family === "environmental"
+  );
 
   const buildStageLabel = computed(() => {
     const summary = props.run?.summary ?? "";
     if (
-      props.dataset === "flood" &&
+      isEnvironmentalDataset.value &&
       summary.includes("phase=export") &&
       (props.buildProgress?.workDone ?? 0) === 0 &&
       (props.buildProgress?.logBytes ?? 0) === 0
@@ -71,7 +75,7 @@
   const isPreparingReducedOverlay = computed(() => {
     const summary = props.run?.summary ?? "";
     return (
-      props.dataset === "flood" &&
+      isEnvironmentalDataset.value &&
       summary.includes("phase=export") &&
       (props.buildProgress?.workDone ?? 0) === 0 &&
       (props.buildProgress?.logBytes ?? 0) === 0
@@ -171,7 +175,7 @@
       <span class="font-mono">{{ buildStageLabel }}</span>
     </p>
     <p v-if="isPreparingReducedOverlay" class="mt-1 text-xs text-muted-foreground">
-      Building the reduced overlay geometry in PostGIS before export begins.
+      Building the environmental overlay geometry in PostGIS before export begins.
     </p>
     <p v-if="props.buildProgress?.workDone !== null" class="mt-1 text-xs">
       {{ props.buildProgress?.workTotal === null ? "Exported rows:" : "Tile work:" }}

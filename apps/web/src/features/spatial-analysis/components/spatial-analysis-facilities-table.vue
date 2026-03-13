@@ -84,11 +84,11 @@
 </script>
 
 <template>
-  <table class="w-full border-collapse text-[11px]">
-    <thead class="map-glass-panel-soft sticky top-0 z-10">
-      <tr
-        class="border-b border-border/60 text-left text-[10px] uppercase tracking-wide text-muted-foreground"
-      >
+  <table class="w-full border-collapse text-[10px] text-[#94A3B8]">
+    <thead
+      class="sticky top-0 z-10 border-b border-[#E2E8F0] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+    >
+      <tr class="text-left text-[10px] uppercase tracking-wide text-[#94A3B8]">
         <th class="px-2 py-1.5">{{ useBadgePerspective ? "Perspective" : "" }}</th>
         <th class="px-2 py-1.5">Facility</th>
         <th class="px-2 py-1.5">Provider</th>
@@ -106,17 +106,17 @@
       <tr
         v-for="facility in props.facilities"
         :key="`${facility.perspective}:${facility.facilityId}`"
-        class="border-b border-border/40 align-top transition"
-        :class="isInteractive ? 'cursor-pointer hover:bg-muted/20' : ''"
+        class="border-b border-[#E2E8F0] align-top transition-colors"
+        :class="isInteractive ? 'cursor-pointer hover:bg-[#F8FAFC]' : ''"
         @click="isInteractive ? selectFacility(facility) : undefined"
       >
         <td class="px-2 py-1.5">
           <span
             v-if="useBadgePerspective"
-            class="inline-flex rounded-full px-1.5 py-0.5 text-[10px]"
+            class="inline-flex rounded-[4px] border border-[#E2E8F0] px-1.5 py-0.5 text-[10px]"
             :class="facility.perspective === 'colocation'
-              ? 'bg-cyan-500/10 text-cyan-700'
-              : 'bg-amber-500/10 text-amber-700'"
+              ? 'bg-white text-[#94A3B8]'
+              : 'bg-white text-[#94A3B8]'"
           >
             {{ toSpatialAnalysisPerspectiveLabel(facility.perspective) }}
           </span>
@@ -130,8 +130,8 @@
         <td class="max-w-[18rem] px-2 py-1.5">
           <button
             type="button"
-            class="w-full truncate text-left font-medium text-foreground/90"
-            :class="isInteractive ? 'underline-offset-2 transition hover:text-foreground hover:underline' : 'cursor-default'"
+            class="w-full truncate text-left font-medium text-[#64748B]"
+            :class="isInteractive ? 'underline-offset-2 transition hover:text-[#475569] hover:underline' : 'cursor-default'"
             :disabled="!isInteractive"
             @click.stop="isInteractive ? selectFacility(facility) : undefined"
           >

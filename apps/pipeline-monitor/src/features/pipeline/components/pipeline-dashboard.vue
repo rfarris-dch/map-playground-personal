@@ -114,7 +114,6 @@
       :displayed-states-total="displayedStatesTotal"
       :displayed-written-count="displayedWrittenCount"
       :is-build-likely-stalled="isBuildLikelyStalled"
-      :is-flood-loading="selectedDataset === 'flood' && run?.phase === 'loading'"
       :is-materialize-finalizing="isMaterializeFinalizing"
       :row-progress-percent="rowProgressPercent"
       :run="run"

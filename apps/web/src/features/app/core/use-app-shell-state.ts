@@ -29,6 +29,7 @@ import type { BoundaryHoverState } from "@/features/boundaries/boundaries.types"
 import type { FacilitiesLayerController } from "@/features/facilities/facilities.types";
 import type {
   FacilitiesHoverController,
+  FacilityClusterHoverState,
   FacilityHoverState,
 } from "@/features/facilities/hover.types";
 import type { FloodLayerMountResult } from "@/features/flood/flood-layer.types";
@@ -55,6 +56,7 @@ export function useAppShellState(): UseAppShellStateResult {
   const mapContainer = useTemplateRef<HTMLDivElement>("map-container");
   const map = shallowRef<IMap | null>(null);
   const hoveredFacility = shallowRef<FacilityHoverState | null>(null);
+  const hoveredFacilityCluster = shallowRef<FacilityClusterHoverState | null>(null);
   const hoveredBoundary = shallowRef<BoundaryHoverState | null>(null);
   const boundaryHoverByLayer = shallowRef<BoundaryHoverByLayerState>(
     initialBoundaryHoverByLayerState()
@@ -183,6 +185,7 @@ export function useAppShellState(): UseAppShellStateResult {
     mapContainer,
     map,
     hoveredFacility,
+    hoveredFacilityCluster,
     hoveredBoundary,
     boundaryHoverByLayer,
     hoveredPower,

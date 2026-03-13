@@ -391,6 +391,11 @@ export function mountPowerHover(map: IMap, options: PowerHoverOptions): PowerHov
       return;
     }
 
+    if (event.buttons > 0) {
+      clear();
+      return;
+    }
+
     const candidate = resolveHoverCandidate(map, event);
     if (candidate === null) {
       clear();

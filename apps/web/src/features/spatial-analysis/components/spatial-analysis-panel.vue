@@ -1,7 +1,6 @@
 <script setup lang="ts">
   import { Download, LayoutDashboard, X } from "lucide-vue-next";
   import { computed, shallowRef, watch } from "vue";
-  import Button from "@/components/ui/button/button.vue";
   import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";
   import SpatialAnalysisCountyScoresSection from "@/features/spatial-analysis/components/spatial-analysis-county-scores-section.vue";
   import SpatialAnalysisFacilitiesTable from "@/features/spatial-analysis/components/spatial-analysis-facilities-table.vue";
@@ -168,32 +167,32 @@
   const summaryChips = computed(() =>
     [
       {
+        dotClass: "bg-[#3B82F6]",
         label: "Colocation",
-        toneClass: "border-cyan-500/20 bg-cyan-500/10 text-cyan-800",
         value: panelSummary.value.colocation.count,
         visible: true,
       },
       {
+        dotClass: "bg-[#F97316]",
         label: "Hyperscale",
-        toneClass: "border-amber-500/20 bg-amber-500/10 text-amber-800",
         value: panelSummary.value.hyperscale.count,
         visible: true,
       },
       {
+        dotClass: "bg-[#8B5CF6]",
         label: "Markets",
-        toneClass: "border-violet-500/20 bg-violet-500/10 text-violet-800",
         value: panelSummary.value.marketSelection?.matchCount ?? 0,
         visible: true,
       },
       {
+        dotClass: "bg-[#10B981]",
         label: "Parcels",
-        toneClass: "border-emerald-500/20 bg-emerald-500/10 text-emerald-800",
         value: panelSummary.value.parcelSelection.count,
         visible: true,
       },
       {
+        dotClass: "bg-[#6366F1]",
         label: "Counties",
-        toneClass: "border-indigo-500/20 bg-indigo-500/10 text-indigo-800",
         value: countyScores.value?.summary.requestedCountyIds.length ?? countySelectionCount.value,
         visible: hasCountyScores.value,
       },
@@ -203,9 +202,6 @@
     (props.progress?.stages ?? []).filter((stage) => stage.status !== "skipped")
   );
   const progressPercentText = computed(() => `${props.progress?.percent ?? 0}%`);
-  const progressBarStyle = computed(() => ({
-    width: `${props.progress?.percent ?? 0}%`,
-  }));
   const progressStatusText = computed(() => {
     const progress = props.progress ?? null;
     if (progress === null) {
@@ -237,14 +233,14 @@
     readonly id: SpatialAnalysisPanelTab;
   }): string {
     if (activeTab.value === tab.id) {
-      return "map-glass-button-active text-foreground";
+      return "border-[#CBD5E1] bg-[#F8FAFC] text-[#64748B] shadow-[inset_0_0_0_1px_rgba(148,163,184,0.08),0_1px_2px_rgba(15,23,42,0.04)]";
     }
 
     if (tab.disabled) {
-      return "map-glass-button cursor-not-allowed text-muted-foreground/60 opacity-60";
+      return "cursor-not-allowed border-[#E2E8F0] bg-white text-[#CBD5E1] opacity-60";
     }
 
-    return "map-glass-button text-muted-foreground hover:text-foreground";
+    return "border-[#E2E8F0] bg-white text-[#94A3B8] hover:border-[#CBD5E1] hover:bg-[#F8FAFC] hover:text-[#64748B] active:bg-[#F1F5F9]";
   }
 
   function progressStageDotClass(status: string): string {
@@ -304,28 +300,28 @@
 
 <template>
   <aside
-    class="map-glass-panel pointer-events-auto absolute bottom-4 right-3 z-20 flex max-h-[78vh] flex-col overflow-hidden rounded-xl p-3 transition-[width] duration-200"
+    class="pointer-events-auto absolute bottom-4 right-3 z-20 flex max-h-[78vh] flex-col overflow-hidden rounded-[4px] border border-[#E2E8F0] bg-white p-2 text-[#94A3B8] shadow-[0_4px_8px_rgba(0,0,0,0.06)] transition-[width] duration-200 [font-family:Inter,var(--font-sans)]"
     :class="panelWidthClass"
     :aria-label="props.title"
   >
     <header class="mb-3 flex items-start justify-between gap-3">
       <div class="min-w-0">
         <div class="flex items-center gap-2">
-          <h2 class="m-0 text-base font-semibold">{{ props.title }}</h2>
+          <h2 class="m-0 text-[12px] font-semibold text-[#64748B]">{{ props.title }}</h2>
           <span
             v-if="props.isLoading || props.isParcelsLoading"
-            class="map-glass-pill inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+            class="inline-flex items-center rounded-[4px] border border-[#E2E8F0] bg-white px-2 py-0.5 text-[10px] font-medium text-[#94A3B8] shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
           >
             {{ props.progress === null ? "Refreshing" : `Refreshing · ${progressPercentText}` }}
           </span>
         </div>
-        <p class="m-0 text-[11px] text-muted-foreground">{{ props.subtitle }}</p>
+        <p class="m-0 text-[10px] text-[#94A3B8]">{{ props.subtitle }}</p>
       </div>
 
       <button
         type="button"
         :aria-label="props.dismissLabel"
-        class="map-glass-button rounded p-1 text-muted-foreground transition hover:text-foreground"
+        class="inline-flex h-6 w-6 items-center justify-center rounded-[4px] border border-[#E2E8F0] bg-white text-[#94A3B8] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-[#CBD5E1] hover:bg-[#F8FAFC] hover:text-[#64748B]"
         @click="emit('dismiss')"
       >
         <X class="h-4 w-4" />
@@ -334,7 +330,7 @@
 
     <p
       v-if="props.errorMessage !== null"
-      class="mb-3 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-[11px] text-red-900"
+      class="mb-3 rounded-[4px] border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-[10px] text-[#B91C1C]"
     >
       {{ props.errorMessage }}
     </p>
@@ -343,20 +339,23 @@
       <span
         v-for="chip in summaryChips"
         :key="chip.label"
-        class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
-        :class="chip.toneClass"
+        class="inline-flex items-center gap-1.5 rounded-[4px] border border-[#E2E8F0] bg-white px-2 py-1 text-[10px] font-medium text-[#94A3B8] shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
       >
-        {{ chip.label }}
-        · {{ chip.value }}
+        <span class="h-1.5 w-1.5 rounded-full" :class="chip.dotClass" />
+        <span>{{ chip.label }}</span>
+        <span class="text-[#64748B]">{{ chip.value }}</span>
       </span>
     </div>
 
-    <div v-if="hasAnyResults" class="map-glass-segment mb-3 inline-flex rounded-lg p-1">
+    <div
+      v-if="hasAnyResults"
+      class="mb-3 inline-flex rounded-[4px] border border-[#E2E8F0] bg-white p-1 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+    >
       <button
         v-for="tab in tabItems"
         :key="tab.id"
         type="button"
-        class="rounded-md px-2.5 py-1 text-xs font-medium transition"
+        class="rounded-[4px] border px-2.5 py-1 text-[10px] font-medium transition-colors"
         :class="tabClass(tab)"
         :disabled="tab.disabled"
         @click="activeTab = tab.id"
@@ -368,7 +367,7 @@
 
     <section
       v-if="props.isLoading"
-      class="map-glass-card flex-1 overflow-auto rounded-lg p-3"
+      class="flex-1 overflow-auto rounded-[4px] border border-[#E2E8F0] bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
       :aria-label="`${props.title} loading`"
     >
       <div
@@ -379,24 +378,23 @@
         aria-busy="true"
       >
         <div class="space-y-1.5">
-          <div class="flex items-center justify-between gap-3 text-[11px] font-medium">
+          <div
+            class="flex items-center justify-between gap-3 text-[10px] font-medium text-[#94A3B8]"
+          >
             <span>Selection analysis</span>
             <span>{{ progressPercentText }}</span>
           </div>
-          <div class="h-2 overflow-hidden rounded-full bg-muted/80">
-            <div
-              class="h-full rounded-full bg-cyan-500 transition-[width] duration-300"
-              :style="progressBarStyle"
-            />
+          <div class="h-2 overflow-hidden rounded-full border border-[#E2E8F0] bg-[#F8FAFC]">
+            <div class="h-full w-full animate-pulse rounded-full bg-[#CBD5E1]" />
           </div>
-          <p class="m-0 text-[10px] text-muted-foreground">{{ progressStatusText }}</p>
+          <p class="m-0 text-[10px] text-[#94A3B8]">{{ progressStatusText }}</p>
         </div>
 
         <div class="space-y-2">
           <div
             v-for="stage in visibleProgressStages"
             :key="stage.key"
-            class="map-glass-card rounded-md px-3 py-2"
+            class="rounded-[4px] border border-[#E2E8F0] bg-white px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
           >
             <div class="flex items-center justify-between gap-2">
               <div class="flex items-center gap-2">
@@ -404,13 +402,13 @@
                   class="inline-block h-2 w-2 rounded-full"
                   :class="progressStageDotClass(stage.status)"
                 />
-                <span class="text-[11px] font-medium">{{ stage.label }}</span>
+                <span class="text-[10px] font-medium text-[#64748B]">{{ stage.label }}</span>
               </div>
-              <span class="text-[10px] uppercase tracking-wide text-muted-foreground">
+              <span class="text-[10px] uppercase tracking-wide text-[#94A3B8]">
                 {{ progressStageStatusLabel(stage.status) }}
               </span>
             </div>
-            <p class="mt-1 mb-0 text-[10px] text-muted-foreground">
+            <p class="mt-1 mb-0 text-[10px] text-[#94A3B8]">
               {{ stage.detail ?? "Waiting to start…" }}
             </p>
           </div>
@@ -418,9 +416,9 @@
       </div>
 
       <div v-else class="animate-pulse space-y-2" role="status" aria-live="polite" aria-busy="true">
-        <div class="h-3 w-40 rounded bg-muted" />
-        <div class="h-3 w-56 rounded bg-muted" />
-        <div class="h-3 w-48 rounded bg-muted" />
+        <div class="h-3 w-40 rounded bg-[#F1F5F9]" />
+        <div class="h-3 w-56 rounded bg-[#F1F5F9]" />
+        <div class="h-3 w-48 rounded bg-[#F1F5F9]" />
       </div>
     </section>
 
@@ -457,17 +455,17 @@
 
           <article
             v-if="hasMarkets || marketSelectionUnavailableReason !== null"
-            class="map-glass-card rounded-md p-2 lg:col-span-2"
+            class="rounded-[4px] border border-[#E2E8F0] bg-white p-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)] lg:col-span-2"
             aria-label="Market summary"
           >
             <div class="mb-1 flex items-center gap-1.5">
-              <span class="inline-block h-2 w-2 rounded-full bg-violet-500" />
-              <h3 class="m-0 text-xs font-semibold text-violet-700">Market Coverage</h3>
+              <span class="inline-block h-2 w-2 rounded-full bg-[#8B5CF6]" />
+              <h3 class="m-0 text-[10px] font-semibold text-[#94A3B8]">Market Coverage</h3>
             </div>
 
             <p
               v-if="marketSelectionUnavailableReason !== null"
-              class="mb-2 rounded border border-violet-500/20 bg-violet-500/10 px-2 py-1.5 text-[11px] text-violet-900"
+              class="mb-2 rounded-[4px] border border-[#E2E8F0] bg-[#F8FAFC] px-2 py-1.5 text-[10px] text-[#94A3B8]"
             >
               {{ marketSelectionUnavailableReason }}
             </p>
@@ -476,19 +474,27 @@
               v-if="hasMarkets"
               class="grid grid-cols-[1fr_auto] gap-x-2 gap-y-1 text-[11px] sm:grid-cols-[repeat(3,minmax(0,1fr))]"
             >
-              <div class="map-glass-card flex items-center justify-between gap-2 rounded px-2 py-1">
-                <dt class="text-muted-foreground">Matches</dt>
-                <dd class="m-0 font-medium">{{ panelSummary.marketSelection?.matchCount ?? 0 }}</dd>
+              <div
+                class="flex items-center justify-between gap-2 rounded-[4px] border border-[#E2E8F0] bg-white px-2 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+              >
+                <dt class="text-[#94A3B8]">Matches</dt>
+                <dd class="m-0 font-medium text-[#64748B]">
+                  {{ panelSummary.marketSelection?.matchCount ?? 0 }}
+                </dd>
               </div>
-              <div class="map-glass-card flex items-center justify-between gap-2 rounded px-2 py-1">
-                <dt class="text-muted-foreground">Primary</dt>
-                <dd class="m-0 font-medium">
+              <div
+                class="flex items-center justify-between gap-2 rounded-[4px] border border-[#E2E8F0] bg-white px-2 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+              >
+                <dt class="text-[#94A3B8]">Primary</dt>
+                <dd class="m-0 font-medium text-[#64748B]">
                   {{ panelSummary.marketSelection?.primaryMarket?.name ?? "-" }}
                 </dd>
               </div>
-              <div class="map-glass-card flex items-center justify-between gap-2 rounded px-2 py-1">
-                <dt class="text-muted-foreground">Selection Area</dt>
-                <dd class="m-0 font-medium">
+              <div
+                class="flex items-center justify-between gap-2 rounded-[4px] border border-[#E2E8F0] bg-white px-2 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+              >
+                <dt class="text-[#94A3B8]">Selection Area</dt>
+                <dd class="m-0 font-medium text-[#64748B]">
                   {{ panelSummary.marketSelection?.selectionAreaSqKm.toFixed(1) ?? "0.0" }}
                   sq km
                 </dd>
@@ -499,26 +505,24 @@
               <div
                 v-for="market in matchedMarkets"
                 :key="market.marketId"
-                class="map-glass-card rounded px-2 py-1.5 text-[11px]"
+                class="rounded-[4px] border border-[#E2E8F0] bg-white px-2 py-1.5 text-[10px] shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
               >
                 <div class="flex items-center justify-between gap-2">
-                  <span class="truncate font-medium">{{ market.name }}</span>
-                  <span class="text-muted-foreground">
+                  <span class="truncate font-medium text-[#64748B]">{{ market.name }}</span>
+                  <span class="text-[#94A3B8]">
                     {{ formatOverlapPercent(market.marketOverlapPercent) }}
                   </span>
                 </div>
-                <div class="truncate text-[10px] text-muted-foreground">
+                <div class="truncate text-[10px] text-[#94A3B8]">
                   {{ [market.region, market.state, market.country].filter(Boolean).join(" · ") || "No market metadata" }}
                 </div>
                 <div
-                  class="mt-1 flex items-center justify-between gap-2 text-[10px] text-muted-foreground"
+                  class="mt-1 flex items-center justify-between gap-2 text-[10px] text-[#94A3B8]"
                 >
                   <span>Market covered</span>
                   <span>{{ formatOverlapPercent(market.marketOverlapPercent) }}</span>
                 </div>
-                <div
-                  class="flex items-center justify-between gap-2 text-[10px] text-muted-foreground"
-                >
+                <div class="flex items-center justify-between gap-2 text-[10px] text-[#94A3B8]">
                   <span>Selection share</span>
                   <span>{{ formatOverlapPercent(market.selectionOverlapPercent) }}</span>
                 </div>
@@ -528,46 +532,56 @@
 
           <article
             v-if="hasParcels || props.isParcelsLoading"
-            class="map-glass-card rounded-md p-2 lg:col-span-2"
+            class="rounded-[4px] border border-[#E2E8F0] bg-white p-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)] lg:col-span-2"
             aria-label="Parcel summary"
           >
             <div class="mb-1 flex items-center gap-1.5">
-              <span class="inline-block h-2 w-2 rounded-full bg-emerald-500" />
-              <h3 class="m-0 text-xs font-semibold text-emerald-700">Parcel Coverage</h3>
+              <span class="inline-block h-2 w-2 rounded-full bg-[#10B981]" />
+              <h3 class="m-0 text-[10px] font-semibold text-[#94A3B8]">Parcel Coverage</h3>
             </div>
 
             <dl
               class="grid grid-cols-[1fr_auto] gap-x-2 gap-y-1 text-[11px] sm:grid-cols-[repeat(3,minmax(0,1fr))]"
             >
-              <div class="map-glass-card flex items-center justify-between gap-2 rounded px-2 py-1">
-                <dt class="text-muted-foreground">Records</dt>
-                <dd class="m-0 font-medium">{{ panelSummary.parcelSelection.count }}</dd>
+              <div
+                class="flex items-center justify-between gap-2 rounded-[4px] border border-[#E2E8F0] bg-white px-2 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+              >
+                <dt class="text-[#94A3B8]">Records</dt>
+                <dd class="m-0 font-medium text-[#64748B]">
+                  {{ panelSummary.parcelSelection.count }}
+                </dd>
               </div>
-              <div class="map-glass-card flex items-center justify-between gap-2 rounded px-2 py-1">
-                <dt class="text-muted-foreground">States</dt>
-                <dd class="m-0 font-medium">{{ parcelOverview.stateCount }}</dd>
+              <div
+                class="flex items-center justify-between gap-2 rounded-[4px] border border-[#E2E8F0] bg-white px-2 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+              >
+                <dt class="text-[#94A3B8]">States</dt>
+                <dd class="m-0 font-medium text-[#64748B]">{{ parcelOverview.stateCount }}</dd>
               </div>
-              <div class="map-glass-card flex items-center justify-between gap-2 rounded px-2 py-1">
-                <dt class="text-muted-foreground">Counties</dt>
-                <dd class="m-0 font-medium">{{ parcelOverview.countyCount }}</dd>
+              <div
+                class="flex items-center justify-between gap-2 rounded-[4px] border border-[#E2E8F0] bg-white px-2 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+              >
+                <dt class="text-[#94A3B8]">Counties</dt>
+                <dd class="m-0 font-medium text-[#64748B]">{{ parcelOverview.countyCount }}</dd>
               </div>
-              <div class="map-glass-card flex items-center justify-between gap-2 rounded px-2 py-1">
-                <dt class="text-muted-foreground">Truncated</dt>
-                <dd class="m-0 font-medium">
+              <div
+                class="flex items-center justify-between gap-2 rounded-[4px] border border-[#E2E8F0] bg-white px-2 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+              >
+                <dt class="text-[#94A3B8]">Truncated</dt>
+                <dd class="m-0 font-medium text-[#64748B]">
                   {{ panelSummary.parcelSelection.truncated ? "Yes" : "No" }}
                 </dd>
               </div>
               <div
-                class="map-glass-card flex items-center justify-between gap-2 rounded px-2 py-1 sm:col-span-2"
+                class="flex items-center justify-between gap-2 rounded-[4px] border border-[#E2E8F0] bg-white px-2 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:col-span-2"
               >
-                <dt class="text-muted-foreground">Next Cursor</dt>
-                <dd class="m-0 max-w-[18rem] truncate font-mono text-[10px]">
+                <dt class="text-[#94A3B8]">Next Cursor</dt>
+                <dd class="m-0 max-w-[18rem] truncate text-[10px] text-[#64748B]">
                   {{ panelSummary.parcelSelection.nextCursor ?? "-" }}
                 </dd>
               </div>
             </dl>
 
-            <p v-if="props.isParcelsLoading" class="mt-2 text-[10px] text-muted-foreground">
+            <p v-if="props.isParcelsLoading" class="mt-2 text-[10px] text-[#94A3B8]">
               Refreshing parcels…
             </p>
           </article>
@@ -577,7 +591,7 @@
 
     <section
       v-else-if="hasCountyScores && activeTab === 'counties'"
-      class="map-glass-card flex-1 overflow-auto rounded-lg p-2"
+      class="flex-1 overflow-auto rounded-[4px] border border-[#E2E8F0] bg-white p-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
     >
       <SpatialAnalysisCountyScoresSection
         :county-scores="countyScores"
@@ -589,7 +603,7 @@
 
     <section
       v-else-if="hasFacilities && activeTab === 'facilities'"
-      class="map-glass-card flex-1 overflow-auto rounded-lg"
+      class="flex-1 overflow-auto rounded-[4px] border border-[#E2E8F0] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
     >
       <SpatialAnalysisFacilitiesTable
         :facilities="orderedFacilities"
@@ -604,34 +618,44 @@
 
     <section
       v-else-if="hasParcels && activeTab === 'parcels'"
-      class="map-glass-card flex-1 overflow-auto rounded-lg"
+      class="flex-1 overflow-auto rounded-[4px] border border-[#E2E8F0] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
     >
       <SpatialAnalysisParcelTable :parcels="orderedParcels" />
     </section>
 
     <section
       v-else
-      class="map-glass-card flex-1 rounded-lg border-dashed px-3 py-6 text-center text-[11px] text-muted-foreground"
+      class="flex-1 rounded-[4px] border border-dashed border-[#E2E8F0] bg-white px-3 py-6 text-center text-[10px] text-[#94A3B8] shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
     >
       {{ props.emptyMessage }}
     </section>
 
     <footer class="mt-3 flex items-center gap-2">
-      <Button
-        size="sm"
-        variant="glass-active"
-        class="flex-1"
+      <button
+        type="button"
+        class="inline-flex h-[22px] flex-1 items-center justify-center gap-1.5 rounded-[4px] border border-[#CBD5E1] bg-[#F8FAFC] px-3 text-[10px] font-medium text-[#64748B] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
         :disabled="props.dashboardDisabled"
         @click="emit('open-dashboard')"
       >
-        <LayoutDashboard class="mr-1.5 h-3.5 w-3.5" />
+        <LayoutDashboard class="h-3.5 w-3.5" />
         {{ props.dashboardLabel }}
-      </Button>
-      <Button size="sm" variant="glass" :disabled="props.exportDisabled" @click="emit('export')">
-        <Download class="mr-1.5 h-3.5 w-3.5" />
+      </button>
+      <button
+        type="button"
+        class="inline-flex h-[22px] items-center justify-center gap-1.5 rounded-[4px] border border-[#E2E8F0] bg-white px-3 text-[10px] font-normal text-[#94A3B8] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-[#CBD5E1] hover:bg-[#F8FAFC] hover:text-[#64748B] disabled:cursor-not-allowed disabled:opacity-60"
+        :disabled="props.exportDisabled"
+        @click="emit('export')"
+      >
+        <Download class="h-3.5 w-3.5" />
         {{ props.exportLabel }}
-      </Button>
-      <Button size="sm" variant="glass" @click="emit('dismiss')">{{ props.dismissLabel }}</Button>
+      </button>
+      <button
+        type="button"
+        class="inline-flex h-[22px] items-center justify-center rounded-[4px] border border-[#E2E8F0] bg-white px-3 text-[10px] font-normal text-[#94A3B8] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-[#CBD5E1] hover:bg-[#F8FAFC] hover:text-[#64748B]"
+        @click="emit('dismiss')"
+      >
+        {{ props.dismissLabel }}
+      </button>
     </footer>
   </aside>
 </template>

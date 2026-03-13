@@ -29,14 +29,6 @@
 
   const props = defineProps<SpatialAnalysisPerspectiveCardProps>();
 
-  const headingClass = computed(() => {
-    if (props.accent === "colocation") {
-      return "text-cyan-700";
-    }
-
-    return "text-amber-700";
-  });
-
   const dotClass = computed(() => {
     if (props.accent === "colocation") {
       return "bg-cyan-500";
@@ -49,44 +41,48 @@
 </script>
 
 <template>
-  <article class="map-glass-card rounded-md p-2">
+  <article
+    class="rounded-[4px] border border-[#E2E8F0] bg-white p-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+  >
     <div class="mb-1 flex items-center gap-1.5">
       <span class="inline-block h-2 w-2 rounded-full" :class="dotClass" />
-      <h3 class="m-0 text-xs font-semibold" :class="headingClass">{{ props.title }}</h3>
+      <h3 class="m-0 text-[10px] font-semibold text-[#94A3B8]">{{ props.title }}</h3>
     </div>
 
-    <dl class="grid grid-cols-[1fr_auto] gap-x-2 gap-y-1 text-[11px]">
-      <dt class="text-muted-foreground">Facilities</dt>
-      <dd class="m-0 font-medium">{{ props.summary.count }}</dd>
-      <dt class="text-muted-foreground">Commissioned</dt>
-      <dd class="m-0 font-medium">{{ props.formatPower(props.summary.commissionedPowerMw) }}</dd>
-      <dt class="text-muted-foreground">Pipeline</dt>
-      <dd class="m-0 font-medium">{{ props.formatPower(props.summary.pipelinePowerMw) }}</dd>
-      <dt class="text-muted-foreground">Square Ft</dt>
-      <dd class="m-0 font-medium">
+    <dl class="grid grid-cols-[1fr_auto] gap-x-2 gap-y-1 text-[10px]">
+      <dt class="text-[#94A3B8]">Facilities</dt>
+      <dd class="m-0 font-medium text-[#64748B]">{{ props.summary.count }}</dd>
+      <dt class="text-[#94A3B8]">Commissioned</dt>
+      <dd class="m-0 font-medium text-[#64748B]">
+        {{ props.formatPower(props.summary.commissionedPowerMw) }}
+      </dd>
+      <dt class="text-[#94A3B8]">Pipeline</dt>
+      <dd class="m-0 font-medium text-[#64748B]">
+        {{ props.formatPower(props.summary.pipelinePowerMw) }}
+      </dd>
+      <dt class="text-[#94A3B8]">Square Ft</dt>
+      <dd class="m-0 font-medium text-[#64748B]">
         {{ props.summary.squareFootage > 0 ? Math.round(props.summary.squareFootage).toLocaleString() : "-" }}
       </dd>
-      <dt class="text-muted-foreground">Operational</dt>
-      <dd class="m-0">{{ props.summary.operationalCount }}</dd>
-      <dt class="text-muted-foreground">Under Construction</dt>
-      <dd class="m-0">
+      <dt class="text-[#94A3B8]">Operational</dt>
+      <dd class="m-0 text-[#64748B]">{{ props.summary.operationalCount }}</dd>
+      <dt class="text-[#94A3B8]">Under Construction</dt>
+      <dd class="m-0 text-[#64748B]">
         {{ props.summary.underConstructionCount }}
-        <span class="text-muted-foreground">
+        <span class="text-[#94A3B8]">
           · {{ props.formatPower(props.summary.underConstructionPowerMw) }}
         </span>
       </dd>
-      <dt class="text-muted-foreground">Planned</dt>
-      <dd class="m-0">
+      <dt class="text-[#94A3B8]">Planned</dt>
+      <dd class="m-0 text-[#64748B]">
         {{ props.summary.plannedCount }}
-        <span class="text-muted-foreground">
-          · {{ props.formatPower(props.summary.plannedPowerMw) }}</span
-        >
+        <span class="text-[#94A3B8]"> · {{ props.formatPower(props.summary.plannedPowerMw) }}</span>
       </dd>
-      <dt class="text-muted-foreground">Leased</dt>
-      <dd class="m-0">{{ props.summary.leasedCount }}</dd>
+      <dt class="text-[#94A3B8]">Leased</dt>
+      <dd class="m-0 text-[#64748B]">{{ props.summary.leasedCount }}</dd>
     </dl>
 
-    <div v-if="props.providers !== undefined" class="mt-2 border-t border-border/60 pt-2">
+    <div v-if="props.providers !== undefined" class="mt-2 border-t border-[#E2E8F0] pt-2">
       <SpatialAnalysisProviderSummary
         :heading="props.providerHeading ?? 'Top Providers'"
         :providers="providerItems"

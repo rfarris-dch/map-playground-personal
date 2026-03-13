@@ -28,6 +28,10 @@ import {
 
 const basemapBoundaryHideCountByMap = new WeakMap<IMap, number>();
 
+function isPointerDragging(event: { readonly buttons?: number }): boolean {
+  return typeof event.buttons === "number" && event.buttons > 0;
+}
+
 export function mountBoundaryLayer(
   map: IMap,
   options: BoundaryLayerOptions
@@ -267,6 +271,11 @@ export function mountBoundaryLayer(
 
   function onPointerMove(event: { point: readonly [number, number] }): void {
     if (!(options.isInteractionEnabled?.() ?? true)) {
+      clearHover();
+      return;
+    }
+
+    if (isPointerDragging(event)) {
       clearHover();
       return;
     }

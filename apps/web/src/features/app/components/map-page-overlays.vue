@@ -5,6 +5,7 @@
   } from "@/features/app/components/map-page-overlays.types";
   import MapStatusBar from "@/features/app/components/map-status-bar.vue";
   import BoundaryHoverTooltip from "@/features/boundaries/components/boundary-hover-tooltip.vue";
+  import FacilityClusterHoverTooltip from "@/features/facilities/components/facility-cluster-hover-tooltip.vue";
   import FacilityHoverTooltip from "@/features/facilities/components/facility-hover-tooltip.vue";
   import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";
   import FacilityDetailDrawer from "@/features/facilities/facility-detail/components/facility-detail-drawer.vue";
@@ -54,6 +55,7 @@
   <MapStatusBar :overlay-status-message="props.overlayStatusMessage" />
 
   <FacilityHoverTooltip :hover-state="props.hoveredFacility" />
+  <FacilityClusterHoverTooltip :hover-state="props.hoveredFacilityCluster" />
   <BoundaryHoverTooltip :hover-state="props.hoveredBoundary" />
   <FiberLocatorHoverTooltip :hover-state="props.hoveredFiber" />
   <PowerHoverTooltip :hover-state="props.hoveredPower" />

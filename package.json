@@ -57,6 +57,8 @@
     "tiles:publish:environmental-hydro-basins": "sh -c 'bun run ./scripts/publish-parcels-manifest.ts --dataset=environmental-hydro-basins --run-id=${RUN_ID:-sample}'",
     "tiles:rollback:environmental-hydro-basins": "bun run ./scripts/rollback-parcels-manifest.ts --dataset=environmental-hydro-basins",
     "dev:pipeline-monitor": "turbo run dev --filter=@map-migration/pipeline-monitor",
+    "dagster:dev": "sh -c 'cd apps/dagster && dagster dev -m map_dagster.definitions'",
+    "dagster:compile": "python3 -m compileall apps/dagster/src",
     "build:pipeline-monitor": "turbo run build --filter=@map-migration/pipeline-monitor",
     "typecheck:pipeline-monitor": "turbo run typecheck --filter=@map-migration/pipeline-monitor",
     "start:api:prod": "bun run --cwd apps/api start:prod",

@@ -1,6 +1,7 @@
 import maplibregl, {
   type AddProtocolAction,
   addProtocol,
+  type GeoJSONSource,
   type FullscreenControlOptions as MapLibreFullscreenControlOptions,
   type Map as MapLibreMap,
   type NavigationControlOptions as MapLibreNavigationControlOptions,
@@ -22,6 +23,7 @@ import type {
   MapControl,
   MapControlPosition,
   MapCreateOptions,
+  MapExpression,
   MapLayerSpecification,
   MapPointerEvent,
   MapPointLike,
@@ -162,6 +164,10 @@ class MapLibreEngine implements IMap {
     this.map.addControl(control, position);
   }
 
+  addImage(id: string, image: ImageBitmap | HTMLImageElement | ImageData): void {
+    this.map.addImage(id, image);
+  }
+
   addSource(id: string, spec: MapSourceSpecification): void {
     this.map.addSource(id, spec);
   }
@@ -190,12 +196,21 @@ class MapLibreEngine implements IMap {
     });
   }
 
+  hasImage(id: string): boolean {
+    return this.map.hasImage(id);
+  }
+
   hasSource(sourceId: string): boolean {
     return typeof this.map.getSource(sourceId) !== "undefined";
   }
 
   hasLayer(layerId: string): boolean {
     return typeof this.map.getLayer(layerId) !== "undefined";
+  }
+
+  async loadImage(url: string): Promise<ImageBitmap | HTMLImageElement | ImageData> {
+    const response = await this.map.loadImage(url);
+    return response.data;
   }
 
   removeControl(control: MapControl): void {
@@ -329,6 +344,14 @@ class MapLibreEngine implements IMap {
     source.setData(data);
   }
 
+  setLayerFilter(layerId: string, filter: MapExpression | null): void {
+    if (!this.hasLayer(layerId)) {
+      return;
+    }
+
+    this.map.setFilter(layerId, filter ?? undefined);
+  }
+
   setLayerVisibility(layerId: string, visible: boolean): void {
     if (!this.hasLayer(layerId)) {
       return;
@@ -456,8 +479,41 @@ class MapLibreEngine implements IMap {
     this.pointerLeaveHandlers.delete(handler);
   }
 
+  async getClusterLeaves(
+    sourceId: string,
+    clusterId: number,
+    limit: number
+  ): Promise<MapRenderedFeature[]> {
+    const source = this.map.getSource(sourceId) as GeoJSONSource | undefined;
+    if (!source || typeof source.getClusterLeaves !== "function") {
+      return [];
+    }
+
+    const features = await source.getClusterLeaves(clusterId, limit, 0);
+    return (features ?? []) as unknown as MapRenderedFeature[];
+  }
+
+  async getClusterExpansionZoom(sourceId: string, clusterId: number): Promise<number> {
+    const source = this.map.getSource(sourceId) as GeoJSONSource | undefined;
+    if (!source || typeof source.getClusterExpansionZoom !== "function") {
+      return 0;
+    }
+
+    return source.getClusterExpansionZoom(clusterId);
+  }
+
+  private readMouseButtons(event: MapMouseEvent): number {
+    const originalEvent = Reflect.get(event, "originalEvent");
+    if (!(originalEvent instanceof MouseEvent)) {
+      return 0;
+    }
+
+    return originalEvent.buttons;
+  }
+
   private toPointerEvent(event: MapMouseEvent): MapPointerEvent {
     return {
+      buttons: this.readMouseButtons(event),
       lngLat: {
         lng: event.lngLat.lng,
         lat: event.lngLat.lat,

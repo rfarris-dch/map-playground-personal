@@ -52,7 +52,7 @@ describe("app-shell-map service", () => {
             expect(options.maxPitch).toBe(85);
             expect(options.zoom).toBe(3.2);
             expect(options.projection).toEqual({ type: "mercator" });
-            expect(options.preserveDrawingBuffer).toBe(true);
+            expect(options.preserveDrawingBuffer).toBeUndefined();
             return fakeMap;
           }),
           () =>

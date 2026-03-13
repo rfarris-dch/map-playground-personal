@@ -31,6 +31,7 @@ export interface MapCaptureImageOptions {
 
 export interface IMap {
   addControl(control: MapControl, position?: MapControlPosition): void;
+  addImage(id: string, image: ImageBitmap | HTMLImageElement | ImageData): void;
   addLayer(layerSpec: MapLayerSpecification, beforeId?: string): void;
   addSource(id: string, spec: MapSourceSpecification): void;
   captureImage(options?: MapCaptureImageOptions): Promise<Blob>;
@@ -39,12 +40,22 @@ export interface IMap {
   getBounds(): LngLatBounds;
   getCanvasSize(): { readonly height: number; readonly width: number };
   getCenter(): LngLat;
+
+  getClusterExpansionZoom(sourceId: string, clusterId: number): Promise<number>;
+
+  getClusterLeaves(
+    sourceId: string,
+    clusterId: number,
+    limit: number
+  ): Promise<MapRenderedFeature[]>;
   getPitch(): number;
   getProjection(): MapProjectionSpecification;
   getStyle(): MapStyleSpecification;
   getZoom(): number;
+  hasImage(id: string): boolean;
   hasLayer(layerId: string): boolean;
   hasSource(sourceId: string): boolean;
+  loadImage(url: string): Promise<ImageBitmap | HTMLImageElement | ImageData>;
   off(event: "load" | "moveend", handler: () => void): void;
   offClick(handler: (event: MapClickEvent) => void): void;
   offPointerLeave(handler: () => void): void;
@@ -63,6 +74,7 @@ export interface IMap {
   removeSource(sourceId: string): void;
   setFeatureState(target: FeatureStateTarget, state: Record<string, unknown>): void;
   setGeoJSONSourceData(sourceId: string, data: unknown): void;
+  setLayerFilter(layerId: string, filter: MapExpression | null): void;
   setLayerVisibility(layerId: string, visible: boolean): void;
   setProjection(projection: MapProjectionSpecification): void;
   setStyle(style: StyleInput): void;
@@ -71,6 +83,7 @@ export interface IMap {
 }
 
 export interface MapPointerEvent {
+  readonly buttons: number;
   lngLat: {
     lat: number;
     lng: number;

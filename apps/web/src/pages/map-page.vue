@@ -1,15 +1,18 @@
 <script setup lang="ts">
-  import { computed } from "vue";
+  import { computed, provide } from "vue";
   import MapPageControls from "@/features/app/components/map-page-controls.vue";
   import MapPageOverlays from "@/features/app/components/map-page-overlays.vue";
   import { useAppShell } from "@/features/app/core/use-app-shell";
+  import { MAP_FILTERS_KEY } from "@/features/app/filters/map-filters.keys";
 
   const {
+    mapFilters,
     mapContainer,
     map,
     selectedFacility,
     selectedParcel,
     hoveredFacility,
+    hoveredFacilityCluster,
     hoveredBoundary,
     hoveredFiber,
     hoveredPower,
@@ -61,6 +64,7 @@
     isSelectionPanelOpen,
     facilityDetailQuery,
     parcelDetailQuery,
+    setPerspectiveViewMode,
     setPerspectiveVisibility,
     setBoundaryVisible,
     setBoundarySelectedRegionIds,
@@ -95,6 +99,8 @@
     toggleSketchMeasurePanel,
     toggleSelectionPanel,
   } = useAppShell();
+
+  provide(MAP_FILTERS_KEY, mapFilters);
 
   const facilityDetail = computed(() => facilityDetailQuery.data.value ?? null);
   const isFacilityDetailLoading = computed(() => facilityDetailQuery.isLoading.value);
@@ -155,6 +161,7 @@
         @update:basemap-layer-visible="setBasemapLayerVisible"
         @update:boundary-visible="setBoundaryVisible"
         @update:boundary-selected-region-ids="setBoundarySelectedRegionIds"
+        @update:perspective-view-mode="setPerspectiveViewMode"
         @update:perspective-visibility="setPerspectiveVisibility"
         @update:flood-layer-visible="setFloodLayerVisible"
         @update:hydro-basins-visible="setHydroBasinsVisible"
@@ -182,6 +189,7 @@
         :county-ids="scannerAnalysisSummary.area.countyIds"
         :map="map"
         :hovered-facility="hoveredFacility"
+        :hovered-facility-cluster="hoveredFacilityCluster"
         :hovered-boundary="hoveredBoundary"
         :hovered-fiber="hoveredFiber"
         :hovered-power="hoveredPower"

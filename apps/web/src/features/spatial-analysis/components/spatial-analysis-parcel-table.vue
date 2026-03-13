@@ -71,7 +71,7 @@
 
 <template>
   <div
-    class="flex items-center justify-between border-b border-border/60 px-2 py-1 text-[10px] text-muted-foreground"
+    class="flex items-center justify-between border-b border-[#E2E8F0] px-2 py-1 text-[10px] text-[#94A3B8]"
   >
     <p class="m-0">
       Showing {{ pageStartIndex + 1 }}-{{ pageEndIndex }}
@@ -81,7 +81,7 @@
       <Button
         size="sm"
         variant="glass"
-        class="h-6 px-2 text-[10px]"
+        class="h-[22px] rounded-[4px] border border-[#E2E8F0] bg-white px-2 text-[10px] font-normal text-[#94A3B8] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-[#CBD5E1] hover:bg-[#F8FAFC] hover:text-[#64748B]"
         :disabled="page <= 1"
         @click="showPreviousPage"
       >
@@ -91,7 +91,7 @@
       <Button
         size="sm"
         variant="glass"
-        class="h-6 px-2 text-[10px]"
+        class="h-[22px] rounded-[4px] border border-[#E2E8F0] bg-white px-2 text-[10px] font-normal text-[#94A3B8] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-[#CBD5E1] hover:bg-[#F8FAFC] hover:text-[#64748B]"
         :disabled="page >= pageCount"
         @click="showNextPage"
       >
@@ -99,10 +99,10 @@
       </Button>
     </div>
   </div>
-  <table class="min-w-max text-[11px]">
+  <table class="min-w-max text-[10px] text-[#94A3B8]">
     <thead>
       <tr
-        class="map-glass-panel-soft sticky top-0 text-[10px] uppercase tracking-wide text-muted-foreground whitespace-nowrap"
+        class="sticky top-0 border-b border-[#E2E8F0] bg-white text-[10px] uppercase tracking-wide text-[#94A3B8] shadow-[0_1px_2px_rgba(15,23,42,0.04)] whitespace-nowrap"
       >
         <th class="px-2 py-1 text-left">parcel_id</th>
         <th
@@ -118,9 +118,9 @@
       <tr
         v-for="parcel in pagedParcels"
         :key="parcel.parcelId"
-        class="border-t border-border/50 transition-colors hover:bg-muted/50"
+        class="border-t border-[#E2E8F0] transition-colors hover:bg-[#F8FAFC]"
       >
-        <td class="px-2 py-1 font-mono text-[10px] text-muted-foreground">{{ parcel.parcelId }}</td>
+        <td class="px-2 py-1 text-[10px] text-[#94A3B8]">{{ parcel.parcelId }}</td>
         <td
           v-for="field in SPATIAL_ANALYSIS_PARCEL_FOCUS_FIELDS"
           :key="`${parcel.parcelId}-${field}`"

@@ -48,6 +48,7 @@ export function resetMapLifecycleInteractions(options: UseAppShellMapLifecycleOp
   options.actions.clearSelectedParcel();
   options.layers.facilitiesHoverController.value?.clear();
   options.state.hoveredFacility.value = null;
+  options.state.hoveredFacilityCluster.value = null;
   resetBoundaryRuntime(options);
   options.layers.powerHoverController.value?.clear();
   options.state.hoveredPower.value = null;

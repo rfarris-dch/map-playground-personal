@@ -2,12 +2,13 @@
   import { computed, shallowRef, watch } from "vue";
   import PipelineDashboard from "@/features/pipeline/components/pipeline-dashboard.vue";
   import type { PipelineDataset } from "@/features/pipeline/pipeline.types";
+  import {
+    getPipelineDataset,
+    isKnownPipelineDataset,
+    pipelineDatasets,
+  } from "@/features/pipeline/pipeline-registry.service";
 
   const PIPELINE_DATASET_SEARCH_PARAM = "dataset";
-
-  function isPipelineDataset(value: string | null): value is PipelineDataset {
-    return value === "parcels" || value === "flood";
-  }
 
   function resolveInitialDataset(): PipelineDataset {
     if (typeof window === "undefined") {
@@ -17,19 +18,16 @@
     const currentUrl = new URL(window.location.href);
     const dataset = currentUrl.searchParams.get(PIPELINE_DATASET_SEARCH_PARAM);
 
-    return isPipelineDataset(dataset) ? dataset : "parcels";
+    return isKnownPipelineDataset(dataset) ? dataset : "parcels";
   }
 
   const dataset = shallowRef<PipelineDataset>(resolveInitialDataset());
+  const datasetDefinition = computed(() => getPipelineDataset(dataset.value));
 
-  const title = computed(() =>
-    dataset.value === "flood" ? "Flood Pipeline Monitor" : "Parcels Pipeline Monitor"
-  );
-
-  const description = computed(() =>
-    dataset.value === "flood"
-      ? "Live status for FEMA flood normalization, canonical load, PMTiles build, and publish."
-      : "Live status for extraction, canonical load/swap, PMTiles build, and publish."
+  const title = computed(() => `${datasetDefinition.value.displayName} Pipeline Monitor`);
+  const description = computed(
+    () =>
+      `${datasetDefinition.value.description} Shared Dagster-style asset status for the current dataset.`
   );
 
   function setDataset(nextDataset: PipelineDataset): void {
@@ -75,28 +73,18 @@
         class="inline-flex w-fit items-center rounded-xl border border-border/80 bg-card/95 p-1 shadow-sm"
       >
         <button
+          v-for="entry in pipelineDatasets"
+          :key="entry.dataset"
           type="button"
           class="rounded-lg px-3 py-2 text-sm font-semibold transition"
           :class="
-            dataset === 'parcels'
+            dataset === entry.dataset
               ? 'bg-primary text-primary-foreground'
               : 'text-muted-foreground hover:bg-muted'
           "
-          @click="setDataset('parcels')"
+          @click="setDataset(entry.dataset)"
         >
-          Parcels
-        </button>
-        <button
-          type="button"
-          class="rounded-lg px-3 py-2 text-sm font-semibold transition"
-          :class="
-            dataset === 'flood'
-              ? 'bg-primary text-primary-foreground'
-              : 'text-muted-foreground hover:bg-muted'
-          "
-          @click="setDataset('flood')"
-        >
-          Flood
+          {{ entry.displayName }}
         </button>
       </div>
     </header>

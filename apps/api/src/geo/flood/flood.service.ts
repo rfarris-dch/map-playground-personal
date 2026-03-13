@@ -125,38 +125,35 @@ function mapFloodSummary(
 export async function queryFloodAnalysis(
   args: QueryFloodAnalysisArgs
 ): Promise<QueryFloodAnalysisResult> {
-  const [areaRowsResult, parcelRowsResult] = await Promise.allSettled([
-    queryFloodAreaSummary(args.geometryGeoJson),
-    queryFloodParcelRollup(args.geometryGeoJson),
-  ]);
-
-  if (areaRowsResult.status === "rejected") {
+  let areaRows: readonly FloodAreaSummaryRow[];
+  try {
+    areaRows = await queryFloodAreaSummary(args.geometryGeoJson);
+  } catch (error) {
     return {
       ok: false,
       value: {
-        error: areaRowsResult.reason,
-        reason: isMissingRelationError(areaRowsResult.reason)
-          ? "source_unavailable"
-          : "query_failed",
+        error,
+        reason: isMissingRelationError(error) ? "source_unavailable" : "query_failed",
       },
     };
   }
 
-  if (parcelRowsResult.status === "rejected") {
+  let parcelRows: readonly FloodParcelRollupRow[];
+  try {
+    parcelRows = await queryFloodParcelRollup(args.geometryGeoJson);
+  } catch (error) {
     return {
       ok: false,
       value: {
-        error: parcelRowsResult.reason,
-        reason: isMissingRelationError(parcelRowsResult.reason)
-          ? "source_unavailable"
-          : "query_failed",
+        error,
+        reason: isMissingRelationError(error) ? "source_unavailable" : "query_failed",
       },
     };
   }
 
   try {
-    const areaRow = areaRowsResult.value[0];
-    const parcelRollupRow = parcelRowsResult.value[0];
+    const areaRow = areaRows[0];
+    const parcelRollupRow = parcelRows[0];
 
     if (typeof areaRow === "undefined" || typeof parcelRollupRow === "undefined") {
       return {

@@ -1,9 +1,10 @@
+import http from "node:http";
 import { fileURLToPath, URL } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
 import vue from "@vitejs/plugin-vue";
 import { defineConfig } from "vite";
 
-const defaultApiProxyTarget = "http://localhost:3001";
+const defaultApiProxyTarget = "http://127.0.0.1:3001";
 const apiProxyTarget =
   process.env.MAP_WEB_API_PROXY_TARGET ??
   process.env.VITE_API_PROXY_TARGET ??
@@ -36,6 +37,20 @@ export default defineConfig({
       "/api": {
         target: apiProxyTarget,
         changeOrigin: true,
+        configure: (proxy) => {
+          // Defer to run after Vite registers its own error handler, then
+          // replace all error listeners with a silent one so ECONNREFUSED
+          // noise never hits the console during API restarts.
+          process.nextTick(() => {
+            proxy.removeAllListeners("error");
+            proxy.on("error", (_err, _req, res) => {
+              if (res instanceof http.ServerResponse && !res.headersSent) {
+                res.writeHead(502, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({ error: "API unavailable — it may be restarting" }));
+              }
+            });
+          });
+        },
       },
     },
   },

@@ -73,7 +73,6 @@ TIPPECANOE_ARGS=(
   --include=FLD_ZONE
   --include=ZONE_SUBTY
   --include=SFHA_TF
-  --include=DFIRM_ID
   --include=SOURCE_CIT
   --include=is_flood_100
   --include=is_flood_500
@@ -92,7 +91,6 @@ if [[ -n "${SOURCE_RUN_ID}" ]]; then
 COPY (
   WITH flood_overlay_source AS (
     SELECT
-      COALESCE(flood.dfirm_id, 'unknown') AS dfirm_id,
       flood.is_flood_100,
       flood.is_flood_500,
       flood.flood_band,
@@ -105,7 +103,6 @@ COPY (
   ),
   flood_overlay_groups AS (
     SELECT
-      source.dfirm_id,
       source.is_flood_100,
       source.is_flood_500,
       source.flood_band,
@@ -115,7 +112,6 @@ COPY (
     FROM flood_overlay_source AS source
     WHERE NOT ST_IsEmpty(source.geom_3857)
     GROUP BY
-      source.dfirm_id,
       source.is_flood_100,
       source.is_flood_500,
       source.flood_band,
@@ -124,7 +120,6 @@ COPY (
   ),
   flood_overlay_parts AS (
     SELECT
-      groups.dfirm_id,
       groups.is_flood_100,
       groups.is_flood_500,
       groups.flood_band,
@@ -136,7 +131,6 @@ COPY (
   ),
   flood_overlay_subdivided AS (
     SELECT
-      parts.dfirm_id,
       parts.is_flood_100,
       parts.is_flood_500,
       parts.flood_band,
@@ -149,7 +143,6 @@ COPY (
   SELECT json_build_object(
     'type', 'Feature',
     'properties', json_build_object(
-      'DFIRM_ID', NULLIF(dfirm_id, 'unknown'),
       'FLD_ZONE', CASE
         WHEN is_flood_100 THEN 'SFHA'
         WHEN is_flood_500 THEN '0.2 PCT'

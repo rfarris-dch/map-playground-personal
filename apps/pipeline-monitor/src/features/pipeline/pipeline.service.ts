@@ -1,8 +1,7 @@
 import {
-  buildFloodSyncStatusRoute,
-  buildParcelsSyncStatusRoute,
+  buildPipelineStatusRoute,
   type ParcelSyncPhase,
-  ParcelsSyncStatusResponseSchema,
+  PipelineStatusResponseSchema,
 } from "@map-migration/contracts";
 import {
   type ApiEffectError,
@@ -15,25 +14,23 @@ import type {
   PipelineStatusFetchResult,
   PipelineStatusPayload,
 } from "@/features/pipeline/pipeline.types";
-
-function resolvePipelineStatusRoute(dataset: PipelineDataset): string {
-  if (dataset === "flood") {
-    return buildFloodSyncStatusRoute();
-  }
-
-  return buildParcelsSyncStatusRoute();
-}
+import { getPipelineDataset } from "./pipeline-registry.service";
 
 function phaseLabel(
   phase: ParcelSyncPhase,
   dataset: PipelineDataset = "parcels",
   summary: string | null = null
 ): string {
+  const isEnvironmentalDataset = getPipelineDataset(dataset).family === "environmental";
   switch (phase) {
     case "idle":
       return "Idle";
     case "extracting":
-      if (dataset === "flood" && typeof summary === "string" && summary.startsWith("normalize ")) {
+      if (
+        isEnvironmentalDataset &&
+        typeof summary === "string" &&
+        summary.startsWith("normalize ")
+      ) {
         return "Normalizing";
       }
       return "Extracting";
@@ -185,8 +182,8 @@ export function createFetchPipelineStatusEffect(
       ApiEffectError,
       never
     > = apiGetJsonEffect(
-      resolvePipelineStatusRoute(dataset),
-      ParcelsSyncStatusResponseSchema,
+      buildPipelineStatusRoute(dataset),
+      PipelineStatusResponseSchema,
       {
         method: "GET",
         ...(typeof signal === "undefined" ? {} : { signal }),
@@ -215,8 +212,11 @@ export function createFetchPipelineStatusEffect(
   });
 }
 
-export function fetchPipelineStatus(signal?: AbortSignal): Promise<PipelineStatusFetchResult> {
-  return Effect.runPromise(createFetchPipelineStatusEffect("parcels", signal));
+export function fetchPipelineStatus(
+  dataset: PipelineDataset,
+  signal?: AbortSignal
+): Promise<PipelineStatusFetchResult> {
+  return Effect.runPromise(createFetchPipelineStatusEffect(dataset, signal));
 }
 
 export function formatPhaseLabel(

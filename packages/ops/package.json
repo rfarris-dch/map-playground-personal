@@ -11,6 +11,7 @@
     "dev": "tsc -w -p tsconfig.json"
   },
   "dependencies": {
+    "@map-migration/contracts": "workspace:*",
     "@effect/platform": "^0.94.5",
     "@effect/platform-bun": "^0.87.1",
     "effect": "^3.19.19"
@@ -30,6 +31,10 @@
     "./etl/command-runner": {
       "types": "./dist/etl/command-runner.d.ts",
       "default": "./dist/etl/command-runner.js"
+    },
+    "./pipeline/pipeline-datasets": {
+      "types": "./dist/pipeline/pipeline-datasets.d.ts",
+      "default": "./dist/pipeline/pipeline-datasets.js"
     },
     "./etl/project-paths": {
       "types": "./dist/etl/project-paths.d.ts",

@@ -304,6 +304,11 @@ export function mountFiberLocatorHover(
       return;
     }
 
+    if (event.buttons > 0) {
+      clear();
+      return;
+    }
+
     const { queryLayerIds, lineIdBySourceId } = buildHoverQueryContext(map, options);
 
     if (queryLayerIds.length === 0) {

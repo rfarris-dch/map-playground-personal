@@ -16,8 +16,26 @@ export interface FacilityHoverState {
   readonly screenPoint: readonly [number, number];
 }
 
+export interface ClusterProviderSummary {
+  readonly name: string;
+  readonly totalPowerMw: number;
+}
+
+export interface FacilityClusterHoverState {
+  readonly clusterId: number;
+  readonly commissionedPowerMw: number;
+  readonly facilityCount: number;
+  readonly perspective: FacilityPerspective;
+  readonly plannedPowerMw: number;
+  readonly screenPoint: readonly [number, number];
+  readonly topProviders: readonly ClusterProviderSummary[];
+  readonly totalPowerMw: number;
+  readonly underConstructionPowerMw: number;
+}
+
 export interface FacilitiesHoverOptions {
   readonly isInteractionEnabled?: () => boolean;
+  readonly onClusterHoverChange?: (nextHover: FacilityClusterHoverState | null) => void;
   readonly onHoverChange?: (nextHover: FacilityHoverState | null) => void;
   readonly perspectives: readonly FacilityPerspective[];
 }

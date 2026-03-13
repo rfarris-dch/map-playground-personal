@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, mock } from "bun:test";
-import { ApiHeaders, buildFloodSyncStatusRoute } from "@map-migration/contracts";
+import {
+  ApiHeaders,
+  buildPipelineStatusRoute,
+  getPipelineDatasetDescriptor,
+  PIPELINE_PLATFORM,
+} from "@map-migration/contracts";
 import { Effect } from "effect";
 import {
   createFetchPipelineStatusEffect,
@@ -14,6 +19,7 @@ afterEach(() => {
 
 function createSuccessResponseBody(): Record<string, unknown> {
   return {
+    dataset: getPipelineDatasetDescriptor("parcels"),
     status: "ok",
     generatedAt: "2026-03-08T12:00:00.000Z",
     enabled: true,
@@ -23,6 +29,7 @@ function createSuccessResponseBody(): Record<string, unknown> {
     snapshotRoot: "/tmp/parcels-sync",
     latestRunId: "run-1",
     latestRunCompletedAt: null,
+    platform: PIPELINE_PLATFORM,
     run: {
       runId: "run-1",
       reason: "interval",
@@ -66,7 +73,7 @@ describe("fetchPipelineStatus", () => {
       return Promise.reject(new Error("socket hang up"));
     });
 
-    const result = await fetchPipelineStatus();
+    const result = await fetchPipelineStatus("parcels");
 
     expect(result.ok).toBe(false);
     if (result.ok) {
@@ -87,7 +94,7 @@ describe("fetchPipelineStatus", () => {
       return Promise.reject(new DOMException("Request aborted", "AbortError"));
     });
 
-    const result = await fetchPipelineStatus();
+    const result = await fetchPipelineStatus("parcels");
 
     expect(result.ok).toBe(false);
     if (result.ok) {
@@ -114,7 +121,7 @@ describe("fetchPipelineStatus", () => {
       )
     );
 
-    const result = await fetchPipelineStatus();
+    const result = await fetchPipelineStatus("parcels");
 
     expect(result.ok).toBe(false);
     if (result.ok) {
@@ -143,7 +150,7 @@ describe("fetchPipelineStatus", () => {
       )
     );
 
-    const result = await fetchPipelineStatus();
+    const result = await fetchPipelineStatus("parcels");
 
     expect(result.ok).toBe(false);
     if (result.ok) {
@@ -168,7 +175,7 @@ describe("fetchPipelineStatus", () => {
       )
     );
 
-    const result = await fetchPipelineStatus();
+    const result = await fetchPipelineStatus("parcels");
 
     expect(result.ok).toBe(true);
     if (!result.ok) {
@@ -198,6 +205,6 @@ describe("fetchPipelineStatus", () => {
     const result = await Effect.runPromise(createFetchPipelineStatusEffect("flood"));
 
     expect(result.ok).toBe(true);
-    expect(capturedUrl).toBe(buildFloodSyncStatusRoute());
+    expect(capturedUrl).toBe(buildPipelineStatusRoute("flood"));
   });
 });

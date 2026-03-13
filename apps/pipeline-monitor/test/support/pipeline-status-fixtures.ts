@@ -1,18 +1,20 @@
 import type {
   ParcelSyncPhase,
   ParcelSyncStateProgress,
-  ParcelsSyncStatusResponse,
+  PipelineStatusResponse,
 } from "@map-migration/contracts";
+import { getPipelineDatasetDescriptor, PIPELINE_PLATFORM } from "@map-migration/contracts";
 import type {
   PipelineStatusFetchResult,
   PipelineStatusPayload,
 } from "../../src/features/pipeline/pipeline.types";
 
 interface PipelineResponseOptions {
+  readonly dataset?: PipelineStatusResponse["dataset"]["dataset"];
   readonly generatedAt?: string;
   readonly isRunning?: boolean;
   readonly phase?: ParcelSyncPhase;
-  readonly progress?: ParcelsSyncStatusResponse["run"]["progress"];
+  readonly progress?: PipelineStatusResponse["run"]["progress"];
   readonly requestId?: string;
   readonly runId?: string | null;
   readonly states?: readonly ParcelSyncStateProgress[];
@@ -42,8 +44,9 @@ export function createPipelineState(options: PipelineStateOptions = {}): ParcelS
 
 export function createPipelineStatusResponse(
   options: PipelineResponseOptions = {}
-): ParcelsSyncStatusResponse {
+): PipelineStatusResponse {
   const states = options.states ? [...options.states] : [createPipelineState()];
+  const dataset = options.dataset ?? "parcels";
 
   let writtenCount = 0;
   let expectedCount = 0;
@@ -64,12 +67,14 @@ export function createPipelineStatusResponse(
   }
 
   return {
+    dataset: getPipelineDatasetDescriptor(dataset),
     enabled: true,
     generatedAt: options.generatedAt ?? "2026-03-08T12:00:00.000Z",
     intervalMs: 3000,
     latestRunCompletedAt: null,
     latestRunId: options.runId ?? "run-1",
     mode: "external",
+    platform: PIPELINE_PLATFORM,
     requireStartupSuccess: true,
     run: {
       durationMs: options.isRunning === false ? 3000 : null,

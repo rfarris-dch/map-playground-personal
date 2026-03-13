@@ -21,25 +21,23 @@
 </script>
 
 <template>
-  <p class="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+  <p class="mb-1 text-[10px] font-semibold uppercase tracking-wide text-[#94A3B8]">
     {{ props.heading }}
   </p>
   <div class="grid grid-cols-[1fr_auto_auto] gap-x-2 gap-y-1 text-[11px]">
-    <span class="text-[10px] uppercase tracking-wide text-muted-foreground">Provider</span>
-    <span class="text-[10px] uppercase tracking-wide text-muted-foreground text-right">
+    <span class="text-[10px] uppercase tracking-wide text-[#94A3B8]">Provider</span>
+    <span class="text-[10px] uppercase tracking-wide text-[#94A3B8] text-right">
       {{ props.powerLabel ?? "Power" }}
     </span>
-    <span class="text-[10px] uppercase tracking-wide text-muted-foreground text-right"
-      >Facilities</span
-    >
+    <span class="text-[10px] uppercase tracking-wide text-[#94A3B8] text-right">Facilities</span>
     <template v-for="(provider, index) in props.providers" :key="providerKey(provider, index)">
-      <span class="truncate">{{ provider.providerName }}</span>
-      <span class="text-right text-muted-foreground">
+      <span class="truncate text-[#64748B]">{{ provider.providerName }}</span>
+      <span class="text-right text-[#94A3B8]">
         {{ props.formatPower(provider.commissionedPowerMw) }}
       </span>
-      <span class="text-right text-muted-foreground">{{ provider.count }}</span>
+      <span class="text-right text-[#94A3B8]">{{ provider.count }}</span>
     </template>
-    <span v-if="props.providers.length === 0" class="col-span-3 text-[10px] text-muted-foreground"
+    <span v-if="props.providers.length === 0" class="col-span-3 text-[10px] text-[#94A3B8]"
       >None</span
     >
   </div>

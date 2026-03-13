@@ -26,6 +26,20 @@ export function useAppShellMapLifecycle(options: UseAppShellMapLifecycleOptions)
     }
   );
 
+  watch(options.filters.facilitiesPredicate, () => {
+    for (const controller of options.layers.facilitiesControllers.value) {
+      controller.applyFilter();
+    }
+  });
+
+  watch(options.filters.transmissionFilter, (filter) => {
+    for (const controller of options.layers.powerControllers.value) {
+      if (controller.layerId === "transmission") {
+        controller.setFilter(filter ?? null);
+      }
+    }
+  });
+
   onMounted(() => {
     initializeMapLifecycleRuntime(options).catch((error: unknown) => {
       console.error("Map initialization failed", error);

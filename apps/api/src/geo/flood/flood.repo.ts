@@ -1,8 +1,14 @@
+import { parsePositiveIntFlag } from "@/config/env-parsing.service";
 import { equalAreaSqKmSql } from "@/db/postgis-analysis-sql.service";
 import { runQuery } from "@/db/postgres";
 import type { FloodAreaSummaryRow, FloodParcelRollupRow } from "./flood.repo.types";
 
 export type { FloodAreaSummaryRow, FloodParcelRollupRow } from "./flood.repo.types";
+
+const DEFAULT_FLOOD_QUERY_STATEMENT_TIMEOUT_MS = parsePositiveIntFlag(
+  process.env.API_FLOOD_QUERY_STATEMENT_TIMEOUT_MS,
+  15_000
+);
 
 export function queryFloodAreaSummary(
   geometryGeoJson: string
@@ -50,7 +56,10 @@ CROSS JOIN dataset_meta
 CROSS JOIN flood_100
 CROSS JOIN flood_500;
 `,
-    [geometryGeoJson]
+    [geometryGeoJson],
+    {
+      statementTimeoutMs: DEFAULT_FLOOD_QUERY_STATEMENT_TIMEOUT_MS,
+    }
   );
 }
 
@@ -88,6 +97,9 @@ SELECT
   COUNT(*) AS selected_parcel_count
 FROM parcel_flood_rollup;
 `,
-    [geometryGeoJson]
+    [geometryGeoJson],
+    {
+      statementTimeoutMs: DEFAULT_FLOOD_QUERY_STATEMENT_TIMEOUT_MS,
+    }
   );
 }

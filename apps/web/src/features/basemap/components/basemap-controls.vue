@@ -15,8 +15,8 @@
   }
 
   interface BasemapControlOption {
-    readonly color: string;
     readonly description: string;
+    readonly dotClass: string;
     readonly label: string;
     readonly layerId: BasemapLayerId;
   }
@@ -37,7 +37,9 @@
   }>();
 
   const containerClass = computed(() =>
-    props.embedded ? "w-full" : "map-glass-panel w-full rounded-lg p-3"
+    props.embedded
+      ? "w-full [font-family:Inter,var(--font-sans)] text-[#94A3B8]"
+      : "w-full rounded-[4px] border border-[#E2E8F0] bg-white p-3 shadow-[0_4px_8px_rgba(0,0,0,0.06)] [font-family:Inter,var(--font-sans)] text-[#94A3B8]"
   );
 
   const controls = computed<readonly BasemapControlOption[]>(() => {
@@ -46,49 +48,49 @@
         layerId: "color",
         label: "Color Basemap",
         description: "Colored vector basemap style, not satellite imagery",
-        color: "#16a34a",
+        dotClass: "bg-[#16A34A]",
       },
       {
         layerId: "globe",
         label: "Globe Projection",
         description: "Spherical map view you can use with any basemap color mode",
-        color: "#7c3aed",
+        dotClass: "bg-[#7C3AED]",
       },
       {
         layerId: "satellite",
         label: "Satellite",
         description: "Imagery raster base below roads and labels",
-        color: "#0369a1",
+        dotClass: "bg-[#0369A1]",
       },
       {
         layerId: "landmarks",
         label: "Landmarks",
         description: "POI and mountain peak labels from vector tiles",
-        color: "#0f766e",
+        dotClass: "bg-[#0F766E]",
       },
       {
         layerId: "labels",
         label: "Place Labels",
         description: "City, state, country, and road labels",
-        color: "#334155",
+        dotClass: "bg-[#334155]",
       },
       {
         layerId: "roads",
         label: "Road Network",
         description: "Transportation geometry layers",
-        color: "#a16207",
+        dotClass: "bg-[#A16207]",
       },
       {
         layerId: "boundaries",
         label: "Basemap Boundaries",
         description: "Country and boundary lines from basemap",
-        color: "#7c2d12",
+        dotClass: "bg-[#7C2D12]",
       },
       {
         layerId: "buildings3d",
         label: "3D Buildings",
         description: "Extruded building footprints (zoom 15+)",
-        color: "#57534e",
+        dotClass: "bg-[#57534E]",
       },
     ];
   });
@@ -172,37 +174,49 @@
 
     emitVisibility(layerId, target.checked);
   }
+
+  function rowClass(visible: boolean): string {
+    if (visible) {
+      return "border-[#CBD5E1] bg-[#F8FAFC] shadow-[0_1px_2px_rgba(15,23,42,0.04)]";
+    }
+
+    return "border-transparent bg-white hover:border-[#E2E8F0] hover:bg-[#F8FAFC]";
+  }
 </script>
 
 <template>
   <aside :class="containerClass" aria-label="Basemap layers">
     <header v-if="!props.embedded" class="mb-2 flex items-center justify-between">
-      <h2 class="m-0 text-xs font-semibold tracking-wide">Basemap</h2>
-      <span class="text-[11px] text-muted-foreground">MapLibre style layer controls</span>
+      <h2 class="m-0 text-[10px] font-semibold tracking-wide text-[#94A3B8]">Basemap</h2>
+      <span class="text-[10px] text-[#94A3B8]">MapLibre style layer controls</span>
     </header>
 
     <div class="grid gap-2">
       <label
         v-for="control in controls"
         :key="control.layerId"
-        class="map-glass-card flex cursor-pointer items-start gap-3 rounded-md p-2"
+        class="group flex cursor-pointer items-start gap-2 rounded-[4px] border px-3 py-1 transition-colors"
+        :class="rowClass(visibleForLayer(control.layerId))"
       >
         <input
-          class="mt-0.5 h-4 w-4"
+          class="mt-[1px] h-[10px] w-[10px] rounded-[2px] border border-[#CBD5E1] accent-[#94A3B8]"
           type="checkbox"
           :checked="visibleForLayer(control.layerId)"
           @change="onToggle(control.layerId, $event)"
         >
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-2">
+            <span class="h-2 w-2 rounded-full" :class="control.dotClass" aria-hidden="true" />
             <span
-              class="h-2.5 w-2.5 rounded-full"
-              :style="{ backgroundColor: control.color }"
-              aria-hidden="true"
-            />
-            <span class="text-xs font-medium">{{ control.label }}</span>
+              class="text-[10px] font-semibold transition-colors"
+              :class="visibleForLayer(control.layerId) ? 'text-[#64748B]' : 'text-[#94A3B8]'"
+              >{{ control.label }}</span
+            >
           </div>
-          <p class="mt-1 break-words text-[11px] text-muted-foreground">
+          <p
+            class="mt-1 break-words text-[10px] transition-colors"
+            :class="visibleForLayer(control.layerId) ? 'text-[#64748B]' : 'text-[#94A3B8]'"
+          >
             {{ control.description }}
           </p>
         </div>

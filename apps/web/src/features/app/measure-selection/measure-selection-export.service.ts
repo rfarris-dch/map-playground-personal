@@ -1,3 +1,4 @@
+import { captureMapImageForExport } from "@/features/app/map-export/map-capture.service";
 import type { ExportMeasureSelectionImageArgs } from "@/features/app/measure-selection/measure-selection-export.service.types";
 import { buildMeasureSelectionCsv } from "@/features/measure/measure-analysis.service";
 import type { MeasureSelectionSummary } from "@/features/measure/measure-analysis.types";
@@ -31,14 +32,6 @@ function downloadBlobFile(blob: Blob, filename: string): void {
   downloadLink.download = filename;
   downloadLink.click();
   URL.revokeObjectURL(url);
-}
-
-async function waitForAnimationFrame(): Promise<void> {
-  await new Promise<void>((resolve) => {
-    requestAnimationFrame(() => {
-      resolve();
-    });
-  });
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -260,9 +253,6 @@ export async function exportMeasureSelectionImage(
 ): Promise<void> {
   const imageType = args.format ?? "image/png";
 
-  await waitForAnimationFrame();
-  await waitForAnimationFrame();
-
   const captureOptions =
     typeof args.quality === "number"
       ? {
@@ -273,7 +263,10 @@ export async function exportMeasureSelectionImage(
           type: imageType,
         };
 
-  const capturedBlob = await args.map.captureImage(captureOptions);
+  const capturedBlob = await captureMapImageForExport({
+    captureOptions,
+    map: args.map,
+  });
   const blob = await cropSelectionImage(args, capturedBlob, imageType);
 
   downloadBlobFile(

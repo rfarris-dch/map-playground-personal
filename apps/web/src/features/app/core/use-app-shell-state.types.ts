@@ -17,6 +17,7 @@ import type { BoundaryHoverState } from "@/features/boundaries/boundaries.types"
 import type { FacilitiesLayerController } from "@/features/facilities/facilities.types";
 import type {
   FacilitiesHoverController,
+  FacilityClusterHoverState,
   FacilityHoverState,
 } from "@/features/facilities/hover.types";
 import type { FloodLayerMountResult } from "@/features/flood/flood-layer.types";
@@ -56,6 +57,7 @@ export interface UseAppShellStateResult {
   readonly floodLayersController: ShallowRef<FloodLayerMountResult | null>;
   readonly hoveredBoundary: ShallowRef<BoundaryHoverState | null>;
   readonly hoveredFacility: ShallowRef<FacilityHoverState | null>;
+  readonly hoveredFacilityCluster: ShallowRef<FacilityClusterHoverState | null>;
   readonly hoveredPower: ShallowRef<PowerHoverState | null>;
   readonly hydroBasinsController: ShallowRef<HydroBasinsVisibilityController | null>;
   readonly hyperscaleViewportFeatures: ShallowRef<FacilitiesFeatureCollection["features"]>;

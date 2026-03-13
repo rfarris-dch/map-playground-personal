@@ -63,12 +63,14 @@
 </script>
 
 <template>
-  <article class="space-y-3 rounded-xl border border-border/70 bg-background/70 p-4">
+  <article
+    class="space-y-3 rounded-[4px] border border-[#E2E8F0] bg-white p-3 text-[#94A3B8] shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+  >
     <div class="flex items-center gap-2">
-      <span class="inline-block h-2.5 w-2.5 rounded-full bg-cyan-500" />
+      <span class="inline-block h-2 w-2 rounded-full bg-[#0EA5E9]" />
       <div>
-        <h2 class="m-0 text-sm font-semibold">County Market Pressure</h2>
-        <p class="m-0 text-xs text-muted-foreground">
+        <h2 class="m-0 text-[10px] font-semibold text-[#64748B]">County Market Pressure</h2>
+        <p class="m-0 text-[10px] text-[#94A3B8]">
           County-first market-pressure triage with demand, supply timeline, grid friction, policy,
           confidence, and deferred-state detail.
         </p>
@@ -83,7 +85,7 @@
 
     <p
       v-if="props.errorMessage"
-      class="rounded-md border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-900"
+      class="rounded-[4px] border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-[10px] text-[#B91C1C]"
     >
       {{ props.errorMessage }}
     </p>
@@ -95,36 +97,42 @@
       aria-live="polite"
       aria-busy="true"
     >
-      <div class="h-3 w-40 animate-pulse rounded bg-muted" />
-      <div class="h-28 animate-pulse rounded-md bg-muted/80" />
-      <div class="h-28 animate-pulse rounded-md bg-muted/80" />
+      <div class="h-3 w-40 animate-pulse rounded bg-[#F1F5F9]" />
+      <div class="h-28 animate-pulse rounded-[4px] bg-[#F1F5F9]" />
+      <div class="h-28 animate-pulse rounded-[4px] bg-[#F1F5F9]" />
     </div>
 
     <div v-else-if="hasCountySummary" class="space-y-3">
       <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-        <div class="rounded-md border border-border/60 bg-card/80 px-3 py-2">
-          <div class="text-[10px] uppercase tracking-wide text-muted-foreground">
-            Selected Counties
-          </div>
-          <div class="text-lg font-semibold">{{ requestedCountyIds.length }}</div>
+        <div
+          class="rounded-[4px] border border-[#E2E8F0] bg-white px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-[#CBD5E1] hover:bg-[#F8FAFC]"
+        >
+          <div class="text-[10px] uppercase tracking-wide text-[#94A3B8]">Selected Counties</div>
+          <div class="text-lg font-semibold text-[#64748B]">{{ requestedCountyIds.length }}</div>
         </div>
-        <div class="rounded-md border border-border/60 bg-card/80 px-3 py-2">
-          <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Ranked</div>
-          <div class="text-lg font-semibold">{{ rankedCountyCount }}</div>
+        <div
+          class="rounded-[4px] border border-[#E2E8F0] bg-white px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+        >
+          <div class="text-[10px] uppercase tracking-wide text-[#94A3B8]">Ranked</div>
+          <div class="text-lg font-semibold text-[#64748B]">{{ rankedCountyCount }}</div>
         </div>
-        <div class="rounded-md border border-border/60 bg-card/80 px-3 py-2">
-          <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Deferred</div>
-          <div class="text-lg font-semibold">{{ deferredCountyIds.length }}</div>
+        <div
+          class="rounded-[4px] border border-[#E2E8F0] bg-white px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+        >
+          <div class="text-[10px] uppercase tracking-wide text-[#94A3B8]">Deferred</div>
+          <div class="text-lg font-semibold text-[#64748B]">{{ deferredCountyIds.length }}</div>
         </div>
-        <div class="rounded-md border border-border/60 bg-card/80 px-3 py-2">
-          <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Blocked</div>
-          <div class="text-lg font-semibold">{{ blockedCountyIds.length }}</div>
+        <div
+          class="rounded-[4px] border border-[#E2E8F0] bg-white px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+        >
+          <div class="text-[10px] uppercase tracking-wide text-[#94A3B8]">Blocked</div>
+          <div class="text-lg font-semibold text-[#64748B]">{{ blockedCountyIds.length }}</div>
         </div>
-        <div class="rounded-md border border-border/60 bg-card/80 px-3 py-2">
-          <div class="text-[10px] uppercase tracking-wide text-muted-foreground">
-            Missing Geography
-          </div>
-          <div class="text-lg font-semibold">{{ missingCountyIds.length }}</div>
+        <div
+          class="rounded-[4px] border border-[#E2E8F0] bg-white px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+        >
+          <div class="text-[10px] uppercase tracking-wide text-[#94A3B8]">Missing Geography</div>
+          <div class="text-lg font-semibold text-[#64748B]">{{ missingCountyIds.length }}</div>
         </div>
       </div>
 
@@ -132,23 +140,23 @@
         <div
           v-for="row in rows"
           :key="row.countyFips"
-          class="space-y-3 rounded-md border border-border/60 bg-card/80 px-3 py-3"
+          class="space-y-3 rounded-[4px] border border-[#E2E8F0] bg-white px-3 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-[#CBD5E1]"
         >
           <div class="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <div class="text-sm font-medium">{{ countyLabel(row) }}</div>
-              <div class="text-[11px] text-muted-foreground">FIPS {{ row.countyFips }}</div>
+              <div class="text-sm font-medium text-[#64748B]">{{ countyLabel(row) }}</div>
+              <div class="text-[10px] text-[#94A3B8]">FIPS {{ row.countyFips }}</div>
             </div>
 
-            <div class="flex flex-wrap items-center gap-2 text-[11px]">
+            <div class="flex flex-wrap items-center gap-2 text-[10px]">
               <span
-                class="rounded-full border px-2.5 py-1 font-medium"
+                class="rounded-[4px] border px-2.5 py-1 font-medium shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
                 :class="rankToneClass(row.rankStatus)"
               >
                 {{ formatRankStatus(row.rankStatus) }}
               </span>
               <span
-                class="rounded-full border px-2.5 py-1 font-medium"
+                class="rounded-[4px] border px-2.5 py-1 font-medium shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
                 :class="confidenceToneClass(row.confidenceBadge)"
               >
                 {{ row.confidenceBadge.toUpperCase() }}
@@ -159,59 +167,75 @@
 
           <div class="grid gap-2 lg:grid-cols-[1.3fr_1fr]">
             <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-              <div class="rounded bg-muted/50 px-2 py-1.5">
-                <div class="text-[10px] uppercase tracking-wide text-muted-foreground">
-                  Pressure Index
+              <div class="rounded-[4px] border border-[#E2E8F0] bg-[#F8FAFC] px-2 py-1.5">
+                <div class="text-[10px] uppercase tracking-wide text-[#94A3B8]">Pressure Index</div>
+                <div class="text-sm font-semibold text-[#64748B]">
+                  {{ formatMetric(row.marketPressureIndex) }}
                 </div>
-                <div class="text-sm font-semibold">{{ formatMetric(row.marketPressureIndex) }}</div>
               </div>
-              <div class="rounded bg-muted/50 px-2 py-1.5">
-                <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Tier</div>
-                <div class="text-sm font-semibold">{{ formatTier(row.attractivenessTier) }}</div>
-              </div>
-              <div class="rounded bg-muted/50 px-2 py-1.5">
-                <div class="text-[10px] uppercase tracking-wide text-muted-foreground">
-                  Freshness
+              <div class="rounded-[4px] border border-[#E2E8F0] bg-[#F8FAFC] px-2 py-1.5">
+                <div class="text-[10px] uppercase tracking-wide text-[#94A3B8]">Tier</div>
+                <div class="text-sm font-semibold text-[#64748B]">
+                  {{ formatTier(row.attractivenessTier) }}
                 </div>
-                <div class="text-sm font-semibold">{{ formatMetric(row.freshnessScore) }}</div>
               </div>
-              <div class="rounded bg-muted/50 px-2 py-1.5">
-                <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Updated</div>
-                <div class="text-sm font-semibold">{{ formatDateTime(row.lastUpdatedAt) }}</div>
+              <div class="rounded-[4px] border border-[#E2E8F0] bg-[#F8FAFC] px-2 py-1.5">
+                <div class="text-[10px] uppercase tracking-wide text-[#94A3B8]">Freshness</div>
+                <div class="text-sm font-semibold text-[#64748B]">
+                  {{ formatMetric(row.freshnessScore) }}
+                </div>
+              </div>
+              <div class="rounded-[4px] border border-[#E2E8F0] bg-[#F8FAFC] px-2 py-1.5">
+                <div class="text-[10px] uppercase tracking-wide text-[#94A3B8]">Updated</div>
+                <div class="text-sm font-semibold text-[#64748B]">
+                  {{ formatDateTime(row.lastUpdatedAt) }}
+                </div>
               </div>
             </div>
 
-            <div class="rounded-md border border-border/60 bg-background/70 px-3 py-2 text-xs">
-              <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Narrative</div>
-              <p class="mt-1 mb-0">
+            <div
+              class="rounded-[4px] border border-[#E2E8F0] bg-white px-3 py-2 text-[10px] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-[#CBD5E1] hover:bg-[#F8FAFC]"
+            >
+              <div class="text-[10px] uppercase tracking-wide text-[#94A3B8]">Narrative</div>
+              <p class="mt-1 mb-0 text-[#64748B]">
                 {{ row.narrativeSummary ?? "No county narrative is available." }}
               </p>
             </div>
           </div>
 
-          <dl class="grid gap-2 text-xs sm:grid-cols-2 xl:grid-cols-4">
-            <div class="rounded bg-muted/50 px-2 py-1.5">
-              <dt class="text-muted-foreground">Demand Pressure</dt>
-              <dd class="m-0 font-medium">{{ formatMetric(row.demandPressureScore) }}</dd>
+          <dl class="grid gap-2 text-[10px] sm:grid-cols-2 xl:grid-cols-4">
+            <div class="rounded-[4px] border border-[#E2E8F0] bg-[#F8FAFC] px-2 py-1.5">
+              <dt class="text-[#94A3B8]">Demand Pressure</dt>
+              <dd class="m-0 font-medium text-[#64748B]">
+                {{ formatMetric(row.demandPressureScore) }}
+              </dd>
             </div>
-            <div class="rounded bg-muted/50 px-2 py-1.5">
-              <dt class="text-muted-foreground">Supply Timeline</dt>
-              <dd class="m-0 font-medium">{{ formatMetric(row.supplyTimelineScore) }}</dd>
+            <div class="rounded-[4px] border border-[#E2E8F0] bg-[#F8FAFC] px-2 py-1.5">
+              <dt class="text-[#94A3B8]">Supply Timeline</dt>
+              <dd class="m-0 font-medium text-[#64748B]">
+                {{ formatMetric(row.supplyTimelineScore) }}
+              </dd>
             </div>
-            <div class="rounded bg-muted/50 px-2 py-1.5">
-              <dt class="text-muted-foreground">Grid Friction</dt>
-              <dd class="m-0 font-medium">{{ formatMetric(row.gridFrictionScore) }}</dd>
+            <div class="rounded-[4px] border border-[#E2E8F0] bg-[#F8FAFC] px-2 py-1.5">
+              <dt class="text-[#94A3B8]">Grid Friction</dt>
+              <dd class="m-0 font-medium text-[#64748B]">
+                {{ formatMetric(row.gridFrictionScore) }}
+              </dd>
             </div>
-            <div class="rounded bg-muted/50 px-2 py-1.5">
-              <dt class="text-muted-foreground">Policy Constraint</dt>
-              <dd class="m-0 font-medium">{{ formatMetric(row.policyConstraintScore) }}</dd>
+            <div class="rounded-[4px] border border-[#E2E8F0] bg-[#F8FAFC] px-2 py-1.5">
+              <dt class="text-[#94A3B8]">Policy Constraint</dt>
+              <dd class="m-0 font-medium text-[#64748B]">
+                {{ formatMetric(row.policyConstraintScore) }}
+              </dd>
             </div>
           </dl>
 
-          <dl class="grid gap-2 text-xs lg:grid-cols-3">
-            <div class="rounded-md border border-border/60 bg-background/70 px-3 py-2">
-              <dt class="text-[10px] uppercase tracking-wide text-muted-foreground">Demand</dt>
-              <dd class="mt-1 space-y-1">
+          <dl class="grid gap-2 text-[10px] lg:grid-cols-3">
+            <div
+              class="rounded-[4px] border border-[#E2E8F0] bg-white px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-[#CBD5E1] hover:bg-[#F8FAFC]"
+            >
+              <dt class="text-[10px] uppercase tracking-wide text-[#94A3B8]">Demand</dt>
+              <dd class="mt-1 space-y-1 text-[#64748B]">
                 <div>0-24m expected MW: {{ formatMetric(row.expectedMw0To24m) }}</div>
                 <div>24-60m expected MW: {{ formatMetric(row.expectedMw24To60m) }}</div>
                 <div>Momentum QoQ: {{ formatMetric(row.demandMomentumQoq, 2) }}</div>
@@ -219,11 +243,11 @@
               </dd>
             </div>
 
-            <div class="rounded-md border border-border/60 bg-background/70 px-3 py-2">
-              <dt class="text-[10px] uppercase tracking-wide text-muted-foreground">
-                Supply + Friction
-              </dt>
-              <dd class="mt-1 space-y-1">
+            <div
+              class="rounded-[4px] border border-[#E2E8F0] bg-white px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+            >
+              <dt class="text-[10px] uppercase tracking-wide text-[#94A3B8]">Supply + Friction</dt>
+              <dd class="mt-1 space-y-1 text-[#64748B]">
                 <div>0-36m expected supply MW: {{ formatMetric(row.expectedSupplyMw0To36m) }}</div>
                 <div>Signed IA MW: {{ formatMetric(row.signedIaMw) }}</div>
                 <div>Queue MW active: {{ formatMetric(row.queueMwActive) }}</div>
@@ -232,11 +256,11 @@
               </dd>
             </div>
 
-            <div class="rounded-md border border-border/60 bg-background/70 px-3 py-2">
-              <dt class="text-[10px] uppercase tracking-wide text-muted-foreground">
-                Policy + Context
-              </dt>
-              <dd class="mt-1 space-y-1">
+            <div
+              class="rounded-[4px] border border-[#E2E8F0] bg-white px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+            >
+              <dt class="text-[10px] uppercase tracking-wide text-[#94A3B8]">Policy + Context</dt>
+              <dd class="mt-1 space-y-1 text-[#64748B]">
                 <div>Moratorium: {{ row.moratoriumStatus }}</div>
                 <div>Policy momentum: {{ formatMetric(row.policyMomentumScore) }}</div>
                 <div>Policy events: {{ formatCount(row.policyEventCount) }}</div>
@@ -247,41 +271,41 @@
 
           <div
             v-if="row.topDrivers.length > 0 || row.deferredReasonCodes.length > 0 || visibleChanges(row).length > 0"
-            class="grid gap-2 text-xs lg:grid-cols-3"
+            class="grid gap-2 text-[10px] lg:grid-cols-3"
           >
-            <div class="rounded-md border border-border/60 bg-background/70 px-3 py-2">
-              <div class="text-[10px] uppercase tracking-wide text-muted-foreground">
-                Top Drivers
-              </div>
-              <ul class="mt-1 mb-0 space-y-1 pl-4">
+            <div
+              class="rounded-[4px] border border-[#E2E8F0] bg-white px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+            >
+              <div class="text-[10px] uppercase tracking-wide text-[#94A3B8]">Top Drivers</div>
+              <ul class="mt-1 mb-0 space-y-1 pl-4 text-[#64748B]">
                 <li v-for="driver in row.topDrivers" :key="driver.code">
                   {{ driver.label }}: {{ driver.summary }}
                 </li>
               </ul>
             </div>
 
-            <div class="rounded-md border border-border/60 bg-background/70 px-3 py-2">
-              <div class="text-[10px] uppercase tracking-wide text-muted-foreground">
-                Deferred Reasons
-              </div>
-              <p v-if="row.deferredReasonCodes.length === 0" class="mt-1 mb-0">
+            <div
+              class="rounded-[4px] border border-[#E2E8F0] bg-white px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+            >
+              <div class="text-[10px] uppercase tracking-wide text-[#94A3B8]">Deferred Reasons</div>
+              <p v-if="row.deferredReasonCodes.length === 0" class="mt-1 mb-0 text-[#64748B]">
                 No deferred reasons.
               </p>
-              <ul v-else class="mt-1 mb-0 space-y-1 pl-4">
+              <ul v-else class="mt-1 mb-0 space-y-1 pl-4 text-[#64748B]">
                 <li v-for="reason in row.deferredReasonCodes" :key="reason">
                   {{ formatDeferredReason(reason) }}
                 </li>
               </ul>
             </div>
 
-            <div class="rounded-md border border-border/60 bg-background/70 px-3 py-2">
-              <div class="text-[10px] uppercase tracking-wide text-muted-foreground">
-                What Changed
-              </div>
-              <p v-if="visibleChanges(row).length === 0" class="mt-1 mb-0">
+            <div
+              class="rounded-[4px] border border-[#E2E8F0] bg-white px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+            >
+              <div class="text-[10px] uppercase tracking-wide text-[#94A3B8]">What Changed</div>
+              <p v-if="visibleChanges(row).length === 0" class="mt-1 mb-0 text-[#64748B]">
                 No tracked change yet.
               </p>
-              <ul v-else class="mt-1 mb-0 space-y-1 pl-4">
+              <ul v-else class="mt-1 mb-0 space-y-1 pl-4 text-[#64748B]">
                 <li
                   v-for="change in visibleChanges(row)"
                   :key="`${change.code}-${change.direction}`"
@@ -296,13 +320,13 @@
 
       <p
         v-if="hasMissingCountyIds"
-        class="rounded-md border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-950"
+        class="rounded-[4px] border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2 text-[10px] text-[#94A3B8]"
       >
         Counties not found in the reference geography: {{ missingCountyIds.join(", ") }}
       </p>
     </div>
 
-    <p v-else class="text-sm text-muted-foreground">
+    <p v-else class="text-[10px] text-[#94A3B8]">
       No county market-pressure rows are available for this selection.
     </p>
   </article>

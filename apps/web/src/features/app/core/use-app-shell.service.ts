@@ -2,7 +2,14 @@ import type { UseAppShellRuntimeResult } from "./use-app-shell.types";
 
 function buildAppShellMapViewModel(args: UseAppShellRuntimeResult) {
   const { state, selection, fiber } = args;
-  const { mapContainer, map, hoveredFacility, hoveredBoundary, hoveredPower } = state;
+  const {
+    mapContainer,
+    map,
+    hoveredFacility,
+    hoveredFacilityCluster,
+    hoveredBoundary,
+    hoveredPower,
+  } = state;
   const { selectedFacility, selectedParcel, facilityDetailQuery, parcelDetailQuery } = selection;
   const { hoveredFiber } = fiber;
 
@@ -12,6 +19,7 @@ function buildAppShellMapViewModel(args: UseAppShellRuntimeResult) {
     selectedFacility,
     selectedParcel,
     hoveredFacility,
+    hoveredFacilityCluster,
     hoveredBoundary,
     hoveredFiber,
     hoveredPower,

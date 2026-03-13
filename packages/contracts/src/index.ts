@@ -7,6 +7,7 @@ export * from "./fiber-locator-contracts";
 export * from "./map-context-transfer-contracts";
 export * from "./markets-selection-contracts";
 export * from "./parcels-contracts";
+export * from "./pipeline-contracts";
 export * from "./shared-contracts";
 export * from "./spatial-analysis-summary-contracts";
 export * from "./table-contracts";

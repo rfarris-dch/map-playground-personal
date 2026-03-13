@@ -28,6 +28,7 @@ import {
 } from "@/http/api-response";
 import { ApiRequestContext, routeError, runEffectRoute } from "@/http/effect-route";
 import { registerTilesRoute } from "@/http/tiles.route";
+import { registerPipelineStatusRoute } from "@/pipeline/pipeline-status.route";
 import type { ApiAppOptions, CreateApiAppOptions } from "./app.types";
 
 const DEFAULT_REQUEST_BODY_LIMIT_BYTES = parsePositiveIntFlag(
@@ -211,6 +212,7 @@ export function createApiApp(options: CreateApiAppOptions = {}): Hono {
   );
 
   registerEffectMetricsRoute(app);
+  registerPipelineStatusRoute(app);
   registerFacilitiesRoute(app);
   registerAnalysisSummaryRoute(app);
   registerFloodSyncStatusRoute(app);

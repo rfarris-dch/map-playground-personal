@@ -1,4 +1,5 @@
 import type { UseAppShellStateResult } from "@/features/app/core/use-app-shell-state.types";
+import type { UseMapFiltersResult } from "@/features/app/filters/use-map-filters";
 
 export type UseAppShellStatusResult = ReturnType<
   typeof import("./use-app-shell-status").useAppShellStatus
@@ -30,6 +31,7 @@ export type UseAppShellVisibilityResult = ReturnType<
 
 export interface UseAppShellRuntimeResult {
   readonly fiber: UseAppShellFiberResult;
+  readonly mapFilters: UseMapFiltersResult;
   readonly mapLifecycle: UseAppShellMapLifecycleResult;
   readonly mapOverlays: UseMapOverlaysResult;
   readonly selection: UseAppShellSelectionResult;

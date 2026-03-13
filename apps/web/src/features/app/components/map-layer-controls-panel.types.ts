@@ -11,6 +11,7 @@ import type {
 } from "@/features/app/core/app-shell.types";
 import type { BasemapLayerId, BasemapVisibilityState } from "@/features/basemap/basemap.types";
 import type { BoundaryLayerId } from "@/features/boundaries/boundaries.types";
+import type { FacilitiesViewMode } from "@/features/facilities/facilities.types";
 import type { FiberLocatorLineId } from "@/features/fiber-locator/fiber-locator.types";
 import type { PowerLayerId, PowerVisibilityState } from "@/features/power/power.types";
 
@@ -52,6 +53,7 @@ export interface MapLayerControlsPanelEmits {
   "update:flood-layer-visible": [layerId: keyof FloodVisibilityState, visible: boolean];
   "update:hydro-basins-visible": [visible: boolean];
   "update:parcels-visible": [visible: boolean];
+  "update:perspective-view-mode": [perspective: FacilityPerspective, mode: FacilitiesViewMode];
   "update:perspective-visibility": [perspective: FacilityPerspective, visible: boolean];
   "update:power-layer-visible": [layerId: PowerLayerId, visible: boolean];
   "update:water-visible": [visible: boolean];

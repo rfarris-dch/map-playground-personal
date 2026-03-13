@@ -156,7 +156,6 @@ export function createAppShellMapInitializer(
       const mapCreateOptions = {
         style: basemapStyle,
         center: resolveInitialMapCenter(options.initialViewport),
-        preserveDrawingBuffer: true,
         maxPitch: DEFAULT_MAP_MAX_PITCH,
         ...(typeof initialBearing === "number" ? { bearing: initialBearing } : {}),
         ...(typeof initialPitch === "number" ? { pitch: initialPitch } : {}),

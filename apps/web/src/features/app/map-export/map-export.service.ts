@@ -1,3 +1,4 @@
+import { captureMapImageForExport } from "@/features/app/map-export/map-capture.service";
 import type {
   CaptureMapImageArgs,
   ExportMapViewArgs,
@@ -117,14 +118,6 @@ function downloadBlobFile(blob: Blob, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
-async function waitForAnimationFrame(): Promise<void> {
-  await new Promise<void>((resolve) => {
-    requestAnimationFrame(() => {
-      resolve();
-    });
-  });
-}
-
 async function loadBlobImage(blob: Blob): Promise<HTMLImageElement> {
   const imageUrl = URL.createObjectURL(blob);
 
@@ -158,10 +151,7 @@ async function createPdfBlobFromCapturedImage(
   return new Blob([new Uint8Array(pdfBytes)], { type: "application/pdf" });
 }
 
-export async function captureMapImage(args: CaptureMapImageArgs): Promise<Blob> {
-  await waitForAnimationFrame();
-  await waitForAnimationFrame();
-
+export function captureMapImage(args: CaptureMapImageArgs): Promise<Blob> {
   const type = mimeTypeForImageFormat(args.format);
   const captureOptions =
     args.format === "jpeg" && typeof args.quality === "number"
@@ -173,7 +163,10 @@ export async function captureMapImage(args: CaptureMapImageArgs): Promise<Blob> 
           type,
         };
 
-  return args.map.captureImage(captureOptions);
+  return captureMapImageForExport({
+    captureOptions,
+    map: args.map,
+  });
 }
 
 export async function exportMapView(args: ExportMapViewArgs): Promise<void> {

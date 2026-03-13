@@ -47,21 +47,31 @@ export type FacilitiesStatus =
       readonly reason: string;
     };
 
+export type FacilitiesFeatureFilterPredicate = (
+  feature: FacilitiesFeatureCollection["features"][number]
+) => boolean;
+
 export interface FacilitiesLayerOptions {
   debounceMs?: number;
+  readonly filterPredicate?: () => FacilitiesFeatureFilterPredicate | null;
   readonly isInteractionEnabled?: () => boolean;
   limit?: number;
   minZoom?: number;
+  readonly onCachedFeaturesUpdate?: (features: FacilitiesFeatureCollection["features"]) => void;
   readonly onSelectFacility?: (facility: SelectedFacilityRef | null) => void;
   readonly onStatus?: (status: FacilitiesStatus) => void;
   readonly onViewportUpdate?: (snapshot: FacilitiesViewportSnapshot) => void;
   perspective?: FacilityPerspective;
 }
 
+export type FacilitiesViewMode = "bubbles" | "clusters" | "dots" | "heatmap" | "icons";
+
 export interface FacilitiesLayerController {
+  applyFilter(): void;
   clearSelection(): void;
   destroy(): void;
   readonly perspective: FacilityPerspective;
+  setViewMode(mode: FacilitiesViewMode): void;
   setVisible(visible: boolean): void;
 }
 
@@ -75,6 +85,7 @@ export interface FacilitiesLayerState {
   ready: boolean;
   requestSequence: number;
   selectedFeatureId: number | string | null;
+  viewMode: FacilitiesViewMode;
   visible: boolean;
 }
 

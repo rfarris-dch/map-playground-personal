@@ -14,10 +14,14 @@
     formatPhaseLabel,
     formatTimestamp,
   } from "@/features/pipeline/pipeline.service";
+  import { getPipelineDataset } from "@/features/pipeline/pipeline-registry.service";
 
   const BUILD_EXPORT_ELAPSED_PATTERN = /phase=export\s+([0-9]+)s\b/;
 
   const props = defineProps<PipelineDashboardOverviewProps>();
+  const isEnvironmentalDataset = computed(
+    () => getPipelineDataset(props.dataset).family === "environmental"
+  );
 
   const emit = defineEmits<{
     refreshNow: [];
@@ -38,7 +42,7 @@
       return "Idle";
     }
 
-    if (props.dataset === "flood" && props.run.phase === "extracting") {
+    if (isEnvironmentalDataset.value && props.run.phase === "extracting") {
       const extractState = props.run.states.find((stateRow) => stateRow.state === "extract");
       const normalizeState = props.run.states.find((stateRow) => stateRow.state === "normalize");
 
@@ -52,7 +56,7 @@
 
   const isBuilding = computed(() => props.run?.phase === "building");
   const isFloodBuildPreparingExport = computed(() => {
-    if (!(isBuilding.value && props.dataset === "flood")) {
+    if (!(isBuilding.value && isEnvironmentalDataset.value)) {
       return false;
     }
 
@@ -64,7 +68,7 @@
     );
   });
   const isFloodMaterializing = computed(() => {
-    return props.dataset === "flood" && props.dbLoadProgress?.stepKey === "materialize";
+    return isEnvironmentalDataset.value && props.dbLoadProgress?.stepKey === "materialize";
   });
   const buildExportElapsedLabel = computed(() => {
     const summary = props.run?.summary ?? "";
@@ -227,7 +231,7 @@
         last movement: {{ formatRelativeDuration(lastMovementMs) }} ago
       </p>
       <p
-        v-if="props.dataset === 'flood' && props.stageSizeLabel !== null && !isBuilding"
+        v-if="isEnvironmentalDataset && props.stageSizeLabel !== null && !isBuilding"
         class="mt-1 text-xs text-muted-foreground"
       >
         load metric: {{ props.stageSizeLabel }}

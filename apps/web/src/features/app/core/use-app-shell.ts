@@ -1,3 +1,4 @@
+import type { FacilityPerspective } from "@map-migration/contracts";
 import { computed, shallowRef } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
@@ -8,6 +9,7 @@ import {
 import { exportMapView } from "@/features/app/map-export/map-export.service";
 import type { MapViewExportFormat } from "@/features/app/map-export/map-export.types";
 import { useCountyScores } from "@/features/county-scores/use-county-scores";
+import type { FacilitiesViewMode } from "@/features/facilities/facilities.types";
 import type { LayerRuntimeSnapshot } from "@/features/layers/layer-runtime.types";
 import {
   buildMapContextTransferFromAppShell,
@@ -57,6 +59,7 @@ export function useAppShell() {
     initialViewport: initialMapContext?.viewport,
   });
   const {
+    mapFilters,
     state,
     status,
     selection,
@@ -238,12 +241,25 @@ export function useAppShell() {
     state.map.value === null ? "Map is still initializing." : null
   );
 
+  function setPerspectiveViewMode(
+    perspective: FacilityPerspective,
+    mode: FacilitiesViewMode
+  ): void {
+    for (const controller of state.facilitiesControllers.value) {
+      if (controller.perspective === perspective) {
+        controller.setViewMode(mode);
+      }
+    }
+  }
+
   return {
+    mapFilters,
     mapContainer: state.mapContainer,
     map: state.map,
     selectedFacility: selection.selectedFacility,
     selectedParcel: selection.selectedParcel,
     hoveredFacility: state.hoveredFacility,
+    hoveredFacilityCluster: state.hoveredFacilityCluster,
     hoveredBoundary: state.hoveredBoundary,
     hoveredFiber: fiber.hoveredFiber,
     hoveredPower: state.hoveredPower,
@@ -298,6 +314,7 @@ export function useAppShell() {
     isSelectionPanelOpen: state.isSelectionPanelOpen,
     facilityDetailQuery: selection.facilityDetailQuery,
     parcelDetailQuery: selection.parcelDetailQuery,
+    setPerspectiveViewMode,
     setPerspectiveVisibility: visibility.setPerspectiveVisibility,
     setBoundaryVisible: visibility.setBoundaryVisible,
     setBoundarySelectedRegionIds: mapLifecycle.setBoundarySelectedRegionIds,

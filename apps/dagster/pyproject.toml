@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "map-dagster"
+version = "0.1.0"
+description = "Dagster control plane for the map platform tile datasets"
+requires-python = ">=3.11"
+dependencies = [
+  "dagster>=1.11,<2",
+  "dagster-webserver>=1.11,<2",
+  "python-dotenv>=1.0,<2",
+]
+
+[project.optional-dependencies]
+cloud = ["dagster-cloud>=1.11,<2"]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.dagster]
+module_name = "map_dagster.definitions"
+code_location_name = "map_platform"

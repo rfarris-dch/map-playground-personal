@@ -1,4 +1,4 @@
-import type { IMap } from "@map-migration/map-engine";
+import type { IMap, MapExpression } from "@map-migration/map-engine";
 import { getPowerStyleLayerIds, type PowerCatalogLayerId } from "@map-migration/map-style";
 import type { PowerLayerId, PowerLayerVisibilityController } from "@/features/power/power.types";
 import type { MountPowerLayerVisibilityOptions } from "./power.layer.types";
@@ -195,6 +195,7 @@ export function mountPowerLayerVisibility(
   options: MountPowerLayerVisibilityOptions
 ): PowerLayerVisibilityController {
   let visible = true;
+  let currentFilter: MapExpression | null = null;
 
   function applyVisibility(): void {
     for (const styleLayerId of getPowerStyleLayerIds(toPowerCatalogLayerId(options.layerId))) {
@@ -206,9 +207,23 @@ export function mountPowerLayerVisibility(
     }
   }
 
+  function applyFilter(): void {
+    const catalogLayerId = toPowerCatalogLayerId(options.layerId);
+    for (const styleLayerId of getPowerStyleLayerIds(catalogLayerId)) {
+      if (!options.map.hasLayer(styleLayerId)) {
+        continue;
+      }
+
+      options.map.setLayerFilter(styleLayerId, currentFilter);
+    }
+  }
+
   const onLoad = (): void => {
     ensurePowerLayers(options.map);
     applyVisibility();
+    if (currentFilter !== null) {
+      applyFilter();
+    }
   };
 
   options.map.on("load", onLoad);
@@ -218,6 +233,10 @@ export function mountPowerLayerVisibility(
     setVisible(nextVisible: boolean): void {
       visible = nextVisible;
       applyVisibility();
+    },
+    setFilter(filter: MapExpression | null): void {
+      currentFilter = filter;
+      applyFilter();
     },
     destroy(): void {
       options.map.off("load", onLoad);

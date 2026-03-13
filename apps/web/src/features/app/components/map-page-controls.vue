@@ -10,7 +10,10 @@
   import MapSketchMeasureTools from "@/features/app/components/map-sketch-measure-tools.vue";
   import type { BasemapLayerId } from "@/features/basemap/basemap.types";
   import type { BoundaryLayerId } from "@/features/boundaries/boundaries.types";
-  import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";
+  import type {
+    FacilitiesViewMode,
+    SelectedFacilityRef,
+  } from "@/features/facilities/facilities.types";
   import type { FiberLocatorLineId } from "@/features/fiber-locator/fiber-locator.types";
   import type { PowerLayerId } from "@/features/power/power.types";
   import type {
@@ -35,6 +38,13 @@
     regionIds: readonly string[] | null
   ): void {
     emit("update:boundary-selected-region-ids", boundaryId, regionIds);
+  }
+
+  function forwardPerspectiveViewMode(
+    perspective: FacilityPerspective,
+    mode: FacilitiesViewMode
+  ): void {
+    emit("update:perspective-view-mode", perspective, mode);
   }
 
   function forwardPerspectiveVisibility(perspective: FacilityPerspective, visible: boolean): void {
@@ -126,6 +136,7 @@
     @update:basemap-layer-visible="forwardBasemapLayerVisible"
     @update:boundary-visible="forwardBoundaryVisible"
     @update:boundary-selected-region-ids="forwardBoundarySelectedRegionIds"
+    @update:perspective-view-mode="forwardPerspectiveViewMode"
     @update:perspective-visibility="forwardPerspectiveVisibility"
     @update:parcels-visible="forwardParcelsVisible"
     @update:water-visible="forwardWaterVisible"

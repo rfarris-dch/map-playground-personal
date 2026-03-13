@@ -5,7 +5,7 @@ import {
 import type { Env, Hono } from "hono";
 import { jsonOk, toDebugDetails } from "@/http/api-response";
 import { fromApiRequest, routeError, runEffectRoute } from "@/http/effect-route";
-import { getFloodSyncStatusSnapshot } from "./flood-sync-status.service";
+import { getPipelineStatusPayload } from "@/pipeline/pipeline-status.service";
 
 export function registerFloodSyncStatusRoute<E extends Env>(app: Hono<E>): void {
   app.get(buildFloodSyncStatusRoute(), (c) =>
@@ -13,7 +13,7 @@ export function registerFloodSyncStatusRoute<E extends Env>(app: Hono<E>): void 
       c,
       fromApiRequest(async ({ honoContext, requestId }) => {
         try {
-          const statusSnapshot = await getFloodSyncStatusSnapshot();
+          const statusSnapshot = await getPipelineStatusPayload("flood");
           return jsonOk(honoContext, ParcelsSyncStatusResponseSchema, statusSnapshot, requestId);
         } catch (error) {
           throw routeError({

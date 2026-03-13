@@ -2,7 +2,10 @@ import type { IMap } from "@map-migration/map-engine";
 import type { BoundaryHoverState } from "@/features/boundaries/boundaries.types";
 import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";
 import type { FacilityDetailPayload } from "@/features/facilities/facility-detail/detail.types";
-import type { FacilityHoverState } from "@/features/facilities/hover.types";
+import type {
+  FacilityClusterHoverState,
+  FacilityHoverState,
+} from "@/features/facilities/hover.types";
 import type { FiberLocatorHoverState } from "@/features/fiber-locator/hover.types";
 import type { ParcelDetailPayload } from "@/features/parcels/parcel-detail/detail.types";
 import type { SelectedParcelRef } from "@/features/parcels/parcels.types";
@@ -15,6 +18,7 @@ export interface MapPageOverlaysProps {
   readonly facilityDetail: FacilityDetailPayload | null;
   readonly hoveredBoundary: BoundaryHoverState | null;
   readonly hoveredFacility: FacilityHoverState | null;
+  readonly hoveredFacilityCluster: FacilityClusterHoverState | null;
   readonly hoveredFiber: FiberLocatorHoverState | null;
   readonly hoveredPower: PowerHoverState | null;
   readonly isFacilityDetailError: boolean;

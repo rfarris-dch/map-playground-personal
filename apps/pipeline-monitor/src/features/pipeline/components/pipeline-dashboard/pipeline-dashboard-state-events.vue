@@ -1,9 +1,14 @@
 <script setup lang="ts">
+  import { computed } from "vue";
   import type { PipelineDashboardStateEventsProps } from "@/features/pipeline/components/pipeline-dashboard/pipeline-dashboard.types";
   import { formatRelativeDuration } from "@/features/pipeline/components/pipeline-dashboard/pipeline-dashboard-format.service";
   import { formatCount, formatTimestamp } from "@/features/pipeline/pipeline.service";
+  import { getPipelineDataset } from "@/features/pipeline/pipeline-registry.service";
 
   const props = defineProps<PipelineDashboardStateEventsProps>();
+  const isEnvironmentalDataset = computed(
+    () => getPipelineDataset(props.dataset).family === "environmental"
+  );
 </script>
 
 <template>
@@ -11,18 +16,18 @@
     <article class="rounded-xl border border-border/80 bg-card/95 p-4 shadow-sm">
       <header class="mb-2 flex items-center justify-between">
         <h2 class="m-0 text-sm font-semibold">
-          {{ props.dataset === "flood" ? "Phase Checkpoints" : "State Checkpoints" }}
+          {{ isEnvironmentalDataset ? "Phase Checkpoints" : "State Checkpoints" }}
         </h2>
         <span class="text-xs text-muted-foreground"
-          >{{ props.dataset === "flood" ? `${String(props.stateRows.length)} phases` : `${String(props.stateRows.length)} states` }}</span
+          >{{ isEnvironmentalDataset ? `${String(props.stateRows.length)} phases` : `${String(props.stateRows.length)} states` }}</span
         >
       </header>
 
       <p
-        v-if="props.dataset === 'flood' && props.stageSizeLabel !== null"
+        v-if="isEnvironmentalDataset && props.stageSizeLabel !== null"
         class="mb-2 text-xs text-muted-foreground"
       >
-        Flood load progress uses {{ props.stageSizeLabel }} while the canonical table is
+        Environmental load progress uses {{ props.stageSizeLabel }} while the canonical table is
         materializing.
       </p>
 
@@ -31,7 +36,7 @@
           <thead class="sticky top-0 bg-muted/90 backdrop-blur">
             <tr>
               <th class="px-2 py-1 text-left font-semibold">
-                {{ props.dataset === "flood" ? "Phase" : "State" }}
+                {{ isEnvironmentalDataset ? "Phase" : "State" }}
               </th>
               <th class="px-2 py-1 text-right font-semibold">Completion</th>
               <th class="px-2 py-1 text-right font-semibold">Written</th>

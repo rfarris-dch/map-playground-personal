@@ -16,10 +16,13 @@ import {
 import { formatPercent } from "@/features/pipeline/pipeline.service";
 import type { PipelineDataset } from "@/features/pipeline/pipeline.types";
 import { usePipelineStatus } from "@/features/pipeline/pipeline.view";
+import { getPipelineDataset } from "@/features/pipeline/pipeline-registry.service";
 import { estimateTileBuildRate } from "@/features/pipeline/pipeline-tracking/pipeline-tracking-build-rate.service";
 import { estimatePipelineRate } from "@/features/pipeline/pipeline-tracking/pipeline-tracking-rate.service";
 
 export function usePipelineDashboard(dataset: PipelineDataset): PipelineDashboardModel {
+  const datasetDefinition = getPipelineDataset(dataset);
+  const isEnvironmentalDataset = datasetDefinition.family === "environmental";
   const pipelineStatus = usePipelineStatus(dataset);
 
   const response = computed(() => pipelineStatus.payload.value?.response ?? null);
@@ -193,7 +196,7 @@ export function usePipelineDashboard(dataset: PipelineDataset): PipelineDashboar
   });
 
   const dbLoadPercentLabel = computed(() => {
-    if (dataset === "flood" && run.value?.phase === "loading" && stageSizeLabel.value !== null) {
+    if (isEnvironmentalDataset && run.value?.phase === "loading" && stageSizeLabel.value !== null) {
       return stageSizeLabel.value ?? "live";
     }
 
@@ -217,7 +220,7 @@ export function usePipelineDashboard(dataset: PipelineDataset): PipelineDashboar
     }
 
     if (stepKey === "materialize") {
-      return dataset === "flood" ? "Current batch" : "Metrics";
+      return isEnvironmentalDataset ? "Current batch" : "Metrics";
     }
 
     return "Detail";
@@ -314,8 +317,8 @@ export function usePipelineDashboard(dataset: PipelineDataset): PipelineDashboar
     }
 
     if (currentRun.states.length <= 1 && !currentRun.isRunning) {
-      return dataset === "flood"
-        ? "This flood run only exposes a partial checkpoint set. Full monitor detail appears during a full environmental sync run."
+      return isEnvironmentalDataset
+        ? "This environmental run only exposes a partial checkpoint set. Full monitor detail appears during a full environmental sync run."
         : "This run only exposes a partial checkpoint set (likely a smoke/single-state run). Full-state visibility appears only during a full sync run.";
     }
 
@@ -334,12 +337,12 @@ export function usePipelineDashboard(dataset: PipelineDataset): PipelineDashboar
     }
 
     if (!currentResponse.enabled) {
-      return dataset === "flood"
-        ? "No active flood sync is running. Status values stay static until a new flood refresh starts."
+      return isEnvironmentalDataset
+        ? `No active ${datasetDefinition.displayName.toLowerCase()} sync is running. Status values stay static until a new environmental refresh starts.`
         : "No active parcels sync is running (AUTO_PARCELS_SYNC=false). Status values stay static until a new run starts.";
     }
 
-    if (dataset === "flood") {
+    if (isEnvironmentalDataset) {
       return null;
     }
 

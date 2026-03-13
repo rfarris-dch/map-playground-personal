@@ -1,7 +1,10 @@
 <script setup lang="ts">
+  import { computed } from "vue";
   import type { PipelineDashboardRunAlertsProps } from "@/features/pipeline/components/pipeline-dashboard/pipeline-dashboard.types";
+  import { getPipelineDataset } from "@/features/pipeline/pipeline-registry.service";
 
   const props = defineProps<PipelineDashboardRunAlertsProps>();
+  const datasetDefinition = computed(() => getPipelineDataset(props.dataset));
 </script>
 
 <template>
@@ -22,7 +25,7 @@
     <p class="mt-2 text-xs text-red-800">
       Start a full run to see live movement:
       <code class="rounded bg-red-100 px-1 py-0.5 font-mono">
-        {{ props.dataset === "flood" ? "bun run sync:environmental-flood" : "bun run sync:parcels" }}
+        {{ datasetDefinition.syncCommand }}
       </code>
     </p>
   </div>

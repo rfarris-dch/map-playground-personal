@@ -86,15 +86,43 @@ function forceClearPortBeforeStartEffect(port: number): Effect.Effect<void, Erro
   }
 
   return Effect.gen(function* () {
-    for (let attempt = 0; attempt < 12; attempt += 1) {
+    // Phase 1: Send SIGTERM to give the old process a chance to clean up gracefully.
+    for (let attempt = 0; attempt < 6; attempt += 1) {
       const otherPids = listListeningPids(port).filter((pid) => pid !== process.pid);
       if (otherPids.length === 0) {
         return;
       }
 
-      console.warn(`[api] force clearing port ${String(port)}: ${otherPids.join(", ")}`);
+      console.warn(`[api] force clearing port ${String(port)} (SIGTERM): ${otherPids.join(", ")}`);
+      for (const pid of otherPids) {
+        try {
+          process.kill(pid, "SIGTERM");
+        } catch {
+          // already exited
+        }
+      }
+      yield* Effect.sleep("500 millis");
+    }
+
+    // Phase 2: SIGKILL anything still lingering.
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      const otherPids = listListeningPids(port).filter((pid) => pid !== process.pid);
+      if (otherPids.length === 0) {
+        return;
+      }
+
+      console.warn(`[api] force clearing port ${String(port)} (SIGKILL): ${otherPids.join(", ")}`);
       killListeningPids(otherPids);
-      yield* Effect.sleep("150 millis");
+      yield* Effect.sleep("500 millis");
+    }
+
+    // Phase 3: Wait for the OS to release the port even after processes are gone.
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const otherPids = listListeningPids(port).filter((pid) => pid !== process.pid);
+      if (otherPids.length === 0) {
+        return;
+      }
+      yield* Effect.sleep("300 millis");
     }
 
     const remainingPids = listListeningPids(port).filter((pid) => pid !== process.pid);
@@ -163,34 +191,31 @@ function shutdown(signal: string): Promise<void> {
   return shutdownPromise;
 }
 
-function handleSigint(): void {
-  shutdown("SIGINT").catch((error) => {
-    recordRuntimeEffectFailure({
-      cause:
-        error instanceof Error && typeof error.stack === "string" ? error.stack : String(error),
-      code: "API_SHUTDOWN_FAILURE",
-      details: error,
-      message: "api shutdown failure",
-      source: "api-server",
+function handleSignalShutdown(signal: string): void {
+  shutdown(signal)
+    .then(() => {
+      process.exit(0);
+    })
+    .catch((error) => {
+      recordRuntimeEffectFailure({
+        cause:
+          error instanceof Error && typeof error.stack === "string" ? error.stack : String(error),
+        code: "API_SHUTDOWN_FAILURE",
+        details: error,
+        message: "api shutdown failure",
+        source: "api-server",
+      });
+      console.error("[api] shutdown failure", error);
+      process.exit(1);
     });
-    console.error("[api] shutdown failure", error);
-    process.exit(1);
-  });
+}
+
+function handleSigint(): void {
+  handleSignalShutdown("SIGINT");
 }
 
 function handleSigterm(): void {
-  shutdown("SIGTERM").catch((error) => {
-    recordRuntimeEffectFailure({
-      cause:
-        error instanceof Error && typeof error.stack === "string" ? error.stack : String(error),
-      code: "API_SHUTDOWN_FAILURE",
-      details: error,
-      message: "api shutdown failure",
-      source: "api-server",
-    });
-    console.error("[api] shutdown failure", error);
-    process.exit(1);
-  });
+  handleSignalShutdown("SIGTERM");
 }
 
 function registerProcessSignalHandlers(): void {
@@ -201,6 +226,43 @@ function registerProcessSignalHandlers(): void {
 function unregisterProcessSignalHandlers(): void {
   process.off("SIGINT", handleSigint);
   process.off("SIGTERM", handleSigterm);
+}
+
+function startServerWithRetry(
+  appFetch: typeof app.fetch,
+  targetPort: number,
+  maxAttempts: number
+): Effect.Effect<void, Error> {
+  return Effect.gen(function* () {
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      try {
+        server = serve(
+          {
+            fetch: appFetch,
+            hostname: "0.0.0.0",
+            port: targetPort,
+          },
+          (info) => {
+            console.log(`[api] listening on http://localhost:${info.port}`);
+            console.log(
+              `[api] Effect issues: http://localhost:${info.port}/api/debug/effect/issues`
+            );
+          }
+        );
+        return;
+      } catch (error) {
+        const isPortInUse =
+          error instanceof Error && /port.*in use|EADDRINUSE/i.test(error.message);
+        if (!isPortInUse || attempt === maxAttempts - 1) {
+          yield* Effect.fail(error instanceof Error ? error : new Error(String(error)));
+        }
+        console.warn(
+          `[api] port ${String(targetPort)} still busy, retrying (${String(attempt + 1)}/${String(maxAttempts)})`
+        );
+        yield* Effect.sleep("500 millis");
+      }
+    }
+  });
 }
 
 function startServerEffect(): Effect.Effect<void, Error> {
@@ -221,16 +283,7 @@ function startServerEffect(): Effect.Effect<void, Error> {
         console.log(`[api] Effect DevTools enabled (${effectDevToolsConnection})`);
       }
     });
-    server = serve(
-      {
-        fetch: app.fetch,
-        port,
-      },
-      (info) => {
-        console.log(`[api] listening on http://localhost:${info.port}`);
-        console.log(`[api] Effect issues: http://localhost:${info.port}/api/debug/effect/issues`);
-      }
-    );
+    yield* startServerWithRetry(app.fetch, port, 8);
   });
 }
 

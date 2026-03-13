@@ -1,5 +1,5 @@
 import type { FacilitiesFeatureCollection, MapContextTransfer } from "@map-migration/contracts";
-import type { IMap } from "@map-migration/map-engine";
+import type { IMap, MapExpression } from "@map-migration/map-engine";
 import type { ComputedRef, ShallowRef } from "vue";
 import type {
   BoundaryControllerState,
@@ -10,6 +10,7 @@ import type {
   BoundaryFacetSelectionState,
   PerspectiveStatusState,
 } from "@/features/app/core/app-shell.types";
+import type { FacilitiesFilterPredicate } from "@/features/app/filters/map-filters.types";
 import type { BasemapLayerVisibilityController } from "@/features/basemap/basemap.types";
 import type { BoundaryHoverState } from "@/features/boundaries/boundaries.types";
 import type {
@@ -18,6 +19,7 @@ import type {
 } from "@/features/facilities/facilities.types";
 import type {
   FacilitiesHoverController,
+  FacilityClusterHoverState,
   FacilityHoverState,
 } from "@/features/facilities/hover.types";
 import type { FloodLayerMountResult } from "@/features/flood/flood-layer.types";
@@ -84,6 +86,7 @@ export interface AppShellMapLifecycleStateRefs {
   readonly facilitiesStatus: ShallowRef<PerspectiveStatusState>;
   readonly hoveredBoundary: ShallowRef<BoundaryHoverState | null>;
   readonly hoveredFacility: ShallowRef<FacilityHoverState | null>;
+  readonly hoveredFacilityCluster: ShallowRef<FacilityClusterHoverState | null>;
   readonly hoveredPower: ShallowRef<PowerHoverState | null>;
   readonly hyperscaleViewportFeatures: ShallowRef<FacilitiesFeatureCollection["features"]>;
   readonly layerRuntimeSnapshot: ShallowRef<LayerRuntimeSnapshot | null>;
@@ -100,10 +103,17 @@ export interface AppShellMapLifecycleSelectionActions {
   readonly setSelectedParcel: (parcel: SelectedParcelRef | null) => void;
 }
 
+export interface AppShellMapFiltersRefs {
+  readonly facilitiesPredicate: Readonly<ShallowRef<FacilitiesFilterPredicate | null | undefined>>;
+  readonly onCachedFeaturesUpdate: (features: FacilitiesFeatureCollection["features"]) => void;
+  readonly transmissionFilter: Readonly<ShallowRef<MapExpression | null | undefined>>;
+}
+
 export interface UseAppShellMapLifecycleOptions {
   readonly actions: AppShellMapLifecycleSelectionActions;
   readonly areFacilityInteractionsEnabled: ComputedRef<boolean>;
   readonly fiber: AppShellFiberLifecycleController;
+  readonly filters: AppShellMapFiltersRefs;
   readonly initialViewport?: MapContextTransfer["viewport"];
   readonly layers: AppShellMapLifecycleLayerRefs;
   readonly runtime: AppShellMapLifecycleRuntimeRefs;

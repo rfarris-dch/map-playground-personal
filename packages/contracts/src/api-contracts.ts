@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { BoundaryPowerLevel } from "./boundaries-contracts";
 import type { ParcelGeometryMode, ParcelProfile } from "./parcels-contracts";
+import { isPipelineDataset, type PipelineDataset } from "./pipeline-contracts";
 import {
   type BBox,
   type FacilityPerspective,
@@ -67,6 +68,7 @@ export interface ApiRoutesTable {
   readonly marketsSelection: string;
   readonly parcels: string;
   readonly parcelsSyncStatus: string;
+  readonly pipelines: string;
   readonly providers: string;
 }
 
@@ -121,6 +123,7 @@ export const ApiRoutes = Object.freeze<ApiRoutesTable>({
   providers: "/api/geo/providers",
   parcels: "/api/geo/parcels",
   parcelsSyncStatus: "/api/geo/parcels/sync/status",
+  pipelines: "/api/pipelines",
 });
 
 export const ApiQueryDefaults = Object.freeze<ApiQueryDefaultsTable>({
@@ -295,6 +298,14 @@ export function buildParcelsSyncStatusRoute(): string {
 
 export function buildFloodSyncStatusRoute(): string {
   return ApiRoutes.floodSyncStatus;
+}
+
+export function buildPipelineStatusRoute(dataset: PipelineDataset): string {
+  if (!isPipelineDataset(dataset)) {
+    throw new Error(`Unsupported pipeline dataset "${dataset}"`);
+  }
+
+  return `${ApiRoutes.pipelines}/${dataset}/status`;
 }
 
 export const ApiHeaders = Object.freeze<ApiHeadersTable>({

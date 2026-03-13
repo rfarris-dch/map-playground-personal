@@ -45,12 +45,16 @@ function mountPerspectiveLayer({
 }: MountPerspectiveLayerArgs): void {
   const controller = mountFacilitiesLayer(map, {
     debounceMs: FACILITIES_LAYER_DEBOUNCE_MS,
+    filterPredicate: () => options.filters.facilitiesPredicate.value ?? null,
     limit: FACILITIES_LAYER_LIMIT,
     minZoom: FACILITIES_LAYER_MIN_ZOOM,
     perspective,
     isInteractionEnabled: () => options.areFacilityInteractionsEnabled.value,
     onStatus: (status) => {
       setPerspectiveStatus(options, perspective, status);
+    },
+    onCachedFeaturesUpdate: (features) => {
+      options.filters.onCachedFeaturesUpdate(features);
     },
     onViewportUpdate: (snapshot) => {
       setViewportFacilities(options, perspective, snapshot.features);
@@ -107,6 +111,9 @@ export function initializeFacilitiesRuntime(options: UseAppShellMapLifecycleOpti
     onHoverChange: (nextHover) => {
       options.state.hoveredFacility.value = nextHover;
     },
+    onClusterHoverChange: (nextHover) => {
+      options.state.hoveredFacilityCluster.value = nextHover;
+    },
   });
 }
 
@@ -114,6 +121,7 @@ export function destroyFacilitiesRuntime(options: UseAppShellMapLifecycleOptions
   options.layers.facilitiesHoverController.value?.destroy();
   options.layers.facilitiesHoverController.value = null;
   options.state.hoveredFacility.value = null;
+  options.state.hoveredFacilityCluster.value = null;
 
   options.layers.facilitiesControllers.value.reduce((_, controller) => {
     controller.destroy();

@@ -10,10 +10,10 @@ import { getFacilitiesStyleLayerIds } from "@map-migration/map-style";
 import { Effect, Either } from "effect";
 import { fetchFacilitiesByBboxEffect } from "@/features/facilities/api";
 import {
+  applyFacilitiesFilter,
   bboxContains,
   emptyFacilitiesSourceData,
   expandBbox,
-  facilitiesCollectionToSourceData,
   filterFacilitiesFeaturesToBbox,
   hasFeatureId,
   isFeatureId,
@@ -25,7 +25,9 @@ import type {
   FacilitiesLayerOptions,
   FacilitiesLayerState,
   FacilitiesStatus,
+  FacilitiesViewMode,
 } from "@/features/facilities/facilities.types";
+import providerLogoMap from "@/features/facilities/provider-logo-map.json";
 
 function defaultPerspective(): FacilityPerspective {
   return "colocation";
@@ -59,6 +61,97 @@ export function mountFacilitiesLayer(
   const hoverCircleColor = perspective === "hyperscale" ? "#ea580c" : "#2563eb";
   const selectedCircleColor = perspective === "hyperscale" ? "#c2410c" : "#1d4ed8";
 
+  const heatmapLayerId = `${sourceId}.heatmap`;
+  const iconFallbackLayerId = `${sourceId}.icon-fallback`;
+  const logoBaseUrl = "https://d1cf1x3z5qnthi.cloudfront.net/provider-logos";
+  const loadedLogos = new Set<string>();
+  const failedLogos = new Set<string>();
+
+  const LOGO_SIZE = 128;
+
+  const normalizeLogoImage = (source: ImageBitmap | HTMLImageElement | ImageData): ImageData => {
+    const canvas = document.createElement("canvas");
+    canvas.width = LOGO_SIZE;
+    canvas.height = LOGO_SIZE;
+    const ctx = canvas.getContext("2d")!;
+
+    let sw: number;
+    let sh: number;
+    if (source instanceof ImageData) {
+      sw = source.width;
+      sh = source.height;
+    } else {
+      sw = source.width;
+      sh = source.height;
+    }
+
+    // Fit within square, preserving aspect ratio, centered
+    const scale = Math.min(LOGO_SIZE / sw, LOGO_SIZE / sh);
+    const dw = Math.round(sw * scale);
+    const dh = Math.round(sh * scale);
+    const dx = Math.round((LOGO_SIZE - dw) / 2);
+    const dy = Math.round((LOGO_SIZE - dh) / 2);
+
+    if (source instanceof ImageData) {
+      const tmp = document.createElement("canvas");
+      tmp.width = sw;
+      tmp.height = sh;
+      tmp.getContext("2d")!.putImageData(source, 0, 0);
+      ctx.drawImage(tmp, dx, dy, dw, dh);
+    } else {
+      ctx.drawImage(source, dx, dy, dw, dh);
+    }
+
+    return ctx.getImageData(0, 0, LOGO_SIZE, LOGO_SIZE);
+  };
+
+  const loadProviderLogos = async (
+    features: FacilitiesFeatureCollection["features"]
+  ): Promise<void> => {
+    const logoMap = providerLogoMap as Record<string, string>;
+    const toLoad: { providerId: string; url: string }[] = [];
+
+    for (const f of features) {
+      const pid = String(f.properties?.providerId ?? "");
+      if (!pid || loadedLogos.has(pid) || failedLogos.has(pid)) {
+        continue;
+      }
+      const filename = logoMap[pid];
+      if (!filename) {
+        failedLogos.add(pid);
+        continue;
+      }
+      toLoad.push({
+        providerId: pid,
+        url: `${logoBaseUrl}/${pid}/${encodeURIComponent(filename)}`,
+      });
+    }
+
+    if (toLoad.length === 0) {
+      return;
+    }
+
+    const batch = toLoad.slice(0, 50);
+    await Promise.allSettled(
+      batch.map(async ({ providerId, url }) => {
+        try {
+          if (map.hasImage(`logo-${providerId}`)) {
+            loadedLogos.add(providerId);
+            return;
+          }
+          const raw = await map.loadImage(url);
+          const normalized = normalizeLogoImage(raw);
+          if (!map.hasImage(`logo-${providerId}`)) {
+            map.addImage(`logo-${providerId}`, normalized);
+          }
+          loadedLogos.add(providerId);
+        } catch {
+          failedLogos.add(providerId);
+        }
+      })
+    );
+  };
+
   const state: FacilitiesLayerState = {
     cachedFeatures: [],
     ready: false,
@@ -69,6 +162,7 @@ export function mountFacilitiesLayer(
     lastFetchKey: null,
     requestSequence: 0,
     selectedFeatureId: null,
+    viewMode: "clusters" as FacilitiesViewMode,
     visible: true,
   };
 
@@ -100,8 +194,19 @@ export function mountFacilitiesLayer(
     state.lastTruncated = false;
   };
 
+  const getFilterPredicate = (): ReturnType<
+    NonNullable<FacilitiesLayerOptions["filterPredicate"]>
+  > => {
+    return options.filterPredicate?.() ?? null;
+  };
+
+  const getFilteredCachedFeatures = (): FacilitiesFeatureCollection["features"] => {
+    return applyFacilitiesFilter(state.cachedFeatures, getFilterPredicate());
+  };
+
   const emitCurrentViewportUpdate = (bbox: BBox): void => {
-    const viewportFeatures = filterFacilitiesFeaturesToBbox(state.cachedFeatures, bbox);
+    const filtered = getFilteredCachedFeatures();
+    const viewportFeatures = filterFacilitiesFeaturesToBbox(filtered, bbox);
     const requestId = state.lastRequestId ?? "n/a";
     emitViewportUpdate(viewportFeatures, requestId, state.lastTruncated);
   };
@@ -118,87 +223,258 @@ export function mountFacilitiesLayer(
     });
   };
 
+  const removeFacilitiesLayers = (): void => {
+    for (const layerId of [
+      heatmapLayerId,
+      clusterCountLayerId,
+      clusterLayerId,
+      pointLayerId,
+      iconFallbackLayerId,
+    ]) {
+      if (map.hasLayer(layerId)) {
+        map.removeLayer(layerId);
+      }
+    }
+
+    if (map.hasSource(sourceId)) {
+      map.removeSource(sourceId);
+    }
+  };
+
+  const addSourceForMode = (mode: FacilitiesViewMode): void => {
+    const useClustering = mode === "clusters";
+    map.addSource(sourceId, {
+      type: "geojson",
+      data: emptyFacilitiesSourceData(),
+      ...(useClustering ? { cluster: true, clusterRadius: 55, clusterMaxZoom: 12 } : {}),
+    });
+  };
+
+  const addLayersForMode = (mode: FacilitiesViewMode): void => {
+    if (mode === "clusters") {
+      map.addLayer({
+        id: clusterLayerId,
+        type: "circle",
+        source: sourceId,
+        minzoom: minZoom,
+        filter: ["has", "point_count"],
+        paint: {
+          "circle-color": defaultCircleColor,
+          "circle-stroke-color": "#111827",
+          "circle-stroke-width": 1,
+          "circle-radius": ["step", ["get", "point_count"], 16, 10, 22, 25, 28, 50, 36, 100, 44],
+        },
+      });
+      map.addLayer({
+        id: clusterCountLayerId,
+        type: "symbol",
+        source: sourceId,
+        minzoom: minZoom,
+        filter: ["has", "point_count"],
+        layout: {
+          "text-field": ["get", "point_count_abbreviated"],
+          "text-font": ["Noto Sans Bold"],
+          "text-size": 12,
+        },
+        paint: { "text-color": "#ffffff" },
+      });
+      map.addLayer({
+        id: pointLayerId,
+        type: "circle",
+        source: sourceId,
+        minzoom: minZoom,
+        filter: ["!", ["has", "point_count"]],
+        paint: {
+          "circle-radius": [
+            "case",
+            ["boolean", ["feature-state", "selected"], false],
+            7,
+            ["boolean", ["feature-state", "hover"], false],
+            6,
+            4,
+          ],
+          "circle-stroke-width": [
+            "case",
+            ["boolean", ["feature-state", "selected"], false],
+            2,
+            ["boolean", ["feature-state", "hover"], false],
+            2,
+            1,
+          ],
+          "circle-stroke-color": "#111827",
+          "circle-color": [
+            "case",
+            ["boolean", ["feature-state", "selected"], false],
+            selectedCircleColor,
+            ["boolean", ["feature-state", "hover"], false],
+            hoverCircleColor,
+            defaultCircleColor,
+          ],
+        },
+      });
+      return;
+    }
+
+    if (mode === "heatmap") {
+      map.addLayer({
+        id: heatmapLayerId,
+        type: "heatmap",
+        source: sourceId,
+        minzoom: minZoom,
+        paint: {
+          "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 0, 1, 12, 3],
+          "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 0, 6, 12, 20],
+          "heatmap-opacity": ["interpolate", ["linear"], ["zoom"], 7, 1, 14, 0.6],
+          "heatmap-color": [
+            "interpolate",
+            ["linear"],
+            ["heatmap-density"],
+            0,
+            "rgba(0,0,0,0)",
+            0.2,
+            perspective === "hyperscale" ? "#fed7aa" : "#bfdbfe",
+            0.4,
+            perspective === "hyperscale" ? "#fdba74" : "#93c5fd",
+            0.6,
+            perspective === "hyperscale" ? "#fb923c" : "#60a5fa",
+            0.8,
+            perspective === "hyperscale" ? "#f97316" : "#3b82f6",
+            1,
+            perspective === "hyperscale" ? "#c2410c" : "#1d4ed8",
+          ],
+        },
+      } as unknown as Parameters<typeof map.addLayer>[0]);
+      return;
+    }
+
+    if (mode === "dots") {
+      map.addLayer({
+        id: pointLayerId,
+        type: "circle",
+        source: sourceId,
+        minzoom: minZoom,
+        paint: {
+          "circle-radius": 3,
+          "circle-stroke-width": 0.5,
+          "circle-stroke-color": "#111827",
+          "circle-color": defaultCircleColor,
+        },
+      });
+      return;
+    }
+
+    if (mode === "bubbles") {
+      map.addLayer({
+        id: pointLayerId,
+        type: "circle",
+        source: sourceId,
+        minzoom: minZoom,
+        paint: {
+          "circle-radius": [
+            "case",
+            ["boolean", ["feature-state", "selected"], false],
+            14,
+            ["boolean", ["feature-state", "hover"], false],
+            12,
+            [
+              "interpolate",
+              ["linear"],
+              ["to-number", ["coalesce", ["get", "powerMW"], 0]],
+              0,
+              4,
+              50,
+              10,
+              200,
+              18,
+              500,
+              26,
+            ],
+          ],
+          "circle-stroke-width": 1,
+          "circle-stroke-color": "#111827",
+          "circle-opacity": 0.7,
+          "circle-color": [
+            "case",
+            ["boolean", ["feature-state", "selected"], false],
+            selectedCircleColor,
+            ["boolean", ["feature-state", "hover"], false],
+            hoverCircleColor,
+            defaultCircleColor,
+          ],
+        },
+      });
+      return;
+    }
+
+    if (mode === "icons") {
+      // Fallback circle for facilities without a loaded logo
+      map.addLayer({
+        id: iconFallbackLayerId,
+        type: "circle",
+        source: sourceId,
+        minzoom: minZoom,
+        paint: {
+          "circle-radius": [
+            "case",
+            ["boolean", ["feature-state", "selected"], false],
+            8,
+            ["boolean", ["feature-state", "hover"], false],
+            7,
+            5,
+          ],
+          "circle-stroke-width": 2,
+          "circle-stroke-color": defaultCircleColor,
+          "circle-color": "#ffffff",
+        },
+      });
+
+      // Symbol layer for provider logos
+      map.addLayer({
+        id: pointLayerId,
+        type: "symbol",
+        source: sourceId,
+        minzoom: minZoom,
+        layout: {
+          "icon-image": ["concat", "logo-", ["to-string", ["get", "providerId"]]],
+          "icon-size": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            4,
+            0.08,
+            7,
+            0.14,
+            10,
+            0.22,
+            13,
+            0.32,
+            16,
+            0.45,
+          ],
+          "icon-allow-overlap": true,
+          "icon-ignore-placement": true,
+          "icon-padding": 2,
+        },
+      } as unknown as Parameters<typeof map.addLayer>[0]);
+    }
+  };
+
   const ensureFacilitiesLayers = (): boolean => {
     try {
       if (!map.hasSource(sourceId)) {
-        map.addSource(sourceId, {
-          type: "geojson",
-          data: emptyFacilitiesSourceData(),
-          cluster: true,
-          clusterRadius: 55,
-          clusterMaxZoom: 12,
-        });
+        addSourceForMode(state.viewMode);
       }
 
-      if (!map.hasLayer(clusterLayerId)) {
-        map.addLayer({
-          id: clusterLayerId,
-          type: "circle",
-          source: sourceId,
-          minzoom: minZoom,
-          filter: ["has", "point_count"],
-          paint: {
-            "circle-color": defaultCircleColor,
-            "circle-stroke-color": "#111827",
-            "circle-stroke-width": 1,
-            "circle-radius": ["step", ["get", "point_count"], 16, 10, 22, 25, 28, 50, 36, 100, 44],
-          },
-        });
-      }
+      const needsClusterLayers = state.viewMode === "clusters";
+      const needsPointLayer = state.viewMode !== "heatmap";
+      const needsHeatmapLayer = state.viewMode === "heatmap";
 
-      if (!map.hasLayer(clusterCountLayerId)) {
-        map.addLayer({
-          id: clusterCountLayerId,
-          type: "symbol",
-          source: sourceId,
-          minzoom: minZoom,
-          filter: ["has", "point_count"],
-          layout: {
-            "text-field": ["get", "point_count_abbreviated"],
-            "text-font": ["Noto Sans Bold"],
-            "text-size": 12,
-          },
-          paint: {
-            "text-color": "#ffffff",
-          },
-        });
-      }
-
-      if (!map.hasLayer(pointLayerId)) {
-        map.addLayer({
-          id: pointLayerId,
-          type: "circle",
-          source: sourceId,
-          minzoom: minZoom,
-          filter: ["!", ["has", "point_count"]],
-          paint: {
-            "circle-radius": [
-              "case",
-              ["boolean", ["feature-state", "selected"], false],
-              7,
-              ["boolean", ["feature-state", "hover"], false],
-              6,
-              4,
-            ],
-            "circle-stroke-width": [
-              "case",
-              ["boolean", ["feature-state", "selected"], false],
-              2,
-              ["boolean", ["feature-state", "hover"], false],
-              2,
-              1,
-            ],
-            "circle-stroke-color": "#111827",
-            "circle-color": [
-              "case",
-              ["boolean", ["feature-state", "selected"], false],
-              selectedCircleColor,
-              ["boolean", ["feature-state", "hover"], false],
-              hoverCircleColor,
-              defaultCircleColor,
-            ],
-          },
-        });
+      if (needsClusterLayers && !map.hasLayer(clusterLayerId)) {
+        addLayersForMode(state.viewMode);
+      } else if (needsHeatmapLayer && !map.hasLayer(heatmapLayerId)) {
+        addLayersForMode(state.viewMode);
+      } else if (needsPointLayer && !map.hasLayer(pointLayerId)) {
+        addLayersForMode(state.viewMode);
       }
 
       return true;
@@ -297,8 +573,17 @@ export function mountFacilitiesLayer(
       return;
     }
 
+    if (!map.hasLayer(pointLayerId)) {
+      return;
+    }
+
+    const queryLayers = [pointLayerId];
+    if (state.viewMode === "icons" && map.hasLayer(iconFallbackLayerId)) {
+      queryLayers.push(iconFallbackLayerId);
+    }
+
     const features = map.queryRenderedFeatures(event.point, {
-      layers: [pointLayerId],
+      layers: queryLayers,
     });
 
     const selectedFeature = features[0];
@@ -421,13 +706,16 @@ export function mountFacilitiesLayer(
       return;
     }
 
-    map.setGeoJSONSourceData(sourceId, facilitiesCollectionToSourceData(result.right.data));
     state.cachedFeatures = result.right.data.features;
     state.fetchedBbox = fetchBbox;
     state.lastRequestId = result.right.requestId;
     state.lastTruncated = result.right.data.meta.truncated;
-    syncSelectionForFeatures(result.right.data.features);
-    const viewportFeatures = filterFacilitiesFeaturesToBbox(result.right.data.features, bbox);
+    options.onCachedFeaturesUpdate?.(state.cachedFeatures);
+
+    const filtered = getFilteredCachedFeatures();
+    map.setGeoJSONSourceData(sourceId, { type: "FeatureCollection", features: filtered });
+    syncSelectionForFeatures(filtered);
+    const viewportFeatures = filterFacilitiesFeaturesToBbox(filtered, bbox);
     emitViewportUpdate(viewportFeatures, result.right.requestId, result.right.data.meta.truncated);
 
     setStatus({
@@ -437,6 +725,10 @@ export function mountFacilitiesLayer(
       count: viewportFeatures.length,
       truncated: result.right.data.meta.truncated,
     });
+
+    if (state.viewMode === "icons") {
+      loadProviderLogos(filtered).catch(() => {});
+    }
   };
 
   const setVisible = (visible: boolean): void => {
@@ -483,9 +775,67 @@ export function mountFacilitiesLayer(
   map.on("moveend", onMoveEnd);
   map.onClick(onClick);
 
+  const setViewMode = (mode: FacilitiesViewMode): void => {
+    if (state.viewMode === mode) {
+      return;
+    }
+
+    state.viewMode = mode;
+
+    if (!state.ready) {
+      return;
+    }
+
+    try {
+      removeFacilitiesLayers();
+      addSourceForMode(mode);
+      addLayersForMode(mode);
+
+      if (state.visible && state.cachedFeatures.length > 0) {
+        const filtered = getFilteredCachedFeatures();
+        map.setGeoJSONSourceData(sourceId, { type: "FeatureCollection", features: filtered });
+        syncSelectionForFeatures(filtered);
+
+        if (mode === "icons") {
+          loadProviderLogos(filtered).catch(() => {});
+        }
+      }
+    } catch {
+      // If rebuild fails, try to recover
+      ensureFacilitiesLayers();
+    }
+  };
+
+  const applyFilter = (): void => {
+    if (!(state.ready && state.visible)) {
+      return;
+    }
+
+    if (!ensureFacilitiesLayers()) {
+      return;
+    }
+
+    const filtered = getFilteredCachedFeatures();
+    map.setGeoJSONSourceData(sourceId, { type: "FeatureCollection", features: filtered });
+    syncSelectionForFeatures(filtered);
+
+    const bbox = quantizeBbox(map.getBounds(), 3);
+    emitCurrentViewportUpdate(bbox);
+
+    setStatus({
+      state: "ok",
+      perspective,
+      requestId: state.lastRequestId ?? "n/a",
+      count: filterFacilitiesFeaturesToBbox(filtered, bbox).length,
+      truncated: state.lastTruncated,
+    });
+  };
+
   return {
+    applyFilter,
     clearSelection,
     perspective,
+    setViewMode,
     setVisible,
     destroy(): void {
       state.requestSequence += 1;

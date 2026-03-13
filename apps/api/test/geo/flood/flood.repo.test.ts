@@ -27,13 +27,16 @@ describe("flood repo", () => {
     await queryFloodParcelRollup(geometryGeoJson);
 
     expect(runQueryMock).toHaveBeenCalledTimes(1);
-    const [sql, params] = runQueryMock.mock.calls[0] ?? [];
+    const [sql, params, options] = runQueryMock.mock.calls[0] ?? [];
 
     expect(typeof sql).toBe("string");
     expect(sql).toContain("FROM parcel_current.parcels AS parcel");
     expect(sql).toContain("LEFT JOIN environmental_current.flood_hazard AS flood");
     expect(sql).toContain("ST_Intersects(parcel.geom_3857, selection.geom_3857)");
     expect(params).toEqual([geometryGeoJson]);
+    expect(options).toEqual({
+      statementTimeoutMs: 15_000,
+    });
   });
 
   it("queries flood area summaries from the canonical flood hazard table", async () => {
@@ -43,11 +46,17 @@ describe("flood repo", () => {
     await queryFloodAreaSummary(geometryGeoJson);
 
     expect(runQueryMock).toHaveBeenCalledTimes(1);
-    const [sql, params] = runQueryMock.mock.calls[0] ?? [];
+    const [sql, params, options] = runQueryMock.mock.calls[0] ?? [];
 
     expect(typeof sql).toBe("string");
     expect(sql).toContain("FROM environmental_current.flood_hazard");
     expect(sql).toContain("ST_Intersection(flood.geom_3857, selection.geom_3857)");
+    expect(sql).toContain("ST_Area(ST_Transform(");
+    expect(sql).toContain(")::geography) / 1000000.0");
+    expect(sql).not.toContain(", 5070)");
     expect(params).toEqual([geometryGeoJson]);
+    expect(options).toEqual({
+      statementTimeoutMs: 15_000,
+    });
   });
 });

@@ -534,6 +534,11 @@ export function mountParcelsLayer(
       return;
     }
 
+    if (event.buttons > 0) {
+      clearHover();
+      return;
+    }
+
     const features = map.queryRenderedFeatures(event.point, {
       layers: [outlineLayerId, fillLayerId],
     });

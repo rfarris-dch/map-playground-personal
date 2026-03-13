@@ -1,5 +1,6 @@
 import type { BBox, FacilitiesFeatureCollection } from "@map-migration/contracts";
 import type {
+  FacilitiesFeatureFilterPredicate,
   FacilitiesSourceData,
   FacilitiesStatus,
 } from "@/features/facilities/facilities.types";
@@ -140,6 +141,17 @@ export function filterFacilitiesFeaturesToBbox(
   bbox: BBox
 ): FacilitiesFeatureCollection["features"] {
   return features.filter((feature) => pointWithinBbox(feature.geometry.coordinates, bbox));
+}
+
+export function applyFacilitiesFilter(
+  features: FacilitiesFeatureCollection["features"],
+  predicate: FacilitiesFeatureFilterPredicate | null
+): FacilitiesFeatureCollection["features"] {
+  if (predicate === null) {
+    return features;
+  }
+
+  return features.filter(predicate);
 }
 
 export function isFeatureId(value: unknown): value is number | string {

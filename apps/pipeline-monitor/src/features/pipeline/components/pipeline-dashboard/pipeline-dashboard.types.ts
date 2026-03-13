@@ -1,4 +1,4 @@
-import type { ParcelsSyncStatusResponse } from "@map-migration/contracts";
+import type { PipelineStatusResponse } from "@map-migration/contracts";
 import type { ComputedRef } from "vue";
 import type {
   PipelineDataset,
@@ -12,8 +12,8 @@ type EstimatePipelineRate =
 type EstimateTileBuildRate =
   typeof import("@/features/pipeline/pipeline-tracking/pipeline-tracking-build-rate.service").estimateTileBuildRate;
 
-export type PipelineDashboardResponse = ParcelsSyncStatusResponse;
-export type PipelineDashboardRun = ParcelsSyncStatusResponse["run"];
+export type PipelineDashboardResponse = PipelineStatusResponse;
+export type PipelineDashboardRun = PipelineStatusResponse["run"];
 export type PipelineDashboardState = PipelineDashboardRun["states"][number];
 export type PipelineRateEstimate = ReturnType<EstimatePipelineRate>;
 export type PipelineBuildRateEstimate = ReturnType<EstimateTileBuildRate>;
@@ -113,7 +113,6 @@ export interface PipelineDashboardProgressProps {
   readonly displayedStatesTotal: number;
   readonly displayedWrittenCount: number;
   readonly isBuildLikelyStalled: boolean;
-  readonly isFloodLoading: boolean;
   readonly isMaterializeFinalizing: boolean;
   readonly rowProgressPercent: number;
   readonly run: PipelineDashboardRun | null;

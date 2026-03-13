@@ -1,11 +1,11 @@
-import type { ParcelsSyncStatusResponse } from "@map-migration/contracts";
-import type { Ref } from "vue";
+export type { PipelineDataset } from "@map-migration/contracts";
 
-export type PipelineDataset = "parcels" | "flood";
+import type { PipelineStatusResponse } from "@map-migration/contracts";
+import type { Ref } from "vue";
 
 export interface PipelineStatusPayload {
   readonly requestId: string;
-  readonly response: ParcelsSyncStatusResponse;
+  readonly response: PipelineStatusResponse;
 }
 
 export type PipelineFetchFailureReason = "aborted" | "http" | "network" | "schema";
@@ -26,7 +26,7 @@ export interface PipelineLiveSample {
   readonly expectedCount: number | null;
   readonly isRunning: boolean;
   readonly lastStateUpdatedAt: string | null;
-  readonly phase: ParcelsSyncStatusResponse["run"]["phase"];
+  readonly phase: PipelineStatusResponse["run"]["phase"];
   readonly rawWrittenCount: number;
   readonly requestId: string;
   readonly runId: string | null;

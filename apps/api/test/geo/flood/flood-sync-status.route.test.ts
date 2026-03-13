@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 
-const getFloodSyncStatusSnapshotMock =
+const getPipelineStatusPayloadMock =
   mock<
     () => Promise<{
       readonly status: "ok";
@@ -56,8 +56,9 @@ const getFloodSyncStatusSnapshotMock =
     }>
   >();
 
-mock.module("../../../src/geo/flood/flood-sync-status.service", () => ({
-  getFloodSyncStatusSnapshot: getFloodSyncStatusSnapshotMock,
+mock.module("../../../src/pipeline/pipeline-status.service", () => ({
+  getPipelineStatusPayload: getPipelineStatusPayloadMock,
+  getPipelineStatusResponse: () => Promise.reject(new Error("not used in flood route test")),
 }));
 
 const { createApiApp } = await import("@/app");
@@ -68,11 +69,11 @@ afterAll(() => {
 
 describe("flood sync status route", () => {
   beforeEach(() => {
-    getFloodSyncStatusSnapshotMock.mockReset();
+    getPipelineStatusPayloadMock.mockReset();
   });
 
   it("returns flood monitor status with the shared sync-status schema", async () => {
-    getFloodSyncStatusSnapshotMock.mockResolvedValue({
+    getPipelineStatusPayloadMock.mockResolvedValue({
       status: "ok",
       generatedAt: "2026-03-09T23:00:00.000Z",
       enabled: true,

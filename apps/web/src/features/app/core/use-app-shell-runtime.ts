@@ -1,6 +1,7 @@
 import type { MapContextTransfer } from "@map-migration/contracts";
 import { computed } from "vue";
 import { useAppShellFiber } from "@/features/app/fiber/use-app-shell-fiber";
+import { useMapFilters } from "@/features/app/filters/use-map-filters";
 import { useAppShellMapLifecycle } from "@/features/app/lifecycle/use-app-shell-map-lifecycle";
 import { resolveScannerParcelsBlockedReason } from "@/features/app/overlays/map-overlays.service";
 import { useMapOverlays } from "@/features/app/overlays/use-map-overlays";
@@ -51,6 +52,8 @@ export function useAppShellRuntime(
       resolveScannerParcelsBlockedReason(state.parcelsStatus.value) === null
   );
 
+  const mapFilters = useMapFilters();
+
   const fiber = useAppShellFiber({
     map: state.map,
     layerRuntime: state.layerRuntime,
@@ -87,6 +90,11 @@ export function useAppShellRuntime(
     },
     areFacilityInteractionsEnabled,
     fiber,
+    filters: {
+      facilitiesPredicate: mapFilters.facilitiesPredicate,
+      onCachedFeaturesUpdate: mapFilters.setAvailableFeatures,
+      transmissionFilter: mapFilters.transmissionFilter,
+    },
     initialViewport: options.initialViewport,
     layers: {
       boundaryControllers: state.boundaryControllers,
@@ -116,6 +124,7 @@ export function useAppShellRuntime(
       facilitiesStatus: state.facilitiesStatus,
       hoveredBoundary: state.hoveredBoundary,
       hoveredFacility: state.hoveredFacility,
+      hoveredFacilityCluster: state.hoveredFacilityCluster,
       hoveredPower: state.hoveredPower,
       hyperscaleViewportFeatures: state.hyperscaleViewportFeatures,
       layerRuntimeSnapshot: state.layerRuntimeSnapshot,
@@ -128,6 +137,7 @@ export function useAppShellRuntime(
   });
 
   return {
+    mapFilters,
     state,
     status,
     selection,
