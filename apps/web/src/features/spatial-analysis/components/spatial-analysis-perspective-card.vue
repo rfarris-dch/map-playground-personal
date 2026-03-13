@@ -76,7 +76,9 @@
       <dt class="text-muted-foreground">Planned</dt>
       <dd class="m-0 text-foreground/70">
         {{ props.summary.plannedCount }}
-        <span class="text-muted-foreground"> · {{ props.formatPower(props.summary.plannedPowerMw) }}</span>
+        <span class="text-muted-foreground">
+          · {{ props.formatPower(props.summary.plannedPowerMw) }}</span
+        >
       </dd>
       <dt class="text-muted-foreground">Leased</dt>
       <dd class="m-0 text-foreground/70">{{ props.summary.leasedCount }}</dd>

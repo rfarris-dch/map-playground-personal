@@ -25,17 +25,17 @@
   function iconSizeClass(modeId: MapNavViewModeId): string {
     switch (modeId) {
       case "clusters":
-        return "h-2 w-[6px]";
+        return "h-2 w-1.5";
       case "icons":
-        return "h-[14px] w-[14px]";
+        return "h-3.5 w-3.5";
       case "bubbles":
-        return "h-[9.147px] w-2";
+        return "h-2.5 w-2";
       case "dots":
-        return "h-[7.462px] w-2";
+        return "h-2 w-2";
       case "heatmap":
-        return "h-[6.203px] w-2";
+        return "h-1.5 w-2";
       default:
-        return "h-2 w-[6px]";
+        return "h-2 w-1.5";
     }
   }
 

@@ -3,6 +3,7 @@ import type {
   FacilityPerspective,
   LeaseOrOwn,
 } from "@map-migration/contracts";
+import type { FacilityClusterSummary } from "@/features/facilities/facilities-cluster.types";
 
 export interface FacilityHoverState {
   readonly availablePowerMw: number | null;
@@ -25,17 +26,9 @@ export interface ClusterProviderSummary {
   readonly totalPowerMw: number;
 }
 
-export interface FacilityClusterHoverState {
-  readonly center: readonly [number, number];
-  readonly clusterId: number;
-  readonly commissionedPowerMw: number;
-  readonly facilityCount: number;
-  readonly perspective: FacilityPerspective;
-  readonly plannedPowerMw: number;
+export interface FacilityClusterHoverState extends FacilityClusterSummary {
   readonly screenPoint: readonly [number, number];
   readonly topProviders: readonly ClusterProviderSummary[];
-  readonly totalPowerMw: number;
-  readonly underConstructionPowerMw: number;
 }
 
 export interface FacilitiesHoverOptions {

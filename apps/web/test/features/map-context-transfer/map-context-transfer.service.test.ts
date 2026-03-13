@@ -217,6 +217,7 @@ describe("map-context-transfer service", () => {
         landmarks: false,
         roads: true,
         satellite: false,
+        terrain: false,
       },
       boundaryFacetSelection: {
         country: null,
@@ -380,6 +381,7 @@ describe("map-context-transfer service", () => {
       { layerId: "color", visible: false },
       { layerId: "globe", visible: false },
       { layerId: "satellite", visible: false },
+      { layerId: "terrain", visible: false },
       { layerId: "landmarks", visible: false },
       { layerId: "labels", visible: true },
       { layerId: "roads", visible: true },

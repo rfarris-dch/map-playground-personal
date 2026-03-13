@@ -47,6 +47,7 @@ describe("app-shell-map service", () => {
               sources: {},
               layers: [],
             });
+            expect(options.antialias).toBe(true);
             expect(options.center[0]).toBeCloseTo(-96.8, 10);
             expect(options.center[1]).toBeCloseTo(32.75, 10);
             expect(options.maxPitch).toBe(85);
@@ -227,6 +228,7 @@ describe("app-shell-map service", () => {
     }
 
     expect(capturedOptions).toMatchObject({
+      antialias: true,
       bearing: 22,
       center: [-95.5, 29.75],
       pitch: 48,

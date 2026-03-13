@@ -140,7 +140,7 @@
   <!-- Expanded sidebar -->
   <aside
     v-else
-    class="pointer-events-auto absolute left-0 top-0 z-30 flex h-full w-[min(408px,100vw)] flex-col overflow-hidden border-r border-border bg-card p-4 font-sans"
+    class="pointer-events-auto absolute left-0 top-0 z-30 flex h-full w-[min(408px,calc(100vw-1rem))] flex-col overflow-hidden border-r border-border bg-card p-4 font-sans"
     aria-label="Map layers panel"
   >
     <div class="flex h-full flex-col">
@@ -208,7 +208,11 @@
           <!-- Fiber Routes (expandable) -->
           <div class="flex h-10 items-center bg-card px-2 transition-colors hover:bg-background">
             <div class="flex w-full items-center justify-between">
-              <button type="button" class="flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none" @click="toggleFiberExpanded">
+              <button
+                type="button"
+                class="flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
+                @click="toggleFiberExpanded"
+              >
                 <svg
                   class="h-[5px] w-2 text-foreground/70 transition-transform"
                   :class="fiberExpanded ? 'rotate-180' : 'rotate-90'"
@@ -236,13 +240,13 @@
 
               <button
                 type="button"
-                class="flex size-6 items-center justify-center rounded-sm transition-colors hover:bg-background"
+                class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm transition-colors hover:bg-background focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
                 :aria-label="`${fiberRoutesVisible ? 'Hide' : 'Show'} Fiber Routes`"
                 @click="toggleFiberRoutes"
               >
                 <MapNavIcon
                   name="eye"
-                  class="h-[9.672px] w-4"
+                  class="h-4 w-4"
                   :class="fiberRoutesVisible ? 'text-foreground/75' : 'text-muted-foreground'"
                 />
               </button>
@@ -270,7 +274,7 @@
                 >
                   <MapNavIcon
                     name="eye"
-                    class="h-[9.672px] w-4"
+                    class="h-4 w-4"
                     :class="props.visibleFiberLayers.metro ? 'text-foreground/75' : 'text-muted-foreground'"
                   />
                 </button>
@@ -297,6 +301,7 @@
                 >
                   <svg
                     v-if="isFiberSourceLayerSelected('metro', layer.layerName)"
+                    aria-hidden="true"
                     class="size-[10px] text-white"
                     viewBox="0 0 10 10"
                     fill="none"
@@ -349,7 +354,7 @@
                 >
                   <MapNavIcon
                     name="eye"
-                    class="h-[9.672px] w-4"
+                    class="h-4 w-4"
                     :class="props.visibleFiberLayers.longhaul ? 'text-foreground/75' : 'text-muted-foreground'"
                   />
                 </button>
@@ -376,6 +381,7 @@
                 >
                   <svg
                     v-if="isFiberSourceLayerSelected('longhaul', layer.layerName)"
+                    aria-hidden="true"
                     class="size-[10px] text-white"
                     viewBox="0 0 10 10"
                     fill="none"
@@ -482,6 +488,11 @@
             label="Satellite Imagery"
             :visible="props.basemapVisibility.satellite"
             @toggle="toggleBasemapLayer('satellite')"
+          />
+          <MapNavLayerRow
+            label="Terrain Elevation"
+            :visible="props.basemapVisibility.terrain"
+            @toggle="toggleBasemapLayer('terrain')"
           />
           <MapNavLayerRow
             label="3D Buildings"

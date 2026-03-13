@@ -15,6 +15,7 @@ import type {
   FeatureStateTarget,
   FullscreenControlOptions,
   IMap,
+  IMapMarker,
   LngLat,
   LngLatBounds,
   MapAdapter,
@@ -44,6 +45,7 @@ export type {
   FeatureStateTarget,
   FullscreenControlOptions,
   IMap,
+  IMapMarker,
   LngLat,
   LngLatBounds,
   MapAdapter,
@@ -174,6 +176,24 @@ class MapLibreEngine implements IMap {
 
   addLayer(layerSpec: MapLayerSpecification, beforeId?: string): void {
     this.map.addLayer(layerSpec, beforeId);
+  }
+
+  createHtmlMarker(element: HTMLElement, lngLat: LngLat): IMapMarker {
+    const marker = new maplibregl.Marker({
+      anchor: "center",
+      element,
+    })
+      .setLngLat(lngLat)
+      .addTo(this.map);
+
+    return {
+      remove(): void {
+        marker.remove();
+      },
+      setLngLat(nextLngLat: LngLat): void {
+        marker.setLngLat(nextLngLat);
+      },
+    };
   }
 
   captureImage(options: MapCaptureImageOptions = {}): Promise<Blob> {
@@ -511,10 +531,10 @@ class MapLibreEngine implements IMap {
     return (features ?? []) as unknown as MapRenderedFeature[];
   }
 
-  async getClusterExpansionZoom(sourceId: string, clusterId: number): Promise<number> {
+  getClusterExpansionZoom(sourceId: string, clusterId: number): Promise<number> {
     const source = this.map.getSource(sourceId) as GeoJSONSource | undefined;
     if (!source || typeof source.getClusterExpansionZoom !== "function") {
-      return 0;
+      return Promise.resolve(0);
     }
 
     return source.getClusterExpansionZoom(clusterId);
@@ -643,62 +663,78 @@ export function createMap(
   return adapter.createMap(container, options);
 }
 
+function buildCanvasContextAttributes(
+  options: Pick<MapCreateOptions, "antialias" | "preserveDrawingBuffer">
+): MapOptions["canvasContextAttributes"] | undefined {
+  const canvasContextAttributes: NonNullable<MapOptions["canvasContextAttributes"]> = {};
+
+  if (typeof options.antialias === "boolean") {
+    canvasContextAttributes.antialias = options.antialias;
+  }
+
+  if (typeof options.preserveDrawingBuffer === "boolean") {
+    canvasContextAttributes.preserveDrawingBuffer = options.preserveDrawingBuffer;
+  }
+
+  if (Object.keys(canvasContextAttributes).length === 0) {
+    return undefined;
+  }
+
+  return canvasContextAttributes;
+}
+
+function buildMapLibreOptions(container: HTMLElement, options: MapCreateOptions): MapOptions {
+  const mapOptions: MapOptions = {
+    container,
+    center: options.center,
+    zoom: options.zoom,
+    style: options.style,
+  };
+
+  if (typeof options.bearing === "number") {
+    mapOptions.bearing = options.bearing;
+  }
+
+  if (typeof options.pitch === "number") {
+    mapOptions.pitch = options.pitch;
+  }
+
+  if (typeof options.minZoom === "number") {
+    mapOptions.minZoom = options.minZoom;
+  }
+
+  if (typeof options.maxZoom === "number") {
+    mapOptions.maxZoom = options.maxZoom;
+  }
+
+  if (typeof options.maxPitch === "number") {
+    mapOptions.maxPitch = options.maxPitch;
+  }
+
+  const canvasContextAttributes = buildCanvasContextAttributes(options);
+  if (typeof canvasContextAttributes !== "undefined") {
+    mapOptions.canvasContextAttributes = canvasContextAttributes;
+  }
+
+  if (typeof options.hash !== "undefined") {
+    mapOptions.hash = options.hash;
+  }
+
+  if (typeof options.transformRequest === "function") {
+    mapOptions.transformRequest = options.transformRequest;
+  }
+
+  return mapOptions;
+}
+
 export function createMapLibreAdapter(): MapAdapter {
   return {
     createMap(container: HTMLElement, options: MapCreateOptions): IMap {
-      const {
-        bearing,
-        center,
-        hash,
-        maxPitch,
-        maxZoom,
-        minZoom,
-        pitch,
-        preserveDrawingBuffer,
-        projection,
-        style,
-        transformRequest,
-        zoom,
-      } = options;
-      const mapOptions: MapOptions = {
-        container,
-        center,
-        zoom,
-        style,
-      };
-
-      if (typeof bearing === "number") {
-        mapOptions.bearing = bearing;
-      }
-
-      if (typeof pitch === "number") {
-        mapOptions.pitch = pitch;
-      }
-      if (typeof minZoom === "number") {
-        mapOptions.minZoom = minZoom;
-      }
-      if (typeof maxZoom === "number") {
-        mapOptions.maxZoom = maxZoom;
-      }
-      if (typeof maxPitch === "number") {
-        mapOptions.maxPitch = maxPitch;
-      }
-      if (typeof preserveDrawingBuffer === "boolean") {
-        mapOptions.canvasContextAttributes = {
-          preserveDrawingBuffer,
-        };
-      }
-      if (typeof hash !== "undefined") {
-        mapOptions.hash = hash;
-      }
-      if (typeof transformRequest === "function") {
-        mapOptions.transformRequest = transformRequest;
-      }
-
+      const mapOptions = buildMapLibreOptions(container, options);
       const map = new maplibregl.Map(mapOptions);
       const engine = new MapLibreEngine(map);
-      if (typeof projection !== "undefined") {
-        engine.setProjection(projection);
+      if (typeof options.projection !== "undefined") {
+        engine.setProjection(options.projection);
       }
 
       return engine;

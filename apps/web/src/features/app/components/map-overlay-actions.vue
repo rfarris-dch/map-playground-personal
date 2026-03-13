@@ -37,9 +37,7 @@
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="start" class="w-56 p-2">
-        <p
-          class="px-1 pb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-        >
+        <p class="px-1 pb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Current map view
         </p>
         <div class="grid gap-1">

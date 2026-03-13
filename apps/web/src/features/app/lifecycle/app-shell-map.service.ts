@@ -154,6 +154,7 @@ export function createAppShellMapInitializer(
       const initialBearing = resolveInitialMapBearing(options.initialViewport);
       const initialPitch = resolveInitialMapPitch(options.initialViewport);
       const mapCreateOptions = {
+        antialias: true,
         style: basemapStyle,
         center: resolveInitialMapCenter(options.initialViewport),
         maxPitch: DEFAULT_MAP_MAX_PITCH,

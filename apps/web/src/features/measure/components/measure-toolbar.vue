@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import { computed } from "vue";
   import Button from "@/components/ui/button/button.vue";
+  import MapMetricCard from "@/components/map/map-metric-card.vue";
+  import MapToolPanel from "@/components/map/map-tool-panel.vue";
   import type {
     MeasureSelectionImageSubject,
     MeasureSelectionOutputMode,
@@ -108,11 +110,8 @@
 </script>
 
 <template>
-  <aside
-    class="map-glass-elevated pointer-events-auto absolute bottom-16 left-4 z-20 w-[min(28rem,calc(100%-2rem))] rounded-xl p-3"
-    aria-label="Measurement tools"
-  >
-    <header class="mb-3 flex items-start justify-between gap-3">
+  <MapToolPanel aria-label="Measurement tools">
+    <template #header>
       <div>
         <h2 class="m-0 text-sm font-semibold">Spatial Analysis</h2>
         <p class="m-0 text-xs text-muted-foreground">{{ helperText }}</p>
@@ -122,12 +121,10 @@
       >
         {{ panelStatus }}
       </span>
-    </header>
+    </template>
 
-    <section class="mb-3">
-      <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Output
-      </p>
+    <section>
+      <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Output</p>
       <div class="map-glass-surface inline-flex rounded-lg p-1">
         <button
           type="button"
@@ -152,7 +149,7 @@
       </div>
     </section>
 
-    <section v-if="props.outputMode === 'image'" class="mb-3">
+    <section v-if="props.outputMode === 'image'">
       <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         PNG Framing
       </p>
@@ -176,10 +173,8 @@
       </div>
     </section>
 
-    <section class="mb-3">
-      <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Tools
-      </p>
+    <section>
+      <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tools</p>
       <div class="grid gap-2 sm:grid-cols-2">
         <Button
           size="sm"
@@ -224,40 +219,22 @@
       </div>
     </section>
 
-    <section class="mb-3 grid gap-2 sm:grid-cols-2" role="region" aria-label="Measurement readings">
-      <div class="map-glass-surface rounded-md px-3 py-2">
-        <div class="text-xs uppercase tracking-wide text-muted-foreground">Mode</div>
-        <div class="text-sm font-medium">{{ props.state.mode }}</div>
-      </div>
-      <div class="map-glass-surface rounded-md px-3 py-2">
-        <div class="text-xs uppercase tracking-wide text-muted-foreground">Area Shape</div>
-        <div class="text-sm font-medium">
-          {{ props.state.mode === "area" ? props.state.areaShape : "n/a" }}
-        </div>
-      </div>
-      <div class="map-glass-surface rounded-md px-3 py-2">
-        <div class="text-xs uppercase tracking-wide text-muted-foreground">Distance</div>
-        <div class="text-sm font-medium tabular-nums">
-          {{ formatDistance(props.state.distanceKm) }}
-        </div>
-      </div>
-      <div class="map-glass-surface rounded-md px-3 py-2">
-        <div class="text-xs uppercase tracking-wide text-muted-foreground">Area</div>
-        <div class="text-sm font-medium tabular-nums">{{ formatArea(props.state.areaSqKm) }}</div>
-      </div>
-      <div class="map-glass-surface rounded-md px-3 py-2">
-        <div class="text-xs uppercase tracking-wide text-muted-foreground">Selection</div>
-        <div class="text-sm font-medium">
-          {{ props.state.isSelectionComplete ? "Complete" : "In progress" }}
-        </div>
-      </div>
-      <div class="map-glass-surface rounded-md px-3 py-2">
-        <div class="text-xs uppercase tracking-wide text-muted-foreground">Vertices</div>
-        <div class="text-sm font-medium tabular-nums">{{ props.state.vertexCount }}</div>
-      </div>
+    <section class="grid gap-2 sm:grid-cols-2" role="region" aria-label="Measurement readings">
+      <MapMetricCard label="Mode" :value="props.state.mode" />
+      <MapMetricCard
+        label="Area Shape"
+        :value="props.state.mode === 'area' ? props.state.areaShape : 'n/a'"
+      />
+      <MapMetricCard label="Distance" :value="formatDistance(props.state.distanceKm)" />
+      <MapMetricCard label="Area" :value="formatArea(props.state.areaSqKm)" />
+      <MapMetricCard
+        label="Selection"
+        :value="props.state.isSelectionComplete ? 'Complete' : 'In progress'"
+      />
+      <MapMetricCard label="Vertices" :value="props.state.vertexCount" />
     </section>
 
-    <footer class="flex items-center gap-2">
+    <template #footer>
       <Button
         size="sm"
         variant="glass-active"
@@ -268,6 +245,6 @@
         Finish selection
       </Button>
       <Button size="sm" variant="glass" @click="clearMeasure">Clear</Button>
-    </footer>
-  </aside>
+    </template>
+  </MapToolPanel>
 </template>

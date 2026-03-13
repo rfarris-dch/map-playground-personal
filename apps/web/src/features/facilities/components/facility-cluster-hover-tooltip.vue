@@ -1,5 +1,10 @@
 <script setup lang="ts">
-  import { ref, watch } from "vue";
+  import { ref, toRef, watch } from "vue";
+  import { useTooltipPosition } from "@/composables/use-tooltip-position";
+  import {
+    buildFacilityClusterPowerSegments,
+    getFacilityClusterPrimaryLabel,
+  } from "@/features/facilities/facilities-cluster.service";
   import type { FacilityClusterHoverState } from "@/features/facilities/hover.types";
   import { buildDonutChartArcSegments } from "@/lib/donut-chart.service";
 
@@ -33,6 +38,9 @@
   const isMouseOver = ref(false);
   const displayState = ref<FacilityClusterHoverState | null>(null);
   let dismissTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const clusterScreenPoint = toRef(() => displayState.value?.screenPoint ?? null);
+  const { style: positionStyle } = useTooltipPosition(clusterScreenPoint);
 
   watch(
     () => props.hoverState,
@@ -88,46 +96,67 @@
   function accentColor(): string {
     const style = getComputedStyle(document.documentElement);
     return displayState.value?.perspective === "hyperscale"
-      ? style.getPropertyValue("--hyperscale").trim() || "#10b981"
-      : style.getPropertyValue("--colocation").trim() || "#3b82f6";
+      ? style.getPropertyValue("--hyperscale").trim()
+      : style.getPropertyValue("--colocation").trim();
+  }
+
+  function accentClass(): string {
+    return displayState.value?.perspective === "hyperscale"
+      ? "border-hyperscale"
+      : "border-colocation";
+  }
+
+  function accentTextClass(): string {
+    return displayState.value?.perspective === "hyperscale"
+      ? "text-hyperscale"
+      : "text-colocation";
   }
 
   function providerLabel(): string {
     return displayState.value?.perspective === "hyperscale" ? "Top Users" : "Top Providers";
   }
 
-  interface DonutSegment {
-    color: string;
+  interface ClusterMetricRow {
     label: string;
     value: number;
   }
 
-  const COLO_SHADES = ["oklch(0.62 0.14 250)", "oklch(0.76 0.10 250)", "oklch(0.90 0.05 250)"] as const;
-  const HYPER_SHADES = ["oklch(0.65 0.15 162)", "oklch(0.78 0.10 162)", "oklch(0.92 0.05 162)"] as const;
-
-  function pieSegments(): DonutSegment[] {
+  function pieSegments() {
     if (!displayState.value) {
       return [];
     }
-    const isColo = displayState.value.perspective === "colocation";
-    const shades = isColo ? COLO_SHADES : HYPER_SHADES;
-    return [
+
+    return buildFacilityClusterPowerSegments(displayState.value);
+  }
+
+  function metricRows(): ClusterMetricRow[] {
+    if (!displayState.value) {
+      return [];
+    }
+
+    const rows: ClusterMetricRow[] = [
       {
-        color: shades[0],
-        label: isColo ? "Comm." : "Own.",
+        label: getFacilityClusterPrimaryLabel(displayState.value.perspective),
         value: displayState.value.commissionedPowerMw,
       },
       {
-        color: shades[1],
-        label: "UC",
+        label: "Under Construction",
         value: displayState.value.underConstructionPowerMw,
       },
       {
-        color: shades[2],
-        label: "Plan.",
+        label: "Planned",
         value: displayState.value.plannedPowerMw,
       },
     ];
+
+    if (displayState.value.perspective === "colocation") {
+      rows.splice(1, 0, {
+        label: "Available",
+        value: displayState.value.availablePowerMw,
+      });
+    }
+
+    return rows;
   }
 
   function donutSegments() {
@@ -143,26 +172,21 @@
 <template>
   <aside
     v-if="displayState !== null"
-    class="absolute z-30 rounded-sm p-[2px]"
-    :style="{
-      left: `${displayState.screenPoint[0] + 14}px`,
-      top: `${displayState.screenPoint[1] + 14}px`,
-      borderWidth: '0.5px',
-      borderStyle: 'solid',
-      borderColor: accentColor(),
-    }"
+    class="absolute z-30 rounded-sm border p-[2px]"
+    :class="accentClass()"
+    :style="positionStyle"
     aria-label="Facility cluster details"
     @mouseenter="onMouseEnter"
     @mouseleave="onMouseLeave"
   >
     <div
-      class="flex flex-col gap-[10px] rounded-sm bg-card p-[10px] shadow-[0_4px_8px_rgba(0,0,0,0.06)]"
+      class="flex flex-col gap-[10px] rounded-sm bg-card p-[10px] shadow-sm"
     >
       <!-- Header -->
       <div class="flex items-center justify-between gap-3">
         <span
           class="text-xs font-semibold leading-none whitespace-nowrap"
-          :style="{ color: accentColor() }"
+          :class="accentTextClass()"
         >
           {{ perspectiveLabel() }}
         </span>
@@ -170,7 +194,8 @@
           width="12"
           height="12"
           viewBox="0 0 12 12"
-          class="flex-shrink-0 cursor-pointer opacity-40 hover:opacity-70" aria-hidden="true"
+          class="flex-shrink-0 cursor-pointer opacity-40 hover:opacity-70"
+          aria-hidden="true"
         >
           <line x1="3.5" y1="3.5" x2="8.5" y2="8.5" stroke="currentColor" stroke-width="1.2" />
           <line x1="8.5" y1="3.5" x2="3.5" y2="8.5" stroke="currentColor" stroke-width="1.2" />
@@ -222,7 +247,7 @@
           <div class="flex flex-col gap-[6px]">
             <template v-for="(provider, i) in displayState.topProviders" :key="i">
               <div class="flex flex-col gap-[2px]">
-                <span class="text-xs leading-none" :style="{ color: accentColor() }">
+                <span class="text-xs leading-none" :class="accentTextClass()">
                   {{ provider.name }}
                 </span>
                 <span class="text-xs leading-none text-muted-foreground">
@@ -234,21 +259,32 @@
         </div>
       </div>
 
+      <div class="grid grid-cols-[auto_auto] gap-x-3 gap-y-1 text-xs">
+        <template v-for="row in metricRows()" :key="row.label">
+          <span class="text-muted-foreground">{{ row.label }}</span>
+          <span class="text-right font-medium" :class="accentTextClass()">
+            {{ formatMw(row.value) }}
+          </span>
+        </template>
+      </div>
+
       <!-- Key -->
       <div class="flex items-center gap-[6px]">
         <div v-for="(segment, i) in pieSegments()" :key="i" class="flex items-center gap-[4px]">
           <span
-            class="inline-block size-[7px] rounded-full"
+            class="inline-block h-2 w-2 rounded-full"
             :style="{ backgroundColor: segment.color }"
           />
-          <span class="text-xs text-muted-foreground">{{ segment.label }}</span>
+          <span class="text-xs text-muted-foreground">{{ segment.shortLabel }}</span>
         </div>
       </div>
 
       <!-- Controls -->
       <div class="flex items-center gap-[6px]">
         <div
-          role="button" tabindex="0" class="flex cursor-pointer items-center gap-0 opacity-60 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
+          role="button"
+          tabindex="0"
+          class="flex cursor-pointer items-center gap-0 opacity-60 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
           @click="onZoomClick"
           @keydown.enter="onZoomClick"
           @keydown.space.prevent="onZoomClick"
@@ -261,7 +297,13 @@
           </svg>
           <span class="text-xs text-muted-foreground">Zoom</span>
         </div>
-        <div role="button" tabindex="0" class="flex cursor-pointer items-center gap-0 opacity-60 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none">
+        <div
+          role="button"
+          tabindex="0"
+          class="flex cursor-pointer items-center gap-0 opacity-60 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
+          @keydown.enter="() => {}"
+          @keydown.space.prevent="() => {}"
+        >
           <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
             <path d="M5 4L11 8L5 12Z" fill="currentColor" />
           </svg>

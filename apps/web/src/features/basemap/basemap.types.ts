@@ -15,7 +15,8 @@ export type BasemapLayerId =
   | "labels"
   | "landmarks"
   | "roads"
-  | "satellite";
+  | "satellite"
+  | "terrain";
 
 export interface BasemapVisibilityState {
   readonly boundaries: boolean;
@@ -26,6 +27,7 @@ export interface BasemapVisibilityState {
   readonly landmarks: boolean;
   readonly roads: boolean;
   readonly satellite: boolean;
+  readonly terrain: boolean;
 }
 
 export interface BasemapLayerVisibilityController {

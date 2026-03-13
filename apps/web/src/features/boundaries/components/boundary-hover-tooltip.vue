@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import { toRef } from "vue";
+  import { useTooltipPosition } from "@/composables/use-tooltip-position";
   import type { BoundaryHoverState, BoundaryLayerId } from "@/features/boundaries/boundaries.types";
 
   interface BoundaryHoverTooltipProps {
@@ -6,6 +8,9 @@
   }
 
   const props = defineProps<BoundaryHoverTooltipProps>();
+
+  const screenPoint = toRef(() => props.hoverState?.screenPoint ?? null);
+  const { style: positionStyle } = useTooltipPosition(screenPoint, { x: 12, y: 12 });
 
   function boundaryLabel(boundaryId: BoundaryLayerId): string {
     if (boundaryId === "county") {
@@ -28,10 +33,7 @@
   <aside
     v-if="props.hoverState !== null"
     class="map-glass-surface pointer-events-none absolute z-30 min-w-56 rounded-md p-2"
-    :style="{
-      left: `${props.hoverState.screenPoint[0] + 12}px`,
-      top: `${props.hoverState.screenPoint[1] + 12}px`,
-    }"
+    :style="positionStyle"
     aria-label="Boundary hover details"
   >
     <header class="mb-1 flex items-center gap-2">

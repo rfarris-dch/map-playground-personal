@@ -93,9 +93,7 @@
         <div
           class="rounded-sm border border-border bg-card px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
         >
-          <div class="text-xs uppercase tracking-wide text-muted-foreground">
-            Formula Version
-          </div>
+          <div class="text-xs uppercase tracking-wide text-muted-foreground">Formula Version</div>
           <div class="mt-1 break-all text-sm font-semibold text-foreground/70">
             {{ props.status.formulaVersion ?? "-" }}
           </div>
@@ -111,9 +109,7 @@
         <div
           class="rounded-sm border border-border bg-card px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
         >
-          <div class="text-xs uppercase tracking-wide text-muted-foreground">
-            Publication Run
-          </div>
+          <div class="text-xs uppercase tracking-wide text-muted-foreground">Publication Run</div>
           <div class="mt-1 break-all text-xs font-semibold text-foreground/70">
             {{ props.status.publicationRunId ?? "-" }}
           </div>
@@ -139,9 +135,7 @@
         <div
           class="rounded-sm border border-border bg-card px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
         >
-          <div class="text-xs uppercase tracking-wide text-muted-foreground">
-            Fresh Counties
-          </div>
+          <div class="text-xs uppercase tracking-wide text-muted-foreground">Fresh Counties</div>
           <div class="mt-1 text-sm font-semibold text-foreground/70">
             {{ props.status.freshCountyCount }}
             / {{ props.status.sourceCountyCount }}

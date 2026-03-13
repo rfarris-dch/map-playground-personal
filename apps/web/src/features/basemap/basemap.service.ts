@@ -44,12 +44,14 @@ const DEFAULT_BASEMAP_VISIBILITY_STATE: BasemapVisibilityState = {
   landmarks: false,
   roads: true,
   satellite: false,
+  terrain: false,
 };
 
 const BASEMAP_LAYER_IDS: BasemapLayerId[] = [
   "color",
   "globe",
   "satellite",
+  "terrain",
   "landmarks",
   "labels",
   "roads",
@@ -59,9 +61,13 @@ const BASEMAP_LAYER_IDS: BasemapLayerId[] = [
 
 const SATELLITE_SOURCE_ID = "basemap.satellite-source";
 const SATELLITE_LAYER_ID = "basemap.satellite";
+const TERRAIN_SOURCE_ID = "basemap.terrain-source";
+const TERRAIN_HILLSHADE_LAYER_ID = "basemap.terrain-hillshade";
 const OPENMAPTILES_SOURCE_ID = "openmaptiles";
 const LANDMARKS_POI_LAYER_ID = "basemap.landmarks.poi";
 const LANDMARKS_PEAK_LAYER_ID = "basemap.landmarks.peak";
+const STATE_BOUNDARY_LAYER_ID = "boundary_3";
+const STATE_LABELS_LAYER_ID = "basemap.state-labels";
 const MISSING_SPRITE_SHIELD_LAYER_IDS = [
   "highway-shield-non-us",
   "highway-shield-us-interstate",
@@ -75,6 +81,8 @@ const DEFAULT_SATELLITE_TILE_URLS = [
 const DEFAULT_SATELLITE_ATTRIBUTION =
   "Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community";
 const DEFAULT_SATELLITE_MAX_ZOOM = 19;
+const DEFAULT_TERRAIN_SOURCE_URL = "https://demotiles.maplibre.org/terrain-tiles/tiles.json";
+const DEFAULT_TERRAIN_EXAGGERATION = 1;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -406,7 +414,12 @@ function collectBasemapLayerGroups(map: IMap, profile: BasemapProfile): BasemapL
 
     const sourceLayerId = readSourceLayerId(styleLayer);
 
-    if (layerType === "line" && sourceLayerId !== null && sourceLayerId.includes("boundar")) {
+    if (
+      layerType === "line" &&
+      sourceLayerId !== null &&
+      sourceLayerId.includes("boundar") &&
+      layerId !== STATE_BOUNDARY_LAYER_ID
+    ) {
       boundaryLayerIds.push(layerId);
     }
 
@@ -454,6 +467,36 @@ function ensureSatelliteLayer(map: IMap): void {
       findSatelliteInsertLayerId(map)
     );
   }
+}
+
+function ensureTerrainSource(map: IMap): void {
+  if (map.hasSource(TERRAIN_SOURCE_ID)) {
+    return;
+  }
+
+  map.addSource(TERRAIN_SOURCE_ID, {
+    type: "raster-dem",
+    url: DEFAULT_TERRAIN_SOURCE_URL,
+    tileSize: 256,
+  });
+}
+
+function ensureTerrainHillshadeLayer(map: IMap): void {
+  if (map.hasLayer(TERRAIN_HILLSHADE_LAYER_ID)) {
+    return;
+  }
+
+  map.addLayer(
+    {
+      id: TERRAIN_HILLSHADE_LAYER_ID,
+      type: "hillshade",
+      source: TERRAIN_SOURCE_ID,
+      paint: {
+        "hillshade-shadow-color": "#473B24",
+      },
+    },
+    findSatelliteInsertLayerId(map)
+  );
 }
 
 function suppressMissingSpriteShieldLayers(map: IMap): void {
@@ -534,12 +577,56 @@ function ensureLandmarkLayers(map: IMap): void {
   }
 }
 
+function ensureStateBoundaryVisible(map: IMap): void {
+  if (map.hasLayer(STATE_BOUNDARY_LAYER_ID)) {
+    map.setLayerVisibility(STATE_BOUNDARY_LAYER_ID, true);
+  }
+}
+
+function ensureStateLabels(map: IMap): void {
+  if (!map.hasSource(OPENMAPTILES_SOURCE_ID)) {
+    return;
+  }
+
+  if (map.hasLayer(STATE_LABELS_LAYER_ID)) {
+    return;
+  }
+
+  map.addLayer({
+    id: STATE_LABELS_LAYER_ID,
+    type: "symbol",
+    source: OPENMAPTILES_SOURCE_ID,
+    "source-layer": "place",
+    minzoom: 3,
+    maxzoom: 8,
+    filter: ["==", ["get", "class"], "state"],
+    layout: {
+      "text-field": ["coalesce", ["get", "name_en"], ["get", "name"]],
+      "text-font": ["Noto Sans Regular"],
+      "text-size": ["interpolate", ["linear"], ["zoom"], 3, 10, 6, 13, 8, 15],
+      "text-transform": "uppercase",
+      "text-letter-spacing": 0.1,
+      "text-max-width": 8,
+    },
+    paint: {
+      "text-color": "#475569",
+      "text-halo-color": "#ffffff",
+      "text-halo-width": 1.5,
+      "text-opacity": ["interpolate", ["linear"], ["zoom"], 3, 0.7, 5, 0.9, 8, 0.5],
+    },
+  });
+}
+
 function add3DBuildings(map: IMap, profile: BasemapProfile, sourceId: string): void {
   if (map.hasLayer(profile.buildingsLayerId)) {
     return;
   }
 
   const firstLabelLayerId = findFirstLabelLayerId(map);
+  const buildingHeight = ["coalesce", ["get", "render_height"], 0];
+  const buildingBaseHeight = ["coalesce", ["get", "render_min_height"], 0];
+  const buildingZoomRampStart = profile.buildingsMinZoom - 1;
+  const buildingZoomRampEnd = profile.buildingsMinZoom + 1;
 
   map.addLayer(
     {
@@ -547,12 +634,46 @@ function add3DBuildings(map: IMap, profile: BasemapProfile, sourceId: string): v
       type: "fill-extrusion",
       source: sourceId,
       "source-layer": profile.buildingSourceLayer,
-      minzoom: profile.buildingsMinZoom,
+      filter: ["!=", ["get", "hide_3d"], true],
       paint: {
-        "fill-extrusion-color": "#d6d3d1",
-        "fill-extrusion-height": ["coalesce", ["get", "render_height"], 0],
-        "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
-        "fill-extrusion-opacity": profile.buildingsOpacity,
+        "fill-extrusion-color": [
+          "interpolate",
+          ["linear"],
+          buildingHeight,
+          0,
+          "#d3d3d3",
+          200,
+          "#4169e1",
+          400,
+          "#add8e6",
+        ],
+        "fill-extrusion-height": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          buildingZoomRampStart,
+          0,
+          buildingZoomRampEnd,
+          buildingHeight,
+        ],
+        "fill-extrusion-base": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          buildingZoomRampStart,
+          0,
+          buildingZoomRampEnd,
+          buildingBaseHeight,
+        ],
+        "fill-extrusion-opacity": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          buildingZoomRampStart,
+          0,
+          profile.buildingsMinZoom,
+          profile.buildingsOpacity,
+        ],
       },
     },
     firstLabelLayerId
@@ -580,6 +701,15 @@ function applyBasemapVisibility(args: {
   args.map.setLayerVisibility(LANDMARKS_PEAK_LAYER_ID, landmarksVisible);
   args.map.setLayerVisibility(args.profile.buildingsLayerId, args.visibility.buildings3d);
   args.map.setLayerVisibility(SATELLITE_LAYER_ID, args.visibility.satellite);
+  args.map.setLayerVisibility(TERRAIN_HILLSHADE_LAYER_ID, args.visibility.terrain);
+  args.map.setTerrain(
+    args.visibility.terrain
+      ? {
+          source: TERRAIN_SOURCE_ID,
+          exaggeration: DEFAULT_TERRAIN_EXAGGERATION,
+        }
+      : null
+  );
 }
 
 function resolveBasemapProfile(visibility: BasemapVisibilityState): BasemapProfile {
@@ -656,6 +786,13 @@ export function withBasemapLayerVisibility(
     };
   }
 
+  if (layerId === "terrain") {
+    return {
+      ...visibility,
+      terrain: visible,
+    };
+  }
+
   return {
     ...visibility,
     satellite: visible,
@@ -692,6 +829,10 @@ export function isBasemapLayerVisible(
 
   if (layerId === "roads") {
     return visibility.roads;
+  }
+
+  if (layerId === "terrain") {
+    return visibility.terrain;
   }
 
   return visibility.satellite;
@@ -771,7 +912,11 @@ export function mountBasemapLayerVisibility(
     syncProjection();
     suppressMissingSpriteShieldLayers(map);
     ensureSatelliteLayer(map);
+    ensureTerrainSource(map);
+    ensureTerrainHillshadeLayer(map);
     ensureLandmarkLayers(map);
+    ensureStateBoundaryVisible(map);
+    ensureStateLabels(map);
     const buildingSourceId = findBuildingSourceId(map, profile);
     add3DBuildings(map, profile, buildingSourceId);
     groups = collectBasemapLayerGroups(map, profile);

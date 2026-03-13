@@ -392,7 +392,7 @@
                 <Input
                   :value="section.searchQuery"
                   :placeholder="section.searchPlaceholder"
-                  class="h-[22px] rounded-sm border border-border bg-card px-2 text-xs text-muted-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] placeholder:text-border focus-visible:border-border focus-visible:ring-2 focus-visible:ring-border"
+                  class="h-8 rounded-sm border border-border bg-card px-2 text-xs text-muted-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] placeholder:text-border focus-visible:border-border focus-visible:ring-2 focus-visible:ring-border"
                   @input="onSearchInput(section.level, $event)"
                 />
 

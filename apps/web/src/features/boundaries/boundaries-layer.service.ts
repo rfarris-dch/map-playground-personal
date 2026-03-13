@@ -8,7 +8,6 @@ import type {
 
 export const BASEMAP_BOUNDARY_LAYER_IDS: readonly string[] = [
   "boundary_2",
-  "boundary_3",
   "boundary_disputed",
 ];
 

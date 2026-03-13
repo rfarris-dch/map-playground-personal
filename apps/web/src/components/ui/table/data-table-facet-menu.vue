@@ -39,9 +39,7 @@
         class="flex items-center justify-between gap-2 border-b border-border/70 px-2 py-1.5"
       >
         <span>{{ columnLabel }}</span>
-        <Button size="sm" variant="ghost" class="h-6 px-2 text-xs" @click="clear">
-          Clear
-        </Button>
+        <Button size="sm" variant="ghost" class="h-6 px-2 text-xs" @click="clear"> Clear </Button>
       </DropdownMenuLabel>
       <DropdownMenuSeparator class="my-0" />
       <div class="max-h-64 space-y-1 overflow-y-auto p-2">

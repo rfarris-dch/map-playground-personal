@@ -35,6 +35,7 @@ export interface IMap {
   addLayer(layerSpec: MapLayerSpecification, beforeId?: string): void;
   addSource(id: string, spec: MapSourceSpecification): void;
   captureImage(options?: MapCaptureImageOptions): Promise<Blob>;
+  createHtmlMarker(element: HTMLElement, lngLat: LngLat): IMapMarker;
   destroy(): void;
   getBearing(): number;
   getBounds(): LngLatBounds;
@@ -107,6 +108,7 @@ export interface FeatureStateTarget {
 }
 
 export interface MapCreateOptions {
+  readonly antialias?: boolean;
   readonly bearing?: number;
   readonly center: LngLat;
   readonly hash?: boolean;
@@ -135,6 +137,11 @@ export interface FullscreenControlOptions {
 export interface ScaleControlOptions {
   readonly maxWidth?: number;
   readonly unit?: "imperial" | "metric" | "nautical";
+}
+
+export interface IMapMarker {
+  remove(): void;
+  setLngLat(lngLat: LngLat): void;
 }
 
 export interface NavigationControlOptions {

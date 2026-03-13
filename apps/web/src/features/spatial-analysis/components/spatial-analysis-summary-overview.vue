@@ -128,7 +128,8 @@
         <div class="uppercase tracking-wide text-muted-foreground">Colocation</div>
         <div class="text-lg font-semibold text-foreground/70">{{ metrics.colocationCount }}</div>
         <div class="text-muted-foreground">
-          {{ props.formatPower(metrics.colocationCommissionedPowerMw) }} commissioned
+          {{ props.formatPower(metrics.colocationCommissionedPowerMw) }}
+          commissioned
         </div>
       </div>
 
@@ -136,7 +137,8 @@
         <div class="uppercase tracking-wide text-muted-foreground">Hyperscale</div>
         <div class="text-lg font-semibold text-foreground/70">{{ metrics.hyperscaleCount }}</div>
         <div class="text-muted-foreground">
-          {{ props.formatPower(metrics.hyperscaleCommissionedPowerMw) }} commissioned
+          {{ props.formatPower(metrics.hyperscaleCommissionedPowerMw) }}
+          commissioned
         </div>
       </div>
 
@@ -185,8 +187,10 @@
               {{ props.formatPower(metrics.colocationCommissionedPowerMw) }}
             </div>
             <div class="text-muted-foreground">
-              {{ metrics.colocationCount }} facilities ·
-              {{ props.formatPower(metrics.colocationPipelinePowerMw) }} pipe
+              {{ metrics.colocationCount }}
+              facilities ·
+              {{ props.formatPower(metrics.colocationPipelinePowerMw) }}
+              pipe
             </div>
           </div>
           <div>
@@ -195,8 +199,10 @@
               {{ props.formatPower(metrics.hyperscaleCommissionedPowerMw) }}
             </div>
             <div class="text-muted-foreground">
-              {{ metrics.hyperscaleCount }} facilities ·
-              {{ props.formatPower(metrics.hyperscalePipelinePowerMw) }} pipe
+              {{ metrics.hyperscaleCount }}
+              facilities ·
+              {{ props.formatPower(metrics.hyperscalePipelinePowerMw) }}
+              pipe
             </div>
           </div>
         </div>
@@ -215,7 +221,8 @@
             class="inline-flex items-center rounded-sm border px-2 py-0.5 text-xs font-medium"
             :class="statusToneClass(item.tone)"
           >
-            {{ item.label }} · {{ item.count }}
+            {{ item.label }}
+            · {{ item.count }}
           </span>
         </div>
 
@@ -223,7 +230,7 @@
       </section>
     </div>
 
-    <hr class="border-t border-border/50" />
+    <hr class="border-t border-border/50">
 
     <!-- Top Providers + Parcel Candidates -->
     <div class="grid gap-6 lg:grid-cols-2">
@@ -236,9 +243,12 @@
         <div v-if="providers.length > 0" class="space-y-1.5">
           <div v-for="provider in providers" :key="provider.providerId ?? provider.providerName">
             <div class="flex items-center justify-between gap-2 text-xs">
-              <span class="truncate font-medium text-foreground/70">{{ provider.providerName }}</span>
+              <span class="truncate font-medium text-foreground/70"
+                >{{ provider.providerName }}</span
+              >
               <span class="shrink-0 text-muted-foreground">
-                {{ provider.count }} · {{ props.formatPower(provider.commissionedPowerMw) }}
+                {{ provider.count }}
+                · {{ props.formatPower(provider.commissionedPowerMw) }}
               </span>
             </div>
           </div>
@@ -320,7 +330,9 @@
                 class="inline-block h-2 w-2 rounded-full"
                 :class="facility.perspective === 'colocation' ? 'bg-cyan-500' : 'bg-amber-500'"
               />
-              <span class="truncate font-medium text-foreground/70">{{ facility.facilityName }}</span>
+              <span class="truncate font-medium text-foreground/70"
+                >{{ facility.facilityName }}</span
+              >
             </div>
             <div class="mt-0.5 truncate text-xs text-muted-foreground">
               {{ facility.providerName }}

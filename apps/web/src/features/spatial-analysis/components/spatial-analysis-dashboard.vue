@@ -92,7 +92,11 @@
       </RouterLink>
     </header>
 
-    <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5" role="region" aria-label="Key metrics">
+    <section
+      class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5"
+      role="region"
+      aria-label="Key metrics"
+    >
       <article class="rounded-xl border border-border/70 bg-card/95 p-4 shadow-sm">
         <p class="text-xs uppercase tracking-[0.18em] text-muted-foreground">Facilities</p>
         <p class="mt-2 text-2xl font-semibold tabular-nums">{{ metrics.totalFacilities }}</p>
@@ -119,7 +123,11 @@
       </article>
     </section>
 
-    <section class="grid gap-4 lg:grid-cols-2" role="region" aria-label="Selection summary and providers">
+    <section
+      class="grid gap-4 lg:grid-cols-2"
+      role="region"
+      aria-label="Selection summary and providers"
+    >
       <article class="rounded-xl border border-border/70 bg-card/95 p-4 shadow-sm">
         <h2 class="m-0 text-sm font-semibold">Selection Summary</h2>
         <dl class="mt-3 space-y-2 text-sm">
@@ -177,7 +185,11 @@
       </article>
     </section>
 
-    <section class="grid gap-4 xl:grid-cols-[1.35fr_1fr_1fr]" role="region" aria-label="Status breakdown and perspectives">
+    <section
+      class="grid gap-4 xl:grid-cols-[1.35fr_1fr_1fr]"
+      role="region"
+      aria-label="Status breakdown and perspectives"
+    >
       <article class="rounded-xl border border-border/70 bg-card/95 p-4 shadow-sm">
         <h2 class="m-0 text-sm font-semibold">Status Breakdown</h2>
         <div class="mt-3 flex flex-wrap gap-2">

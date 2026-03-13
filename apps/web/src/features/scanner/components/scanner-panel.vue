@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { ArrowRight, ChevronDown, Download, Minus, X } from "lucide-vue-next";
   import { computed, shallowRef } from "vue";
+  import Button from "@/components/ui/button/button.vue";
   import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";
   import { formatScannerPowerMw } from "@/features/scanner/scanner.service";
   import type { SpatialAnalysisFacilityRecord } from "@/features/spatial-analysis/spatial-analysis-facilities.types";
@@ -60,8 +61,16 @@
   const exportDisabled = computed(() => analysisSummary.value.totalCount === 0);
 
   // Donut chart helpers — use OKLCH shades derived from the colocation/hyperscale tokens
-  const COLO_SHADES = ["oklch(0.62 0.14 250)", "oklch(0.76 0.10 250)", "oklch(0.90 0.05 250)"] as const;
-  const HYPER_SHADES = ["oklch(0.65 0.15 162)", "oklch(0.78 0.10 162)", "oklch(0.92 0.05 162)"] as const;
+  const COLO_SHADES = [
+    "oklch(0.62 0.14 250)",
+    "oklch(0.76 0.10 250)",
+    "oklch(0.90 0.05 250)",
+  ] as const;
+  const HYPER_SHADES = [
+    "oklch(0.65 0.15 162)",
+    "oklch(0.78 0.10 162)",
+    "oklch(0.92 0.05 162)",
+  ] as const;
 
   function donutSegments(commissioned: number, uc: number, planned: number, isColo: boolean) {
     const shades = isColo ? COLO_SHADES : HYPER_SHADES;
@@ -234,12 +243,18 @@
         </div>
 
         <!-- Tabs -->
-        <nav class="flex items-end gap-1 border-b border-border" role="tablist" aria-label="Scanner tabs">
+        <nav
+          class="flex items-end gap-1 border-b border-border"
+          role="tablist"
+          aria-label="Scanner tabs"
+        >
           <button
             v-for="tab in (['overview', 'colocation', 'hyperscale', 'facilities'] as const)"
             :key="tab"
             type="button"
-            role="tab" :aria-selected="activeTab === tab" class="border-b-2 px-3 pb-2 pt-1 text-xs leading-none transition-colors capitalize focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
+            role="tab"
+            :aria-selected="activeTab === tab"
+            class="border-b-2 px-3 pb-2 pt-1 text-xs leading-none transition-colors capitalize focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
             :class="tabClass(tab)"
             @click="setActiveTab(tab)"
           >
@@ -265,7 +280,12 @@
       </section>
 
       <!-- ═══ OVERVIEW TAB ═══ -->
-      <section v-else-if="activeTab === 'overview'" role="tabpanel" aria-label="Overview" class="flex flex-col gap-4 overflow-auto">
+      <section
+        v-else-if="activeTab === 'overview'"
+        role="tabpanel"
+        aria-label="Overview"
+        class="flex flex-col gap-4 overflow-auto"
+      >
         <!-- Colocation + Hyperscale side by side -->
         <div class="flex gap-6">
           <!-- Colocation -->
@@ -281,7 +301,14 @@
             </div>
             <div class="relative size-[100px]">
               <svg width="100" height="100" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="36" fill="none" stroke="var(--muted)" stroke-width="12" />
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="36"
+                  fill="none"
+                  stroke="var(--muted)"
+                  stroke-width="12"
+                />
                 <template v-for="(seg, i) in coloDonut" :key="`colo-${String(i)}`">
                   <circle
                     v-if="seg.path === null"
@@ -304,7 +331,7 @@
                 </template>
               </svg>
               <div class="absolute inset-0 flex items-center justify-center">
-                <span class="text-xs text-muted-foreground">
+                <span class="text-sm font-semibold tabular-nums text-muted-foreground">
                   {{ formatScannerPowerMw(coloTotalMw) }}
                 </span>
               </div>
@@ -324,7 +351,14 @@
             </div>
             <div class="relative size-[100px]">
               <svg width="100" height="100" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="36" fill="none" stroke="var(--muted)" stroke-width="12" />
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="36"
+                  fill="none"
+                  stroke="var(--muted)"
+                  stroke-width="12"
+                />
                 <template v-for="(seg, i) in hyperDonut" :key="`hyper-${String(i)}`">
                   <circle
                     v-if="seg.path === null"
@@ -347,7 +381,7 @@
                 </template>
               </svg>
               <div class="absolute inset-0 flex items-center justify-center">
-                <span class="text-xs text-muted-foreground">
+                <span class="text-sm font-semibold tabular-nums text-muted-foreground">
                   {{ formatScannerPowerMw(hyperTotalMw) }}
                 </span>
               </div>
@@ -411,7 +445,12 @@
       </section>
 
       <!-- ═══ COLOCATION TAB ═══ -->
-      <section v-else-if="activeTab === 'colocation'" role="tabpanel" aria-label="Colocation" class="flex flex-col gap-2 overflow-auto">
+      <section
+        v-else-if="activeTab === 'colocation'"
+        role="tabpanel"
+        aria-label="Colocation"
+        class="flex flex-col gap-2 overflow-auto"
+      >
         <div class="mb-1">
           <div class="text-sm font-semibold text-colocation">Colocation</div>
           <div class="text-xs text-muted-foreground">
@@ -424,16 +463,22 @@
         <div
           v-for="row in colocationMetrics"
           :key="row.label"
-          class="flex items-center justify-between gap-2 py-1 text-xs text-muted-foreground"
+          class="flex items-center justify-between gap-2 py-1"
+          :class="row.value === '' ? 'text-xs font-semibold uppercase tracking-wide text-muted-foreground' : 'text-xs text-muted-foreground'"
         >
           <span>{{ row.label }}</span>
           <ChevronDown v-if="row.value === ''" class="size-3.5" />
-          <span v-else>{{ row.value }}</span>
+          <span v-else class="text-sm font-semibold tabular-nums text-foreground/85">{{ row.value }}</span>
         </div>
       </section>
 
       <!-- ═══ HYPERSCALE TAB ═══ -->
-      <section v-else-if="activeTab === 'hyperscale'" role="tabpanel" aria-label="Hyperscale" class="flex flex-col gap-2 overflow-auto">
+      <section
+        v-else-if="activeTab === 'hyperscale'"
+        role="tabpanel"
+        aria-label="Hyperscale"
+        class="flex flex-col gap-2 overflow-auto"
+      >
         <div class="mb-1">
           <div class="text-sm font-semibold text-hyperscale">Hyperscale</div>
           <div class="text-xs text-muted-foreground">
@@ -446,16 +491,17 @@
         <div
           v-for="row in hyperscaleMetrics"
           :key="row.label"
-          class="flex items-center justify-between gap-2 py-1 text-xs text-muted-foreground"
+          class="flex items-center justify-between gap-2 py-1"
+          :class="row.value === '' ? 'text-xs font-semibold uppercase tracking-wide text-muted-foreground' : 'text-xs text-muted-foreground'"
         >
           <span>{{ row.label }}</span>
           <ChevronDown v-if="row.value === ''" class="size-3.5" />
-          <span v-else>{{ row.value }}</span>
+          <span v-else class="text-sm font-semibold tabular-nums text-foreground/85">{{ row.value }}</span>
         </div>
       </section>
 
       <!-- ═══ FACILITIES TAB ═══ -->
-      <section v-else class="flex-1 overflow-auto">
+      <section v-else role="tabpanel" aria-label="Facilities" class="flex-1 overflow-auto">
         <!-- Table header -->
         <div
           class="grid grid-cols-[1fr_70px_52px_40px_40px] gap-x-2 border-b border-border pb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap"
@@ -476,7 +522,7 @@
         >
           <span class="min-w-0 flex items-center gap-1.5">
             <span
-              class="inline-block size-[6px] flex-shrink-0 rounded-full"
+              class="inline-block h-2 w-2 flex-shrink-0 rounded-full"
               :class="{
                 'bg-colocation': facility.perspective === 'colocation',
                 'bg-hyperscale': facility.perspective === 'hyperscale',
@@ -501,24 +547,26 @@
 
       <!-- Footer buttons -->
       <footer class="flex items-center gap-2">
-        <button
-          type="button"
-          class="inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-md bg-muted-foreground px-3 text-xs font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+        <Button
+          variant="glass-active"
+          size="sm"
+          class="flex-1 gap-1.5"
           :disabled="dashboardDisabled"
           @click="emit('open-dashboard')"
         >
           Open Dashboard
           <ArrowRight class="size-3.5" />
-        </button>
-        <button
-          type="button"
-          class="inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-md bg-muted-foreground px-3 text-xs font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+        </Button>
+        <Button
+          variant="glass"
+          size="sm"
+          class="flex-1 gap-1.5"
           :disabled="exportDisabled"
           @click="emit('export')"
         >
           <Download class="size-3.5" />
           Export Facilities
-        </button>
+        </Button>
       </footer>
     </div>
   </aside>

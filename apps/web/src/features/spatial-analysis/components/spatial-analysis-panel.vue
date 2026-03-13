@@ -233,7 +233,7 @@
     readonly id: SpatialAnalysisPanelTab;
   }): string {
     if (activeTab.value === tab.id) {
-      return "border-border bg-background text-foreground/70 shadow-[inset_0_0_0_1px_rgba(148,163,184,0.08),0_1px_2px_rgba(15,23,42,0.04)]";
+      return "border-border bg-background text-foreground/70 ring-1 ring-border shadow-xs";
     }
 
     if (tab.disabled) {
@@ -300,17 +300,17 @@
 
 <template>
   <aside
-    class="pointer-events-auto absolute bottom-4 right-3 z-20 flex max-h-[78vh] flex-col overflow-hidden rounded-sm border border-border bg-card p-2 text-muted-foreground shadow-[0_4px_8px_rgba(0,0,0,0.06)] transition-[width] duration-200 font-sans"
+    class="pointer-events-auto absolute bottom-4 right-3 z-20 flex max-h-[78vh] flex-col overflow-hidden rounded-sm border border-border bg-card p-2 text-muted-foreground shadow-sm transition-[width] duration-200 font-sans"
     :class="panelWidthClass"
     :aria-label="props.title"
   >
     <header class="mb-3 flex items-start justify-between gap-3">
       <div class="min-w-0">
         <div class="flex items-center gap-2">
-          <h2 class="m-0 text-xs font-semibold text-foreground/70">{{ props.title }}</h2>
+          <h2 class="m-0 text-sm font-semibold text-foreground/70">{{ props.title }}</h2>
           <span
             v-if="props.isLoading || props.isParcelsLoading"
-            class="inline-flex items-center rounded-sm border border-border bg-card px-2 py-0.5 text-xs font-medium text-muted-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+            class="inline-flex items-center rounded-sm border border-border bg-card px-2 py-0.5 text-xs font-medium text-muted-foreground shadow-xs"
           >
             {{ props.progress === null ? "Refreshing" : `Refreshing · ${progressPercentText}` }}
           </span>
@@ -321,7 +321,7 @@
       <button
         type="button"
         :aria-label="props.dismissLabel"
-        class="inline-flex h-6 w-6 items-center justify-center rounded-sm border border-border bg-card text-muted-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-border hover:bg-background hover:text-foreground/70"
+        class="inline-flex h-6 w-6 items-center justify-center rounded-sm border border-border bg-card text-muted-foreground shadow-xs transition-colors hover:border-border hover:bg-background hover:text-foreground/70"
         @click="emit('dismiss')"
       >
         <X class="h-4 w-4" />
@@ -339,9 +339,9 @@
       <span
         v-for="chip in summaryChips"
         :key="chip.label"
-        class="inline-flex items-center gap-1.5 rounded-sm border border-border bg-card px-2 py-1 text-xs font-medium text-muted-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+        class="inline-flex items-center gap-1.5 rounded-sm border border-border bg-card px-2 py-1 text-xs font-medium text-muted-foreground shadow-xs"
       >
-        <span class="h-1.5 w-1.5 rounded-full" :class="chip.dotClass" />
+        <span class="h-2 w-2 rounded-full" :class="chip.dotClass" />
         <span>{{ chip.label }}</span>
         <span class="text-foreground/70">{{ chip.value }}</span>
       </span>
@@ -349,7 +349,7 @@
 
     <div
       v-if="hasAnyResults"
-      class="mb-3 inline-flex rounded-sm border border-border bg-card p-1 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+      class="mb-3 inline-flex rounded-sm border border-border bg-card p-1 shadow-xs"
     >
       <button
         v-for="tab in tabItems"
@@ -367,7 +367,7 @@
 
     <section
       v-if="props.isLoading"
-      class="flex-1 overflow-auto rounded-sm border border-border bg-card p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+      class="flex-1 overflow-auto rounded-sm border border-border bg-card p-3 shadow-xs"
       :aria-label="`${props.title} loading`"
     >
       <div
@@ -575,7 +575,7 @@
 
     <section
       v-else-if="hasCountyScores && activeTab === 'counties'"
-      class="flex-1 overflow-auto rounded-sm border border-border bg-card p-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+      class="flex-1 overflow-auto rounded-sm border border-border bg-card p-2 shadow-xs"
     >
       <SpatialAnalysisCountyScoresSection
         :county-scores="countyScores"
@@ -587,7 +587,7 @@
 
     <section
       v-else-if="hasFacilities && activeTab === 'facilities'"
-      class="flex-1 overflow-auto rounded-sm border border-border bg-card shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+      class="flex-1 overflow-auto rounded-sm border border-border bg-card shadow-xs"
     >
       <SpatialAnalysisFacilitiesTable
         :facilities="orderedFacilities"
@@ -602,14 +602,14 @@
 
     <section
       v-else-if="hasParcels && activeTab === 'parcels'"
-      class="flex-1 overflow-auto rounded-sm border border-border bg-card shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+      class="flex-1 overflow-auto rounded-sm border border-border bg-card shadow-xs"
     >
       <SpatialAnalysisParcelTable :parcels="orderedParcels" />
     </section>
 
     <section
       v-else
-      class="flex-1 rounded-sm border border-dashed border-border bg-card px-3 py-6 text-center text-xs text-muted-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+      class="flex-1 rounded-sm border border-dashed border-border bg-card px-3 py-6 text-center text-xs text-muted-foreground shadow-xs"
     >
       {{ props.emptyMessage }}
     </section>
@@ -617,7 +617,7 @@
     <footer class="mt-3 flex items-center gap-2">
       <button
         type="button"
-        class="inline-flex h-[22px] flex-1 items-center justify-center gap-1.5 rounded-sm border border-border bg-background px-3 text-xs font-medium text-foreground/70 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+        class="inline-flex h-[22px] flex-1 items-center justify-center gap-1.5 rounded-sm border border-border bg-background px-3 text-xs font-medium text-foreground/70 shadow-xs transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
         :disabled="props.dashboardDisabled"
         @click="emit('open-dashboard')"
       >
@@ -626,7 +626,7 @@
       </button>
       <button
         type="button"
-        class="inline-flex h-[22px] items-center justify-center gap-1.5 rounded-sm border border-border bg-card px-3 text-xs font-normal text-muted-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-border hover:bg-background hover:text-foreground/70 disabled:cursor-not-allowed disabled:opacity-60"
+        class="inline-flex h-[22px] items-center justify-center gap-1.5 rounded-sm border border-border bg-card px-3 text-xs font-normal text-muted-foreground shadow-xs transition-colors hover:border-border hover:bg-background hover:text-foreground/70 disabled:cursor-not-allowed disabled:opacity-60"
         :disabled="props.exportDisabled"
         @click="emit('export')"
       >
@@ -635,7 +635,7 @@
       </button>
       <button
         type="button"
-        class="inline-flex h-[22px] items-center justify-center rounded-sm border border-border bg-card px-3 text-xs font-normal text-muted-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-border hover:bg-background hover:text-foreground/70"
+        class="inline-flex h-[22px] items-center justify-center rounded-sm border border-border bg-card px-3 text-xs font-normal text-muted-foreground shadow-xs transition-colors hover:border-border hover:bg-background hover:text-foreground/70"
         @click="emit('dismiss')"
       >
         {{ props.dismissLabel }}

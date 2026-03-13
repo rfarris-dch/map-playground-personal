@@ -1,6 +1,7 @@
 import type {
   FeatureStateTarget,
   IMap,
+  IMapMarker,
   LngLat,
   LngLatBounds,
   MapClickEvent,
@@ -53,6 +54,11 @@ export class FakeMap implements IMap {
   >();
   readonly addedSources = new Map<string, MapSourceSpecification>();
   readonly clickHandlers = new Set<(event: MapClickEvent) => void>();
+  readonly createdHtmlMarkers: Array<{
+    readonly element: HTMLElement;
+    readonly lngLat: LngLat;
+    readonly marker: IMapMarker;
+  }> = [];
   destroyed = false;
   readonly eventHandlers: Record<"load" | "moveend", Set<() => void>> = {
     load: new Set(),
@@ -103,6 +109,29 @@ export class FakeMap implements IMap {
 
   captureImage(): Promise<Blob> {
     return Promise.reject(new Error("captureImage not implemented in FakeMap"));
+  }
+
+  createHtmlMarker(element: HTMLElement, lngLat: LngLat): IMapMarker {
+    const markerState = {
+      lngLat,
+      removed: false,
+    };
+    const marker: IMapMarker = {
+      remove: () => {
+        markerState.removed = true;
+      },
+      setLngLat: (nextLngLat) => {
+        markerState.lngLat = nextLngLat;
+      },
+    };
+
+    this.createdHtmlMarkers.push({
+      element,
+      lngLat: markerState.lngLat,
+      marker,
+    });
+
+    return marker;
   }
 
   destroy(): void {

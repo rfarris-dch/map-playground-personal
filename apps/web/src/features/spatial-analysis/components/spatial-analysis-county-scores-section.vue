@@ -105,7 +105,9 @@
       <div class="grid gap-x-4 gap-y-2 text-xs sm:grid-cols-2 xl:grid-cols-5">
         <div>
           <div class="uppercase tracking-wide text-muted-foreground">Selected Counties</div>
-          <div class="text-lg font-semibold text-foreground/70">{{ requestedCountyIds.length }}</div>
+          <div class="text-lg font-semibold text-foreground/70">
+            {{ requestedCountyIds.length }}
+          </div>
         </div>
         <div>
           <div class="uppercase tracking-wide text-muted-foreground">Ranked</div>
@@ -149,7 +151,8 @@
                 class="rounded-sm border px-2.5 py-1 font-medium"
                 :class="confidenceToneClass(row.confidenceBadge)"
               >
-                {{ row.confidenceBadge.toUpperCase() }} confidence
+                {{ row.confidenceBadge.toUpperCase() }}
+                confidence
               </span>
             </div>
           </div>

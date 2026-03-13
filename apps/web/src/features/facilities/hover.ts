@@ -6,6 +6,8 @@ import {
 } from "@map-migration/contracts";
 import type { IMap, MapPointerEvent } from "@map-migration/map-engine";
 import { isFeatureId } from "@/features/facilities/facilities.service";
+import { createFacilityClusterSummary } from "@/features/facilities/facilities-cluster.service";
+import type { FacilityClusterSummary } from "@/features/facilities/facilities-cluster.types";
 import type {
   ClusterProviderSummary,
   FacilitiesHoverController,
@@ -136,26 +138,15 @@ function toHoverState(
 
 function aggregateClusterLeaves(
   leaves: readonly { properties: unknown }[],
-  totalFacilityCount: number,
-  perspective: FacilityPerspective,
-  clusterId: number,
-  screenPoint: readonly [number, number],
-  center: readonly [number, number]
+  clusterSummary: FacilityClusterSummary,
+  screenPoint: readonly [number, number]
 ): FacilityClusterHoverState {
-  let commissionedPowerMw = 0;
-  let underConstructionPowerMw = 0;
-  let plannedPowerMw = 0;
-
   const providerPowerMap = new Map<string, number>();
 
   for (const leaf of leaves) {
     const commissioned = readNullableNumberProperty(leaf.properties, "commissionedPowerMw") ?? 0;
     const uc = readNullableNumberProperty(leaf.properties, "underConstructionPowerMw") ?? 0;
     const planned = readNullableNumberProperty(leaf.properties, "plannedPowerMw") ?? 0;
-
-    commissionedPowerMw += commissioned;
-    underConstructionPowerMw += uc;
-    plannedPowerMw += planned;
 
     const providerName = readStringProperty(leaf.properties, "providerName") ?? "Unknown";
     const facilityTotal = commissioned + uc + planned;
@@ -167,18 +158,9 @@ function aggregateClusterLeaves(
     .sort((a, b) => b.totalPowerMw - a.totalPowerMw)
     .slice(0, 3);
 
-  const totalPowerMw = commissionedPowerMw + underConstructionPowerMw + plannedPowerMw;
-
   return {
-    center,
-    perspective,
-    facilityCount: totalFacilityCount,
-    commissionedPowerMw,
-    underConstructionPowerMw,
-    plannedPowerMw,
-    totalPowerMw,
+    ...clusterSummary,
     topProviders,
-    clusterId,
     screenPoint,
   };
 }
@@ -235,92 +217,40 @@ export function mountFacilitiesHover(
     clear();
   };
 
-  const onPointerMove = (event: MapPointerEvent): void => {
-    if (!(options.isInteractionEnabled?.() ?? true)) {
-      clear();
+  const toScreenPoint = (event: MapPointerEvent): readonly [number, number] => {
+    return [event.point[0], event.point[1]];
+  };
+
+  const isSameHoverTarget = (nextTarget: HoverTarget): boolean => {
+    return (
+      hoverTarget !== null &&
+      hoverTarget.sourceId === nextTarget.sourceId &&
+      hoverTarget.featureId === nextTarget.featureId
+    );
+  };
+
+  const setPointHover = (nextTarget: HoverTarget, nextHover: FacilityHoverState): void => {
+    if (isSameHoverTarget(nextTarget)) {
+      options.onHoverChange?.(nextHover);
       return;
     }
 
-    if (event.buttons > 0) {
-      clear();
-      return;
-    }
+    clearPointHover();
+    map.setFeatureState(
+      {
+        source: nextTarget.sourceId,
+        id: nextTarget.featureId,
+      },
+      { hover: true }
+    );
+    hoverTarget = nextTarget;
+    options.onHoverChange?.(nextHover);
+  };
 
-    const screenPoint: readonly [number, number] = [event.point[0], event.point[1]];
-
-    // Check cluster layers first
-    const clusterLayers = queryableClusterLayerIds();
-    if (clusterLayers.length > 0) {
-      const clusterFeatures = map.queryRenderedFeatures(event.point, {
-        layers: clusterLayers,
-      });
-
-      if (clusterFeatures.length > 0) {
-        const clusterFeature = clusterFeatures[0];
-        const clusterId = readNullableNumberProperty(clusterFeature.properties, "cluster_id");
-        const pointCount = readNullableNumberProperty(clusterFeature.properties, "point_count");
-        const layerId = clusterFeature.layer?.id ?? "";
-
-        if (clusterId !== null && pointCount !== null) {
-          // Clear point hover if active
-          if (hoverTarget !== null) {
-            clearPointHover();
-          }
-
-          // If already hovering this cluster, just update screen point
-          if (hoveredClusterId === clusterId) {
-            return;
-          }
-
-          hoveredClusterId = clusterId;
-          clusterFetchSequence += 1;
-          const currentSequence = clusterFetchSequence;
-
-          const perspective = perspectiveForClusterLayerId(layerId, options.perspectives);
-          if (perspective === null) {
-            return;
-          }
-
-          const sourceId = sourceIdForPerspective(perspective);
-
-          const geom = clusterFeature.geometry;
-          const clusterCenter: readonly [number, number] =
-            geom.type === "Point"
-              ? [geom.coordinates[0], geom.coordinates[1]]
-              : [event.lngLat.lng, event.lngLat.lat];
-
-          map
-            .getClusterLeaves(sourceId, clusterId, pointCount)
-            .then((leaves) => {
-              if (clusterFetchSequence !== currentSequence) {
-                return;
-              }
-
-              const clusterState = aggregateClusterLeaves(
-                leaves,
-                pointCount,
-                perspective,
-                clusterId,
-                screenPoint,
-                clusterCenter
-              );
-              options.onClusterHoverChange?.(clusterState);
-            })
-            .catch(() => {
-              // Silently ignore fetch failures
-            });
-
-          return;
-        }
-      }
-    }
-
-    // Clear cluster hover if we moved off a cluster
-    if (hoveredClusterId !== null) {
-      clearClusterHover();
-    }
-
-    // Check point layers
+  const handlePointPointerMove = (
+    event: MapPointerEvent,
+    screenPoint: readonly [number, number]
+  ): void => {
     const layers = queryablePointLayerIds();
     if (layers.length === 0) {
       clearPointHover();
@@ -337,35 +267,132 @@ export function mountFacilitiesHover(
         continue;
       }
 
-      const nextSourceId = sourceIdForPerspective(nextHover.perspective);
       const nextTarget: HoverTarget = {
-        sourceId: nextSourceId,
+        sourceId: sourceIdForPerspective(nextHover.perspective),
         featureId: feature.id,
       };
 
-      if (
-        hoverTarget !== null &&
-        hoverTarget.sourceId === nextTarget.sourceId &&
-        hoverTarget.featureId === nextTarget.featureId
-      ) {
-        options.onHoverChange?.(nextHover);
-        return;
-      }
-
-      clearPointHover();
-      map.setFeatureState(
-        {
-          source: nextTarget.sourceId,
-          id: nextTarget.featureId,
-        },
-        { hover: true }
-      );
-      hoverTarget = nextTarget;
-      options.onHoverChange?.(nextHover);
+      setPointHover(nextTarget, nextHover);
       return;
     }
 
     clearPointHover();
+  };
+
+  const readClusterCenter = (
+    event: MapPointerEvent,
+    clusterFeature: { geometry: { coordinates: readonly [number, number]; type: string } }
+  ): readonly [number, number] => {
+    if (clusterFeature.geometry.type === "Point") {
+      return [clusterFeature.geometry.coordinates[0], clusterFeature.geometry.coordinates[1]];
+    }
+
+    return [event.lngLat.lng, event.lngLat.lat];
+  };
+
+  const emitClusterHover = (args: {
+    readonly clusterFeature: {
+      geometry: { coordinates: readonly [number, number]; type: string };
+      layer?: { id?: string };
+      properties: unknown;
+    };
+    readonly clusterId: number;
+    readonly pointCount: number;
+    readonly screenPoint: readonly [number, number];
+    readonly event: MapPointerEvent;
+  }): boolean => {
+    const layerId = args.clusterFeature.layer?.id ?? "";
+    const perspective = perspectiveForClusterLayerId(layerId, options.perspectives);
+    if (perspective === null) {
+      return false;
+    }
+
+    hoveredClusterId = args.clusterId;
+    clusterFetchSequence += 1;
+    const currentSequence = clusterFetchSequence;
+    const sourceId = sourceIdForPerspective(perspective);
+    const clusterCenter = readClusterCenter(args.event, args.clusterFeature);
+    const clusterSummary = createFacilityClusterSummary({
+      center: clusterCenter,
+      clusterId: args.clusterId,
+      facilityCount: args.pointCount,
+      perspective,
+      properties: args.clusterFeature.properties,
+    });
+
+    map
+      .getClusterLeaves(sourceId, args.clusterId, args.pointCount)
+      .then((leaves) => {
+        if (clusterFetchSequence !== currentSequence) {
+          return;
+        }
+
+        options.onClusterHoverChange?.(
+          aggregateClusterLeaves(leaves, clusterSummary, args.screenPoint)
+        );
+      })
+      .catch(() => {
+        // Ignore transient cluster leaf fetch failures.
+      });
+
+    return true;
+  };
+
+  const handleClusterPointerMove = (
+    event: MapPointerEvent,
+    screenPoint: readonly [number, number]
+  ): boolean => {
+    const clusterLayers = queryableClusterLayerIds();
+    if (clusterLayers.length === 0) {
+      return false;
+    }
+
+    const clusterFeature = map.queryRenderedFeatures(event.point, {
+      layers: clusterLayers,
+    })[0];
+    if (typeof clusterFeature === "undefined") {
+      return false;
+    }
+
+    const clusterId = readNullableNumberProperty(clusterFeature.properties, "cluster_id");
+    const pointCount = readNullableNumberProperty(clusterFeature.properties, "point_count");
+    if (clusterId === null || pointCount === null) {
+      return false;
+    }
+
+    if (hoverTarget !== null) {
+      clearPointHover();
+    }
+
+    if (hoveredClusterId === clusterId) {
+      return true;
+    }
+
+    return emitClusterHover({
+      clusterFeature,
+      clusterId,
+      pointCount,
+      screenPoint,
+      event,
+    });
+  };
+
+  const onPointerMove = (event: MapPointerEvent): void => {
+    if (!(options.isInteractionEnabled?.() ?? true) || event.buttons > 0) {
+      clear();
+      return;
+    }
+
+    const screenPoint = toScreenPoint(event);
+    if (handleClusterPointerMove(event, screenPoint)) {
+      return;
+    }
+
+    if (hoveredClusterId !== null) {
+      clearClusterHover();
+    }
+
+    handlePointPointerMove(event, screenPoint);
   };
 
   map.onPointerMove(onPointerMove);

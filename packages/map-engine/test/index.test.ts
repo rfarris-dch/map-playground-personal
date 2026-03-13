@@ -142,14 +142,30 @@ class MapMock {
   }
 }
 
+class MarkerMock {
+  addTo(): this {
+    return this;
+  }
+
+  remove(): void {
+    /* noop */
+  }
+
+  setLngLat(): this {
+    return this;
+  }
+}
+
 mock.module("maplibre-gl", () => ({
   FullscreenControl: class {},
+  Marker: MarkerMock,
   NavigationControl: class {},
   ScaleControl: class {},
   addProtocol: addProtocolMock,
   default: {
     FullscreenControl: class {},
     Map: MapMock,
+    Marker: MarkerMock,
     NavigationControl: class {},
     ScaleControl: class {},
   },
