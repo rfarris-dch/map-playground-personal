@@ -78,7 +78,7 @@
 
 <template>
   <aside
-    class="pointer-events-auto absolute bottom-10 left-[420px] z-20 flex items-center gap-2 rounded-lg border border-white/30 bg-[#1e293b]/90 px-3 py-1.5 shadow-lg backdrop-blur-sm"
+    class="pointer-events-auto absolute bottom-10 left-[420px] z-20 flex items-center gap-2 rounded-lg border border-white/30 bg-foreground/90 px-3 py-1.5 shadow-lg backdrop-blur-sm"
     aria-label="Sketch and measure tools"
   >
     <!-- Tool buttons -->
@@ -86,7 +86,7 @@
       v-for="tool in tools"
       :key="tool.label"
       type="button"
-      class="rounded px-2 py-1 text-[11px] font-medium transition-colors"
+      class="rounded px-2 py-1 text-xs font-medium transition-colors"
       :class="tool.active ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white'"
       @click="tool.action()"
     >
@@ -96,7 +96,7 @@
     <div class="h-4 w-px bg-white/20" />
 
     <!-- Measurements -->
-    <span class="text-[10px] tabular-nums text-white/50">
+    <span class="text-xs tabular-nums text-white/50">
       {{ formatDistance(props.state.distanceKm) }}
       · {{ formatArea(props.state.areaSqKm) }}
     </span>
@@ -106,7 +106,7 @@
     <!-- Actions -->
     <button
       type="button"
-      class="rounded px-2 py-1 text-[11px] font-medium text-emerald-400 hover:bg-white/10 disabled:text-white/20"
+      class="rounded px-2 py-1 text-xs font-medium text-emerald-400 hover:bg-white/10 disabled:text-white/20"
       :disabled="props.state.mode !== 'area' || !props.state.canFinishArea"
       @click="emit('finish')"
     >
@@ -114,7 +114,7 @@
     </button>
     <button
       type="button"
-      class="rounded px-2 py-1 text-[11px] font-medium text-blue-400 hover:bg-white/10 disabled:text-white/20"
+      class="rounded px-2 py-1 text-xs font-medium text-blue-400 hover:bg-white/10 disabled:text-white/20"
       :disabled="props.state.completedAreaGeometry === null"
       @click="emit('use-as-selection')"
     >
@@ -122,13 +122,13 @@
     </button>
     <button
       type="button"
-      class="rounded px-2 py-1 text-[11px] font-medium text-white/60 hover:text-white"
+      class="rounded px-2 py-1 text-xs font-medium text-white/60 hover:text-white"
       @click="emit('clear')"
     >
       Clear
     </button>
 
     <!-- Helper -->
-    <span class="text-[10px] text-white/40">{{ helperText }}</span>
+    <span class="text-xs text-white/40">{{ helperText }}</span>
   </aside>
 </template>

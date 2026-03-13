@@ -42,11 +42,19 @@
       <Button variant="glass" size="sm" class="ml-auto" @click="onClose">Close</Button>
     </header>
 
-    <p v-if="props.isLoading" class="m-0 text-xs font-mono text-muted-foreground">
-      Loading detail...
-    </p>
-    <p v-else-if="props.isError" class="m-0 text-xs font-mono text-muted-foreground">
-      Detail load failed.
+    <div v-if="props.isLoading" class="space-y-3" role="status" aria-live="polite" aria-busy="true">
+      <div class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2">
+        <div class="h-3 w-16 animate-pulse rounded bg-muted/50" />
+        <div class="h-3 w-32 animate-pulse rounded bg-muted/40" />
+        <div class="h-3 w-14 animate-pulse rounded bg-muted/50" />
+        <div class="h-3 w-40 animate-pulse rounded bg-muted/40" />
+        <div class="h-3 w-16 animate-pulse rounded bg-muted/50" />
+        <div class="h-3 w-28 animate-pulse rounded bg-muted/40" />
+      </div>
+      <p class="m-0 text-xs text-muted-foreground">Loading facility detail...</p>
+    </div>
+    <p v-else-if="props.isError" class="m-0 text-xs text-muted-foreground">
+      Facility detail failed to load. Try selecting the facility again.
     </p>
     <template v-else-if="props.detail !== null">
       <dl class="m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-xs">

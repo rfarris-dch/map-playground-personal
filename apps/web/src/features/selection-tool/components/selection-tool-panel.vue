@@ -74,17 +74,17 @@
     <header class="mb-3 flex items-start justify-between gap-3">
       <div>
         <h2 class="m-0 text-sm font-semibold">Selection Tool</h2>
-        <p class="m-0 text-[11px] text-muted-foreground">{{ helperText }}</p>
+        <p class="m-0 text-xs text-muted-foreground">{{ helperText }}</p>
       </div>
       <span
-        class="map-glass-pill inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+        class="map-glass-pill inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium text-muted-foreground"
       >
         {{ panelStatus }}
       </span>
     </header>
 
     <section class="mb-3">
-      <p class="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         Entry Actions
       </p>
       <div class="grid gap-2 sm:grid-cols-2">
@@ -108,48 +108,48 @@
     </section>
 
     <section class="mb-3">
-      <p class="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         Current Shape
       </p>
       <div class="grid gap-2 sm:grid-cols-2">
         <div class="map-glass-card rounded-md px-3 py-2">
-          <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Shape</div>
+          <div class="text-xs uppercase tracking-wide text-muted-foreground">Shape</div>
           <div class="text-sm font-medium">
             {{ props.measureState.mode === "area" ? props.measureState.areaShape : "none" }}
           </div>
         </div>
         <div class="map-glass-card rounded-md px-3 py-2">
-          <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Status</div>
+          <div class="text-xs uppercase tracking-wide text-muted-foreground">Status</div>
           <div class="text-sm font-medium">
             {{ props.hasCompletedDraftSelection ? "Ready" : "In progress" }}
           </div>
         </div>
         <div class="map-glass-card rounded-md px-3 py-2">
-          <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Area</div>
+          <div class="text-xs uppercase tracking-wide text-muted-foreground">Area</div>
           <div class="text-sm font-medium tabular-nums">{{ selectionMetrics.areaText }}</div>
         </div>
         <div class="map-glass-card rounded-md px-3 py-2">
-          <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Vertices</div>
+          <div class="text-xs uppercase tracking-wide text-muted-foreground">Vertices</div>
           <div class="text-sm font-medium tabular-nums">{{ props.measureState.vertexCount }}</div>
         </div>
       </div>
     </section>
 
     <section class="mb-3">
-      <p class="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         Last Result
       </p>
       <div class="grid gap-2 sm:grid-cols-3">
         <div class="map-glass-card rounded-md px-3 py-2">
-          <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Facilities</div>
+          <div class="text-xs uppercase tracking-wide text-muted-foreground">Facilities</div>
           <div class="text-sm font-medium tabular-nums">{{ selectionMetrics.facilityCount }}</div>
         </div>
         <div class="map-glass-card rounded-md px-3 py-2">
-          <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Markets</div>
+          <div class="text-xs uppercase tracking-wide text-muted-foreground">Markets</div>
           <div class="text-sm font-medium tabular-nums">{{ selectionMetrics.marketCount }}</div>
         </div>
         <div class="map-glass-card rounded-md px-3 py-2">
-          <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Parcels</div>
+          <div class="text-xs uppercase tracking-wide text-muted-foreground">Parcels</div>
           <div class="text-sm font-medium tabular-nums">{{ selectionMetrics.parcelCount }}</div>
         </div>
       </div>

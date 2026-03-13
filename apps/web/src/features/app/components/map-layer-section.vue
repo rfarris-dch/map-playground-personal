@@ -7,17 +7,17 @@
 </script>
 
 <template>
-  <AccordionItem :value="props.value" class="border-b border-[#dde3ea] last:border-b-0">
+  <AccordionItem :value="props.value" class="border-b border-border last:border-b-0">
     <AccordionHeader>
       <AccordionTrigger
-        class="group flex w-full items-center justify-between gap-3 rounded-[4px] border border-transparent px-3 py-1 text-left transition-colors hover:border-[#E2E8F0] hover:bg-[#F8FAFC] data-[state=open]:border-[#E2E8F0] data-[state=open]:bg-[#F8FAFC] [&[data-state=open]>span>svg]:rotate-180"
+        class="group flex w-full items-center justify-between gap-3 rounded-sm border border-transparent px-3 py-1 text-left transition-colors hover:border-border hover:bg-background data-[state=open]:border-border data-[state=open]:bg-background [&[data-state=open]>span>svg]:rotate-180"
       >
         <span
-          class="text-[10px] font-semibold tracking-[0.01em] text-[#64748B] transition-colors group-data-[state=open]:text-[#475569]"
+          class="text-xs font-semibold tracking-[0.01em] text-foreground/70 transition-colors group-data-[state=open]:text-foreground/75"
           >{{ props.title }}</span
         >
         <span
-          class="flex h-4 w-4 items-center justify-center text-[#64748B] transition-colors group-data-[state=open]:text-[#475569]"
+          class="flex h-4 w-4 items-center justify-center text-foreground/70 transition-colors group-data-[state=open]:text-foreground/75"
         >
           <FilterChevronIcon class="shrink-0 transition-transform duration-200" />
         </span>

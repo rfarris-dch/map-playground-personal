@@ -35,13 +35,13 @@
     aria-label="Boundary hover details"
   >
     <header class="mb-1 flex items-center gap-2">
-      <span class="text-[11px] font-semibold uppercase tracking-wide">
+      <span class="text-xs font-semibold uppercase tracking-wide">
         {{ boundaryLabel(props.hoverState.boundaryId) }}
       </span>
-      <span class="text-[11px] text-muted-foreground"> {{ props.hoverState.regionName }} </span>
+      <span class="text-xs text-muted-foreground"> {{ props.hoverState.regionName }} </span>
     </header>
 
-    <dl class="m-0 grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-[11px] leading-tight">
+    <dl class="m-0 grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-xs leading-tight">
       <dt class="text-muted-foreground">Region ID</dt>
       <dd class="m-0 font-mono">{{ props.hoverState.regionId }}</dd>
 

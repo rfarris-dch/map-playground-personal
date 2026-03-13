@@ -1,5 +1,6 @@
 import { computed } from "vue";
 import type { PipelineDashboardModel } from "@/features/pipeline/components/pipeline-dashboard/pipeline-dashboard.types";
+import { orderPipelineStatesByAssetChain } from "@/features/pipeline/components/pipeline-dashboard/pipeline-dashboard-asset-chain.service";
 import {
   parseBuildProgress,
   parseDbLoadProgress,
@@ -48,6 +49,9 @@ export function usePipelineDashboard(dataset: PipelineDataset): PipelineDashboar
   const displayedWrittenCount = computed(() => normalizedRunProgress.value?.writtenCount ?? 0);
   const displayedExpectedCount = computed(() => normalizedRunProgress.value?.expectedCount ?? null);
   const stageSizeLabel = computed(() => parseFloodStageSizeLabel(run.value?.summary ?? null));
+  const assetChain = computed(
+    () => response.value?.dataset.assetChain ?? datasetDefinition.assetChain
+  );
 
   const stateProgressPercent = computed(() => {
     const progress = normalizedRunProgress.value;
@@ -72,7 +76,7 @@ export function usePipelineDashboard(dataset: PipelineDataset): PipelineDashboar
       return [];
     }
 
-    return [...run.value.states].sort((left, right) => left.state.localeCompare(right.state));
+    return orderPipelineStatesByAssetChain(run.value.states, assetChain.value);
   });
 
   const stateRows = computed(() => {

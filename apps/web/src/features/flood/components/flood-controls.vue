@@ -21,8 +21,8 @@
 
   const containerClass = computed(() =>
     props.embedded
-      ? "w-full [font-family:Inter,var(--font-sans)] text-[#94A3B8]"
-      : "w-full rounded-[4px] border border-[#E2E8F0] bg-white p-3 shadow-[0_4px_8px_rgba(0,0,0,0.06)] [font-family:Inter,var(--font-sans)] text-[#94A3B8]"
+      ? "w-full font-sans text-muted-foreground"
+      : "w-full rounded-sm border border-border bg-card p-3 shadow-[0_4px_8px_rgba(0,0,0,0.06)] font-sans text-muted-foreground"
   );
 
   const flood100Metadata = floodControlMetadata("flood-100");
@@ -48,10 +48,10 @@
 
   function rowClass(visible: boolean): string {
     if (visible) {
-      return "border-[#CBD5E1] bg-[#F8FAFC] shadow-[0_1px_2px_rgba(15,23,42,0.04)]";
+      return "border-border bg-background shadow-[0_1px_2px_rgba(15,23,42,0.04)]";
     }
 
-    return "border-transparent bg-white hover:border-[#E2E8F0] hover:bg-[#F8FAFC]";
+    return "border-transparent bg-card hover:border-border hover:bg-background";
   }
 </script>
 
@@ -59,35 +59,35 @@
   <aside :class="containerClass" aria-label="Flood risk layers">
     <div class="grid gap-2">
       <label
-        class="group flex cursor-pointer items-start gap-2 rounded-[4px] border px-3 py-1 transition-colors"
+        class="group flex min-h-[44px] cursor-pointer items-start gap-2 rounded-sm border px-3 py-2 transition-colors focus-within:ring-2 focus-within:ring-primary/40 focus-within:outline-none"
         :class="rowClass(props.flood100Visible)"
       >
         <input
-          class="mt-[1px] h-[10px] w-[10px] rounded-[2px] border border-[#CBD5E1] accent-[#94A3B8]"
+          class="mt-[1px] h-4 w-4 shrink-0 rounded-sm border border-border accent-muted-foreground"
           type="checkbox"
           :checked="props.flood100Visible"
           @change="onToggleFlood100"
         >
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-2">
-            <span class="h-2 w-2 rounded-full bg-[#60A5FA]" aria-hidden="true" />
+            <span class="h-2 w-2 rounded-full bg-blue-400" aria-hidden="true" />
             <span
-              class="text-[10px] font-semibold transition-colors"
-              :class="props.flood100Visible ? 'text-[#64748B]' : 'text-[#94A3B8]'"
+              class="text-xs font-semibold transition-colors"
+              :class="props.flood100Visible ? 'text-foreground/70' : 'text-muted-foreground'"
             >
               {{ flood100Metadata.label }}
             </span>
           </div>
           <p
-            class="mt-1 break-words text-[10px] transition-colors"
-            :class="props.flood100Visible ? 'text-[#64748B]' : 'text-[#94A3B8]'"
+            class="mt-1 break-words text-xs transition-colors"
+            :class="props.flood100Visible ? 'text-foreground/70' : 'text-muted-foreground'"
           >
             {{ flood100Metadata.description }}
           </p>
           <p
             v-if="props.showFlood100ZoomHint"
-            class="mt-1 break-words text-[10px] transition-colors"
-            :class="props.flood100Visible ? 'text-[#64748B]' : 'text-[#94A3B8]'"
+            class="mt-1 break-words text-xs transition-colors"
+            :class="props.flood100Visible ? 'text-foreground/70' : 'text-muted-foreground'"
           >
             Zoom in to view.
           </p>
@@ -95,35 +95,35 @@
       </label>
 
       <label
-        class="group flex cursor-pointer items-start gap-2 rounded-[4px] border px-3 py-1 transition-colors"
+        class="group flex min-h-[44px] cursor-pointer items-start gap-2 rounded-sm border px-3 py-2 transition-colors focus-within:ring-2 focus-within:ring-primary/40 focus-within:outline-none"
         :class="rowClass(props.flood500Visible)"
       >
         <input
-          class="mt-[1px] h-[10px] w-[10px] rounded-[2px] border border-[#CBD5E1] accent-[#94A3B8]"
+          class="mt-[1px] h-4 w-4 shrink-0 rounded-sm border border-border accent-muted-foreground"
           type="checkbox"
           :checked="props.flood500Visible"
           @change="onToggleFlood500"
         >
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-2">
-            <span class="h-2 w-2 rounded-full bg-[#2563EB]" aria-hidden="true" />
+            <span class="h-2 w-2 rounded-full bg-blue-600" aria-hidden="true" />
             <span
-              class="text-[10px] font-semibold transition-colors"
-              :class="props.flood500Visible ? 'text-[#64748B]' : 'text-[#94A3B8]'"
+              class="text-xs font-semibold transition-colors"
+              :class="props.flood500Visible ? 'text-foreground/70' : 'text-muted-foreground'"
             >
               {{ flood500Metadata.label }}
             </span>
           </div>
           <p
-            class="mt-1 break-words text-[10px] transition-colors"
-            :class="props.flood500Visible ? 'text-[#64748B]' : 'text-[#94A3B8]'"
+            class="mt-1 break-words text-xs transition-colors"
+            :class="props.flood500Visible ? 'text-foreground/70' : 'text-muted-foreground'"
           >
             {{ flood500Metadata.description }}
           </p>
           <p
             v-if="props.showFlood500ZoomHint"
-            class="mt-1 break-words text-[10px] transition-colors"
-            :class="props.flood500Visible ? 'text-[#64748B]' : 'text-[#94A3B8]'"
+            class="mt-1 break-words text-xs transition-colors"
+            :class="props.flood500Visible ? 'text-foreground/70' : 'text-muted-foreground'"
           >
             Zoom in to view.
           </p>

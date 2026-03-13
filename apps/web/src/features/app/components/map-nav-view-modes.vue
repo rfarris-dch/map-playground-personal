@@ -53,22 +53,22 @@
 </script>
 
 <template>
-  <div class="flex items-end bg-white px-1 py-2">
-    <div class="flex h-[38px] items-center gap-1 rounded-full bg-[#F8FAFC] p-2">
+  <div class="flex items-end bg-card px-1 py-2">
+    <div class="flex h-[38px] items-center gap-1 rounded-full bg-background p-2">
       <button
         v-for="mode in modes"
         :key="mode.id"
         type="button"
-        class="flex h-[22px] cursor-pointer items-center gap-1 px-1.5 py-0.5 transition-colors"
+        class="flex h-[22px] cursor-pointer items-center gap-1 px-1.5 py-0.5 transition-colors focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
         :class="
           props.activeMode === mode.id
-            ? 'rounded-full bg-[#647287] text-white'
-            : 'rounded-[4px] text-[#94A3B8] hover:text-[#64748B]'
+            ? 'rounded-full bg-foreground/65 text-white'
+            : 'rounded-sm text-muted-foreground hover:text-foreground/70'
         "
         @click="selectMode(mode.id)"
       >
         <MapNavIcon :name="mode.id" :class="iconSizeClasses[mode.id]" class="shrink-0" />
-        <span class="text-[10px] leading-none">{{ mode.label }}</span>
+        <span class="text-xs leading-none">{{ mode.label }}</span>
       </button>
     </div>
   </div>

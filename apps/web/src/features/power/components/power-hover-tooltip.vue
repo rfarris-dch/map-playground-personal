@@ -31,18 +31,18 @@
     aria-label="Power hover details"
   >
     <header class="mb-1 flex items-center gap-2">
-      <span class="text-[11px] font-semibold uppercase tracking-wide">
+      <span class="text-xs font-semibold uppercase tracking-wide">
         {{ props.hoverState.layerLabel }}
       </span>
       <span
         v-if="props.hoverState.name !== null"
-        class="max-w-52 truncate text-[11px] text-muted-foreground"
+        class="max-w-52 truncate text-xs text-muted-foreground"
       >
         {{ props.hoverState.name }}
       </span>
     </header>
 
-    <dl class="m-0 grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-[11px] leading-tight">
+    <dl class="m-0 grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-xs leading-tight">
       <template v-if="props.hoverState.name !== null">
         <dt class="text-muted-foreground">Name</dt>
         <dd class="m-0 break-words">{{ props.hoverState.name }}</dd>

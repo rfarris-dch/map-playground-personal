@@ -155,7 +155,7 @@
     class="rounded-xl border border-border/80 bg-card/95 p-4 shadow-sm"
   >
     <header class="mb-2 flex items-center justify-between">
-      <h2 class="m-0 text-sm font-semibold">Tile Build Progress</h2>
+      <h2 class="m-0 text-sm font-semibold">Planetiler Build Progress</h2>
       <span class="text-xs font-mono text-muted-foreground"> {{ buildPercentLabel }} </span>
     </header>
     <p class="text-xs">

@@ -95,7 +95,7 @@
   <div v-if="props.active" class="pointer-events-none absolute inset-0 z-20">
     <div
       v-if="hiddenCount > 0"
-      class="map-glass-pill absolute right-4 top-4 rounded-full px-2 py-1 text-[10px] font-medium text-muted-foreground"
+      class="map-glass-pill absolute right-4 top-4 rounded-full px-2 py-1 text-xs font-medium text-muted-foreground"
     >
       Showing top {{ cards.length }} of {{ cards.length + hiddenCount }}
     </div>
@@ -103,7 +103,7 @@
     <article
       v-for="card in cards"
       :key="card.id"
-      class="map-glass-panel-soft absolute max-w-[190px] rounded-md px-2 py-1.5 text-[11px]"
+      class="map-glass-panel-soft absolute max-w-[min(190px,calc(100vw-2rem))] rounded-md px-2 py-1.5 text-xs"
       :style="{
         left: `${card.screenX}px`,
         top: `${card.screenY}px`,
@@ -117,7 +117,7 @@
         <p class="m-0 truncate font-semibold">{{ card.facilityName }}</p>
       </header>
       <p class="m-0 truncate text-muted-foreground">{{ card.providerName }}</p>
-      <p class="m-0 mt-1 text-[10px] text-muted-foreground">
+      <p class="m-0 mt-1 text-xs text-muted-foreground">
         {{ formatScannerPowerMw(card.commissionedPowerMw ?? 0) }}
       </p>
     </article>

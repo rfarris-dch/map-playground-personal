@@ -78,29 +78,31 @@
     <div v-if="hasActiveFilters" class="flex items-center justify-end px-2 pt-1">
       <button
         type="button"
-        class="text-[10px] font-medium text-[#647287] transition-colors hover:text-[#334155]"
+        class="min-h-[44px] text-xs font-medium text-foreground/65 transition-colors hover:text-foreground/85 focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
         @click="clearAll"
       >
         Clear all
       </button>
     </div>
 
-    <section class="flex flex-col">
-      <div class="flex h-7 items-center bg-white px-2">
-        <span class="text-[10px] font-normal leading-none text-[#64748B]">FACILITY STATUS</span>
+    <section class="flex flex-col" role="group" aria-label="Facility status filters">
+      <div class="flex h-7 items-center bg-card px-2">
+        <span class="text-xs font-normal leading-none text-foreground/70">FACILITY STATUS</span>
       </div>
       <div class="flex flex-col">
         <label
           v-for="opt in statusOptions"
           :key="opt.id"
-          class="flex h-9 cursor-pointer items-center gap-2.5 px-3 transition-colors hover:bg-[#F8FAFC]"
+          class="flex min-h-[44px] cursor-pointer items-center gap-2.5 px-3 transition-colors hover:bg-background focus-within:ring-2 focus-within:ring-primary/40 focus-within:outline-none"
+          role="checkbox"
+          :aria-checked="activeStatuses.has(opt.id)"
         >
           <span
-            class="flex size-[14px] shrink-0 items-center justify-center rounded-[3px] border transition-colors"
+            class="flex size-[14px] shrink-0 items-center justify-center rounded-sm border transition-colors"
             :class="
               activeStatuses.has(opt.id)
-                ? 'border-[#647287] bg-[#647287]'
-                : 'border-[#CBD5E1] bg-white'
+                ? 'border-foreground/65 bg-foreground/65'
+                : 'border-border bg-white'
             "
           >
             <svg
@@ -119,8 +121,8 @@
             </svg>
           </span>
           <span
-            class="text-[13px] leading-none"
-            :class="activeStatuses.has(opt.id) ? 'text-[#334155]' : 'text-[#64748B]'"
+            class="text-sm leading-none"
+            :class="activeStatuses.has(opt.id) ? 'text-foreground/85' : 'text-foreground/70'"
             >{{ opt.label }}</span
           >
           <input
@@ -133,24 +135,24 @@
       </div>
     </section>
 
-    <div class="mx-2 h-px bg-[#E2E8F0]" />
+    <div class="mx-2 h-px bg-border" />
 
-    <section class="flex flex-col">
-      <div class="flex h-7 items-center bg-white px-2">
-        <span class="text-[10px] font-normal leading-none text-[#64748B]">PROVIDERS</span>
+    <section class="flex flex-col" role="group" aria-label="Provider filters">
+      <div class="flex h-7 items-center bg-card px-2">
+        <span class="text-xs font-normal leading-none text-foreground/70">PROVIDERS</span>
       </div>
       <div v-if="providers.length > 0" class="flex max-h-[200px] flex-col gap-0.5 overflow-y-auto">
         <label
           v-for="name in providers"
           :key="name"
-          class="flex h-9 cursor-pointer items-center gap-2.5 px-3 transition-colors hover:bg-[#F8FAFC]"
+          class="flex min-h-[44px] cursor-pointer items-center gap-2.5 px-3 transition-colors hover:bg-background focus-within:ring-2 focus-within:ring-primary/40 focus-within:outline-none"
         >
           <span
-            class="flex size-[14px] shrink-0 items-center justify-center rounded-[3px] border transition-colors"
+            class="flex size-[14px] shrink-0 items-center justify-center rounded-sm border transition-colors"
             :class="
               activeProviders.has(name)
-                ? 'border-[#647287] bg-[#647287]'
-                : 'border-[#CBD5E1] bg-white'
+                ? 'border-foreground/65 bg-foreground/65'
+                : 'border-border bg-white'
             "
           >
             <svg
@@ -169,8 +171,8 @@
             </svg>
           </span>
           <span
-            class="truncate text-[13px] leading-none"
-            :class="activeProviders.has(name) ? 'text-[#334155]' : 'text-[#64748B]'"
+            class="truncate text-sm leading-none"
+            :class="activeProviders.has(name) ? 'text-foreground/85' : 'text-foreground/70'"
             >{{ name }}</span
           >
           <input
@@ -182,15 +184,15 @@
         </label>
       </div>
       <div v-else class="px-3 py-2">
-        <span class="text-[11px] italic text-[#94A3B8]">Zoom in to see providers</span>
+        <span class="text-xs italic text-muted-foreground">Zoom in to see providers</span>
       </div>
     </section>
 
-    <div class="mx-2 h-px bg-[#E2E8F0]" />
+    <div class="mx-2 h-px bg-border" />
 
-    <section class="flex flex-col">
-      <div class="flex h-7 items-center bg-white px-2">
-        <span class="text-[10px] font-normal leading-none text-[#64748B]"
+    <section class="flex flex-col" role="group" aria-label="Transmission voltage filters">
+      <div class="flex h-7 items-center bg-card px-2">
+        <span class="text-xs font-normal leading-none text-foreground/70"
           >TRANSMISSION VOLTAGE</span
         >
       </div>
@@ -198,21 +200,21 @@
         <label
           v-for="opt in voltageOptions"
           :key="opt.id"
-          class="flex h-9 cursor-pointer items-center gap-2.5 px-3 transition-colors hover:bg-[#F8FAFC]"
+          class="flex min-h-[44px] cursor-pointer items-center gap-2.5 px-3 transition-colors hover:bg-background focus-within:ring-2 focus-within:ring-primary/40 focus-within:outline-none"
         >
           <span
             class="flex size-[14px] shrink-0 items-center justify-center rounded-full border transition-colors"
             :class="
               activeVoltageId === opt.id
-                ? 'border-[#647287] bg-[#647287]'
-                : 'border-[#CBD5E1] bg-white'
+                ? 'border-foreground/65 bg-foreground/65'
+                : 'border-border bg-white'
             "
           >
-            <span v-if="activeVoltageId === opt.id" class="size-[6px] rounded-full bg-white" />
+            <span v-if="activeVoltageId === opt.id" class="size-[6px] rounded-full bg-card" />
           </span>
           <span
-            class="text-[13px] leading-none"
-            :class="activeVoltageId === opt.id ? 'text-[#334155]' : 'text-[#64748B]'"
+            class="text-sm leading-none"
+            :class="activeVoltageId === opt.id ? 'text-foreground/85' : 'text-foreground/70'"
             >{{ opt.label }}</span
           >
           <input

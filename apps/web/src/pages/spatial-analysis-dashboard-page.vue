@@ -155,7 +155,7 @@
       >
         <div class="space-y-2">
           <div
-            class="inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground"
+            class="inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground"
           >
             <Clock3 class="h-3.5 w-3.5" />
             Spatial Analysis

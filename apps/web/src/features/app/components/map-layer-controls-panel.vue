@@ -105,12 +105,12 @@
   <!-- Collapsed sidebar -->
   <nav
     v-if="!props.isOpen"
-    class="pointer-events-auto absolute left-0 top-0 z-30 flex h-full flex-col items-start border-r border-[#E2E8F0] bg-white px-2 py-4 [font-family:Inter,var(--font-sans)]"
+    class="pointer-events-auto absolute left-0 top-0 z-30 flex h-full flex-col items-start border-r border-border bg-card px-2 py-4 font-sans"
     aria-label="Map navigation"
   >
     <button
       type="button"
-      class="flex items-center gap-1 rounded-[4px] p-2 text-[#64748B] transition-colors hover:bg-[#F8FAFC] hover:text-[#475569]"
+      class="flex items-center gap-1 rounded-sm p-2 text-foreground/70 transition-colors hover:bg-background hover:text-foreground/75"
       aria-label="Open layers panel"
       @click="openAs('layers')"
     >
@@ -124,7 +124,7 @@
 
     <button
       type="button"
-      class="flex items-center gap-1 rounded-[4px] p-2 text-[#64748B] transition-colors hover:bg-[#F8FAFC] hover:text-[#475569]"
+      class="flex items-center gap-1 rounded-sm p-2 text-foreground/70 transition-colors hover:bg-background hover:text-foreground/75"
       aria-label="Open filters panel"
       @click="openAs('filters')"
     >
@@ -140,26 +140,26 @@
   <!-- Expanded sidebar -->
   <aside
     v-else
-    class="pointer-events-auto absolute left-0 top-0 z-30 flex h-full w-[408px] flex-col overflow-hidden border-r border-[#E2E8F0] bg-white p-4 [font-family:Inter,var(--font-sans)]"
+    class="pointer-events-auto absolute left-0 top-0 z-30 flex h-full w-[min(408px,100vw)] flex-col overflow-hidden border-r border-border bg-card p-4 font-sans"
     aria-label="Map layers panel"
   >
     <div class="flex h-full flex-col">
-      <header class="flex h-10 items-center justify-between bg-white px-2">
+      <header class="flex h-10 items-center justify-between bg-card px-2">
         <div class="flex items-center gap-2">
-          <span class="flex size-6 items-center justify-center text-[#334155]">
+          <span class="flex size-6 items-center justify-center text-foreground/85">
             <MapNavIcon
               :name="activeTab === 'layers' ? 'layers' : 'filter'"
               :class="activeTab === 'layers' ? 'h-[14px] w-4' : 'h-[14px] w-[14px]'"
             />
           </span>
-          <span class="text-sm font-medium leading-none text-[#334155]">
+          <span class="text-sm font-medium leading-none text-foreground/85">
             {{ activeTab === 'layers' ? 'Layers' : 'Filters' }}
           </span>
         </div>
 
         <button
           type="button"
-          class="flex size-4 items-center justify-center rounded-[4px] text-[#64748B] transition-colors hover:bg-[#F8FAFC] hover:text-[#475569]"
+          class="flex size-4 items-center justify-center rounded-sm text-foreground/70 transition-colors hover:bg-background hover:text-foreground/75"
           aria-label="Collapse panel"
           @click="togglePanel"
         >
@@ -167,12 +167,12 @@
         </button>
       </header>
 
-      <div class="h-px w-full bg-[#E2E8F0]" />
+      <div class="h-px w-full bg-border" />
 
       <div v-if="activeTab === 'layers'" class="flex-1 overflow-y-auto pt-2">
         <section class="flex flex-col">
-          <div class="flex h-7 items-center bg-white px-2">
-            <span class="text-[10px] font-normal leading-none text-[#64748B]">FACILITIES</span>
+          <div class="flex h-7 items-center bg-card px-2">
+            <span class="text-xs font-normal leading-none text-foreground/70">FACILITIES</span>
           </div>
 
           <MapNavLayerRow
@@ -198,19 +198,19 @@
           <MapNavLayerRow label="Hyperscale Leased" :actionable="false" :visible="true" />
         </section>
 
-        <div class="my-0 h-px w-full bg-[#E2E8F0]" />
+        <div class="my-0 h-px w-full bg-border" />
 
         <section class="flex flex-col">
-          <div class="flex h-7 items-center bg-white px-2">
-            <span class="text-[10px] font-normal leading-none text-[#64748B]">INFRASTRUCTURE</span>
+          <div class="flex h-7 items-center bg-card px-2">
+            <span class="text-xs font-normal leading-none text-foreground/70">INFRASTRUCTURE</span>
           </div>
 
           <!-- Fiber Routes (expandable) -->
-          <div class="flex h-10 items-center bg-white px-2 transition-colors hover:bg-[#F8FAFC]">
+          <div class="flex h-10 items-center bg-card px-2 transition-colors hover:bg-background">
             <div class="flex w-full items-center justify-between">
-              <button type="button" class="flex items-center gap-2" @click="toggleFiberExpanded">
+              <button type="button" class="flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none" @click="toggleFiberExpanded">
                 <svg
-                  class="h-[5px] w-2 text-[#64748B] transition-transform"
+                  class="h-[5px] w-2 text-foreground/70 transition-transform"
                   :class="fiberExpanded ? 'rotate-180' : 'rotate-90'"
                   width="8"
                   height="5"
@@ -226,24 +226,24 @@
                     stroke-linejoin="round"
                   />
                 </svg>
-                <span class="h-3 w-3 rounded-full bg-[#EEEEEE]" aria-hidden="true" />
+                <span class="h-3 w-3 rounded-full bg-muted" aria-hidden="true" />
                 <span
                   class="text-sm font-medium leading-none"
-                  :class="fiberRoutesVisible ? 'text-[#334155]' : 'text-[#64748B]'"
+                  :class="fiberRoutesVisible ? 'text-foreground/85' : 'text-foreground/70'"
                   >Fiber Routes</span
                 >
               </button>
 
               <button
                 type="button"
-                class="flex size-6 items-center justify-center rounded-[4px] transition-colors hover:bg-[#F8FAFC]"
+                class="flex size-6 items-center justify-center rounded-sm transition-colors hover:bg-background"
                 :aria-label="`${fiberRoutesVisible ? 'Hide' : 'Show'} Fiber Routes`"
                 @click="toggleFiberRoutes"
               >
                 <MapNavIcon
                   name="eye"
                   class="h-[9.672px] w-4"
-                  :class="fiberRoutesVisible ? 'text-[#475569]' : 'text-[#94A3B8]'"
+                  :class="fiberRoutesVisible ? 'text-foreground/75' : 'text-muted-foreground'"
                 />
               </button>
             </div>
@@ -252,26 +252,26 @@
           <!-- Fiber sub-rows -->
           <div v-if="fiberExpanded" class="flex flex-col pl-4">
             <!-- Metro -->
-            <div class="flex h-10 items-center bg-white px-2 transition-colors hover:bg-[#F8FAFC]">
+            <div class="flex h-10 items-center bg-card px-2 transition-colors hover:bg-background">
               <div class="flex w-full items-center justify-between">
                 <div class="flex items-center gap-2">
-                  <span class="h-3 w-3 rounded-full bg-[#EC4899]" aria-hidden="true" />
+                  <span class="h-3 w-3 rounded-full bg-pink-500" aria-hidden="true" />
                   <span
                     class="text-sm font-medium leading-none"
-                    :class="props.visibleFiberLayers.metro ? 'text-[#334155]' : 'text-[#64748B]'"
+                    :class="props.visibleFiberLayers.metro ? 'text-foreground/85' : 'text-foreground/70'"
                     >Metro</span
                   >
                 </div>
                 <button
                   type="button"
-                  class="flex size-6 items-center justify-center rounded-[4px] transition-colors hover:bg-[#F8FAFC]"
+                  class="flex size-6 items-center justify-center rounded-sm transition-colors hover:bg-background"
                   :aria-label="`${props.visibleFiberLayers.metro ? 'Hide' : 'Show'} Metro`"
                   @click="toggleFiberLine('metro')"
                 >
                   <MapNavIcon
                     name="eye"
                     class="h-[9.672px] w-4"
-                    :class="props.visibleFiberLayers.metro ? 'text-[#475569]' : 'text-[#94A3B8]'"
+                    :class="props.visibleFiberLayers.metro ? 'text-foreground/75' : 'text-muted-foreground'"
                   />
                 </button>
               </div>
@@ -285,14 +285,14 @@
               <label
                 v-for="layer in props.fiberSourceLayerOptions.metro"
                 :key="layer.layerName"
-                class="flex h-7 cursor-pointer items-center gap-2 rounded-[4px] px-1 transition-colors hover:bg-[#F8FAFC]"
+                class="flex h-7 cursor-pointer items-center gap-2 rounded-sm px-1 transition-colors hover:bg-background"
               >
                 <span
-                  class="flex size-[14px] shrink-0 items-center justify-center rounded-[3px] border transition-colors"
+                  class="flex size-[14px] shrink-0 items-center justify-center rounded-sm border transition-colors"
                   :class="
                     isFiberSourceLayerSelected('metro', layer.layerName)
-                      ? 'border-[#647287] bg-[#647287]'
-                      : 'border-[#CBD5E1] bg-white'
+                      ? 'border-foreground/65 bg-foreground/65'
+                      : 'border-border bg-white'
                   "
                 >
                   <svg
@@ -317,8 +317,8 @@
                   aria-hidden="true"
                 />
                 <span
-                  class="min-w-0 flex-1 truncate text-[11px] leading-none"
-                  :class="isFiberSourceLayerSelected('metro', layer.layerName) ? 'text-[#64748B]' : 'text-[#64748B]'"
+                  class="min-w-0 flex-1 truncate text-xs leading-none"
+                  :class="isFiberSourceLayerSelected('metro', layer.layerName) ? 'text-foreground/70' : 'text-foreground/70'"
                   >{{ layer.label }}</span
                 >
                 <input
@@ -331,26 +331,26 @@
             </div>
 
             <!-- Longhaul -->
-            <div class="flex h-10 items-center bg-white px-2 transition-colors hover:bg-[#F8FAFC]">
+            <div class="flex h-10 items-center bg-card px-2 transition-colors hover:bg-background">
               <div class="flex w-full items-center justify-between">
                 <div class="flex items-center gap-2">
-                  <span class="h-3 w-3 rounded-full bg-[#06B6D4]" aria-hidden="true" />
+                  <span class="h-3 w-3 rounded-full bg-cyan-500" aria-hidden="true" />
                   <span
                     class="text-sm font-medium leading-none"
-                    :class="props.visibleFiberLayers.longhaul ? 'text-[#334155]' : 'text-[#64748B]'"
+                    :class="props.visibleFiberLayers.longhaul ? 'text-foreground/85' : 'text-foreground/70'"
                     >Longhaul</span
                   >
                 </div>
                 <button
                   type="button"
-                  class="flex size-6 items-center justify-center rounded-[4px] transition-colors hover:bg-[#F8FAFC]"
+                  class="flex size-6 items-center justify-center rounded-sm transition-colors hover:bg-background"
                   :aria-label="`${props.visibleFiberLayers.longhaul ? 'Hide' : 'Show'} Longhaul`"
                   @click="toggleFiberLine('longhaul')"
                 >
                   <MapNavIcon
                     name="eye"
                     class="h-[9.672px] w-4"
-                    :class="props.visibleFiberLayers.longhaul ? 'text-[#475569]' : 'text-[#94A3B8]'"
+                    :class="props.visibleFiberLayers.longhaul ? 'text-foreground/75' : 'text-muted-foreground'"
                   />
                 </button>
               </div>
@@ -364,14 +364,14 @@
               <label
                 v-for="layer in props.fiberSourceLayerOptions.longhaul"
                 :key="layer.layerName"
-                class="flex h-7 cursor-pointer items-center gap-2 rounded-[4px] px-1 transition-colors hover:bg-[#F8FAFC]"
+                class="flex h-7 cursor-pointer items-center gap-2 rounded-sm px-1 transition-colors hover:bg-background"
               >
                 <span
-                  class="flex size-[14px] shrink-0 items-center justify-center rounded-[3px] border transition-colors"
+                  class="flex size-[14px] shrink-0 items-center justify-center rounded-sm border transition-colors"
                   :class="
                     isFiberSourceLayerSelected('longhaul', layer.layerName)
-                      ? 'border-[#647287] bg-[#647287]'
-                      : 'border-[#CBD5E1] bg-white'
+                      ? 'border-foreground/65 bg-foreground/65'
+                      : 'border-border bg-white'
                   "
                 >
                   <svg
@@ -396,8 +396,8 @@
                   aria-hidden="true"
                 />
                 <span
-                  class="min-w-0 flex-1 truncate text-[11px] leading-none"
-                  :class="isFiberSourceLayerSelected('longhaul', layer.layerName) ? 'text-[#64748B]' : 'text-[#64748B]'"
+                  class="min-w-0 flex-1 truncate text-xs leading-none"
+                  :class="isFiberSourceLayerSelected('longhaul', layer.layerName) ? 'text-foreground/70' : 'text-foreground/70'"
                   >{{ layer.label }}</span
                 >
                 <input
@@ -432,11 +432,11 @@
           />
         </section>
 
-        <div class="my-0 h-px w-full bg-[#E2E8F0]" />
+        <div class="my-0 h-px w-full bg-border" />
 
         <section class="flex flex-col">
-          <div class="flex h-7 items-center bg-white px-2">
-            <span class="text-[10px] font-normal leading-none text-[#64748B]">ENVIRONMENTAL</span>
+          <div class="flex h-7 items-center bg-card px-2">
+            <span class="text-xs font-normal leading-none text-foreground/70">ENVIRONMENTAL</span>
           </div>
 
           <MapNavLayerRow
@@ -461,11 +461,11 @@
           />
         </section>
 
-        <div class="my-0 h-px w-full bg-[#E2E8F0]" />
+        <div class="my-0 h-px w-full bg-border" />
 
         <section class="flex flex-col pb-4">
-          <div class="flex h-7 items-center bg-white px-2">
-            <span class="text-[10px] font-normal leading-none text-[#64748B]">BASEMAP</span>
+          <div class="flex h-7 items-center bg-card px-2">
+            <span class="text-xs font-normal leading-none text-foreground/70">BASEMAP</span>
           </div>
 
           <MapNavLayerRow

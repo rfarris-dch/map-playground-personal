@@ -38,7 +38,7 @@
 
       <DropdownMenuContent align="start" class="w-56 p-2">
         <p
-          class="px-1 pb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"
+          class="px-1 pb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
         >
           Current map view
         </p>
@@ -66,7 +66,7 @@
       <EyeOff v-if="props.quickViewActive" class="mr-1.5 h-3.5 w-3.5" />
       <Eye v-else class="mr-1.5 h-3.5 w-3.5" />
       Quick View
-      <span class="ml-1 text-[10px] text-muted-foreground">(G)</span>
+      <span class="ml-1 text-xs text-muted-foreground">(G)</span>
     </Button>
     <Button
       size="sm"
@@ -94,7 +94,7 @@
     >
       <ScanSearch class="mr-1.5 h-3.5 w-3.5" />
       Scanner
-      <span class="ml-1 text-[10px] text-muted-foreground">(V)</span>
+      <span class="ml-1 text-xs text-muted-foreground">(V)</span>
     </Button>
   </div>
 </template>

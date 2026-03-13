@@ -54,24 +54,17 @@
     return formatPower(powerMw);
   }
 
+  const STATUS_TONE_MAP: Record<string, string> = {
+    emerald: "border-emerald-500/25 bg-emerald-500/10 text-emerald-800",
+    amber: "border-amber-500/25 bg-amber-500/10 text-amber-800",
+    cyan: "border-cyan-500/25 bg-cyan-500/10 text-cyan-800",
+    rose: "border-rose-500/25 bg-rose-500/10 text-rose-800",
+  };
+
+  const STATUS_TONE_DEFAULT = "border-muted-foreground/25 bg-muted text-foreground/70";
+
   function statusToneClass(tone: string): string {
-    if (tone === "emerald") {
-      return "border-emerald-500/25 bg-emerald-500/10 text-emerald-800";
-    }
-
-    if (tone === "amber") {
-      return "border-amber-500/25 bg-amber-500/10 text-amber-800";
-    }
-
-    if (tone === "cyan") {
-      return "border-cyan-500/25 bg-cyan-500/10 text-cyan-800";
-    }
-
-    if (tone === "rose") {
-      return "border-rose-500/25 bg-rose-500/10 text-rose-800";
-    }
-
-    return "border-slate-500/25 bg-slate-500/10 text-slate-800";
+    return STATUS_TONE_MAP[tone] ?? STATUS_TONE_DEFAULT;
   }
 </script>
 
@@ -99,34 +92,34 @@
       </RouterLink>
     </header>
 
-    <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+    <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5" role="region" aria-label="Key metrics">
       <article class="rounded-xl border border-border/70 bg-card/95 p-4 shadow-sm">
-        <p class="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Facilities</p>
+        <p class="text-xs uppercase tracking-[0.18em] text-muted-foreground">Facilities</p>
         <p class="mt-2 text-2xl font-semibold tabular-nums">{{ metrics.totalFacilities }}</p>
       </article>
       <article class="rounded-xl border border-border/70 bg-card/95 p-4 shadow-sm">
-        <p class="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Colocation</p>
+        <p class="text-xs uppercase tracking-[0.18em] text-muted-foreground">Colocation</p>
         <p class="mt-2 text-2xl font-semibold tabular-nums">{{ metrics.colocationCount }}</p>
       </article>
       <article class="rounded-xl border border-border/70 bg-card/95 p-4 shadow-sm">
-        <p class="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Hyperscale</p>
+        <p class="text-xs uppercase tracking-[0.18em] text-muted-foreground">Hyperscale</p>
         <p class="mt-2 text-2xl font-semibold tabular-nums">{{ metrics.hyperscaleCount }}</p>
       </article>
       <article class="rounded-xl border border-border/70 bg-card/95 p-4 shadow-sm">
-        <p class="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Commissioned</p>
+        <p class="text-xs uppercase tracking-[0.18em] text-muted-foreground">Commissioned</p>
         <p class="mt-2 text-2xl font-semibold tabular-nums">
           {{ formatPower(metrics.totalCommissionedPowerMw) }}
         </p>
       </article>
       <article class="rounded-xl border border-border/70 bg-card/95 p-4 shadow-sm">
-        <p class="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Pipeline</p>
+        <p class="text-xs uppercase tracking-[0.18em] text-muted-foreground">Pipeline</p>
         <p class="mt-2 text-2xl font-semibold tabular-nums">
           {{ formatPower(metrics.totalPipelinePowerMw) }}
         </p>
       </article>
     </section>
 
-    <section class="grid gap-4 lg:grid-cols-2">
+    <section class="grid gap-4 lg:grid-cols-2" role="region" aria-label="Selection summary and providers">
       <article class="rounded-xl border border-border/70 bg-card/95 p-4 shadow-sm">
         <h2 class="m-0 text-sm font-semibold">Selection Summary</h2>
         <dl class="mt-3 space-y-2 text-sm">
@@ -184,7 +177,7 @@
       </article>
     </section>
 
-    <section class="grid gap-4 xl:grid-cols-[1.35fr_1fr_1fr]">
+    <section class="grid gap-4 xl:grid-cols-[1.35fr_1fr_1fr]" role="region" aria-label="Status breakdown and perspectives">
       <article class="rounded-xl border border-border/70 bg-card/95 p-4 shadow-sm">
         <h2 class="m-0 text-sm font-semibold">Status Breakdown</h2>
         <div class="mt-3 flex flex-wrap gap-2">

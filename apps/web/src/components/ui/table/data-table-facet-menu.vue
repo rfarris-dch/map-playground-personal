@@ -39,7 +39,7 @@
         class="flex items-center justify-between gap-2 border-b border-border/70 px-2 py-1.5"
       >
         <span>{{ columnLabel }}</span>
-        <Button size="sm" variant="ghost" class="h-6 px-2 text-[11px]" @click="clear">
+        <Button size="sm" variant="ghost" class="h-6 px-2 text-xs" @click="clear">
           Clear
         </Button>
       </DropdownMenuLabel>
@@ -57,7 +57,7 @@
             />
             <span class="truncate">{{ facetOption.label }}</span>
           </span>
-          <span class="text-[11px] text-muted-foreground">{{ facetOption.count }}</span>
+          <span class="text-xs text-muted-foreground">{{ facetOption.count }}</span>
         </label>
       </div>
     </DropdownMenuContent>

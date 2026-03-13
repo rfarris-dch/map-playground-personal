@@ -115,17 +115,17 @@
     <header class="mb-3 flex items-start justify-between gap-3">
       <div>
         <h2 class="m-0 text-sm font-semibold">Spatial Analysis</h2>
-        <p class="m-0 text-[11px] text-muted-foreground">{{ helperText }}</p>
+        <p class="m-0 text-xs text-muted-foreground">{{ helperText }}</p>
       </div>
       <span
-        class="map-glass-pill inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+        class="map-glass-pill inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium text-muted-foreground"
       >
         {{ panelStatus }}
       </span>
     </header>
 
     <section class="mb-3">
-      <p class="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         Output
       </p>
       <div class="map-glass-segment inline-flex rounded-lg p-1">
@@ -153,7 +153,7 @@
     </section>
 
     <section v-if="props.outputMode === 'image'" class="mb-3">
-      <p class="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         PNG Framing
       </p>
       <div class="grid gap-2 sm:grid-cols-2">
@@ -177,7 +177,7 @@
     </section>
 
     <section class="mb-3">
-      <p class="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         Tools
       </p>
       <div class="grid gap-2 sm:grid-cols-2">
@@ -224,35 +224,35 @@
       </div>
     </section>
 
-    <section class="mb-3 grid gap-2 sm:grid-cols-2">
+    <section class="mb-3 grid gap-2 sm:grid-cols-2" role="region" aria-label="Measurement readings">
       <div class="map-glass-card rounded-md px-3 py-2">
-        <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Mode</div>
+        <div class="text-xs uppercase tracking-wide text-muted-foreground">Mode</div>
         <div class="text-sm font-medium">{{ props.state.mode }}</div>
       </div>
       <div class="map-glass-card rounded-md px-3 py-2">
-        <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Area Shape</div>
+        <div class="text-xs uppercase tracking-wide text-muted-foreground">Area Shape</div>
         <div class="text-sm font-medium">
           {{ props.state.mode === "area" ? props.state.areaShape : "n/a" }}
         </div>
       </div>
       <div class="map-glass-card rounded-md px-3 py-2">
-        <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Distance</div>
+        <div class="text-xs uppercase tracking-wide text-muted-foreground">Distance</div>
         <div class="text-sm font-medium tabular-nums">
           {{ formatDistance(props.state.distanceKm) }}
         </div>
       </div>
       <div class="map-glass-card rounded-md px-3 py-2">
-        <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Area</div>
+        <div class="text-xs uppercase tracking-wide text-muted-foreground">Area</div>
         <div class="text-sm font-medium tabular-nums">{{ formatArea(props.state.areaSqKm) }}</div>
       </div>
       <div class="map-glass-card rounded-md px-3 py-2">
-        <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Selection</div>
+        <div class="text-xs uppercase tracking-wide text-muted-foreground">Selection</div>
         <div class="text-sm font-medium">
           {{ props.state.isSelectionComplete ? "Complete" : "In progress" }}
         </div>
       </div>
       <div class="map-glass-card rounded-md px-3 py-2">
-        <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Vertices</div>
+        <div class="text-xs uppercase tracking-wide text-muted-foreground">Vertices</div>
         <div class="text-sm font-medium tabular-nums">{{ props.state.vertexCount }}</div>
       </div>
     </section>

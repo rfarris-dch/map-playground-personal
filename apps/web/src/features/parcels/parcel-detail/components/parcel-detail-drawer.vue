@@ -55,9 +55,19 @@
       <Button variant="glass" size="sm" class="ml-auto" @click="onClose">Close</Button>
     </header>
 
-    <p v-if="isLoading" class="m-0 text-xs font-mono text-muted-foreground">Loading detail...</p>
-    <p v-else-if="isError" class="m-0 text-xs font-mono text-muted-foreground">
-      Parcel detail request failed.
+    <div v-if="isLoading" class="space-y-3" role="status" aria-live="polite" aria-busy="true">
+      <div class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2">
+        <div class="h-3 w-16 animate-pulse rounded bg-muted/50" />
+        <div class="h-3 w-32 animate-pulse rounded bg-muted/40" />
+        <div class="h-3 w-20 animate-pulse rounded bg-muted/50" />
+        <div class="h-3 w-24 animate-pulse rounded bg-muted/40" />
+        <div class="h-3 w-14 animate-pulse rounded bg-muted/50" />
+        <div class="h-3 w-28 animate-pulse rounded bg-muted/40" />
+      </div>
+      <p class="m-0 text-xs text-muted-foreground">Loading parcel detail...</p>
+    </div>
+    <p v-else-if="isError" class="m-0 text-xs text-muted-foreground">
+      Parcel detail failed to load. Try selecting the parcel again.
     </p>
     <template v-else-if="detail !== null">
       <dl class="mb-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-xs">
@@ -100,12 +110,12 @@
 
       <section>
         <h3 class="mb-2 mt-0 text-xs font-semibold tracking-wide">Full Attributes</h3>
-        <p class="mb-2 mt-0 text-[11px] text-muted-foreground">
+        <p class="mb-2 mt-0 text-xs text-muted-foreground">
           {{ attributeEntries.length }}
           keys in payload
         </p>
         <div class="map-glass-card max-h-96 overflow-auto rounded-md">
-          <table class="w-full border-collapse text-[11px]">
+          <table class="w-full border-collapse text-xs">
             <thead class="map-glass-panel-soft sticky top-0">
               <tr>
                 <th class="px-2 py-1 text-left font-semibold">Field</th>

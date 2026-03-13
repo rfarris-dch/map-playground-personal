@@ -86,7 +86,10 @@
   }
 
   function accentColor(): string {
-    return displayState.value?.perspective === "hyperscale" ? "#10b981" : "#3b82f6";
+    const style = getComputedStyle(document.documentElement);
+    return displayState.value?.perspective === "hyperscale"
+      ? style.getPropertyValue("--hyperscale").trim() || "#10b981"
+      : style.getPropertyValue("--colocation").trim() || "#3b82f6";
   }
 
   function providerLabel(): string {
@@ -99,24 +102,28 @@
     value: number;
   }
 
+  const COLO_SHADES = ["oklch(0.62 0.14 250)", "oklch(0.76 0.10 250)", "oklch(0.90 0.05 250)"] as const;
+  const HYPER_SHADES = ["oklch(0.65 0.15 162)", "oklch(0.78 0.10 162)", "oklch(0.92 0.05 162)"] as const;
+
   function pieSegments(): DonutSegment[] {
     if (!displayState.value) {
       return [];
     }
     const isColo = displayState.value.perspective === "colocation";
+    const shades = isColo ? COLO_SHADES : HYPER_SHADES;
     return [
       {
-        color: isColo ? "#3b82f6" : "#10b981",
+        color: shades[0],
         label: isColo ? "Comm." : "Own.",
         value: displayState.value.commissionedPowerMw,
       },
       {
-        color: isColo ? "#93c5fd" : "#6ee7b7",
+        color: shades[1],
         label: "UC",
         value: displayState.value.underConstructionPowerMw,
       },
       {
-        color: isColo ? "#dbeafe" : "#d1fae5",
+        color: shades[2],
         label: "Plan.",
         value: displayState.value.plannedPowerMw,
       },
@@ -136,7 +143,7 @@
 <template>
   <aside
     v-if="displayState !== null"
-    class="absolute z-30 rounded-[4px] p-[2px]"
+    class="absolute z-30 rounded-sm p-[2px]"
     :style="{
       left: `${displayState.screenPoint[0] + 14}px`,
       top: `${displayState.screenPoint[1] + 14}px`,
@@ -149,12 +156,12 @@
     @mouseleave="onMouseLeave"
   >
     <div
-      class="flex flex-col gap-[10px] rounded-[4px] bg-white p-[10px] shadow-[0_4px_8px_rgba(0,0,0,0.06)]"
+      class="flex flex-col gap-[10px] rounded-sm bg-card p-[10px] shadow-[0_4px_8px_rgba(0,0,0,0.06)]"
     >
       <!-- Header -->
       <div class="flex items-center justify-between gap-3">
         <span
-          class="text-[12px] font-semibold leading-none whitespace-nowrap"
+          class="text-xs font-semibold leading-none whitespace-nowrap"
           :style="{ color: accentColor() }"
         >
           {{ perspectiveLabel() }}
@@ -163,10 +170,10 @@
           width="12"
           height="12"
           viewBox="0 0 12 12"
-          class="flex-shrink-0 cursor-pointer opacity-40 hover:opacity-70"
+          class="flex-shrink-0 cursor-pointer opacity-40 hover:opacity-70" aria-hidden="true"
         >
-          <line x1="3.5" y1="3.5" x2="8.5" y2="8.5" stroke="#94a3b8" stroke-width="1.2" />
-          <line x1="8.5" y1="3.5" x2="3.5" y2="8.5" stroke="#94a3b8" stroke-width="1.2" />
+          <line x1="3.5" y1="3.5" x2="8.5" y2="8.5" stroke="currentColor" stroke-width="1.2" />
+          <line x1="8.5" y1="3.5" x2="3.5" y2="8.5" stroke="currentColor" stroke-width="1.2" />
         </svg>
       </div>
 
@@ -174,9 +181,9 @@
       <div class="flex items-start gap-[14px]">
         <!-- Donut Chart (stroke-based) -->
         <div class="relative flex-shrink-0">
-          <svg width="68" height="68" viewBox="0 0 68 68">
+          <svg width="68" height="68" viewBox="0 0 68 68" aria-hidden="true">
             <!-- Background ring -->
-            <circle cx="34" cy="34" r="24" fill="none" stroke="#f1f5f9" stroke-width="10" />
+            <circle cx="34" cy="34" r="24" fill="none" stroke="var(--muted)" stroke-width="10" />
             <!-- Data segments -->
             <template v-for="(seg, i) in donutSegments()" :key="`cluster-${String(i)}`">
               <circle
@@ -202,7 +209,7 @@
           <!-- Center text -->
           <div class="pointer-events-none absolute inset-0 grid place-items-center px-2">
             <span
-              class="block max-w-[38px] text-center text-[7px] leading-none tracking-tight text-[#94a3b8]"
+              class="block max-w-[38px] text-center text-xs leading-none tracking-tight text-muted-foreground"
             >
               {{ formatMw(displayState.totalPowerMw) }}
             </span>
@@ -211,14 +218,14 @@
 
         <!-- Top Providers/Users -->
         <div class="flex flex-col gap-[6px]">
-          <span class="text-[10px] font-semibold text-[#94a3b8]">{{ providerLabel() }}</span>
+          <span class="text-xs font-semibold text-muted-foreground">{{ providerLabel() }}</span>
           <div class="flex flex-col gap-[6px]">
             <template v-for="(provider, i) in displayState.topProviders" :key="i">
               <div class="flex flex-col gap-[2px]">
-                <span class="text-[10px] leading-none" :style="{ color: accentColor() }">
+                <span class="text-xs leading-none" :style="{ color: accentColor() }">
                   {{ provider.name }}
                 </span>
-                <span class="text-[8px] leading-none text-[#94a3b8]">
+                <span class="text-xs leading-none text-muted-foreground">
                   Total Power: {{ formatMw(provider.totalPowerMw) }}
                 </span>
               </div>
@@ -234,29 +241,31 @@
             class="inline-block size-[7px] rounded-full"
             :style="{ backgroundColor: segment.color }"
           />
-          <span class="text-[8px] text-[#94a3b8]">{{ segment.label }}</span>
+          <span class="text-xs text-muted-foreground">{{ segment.label }}</span>
         </div>
       </div>
 
       <!-- Controls -->
       <div class="flex items-center gap-[6px]">
         <div
-          class="flex cursor-pointer items-center gap-0 opacity-60 hover:opacity-100"
+          role="button" tabindex="0" class="flex cursor-pointer items-center gap-0 opacity-60 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
           @click="onZoomClick"
+          @keydown.enter="onZoomClick"
+          @keydown.space.prevent="onZoomClick"
         >
-          <svg width="16" height="16" viewBox="0 0 16 16">
-            <circle cx="7" cy="7" r="3.5" stroke="#94a3b8" stroke-width="1" fill="none" />
-            <line x1="9.5" y1="9.5" x2="12.5" y2="12.5" stroke="#94a3b8" stroke-width="1" />
-            <line x1="5.5" y1="7" x2="8.5" y2="7" stroke="#94a3b8" stroke-width="0.7" />
-            <line x1="7" y1="5.5" x2="7" y2="8.5" stroke="#94a3b8" stroke-width="0.7" />
+          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+            <circle cx="7" cy="7" r="3.5" stroke="currentColor" stroke-width="1" fill="none" />
+            <line x1="9.5" y1="9.5" x2="12.5" y2="12.5" stroke="currentColor" stroke-width="1" />
+            <line x1="5.5" y1="7" x2="8.5" y2="7" stroke="currentColor" stroke-width="0.7" />
+            <line x1="7" y1="5.5" x2="7" y2="8.5" stroke="currentColor" stroke-width="0.7" />
           </svg>
-          <span class="text-[8px] text-[#94a3b8]">Zoom</span>
+          <span class="text-xs text-muted-foreground">Zoom</span>
         </div>
-        <div class="flex cursor-pointer items-center gap-0 opacity-60 hover:opacity-100">
-          <svg width="16" height="16" viewBox="0 0 16 16">
-            <path d="M5 4L11 8L5 12Z" fill="#94a3b8" />
+        <div role="button" tabindex="0" class="flex cursor-pointer items-center gap-0 opacity-60 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none">
+          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M5 4L11 8L5 12Z" fill="currentColor" />
           </svg>
-          <span class="text-[8px] text-[#94a3b8]">Select All</span>
+          <span class="text-xs text-muted-foreground">Select All</span>
         </div>
       </div>
     </div>

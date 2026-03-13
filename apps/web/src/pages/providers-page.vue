@@ -265,12 +265,20 @@
         <CardDescription>Infinite scroll over paginated API responses.</CardDescription>
       </CardHeader>
       <CardContent class="flex min-h-0 flex-1 flex-col gap-3">
-        <p
+        <div
           v-if="providersQuery.isFetching.value && flattenedRows.length === 0"
-          class="text-xs text-muted-foreground"
+          class="space-y-3 py-4"
+          role="status"
+          aria-live="polite"
+          aria-busy="true"
         >
-          Loading data...
-        </p>
+          <div class="h-8 w-full animate-pulse rounded bg-muted/60" />
+          <div class="h-6 w-3/4 animate-pulse rounded bg-muted/40" />
+          <div class="h-6 w-5/6 animate-pulse rounded bg-muted/40" />
+          <div class="h-6 w-2/3 animate-pulse rounded bg-muted/40" />
+          <div class="h-6 w-4/5 animate-pulse rounded bg-muted/40" />
+          <p class="text-xs text-muted-foreground">Loading provider data...</p>
+        </div>
         <p v-if="loadErrorMessage" class="text-xs text-red-600">{{ loadErrorMessage }}</p>
         <div ref="provider-scroll-container" class="min-h-0 flex-1 overflow-y-auto">
           <DataTable

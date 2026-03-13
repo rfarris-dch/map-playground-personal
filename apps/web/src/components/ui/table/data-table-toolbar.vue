@@ -32,7 +32,7 @@
       <div class="flex items-center space-x-2">
         <Input
           :model-value="globalQuery"
-          class="h-8 w-[150px] lg:w-[250px]"
+          class="h-8 w-full max-w-[250px] sm:w-[150px] lg:w-[250px]"
           :placeholder="globalFilterPlaceholder"
           @update:model-value="setGlobalQuery"
         />
@@ -57,7 +57,7 @@
               Group by
               <span
                 v-if="groupingCount > 0"
-                class="ml-2 rounded-sm bg-muted px-1 font-normal text-[10px] leading-4 text-muted-foreground"
+                class="ml-2 rounded-sm bg-muted px-1 font-normal text-xs leading-4 text-muted-foreground"
               >
                 {{ groupingCount }}
               </span>

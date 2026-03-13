@@ -37,7 +37,7 @@ function phaseLabel(
     case "loading":
       return "Loading Canonical";
     case "building":
-      return "Building PMTiles";
+      return "Building Planetiler PMTiles";
     case "publishing":
       return "Publishing";
     case "completed":

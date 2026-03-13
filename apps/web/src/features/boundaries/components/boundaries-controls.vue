@@ -65,8 +65,8 @@
 
   const containerClass = computed(() =>
     props.embedded
-      ? "w-full [font-family:Inter,var(--font-sans)] text-[#94A3B8]"
-      : "w-full rounded-[4px] border border-[#E2E8F0] bg-white p-3 shadow-[0_4px_8px_rgba(0,0,0,0.06)] [font-family:Inter,var(--font-sans)] text-[#94A3B8]"
+      ? "w-full font-sans text-muted-foreground"
+      : "w-full rounded-sm border border-border bg-card p-3 shadow-[0_4px_8px_rgba(0,0,0,0.06)] font-sans text-muted-foreground"
   );
 
   const heatStops = boundaryHeatStops();
@@ -260,18 +260,18 @@
 
   function sectionClass(visible: boolean): string {
     if (visible) {
-      return "border-[#CBD5E1] bg-[#F8FAFC] shadow-[0_1px_2px_rgba(15,23,42,0.04)]";
+      return "border-border bg-background shadow-[0_1px_2px_rgba(15,23,42,0.04)]";
     }
 
-    return "border-transparent bg-white hover:border-[#E2E8F0] hover:bg-[#F8FAFC]";
+    return "border-transparent bg-card hover:border-border hover:bg-background";
   }
 
   function facetRowClass(selected: boolean): string {
     if (selected) {
-      return "border-[#E2E8F0] bg-[#F8FAFC]";
+      return "border-border bg-background";
     }
 
-    return "border-transparent hover:border-[#E2E8F0] hover:bg-[#F8FAFC]";
+    return "border-transparent hover:border-border hover:bg-background";
   }
 
   const legendBins = computed<BoundaryLegendBin[]>(() => {
@@ -296,7 +296,7 @@
     {
       level: "county",
       title: "County",
-      dotClass: "bg-[#6B7280]",
+      dotClass: "bg-gray-500",
       description: "County boundaries by commissioned MW",
       visible: props.countyVisible,
       options: props.countyFacetOptions,
@@ -308,7 +308,7 @@
     {
       level: "state",
       title: "State",
-      dotClass: "bg-[#374151]",
+      dotClass: "bg-gray-700",
       description: "State boundaries by commissioned MW",
       visible: props.stateVisible,
       options: props.stateFacetOptions,
@@ -320,7 +320,7 @@
     {
       level: "country",
       title: "Country",
-      dotClass: "bg-[#1F2937]",
+      dotClass: "bg-gray-800",
       description: "Country boundaries by commissioned MW",
       visible: props.countryVisible,
       options: props.countryFacetOptions,
@@ -335,21 +335,21 @@
 <template>
   <aside :class="containerClass" aria-label="Boundary layers">
     <header v-if="!props.embedded" class="mb-2 flex items-center justify-between">
-      <h2 class="m-0 text-[10px] font-semibold tracking-wide text-[#94A3B8]">Boundaries</h2>
-      <span class="text-[10px] text-[#94A3B8]">County, state, country</span>
+      <h2 class="m-0 text-xs font-semibold tracking-wide text-muted-foreground">Boundaries</h2>
+      <span class="text-xs text-muted-foreground">County, state, country</span>
     </header>
 
     <div class="grid gap-2">
       <section
         v-for="section in facetSections"
         :key="section.level"
-        class="rounded-[4px] border px-3 py-1 transition-colors"
+        class="rounded-sm border px-3 py-1 transition-colors"
         :class="sectionClass(section.visible)"
       >
         <div class="flex items-start gap-2">
           <Checkbox
             :checked="section.visible"
-            class="mt-[1px] h-[10px] w-[10px] rounded-[2px] border border-[#CBD5E1] bg-white text-[#94A3B8] shadow-none data-[state=checked]:border-[#94A3B8] data-[state=checked]:bg-[#94A3B8] data-[state=checked]:text-white"
+            class="mt-[1px] h-4 w-4 shrink-0 rounded-sm border border-border bg-card text-muted-foreground shadow-none data-[state=checked]:border-muted-foreground data-[state=checked]:bg-muted-foreground data-[state=checked]:text-white"
             @update:checked="onToggleVisibility(section.level, $event)"
           />
 
@@ -357,14 +357,14 @@
             <div class="flex items-center gap-2">
               <span class="h-2 w-2 rounded-full" :class="section.dotClass" />
               <span
-                class="text-[10px] font-semibold transition-colors"
-                :class="section.visible ? 'text-[#64748B]' : 'text-[#94A3B8]'"
+                class="text-xs font-semibold transition-colors"
+                :class="section.visible ? 'text-foreground/70' : 'text-muted-foreground'"
                 >{{ section.title }}</span
               >
             </div>
             <p
-              class="mt-1 break-words text-[10px] transition-colors"
-              :class="section.visible ? 'text-[#64748B]' : 'text-[#94A3B8]'"
+              class="mt-1 break-words text-xs transition-colors"
+              :class="section.visible ? 'text-foreground/70' : 'text-muted-foreground'"
             >
               {{ section.description }}
             </p>
@@ -374,14 +374,14 @@
         <Accordion
           type="single"
           collapsible
-          class="mt-2 rounded-[4px] border border-[#E2E8F0] bg-white px-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+          class="mt-2 rounded-sm border border-border bg-card px-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
         >
           <AccordionItem value="filters" class="border-b-0">
             <AccordionTrigger
-              class="py-1.5 text-[10px] font-semibold text-[#94A3B8] transition-colors hover:text-[#64748B] hover:no-underline data-[state=open]:text-[#64748B]"
+              class="py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground/70 hover:no-underline data-[state=open]:text-foreground/70"
             >
               <span>{{ section.title }} filters</span>
-              <span class="text-[10px] text-[#94A3B8]"
+              <span class="text-xs text-muted-foreground"
                 >{{ section.options.length }}
                 total</span
               >
@@ -392,7 +392,7 @@
                 <Input
                   :value="section.searchQuery"
                   :placeholder="section.searchPlaceholder"
-                  class="h-[22px] rounded-[4px] border border-[#E2E8F0] bg-white px-2 text-[10px] text-[#94A3B8] shadow-[0_1px_2px_rgba(15,23,42,0.04)] placeholder:text-[#E2E8F0] focus-visible:border-[#CBD5E1] focus-visible:ring-2 focus-visible:ring-[#E2E8F0]"
+                  class="h-[22px] rounded-sm border border-border bg-card px-2 text-xs text-muted-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] placeholder:text-border focus-visible:border-border focus-visible:ring-2 focus-visible:ring-border"
                   @input="onSearchInput(section.level, $event)"
                 />
 
@@ -400,7 +400,7 @@
                   <Button
                     size="sm"
                     variant="glass"
-                    class="h-[22px] rounded-[4px] border border-[#E2E8F0] bg-white px-2 text-[10px] font-normal text-[#94A3B8] shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:border-[#CBD5E1] hover:bg-[#F8FAFC] hover:text-[#64748B]"
+                    class="h-[22px] rounded-sm border border-border bg-card px-2 text-xs font-normal text-muted-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:border-border hover:bg-background hover:text-foreground/70"
                     @click="onSelectAll(section.level)"
                   >
                     Select all
@@ -408,7 +408,7 @@
                   <Button
                     size="sm"
                     variant="glass"
-                    class="h-[22px] rounded-[4px] border border-[#E2E8F0] bg-white px-2 text-[10px] font-normal text-[#94A3B8] shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:border-[#CBD5E1] hover:bg-[#F8FAFC] hover:text-[#64748B]"
+                    class="h-[22px] rounded-sm border border-border bg-card px-2 text-xs font-normal text-muted-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:border-border hover:bg-background hover:text-foreground/70"
                     @click="onClearAll(section.level)"
                   >
                     Clear all
@@ -416,11 +416,11 @@
                 </div>
 
                 <div
-                  class="max-h-44 overflow-y-auto rounded-[4px] border border-[#E2E8F0] bg-white p-1 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+                  class="max-h-44 overflow-y-auto rounded-sm border border-border bg-card p-1 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
                 >
                   <p
                     v-if="section.filteredOptions.length === 0"
-                    class="px-2 py-3 text-center text-[10px] text-[#94A3B8]"
+                    class="px-2 py-3 text-center text-xs text-muted-foreground"
                   >
                     No matching {{ section.title.toLowerCase() }} regions.
                   </p>
@@ -428,31 +428,31 @@
                   <div
                     v-for="option in section.filteredOptions"
                     :key="option.regionId"
-                    class="flex items-center gap-2 rounded-[4px] border px-1.5 py-1 transition-colors"
+                    class="flex items-center gap-2 rounded-sm border px-1.5 py-1 transition-colors"
                     :class="facetRowClass(section.selectedRegionIds.has(option.regionId))"
                   >
                     <Checkbox
                       :checked="section.selectedRegionIds.has(option.regionId)"
-                      class="h-[10px] w-[10px] rounded-[2px] border border-[#CBD5E1] bg-white text-[#94A3B8] shadow-none data-[state=checked]:border-[#94A3B8] data-[state=checked]:bg-[#94A3B8] data-[state=checked]:text-white"
+                      class="h-4 w-4 shrink-0 rounded-sm border border-border bg-card text-muted-foreground shadow-none data-[state=checked]:border-muted-foreground data-[state=checked]:bg-muted-foreground data-[state=checked]:text-white"
                       @update:checked="onToggleFacet(section.level, option.regionId, $event)"
                     />
                     <div class="min-w-0 flex-1">
                       <p
-                        class="truncate text-[10px] font-semibold transition-colors"
+                        class="truncate text-xs font-semibold transition-colors"
                         :class="
                           section.selectedRegionIds.has(option.regionId)
-                            ? 'text-[#64748B]'
-                            : 'text-[#94A3B8]'
+                            ? 'text-foreground/70'
+                            : 'text-muted-foreground'
                         "
                       >
                         {{ formatFacetLabel(option) }}
                       </p>
                       <p
-                        class="truncate text-[10px] transition-colors"
+                        class="truncate text-xs transition-colors"
                         :class="
                           section.selectedRegionIds.has(option.regionId)
-                            ? 'text-[#64748B]'
-                            : 'text-[#94A3B8]'
+                            ? 'text-foreground/70'
+                            : 'text-muted-foreground'
                         "
                       >
                         {{ option.regionId }}
@@ -469,15 +469,15 @@
     </div>
 
     <section
-      class="mt-3 rounded-[4px] border border-[#E2E8F0] bg-white p-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+      class="mt-3 rounded-sm border border-border bg-card p-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
       aria-label="Commissioned power legend"
     >
-      <h3 class="text-[10px] font-semibold text-[#94A3B8]">Commissioned Power (MW)</h3>
+      <h3 class="text-xs font-semibold text-muted-foreground">Commissioned Power (MW)</h3>
 
-      <ul class="mt-2 grid gap-1 text-[10px] text-[#94A3B8]">
+      <ul class="mt-2 grid gap-1 text-xs text-muted-foreground">
         <li v-for="bin in legendBins" :key="bin.label" class="flex items-center gap-2">
           <span
-            class="h-2.5 w-2.5 rounded-[2px] border border-[#CBD5E1] bg-[#F8FAFC]"
+            class="h-2.5 w-2.5 rounded-sm border border-border bg-background"
             aria-hidden="true"
           />
           <span>{{ bin.label }}</span>

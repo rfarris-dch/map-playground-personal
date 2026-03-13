@@ -19,15 +19,15 @@
     aria-label="Fiber hover details"
   >
     <header class="mb-1 flex items-center gap-2">
-      <span class="text-[11px] font-semibold uppercase tracking-wide">
+      <span class="text-xs font-semibold uppercase tracking-wide">
         {{ props.hoverState.lineLabel }}
       </span>
-      <span class="text-[11px] font-mono text-muted-foreground">
+      <span class="text-xs font-mono text-muted-foreground">
         {{ props.hoverState.sourceLayerLabel }}
       </span>
     </header>
 
-    <dl class="m-0 grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-[11px] leading-tight">
+    <dl class="m-0 grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-xs leading-tight">
       <dt class="text-muted-foreground">Source Layer</dt>
       <dd class="m-0 break-words font-mono">{{ props.hoverState.sourceLayerName }}</dd>
 
