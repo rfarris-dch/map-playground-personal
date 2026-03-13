@@ -36,7 +36,7 @@
 
 <template>
   <div
-    class="flex h-10 items-center bg-card px-2 transition-colors"
+    class="flex h-10 items-center bg-card px-2 transition-colors duration-150"
     :class="props.actionable ? 'hover:bg-background' : ''"
   >
     <div class="flex w-full items-center justify-between">
