@@ -112,7 +112,7 @@
       <header class="mb-1 flex items-center gap-1">
         <span
           class="inline-block h-2 w-2 rounded-full"
-          :class="card.perspective === 'colocation' ? 'bg-cyan-500' : 'bg-amber-500'"
+          :class="card.perspective === 'colocation' ? 'bg-colocation' : 'bg-hyperscale'"
         />
         <p class="m-0 truncate font-semibold">{{ card.facilityName }}</p>
       </header>

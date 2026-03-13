@@ -262,7 +262,7 @@
           <div class="h-6 w-4/5 animate-pulse rounded bg-muted/40" />
           <p class="text-xs text-muted-foreground">Loading colocation facilities...</p>
         </div>
-        <p v-if="loadErrorMessage" class="text-xs text-red-600">{{ loadErrorMessage }}</p>
+        <p v-if="loadErrorMessage" class="text-xs text-[var(--error)]">{{ loadErrorMessage }}</p>
         <div ref="colocation-scroll-container" class="min-h-0 flex-1 overflow-y-auto">
           <DataTable
             :columns="facilityColumns"

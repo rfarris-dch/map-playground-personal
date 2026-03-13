@@ -163,14 +163,14 @@
   <Transition enter-active-class="transition-opacity duration-100" enter-from-class="opacity-0">
     <aside
       v-if="displayState !== null"
-      class="absolute z-30 rounded-sm border p-[2px]"
+      class="absolute z-30 rounded-sm border p-0.5"
       :class="accentClass()"
       :style="positionStyle"
       aria-label="Facility cluster details"
       @mouseenter="onMouseEnter"
       @mouseleave="onMouseLeave"
     >
-      <div class="flex flex-col gap-[10px] rounded-sm bg-card p-[10px] shadow-sm">
+      <div class="flex flex-col gap-2.5 rounded-sm bg-card p-2.5 shadow-sm">
         <!-- Header -->
         <div class="flex items-center justify-between gap-3">
           <span
@@ -192,7 +192,7 @@
         </div>
 
         <!-- Body: donut chart + details -->
-        <div class="flex items-start gap-[14px]">
+        <div class="flex items-start gap-3.5">
           <!-- Donut Chart (stroke-based) -->
           <div class="relative flex-shrink-0">
             <svg width="68" height="68" viewBox="0 0 68 68" aria-hidden="true">
@@ -231,11 +231,11 @@
           </div>
 
           <!-- Top Providers/Users -->
-          <div class="flex flex-col gap-[6px]">
+          <div class="flex flex-col gap-1.5">
             <span class="text-xs font-semibold text-muted-foreground">{{ providerLabel() }}</span>
-            <div class="flex flex-col gap-[6px]">
+            <div class="flex flex-col gap-1.5">
               <template v-for="(provider, i) in displayState.topProviders" :key="i">
-                <div class="flex flex-col gap-[2px]">
+                <div class="flex flex-col gap-0.5">
                   <span class="text-xs leading-none" :class="accentTextClass()">
                     {{ provider.name }}
                   </span>
@@ -258,8 +258,8 @@
         </div>
 
         <!-- Key -->
-        <div class="flex items-center gap-[6px]">
-          <div v-for="(segment, i) in pieSegments()" :key="i" class="flex items-center gap-[4px]">
+        <div class="flex items-center gap-1.5">
+          <div v-for="(segment, i) in pieSegments()" :key="i" class="flex items-center gap-1">
             <span
               class="inline-block h-2 w-2 rounded-full"
               :style="{ backgroundColor: segment.color }"
@@ -269,7 +269,7 @@
         </div>
 
         <!-- Controls -->
-        <div class="flex items-center gap-[6px]">
+        <div class="flex items-center gap-1.5">
           <div
             role="button"
             tabindex="0"

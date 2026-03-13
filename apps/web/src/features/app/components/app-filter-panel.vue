@@ -167,11 +167,11 @@
             >
               <CheckboxRoot
                 :model-value="props.activePowerTypes.has(opt.id)"
-                class="flex h-[10px] w-[10px] shrink-0 items-center justify-center rounded-[2px] border border-border bg-white data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
+                class="flex size-2.5 shrink-0 items-center justify-center rounded-sm border border-border bg-card data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
                 @update:model-value="emit('toggle:power-type', opt.id)"
               >
                 <CheckboxIndicator class="flex items-center justify-center text-white">
-                  <svg class="size-[8px]" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                  <svg class="size-2" viewBox="0 0 10 10" fill="none" aria-hidden="true">
                     <path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
                   </svg>
                 </CheckboxIndicator>
@@ -200,11 +200,11 @@
             >
               <CheckboxRoot
                 :model-value="props.activeStatuses.has(opt.id)"
-                class="flex h-[10px] w-[10px] shrink-0 items-center justify-center rounded-[2px] border border-border bg-white data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
+                class="flex size-2.5 shrink-0 items-center justify-center rounded-sm border border-border bg-card data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
                 @update:model-value="emit('toggle:status', opt.id)"
               >
                 <CheckboxIndicator class="flex items-center justify-center text-white">
-                  <svg class="size-[8px]" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                  <svg class="size-2" viewBox="0 0 10 10" fill="none" aria-hidden="true">
                     <path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
                   </svg>
                 </CheckboxIndicator>
@@ -232,7 +232,7 @@
                 v-model="marketSearch"
                 type="text"
                 placeholder="Search markets..."
-                class="h-7 w-full rounded-[var(--radius-1)] border border-border bg-background pl-7 pr-2 text-[length:var(--size-2)] text-foreground/85 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                class="h-7 w-full rounded-sm border border-border bg-background pl-7 pr-2 text-[length:var(--size-2)] text-foreground/85 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               >
             </div>
             <div class="flex max-h-[180px] flex-col gap-[var(--space-1)] overflow-y-auto">
@@ -243,11 +243,11 @@
               >
                 <CheckboxRoot
                   :model-value="props.activeMarkets.has(opt.id)"
-                  class="flex h-[10px] w-[10px] shrink-0 items-center justify-center rounded-[2px] border border-border bg-white data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
+                  class="flex size-2.5 shrink-0 items-center justify-center rounded-sm border border-border bg-card data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
                   @update:model-value="emit('toggle:market', opt.id)"
                 >
                   <CheckboxIndicator class="flex items-center justify-center text-white">
-                    <svg class="size-[8px]" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                    <svg class="size-2" viewBox="0 0 10 10" fill="none" aria-hidden="true">
                       <path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
                     </svg>
                   </CheckboxIndicator>
@@ -279,7 +279,7 @@
                 v-model="providerSearch"
                 type="text"
                 placeholder="Search providers..."
-                class="h-7 w-full rounded-[var(--radius-1)] border border-border bg-background pl-7 pr-2 text-[length:var(--size-2)] text-foreground/85 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                class="h-7 w-full rounded-sm border border-border bg-background pl-7 pr-2 text-[length:var(--size-2)] text-foreground/85 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               >
             </div>
             <div class="flex max-h-[180px] flex-col gap-[var(--space-1)] overflow-y-auto">
@@ -290,11 +290,11 @@
               >
                 <CheckboxRoot
                   :model-value="props.activeProviders.has(opt.id)"
-                  class="flex h-[10px] w-[10px] shrink-0 items-center justify-center rounded-[2px] border border-border bg-white data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
+                  class="flex size-2.5 shrink-0 items-center justify-center rounded-sm border border-border bg-card data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
                   @update:model-value="emit('toggle:provider', opt.id)"
                 >
                   <CheckboxIndicator class="flex items-center justify-center text-white">
-                    <svg class="size-[8px]" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                    <svg class="size-2" viewBox="0 0 10 10" fill="none" aria-hidden="true">
                       <path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
                     </svg>
                   </CheckboxIndicator>
@@ -326,7 +326,7 @@
                 v-model="userSearch"
                 type="text"
                 placeholder="Search users..."
-                class="h-7 w-full rounded-[var(--radius-1)] border border-border bg-background pl-7 pr-2 text-[length:var(--size-2)] text-foreground/85 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                class="h-7 w-full rounded-sm border border-border bg-background pl-7 pr-2 text-[length:var(--size-2)] text-foreground/85 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               >
             </div>
             <div class="flex max-h-[180px] flex-col gap-[var(--space-1)] overflow-y-auto">
@@ -337,11 +337,11 @@
               >
                 <CheckboxRoot
                   :model-value="props.activeUsers.has(opt.id)"
-                  class="flex h-[10px] w-[10px] shrink-0 items-center justify-center rounded-[2px] border border-border bg-white data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
+                  class="flex size-2.5 shrink-0 items-center justify-center rounded-sm border border-border bg-card data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
                   @update:model-value="emit('toggle:user', opt.id)"
                 >
                   <CheckboxIndicator class="flex items-center justify-center text-white">
-                    <svg class="size-[8px]" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                    <svg class="size-2" viewBox="0 0 10 10" fill="none" aria-hidden="true">
                       <path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
                     </svg>
                   </CheckboxIndicator>
@@ -373,7 +373,7 @@
         @click="emit('update:interconnectivity-hub', !props.interconnectivityHub)"
       >
         <span
-          class="pointer-events-none inline-block h-3 w-3 rounded-full bg-white shadow-sm transition-transform"
+          class="pointer-events-none inline-block h-3 w-3 rounded-full bg-card shadow-sm transition-transform"
           :class="props.interconnectivityHub ? 'translate-x-3' : 'translate-x-0.5'"
         />
       </button>
@@ -407,11 +407,11 @@
                   >
                     <CheckboxRoot
                       :model-value="props.activeVoltages.has(opt.id)"
-                      class="flex h-[10px] w-[10px] shrink-0 items-center justify-center rounded-[2px] border border-border bg-white data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
+                      class="flex size-2.5 shrink-0 items-center justify-center rounded-sm border border-border bg-card data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
                       @update:model-value="emit('toggle:voltage', opt.id)"
                     >
                       <CheckboxIndicator class="flex items-center justify-center text-white">
-                        <svg class="size-[8px]" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                        <svg class="size-2" viewBox="0 0 10 10" fill="none" aria-hidden="true">
                           <path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
                       </CheckboxIndicator>
@@ -438,11 +438,11 @@
                   >
                     <CheckboxRoot
                       :model-value="props.activeGasCapacities.has(opt.id)"
-                      class="flex h-[10px] w-[10px] shrink-0 items-center justify-center rounded-[2px] border border-border bg-white data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
+                      class="flex size-2.5 shrink-0 items-center justify-center rounded-sm border border-border bg-card data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
                       @update:model-value="emit('toggle:gas-capacity', opt.id)"
                     >
                       <CheckboxIndicator class="flex items-center justify-center text-white">
-                        <svg class="size-[8px]" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                        <svg class="size-2" viewBox="0 0 10 10" fill="none" aria-hidden="true">
                           <path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
                       </CheckboxIndicator>
@@ -469,11 +469,11 @@
                   >
                     <CheckboxRoot
                       :model-value="props.activeGasStatuses.has(opt.id)"
-                      class="flex h-[10px] w-[10px] shrink-0 items-center justify-center rounded-[2px] border border-border bg-white data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
+                      class="flex size-2.5 shrink-0 items-center justify-center rounded-sm border border-border bg-card data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
                       @update:model-value="emit('toggle:gas-status', opt.id)"
                     >
                       <CheckboxIndicator class="flex items-center justify-center text-white">
-                        <svg class="size-[8px]" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                        <svg class="size-2" viewBox="0 0 10 10" fill="none" aria-hidden="true">
                           <path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
                       </CheckboxIndicator>
@@ -503,7 +503,7 @@
               <span class="text-[length:var(--size-2)] font-[number:var(--weight-2)] leading-none text-foreground/70">Parcel Dataset</span>
               <select
                 :value="props.parcelDropdowns.dataset"
-                class="h-7 w-full rounded-[var(--radius-1)] border border-border bg-background px-2 text-[length:var(--size-2)] text-foreground/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                class="h-7 w-full rounded-sm border border-border bg-background px-2 text-[length:var(--size-2)] text-foreground/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                 @change="emit('update:parcel-dataset', ($event.target as HTMLSelectElement).value)"
               >
                 <option v-for="opt in props.parcelDatasetOptions" :key="opt.id" :value="opt.id">
@@ -517,7 +517,7 @@
               <span class="text-[length:var(--size-2)] font-[number:var(--weight-2)] leading-none text-foreground/70">Parcel Style (Acres)</span>
               <select
                 :value="props.parcelDropdowns.styleAcres"
-                class="h-7 w-full rounded-[var(--radius-1)] border border-border bg-background px-2 text-[length:var(--size-2)] text-foreground/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                class="h-7 w-full rounded-sm border border-border bg-background px-2 text-[length:var(--size-2)] text-foreground/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                 @change="emit('update:parcel-style', ($event.target as HTMLSelectElement).value)"
               >
                 <option v-for="opt in props.parcelStyleOptions" :key="opt.id" :value="opt.id">
@@ -531,7 +531,7 @@
               <span class="text-[length:var(--size-2)] font-[number:var(--weight-2)] leading-none text-foreground/70">Display at % Down-Assessed Value (DAV)</span>
               <select
                 :value="props.parcelDropdowns.davPercent"
-                class="h-7 w-full rounded-[var(--radius-1)] border border-border bg-background px-2 text-[length:var(--size-2)] text-foreground/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                class="h-7 w-full rounded-sm border border-border bg-background px-2 text-[length:var(--size-2)] text-foreground/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                 @change="emit('update:parcel-dav', ($event.target as HTMLSelectElement).value)"
               >
                 <option v-for="opt in props.parcelDavOptions" :key="opt.id" :value="opt.id">
@@ -557,11 +557,11 @@
                     >
                       <CheckboxRoot
                         :model-value="props.activeZoningTypes.has(opt.id)"
-                        class="flex h-[10px] w-[10px] shrink-0 items-center justify-center rounded-[2px] border border-border bg-white data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
+                        class="flex size-2.5 shrink-0 items-center justify-center rounded-sm border border-border bg-card data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
                         @update:model-value="emit('toggle:zoning-type', opt.id)"
                       >
                         <CheckboxIndicator class="flex items-center justify-center text-white">
-                          <svg class="size-[8px]" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                          <svg class="size-2" viewBox="0 0 10 10" fill="none" aria-hidden="true">
                             <path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
                           </svg>
                         </CheckboxIndicator>
@@ -587,11 +587,11 @@
                     >
                       <CheckboxRoot
                         :model-value="props.activeFloodZones.has(opt.id)"
-                        class="flex h-[10px] w-[10px] shrink-0 items-center justify-center rounded-[2px] border border-border bg-white data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
+                        class="flex size-2.5 shrink-0 items-center justify-center rounded-sm border border-border bg-card data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
                         @update:model-value="emit('toggle:flood-zone', opt.id)"
                       >
                         <CheckboxIndicator class="flex items-center justify-center text-white">
-                          <svg class="size-[8px]" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                          <svg class="size-2" viewBox="0 0 10 10" fill="none" aria-hidden="true">
                             <path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
                           </svg>
                         </CheckboxIndicator>

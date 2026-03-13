@@ -81,7 +81,7 @@
       <Button
         size="sm"
         variant="glass"
-        class="h-[22px] rounded-sm border border-border bg-card px-2 text-xs font-normal text-muted-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-border hover:bg-background hover:text-foreground/70"
+        class="h-[22px] rounded-sm border border-border bg-card px-2 text-xs font-normal text-muted-foreground shadow-sm transition-colors hover:border-border hover:bg-background hover:text-foreground/70"
         :disabled="page <= 1"
         @click="showPreviousPage"
       >
@@ -91,7 +91,7 @@
       <Button
         size="sm"
         variant="glass"
-        class="h-[22px] rounded-sm border border-border bg-card px-2 text-xs font-normal text-muted-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-border hover:bg-background hover:text-foreground/70"
+        class="h-[22px] rounded-sm border border-border bg-card px-2 text-xs font-normal text-muted-foreground shadow-sm transition-colors hover:border-border hover:bg-background hover:text-foreground/70"
         :disabled="page >= pageCount"
         @click="showNextPage"
       >
@@ -102,7 +102,7 @@
   <table class="min-w-max text-xs text-muted-foreground">
     <thead>
       <tr
-        class="sticky top-0 border-b border-border bg-card text-xs uppercase tracking-wide text-muted-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] whitespace-nowrap"
+        class="sticky top-0 border-b border-border bg-card text-xs uppercase tracking-wide text-muted-foreground shadow-sm whitespace-nowrap"
       >
         <th class="px-2 py-1 text-left">parcel_id</th>
         <th

@@ -19,7 +19,7 @@
   const containerClass = computed(() =>
     props.embedded
       ? "w-full font-sans text-muted-foreground"
-      : "w-full rounded-sm border border-border bg-card p-3 shadow-[0_4px_8px_rgba(0,0,0,0.06)] font-sans text-muted-foreground"
+      : "w-full rounded-sm border border-border bg-card p-3 shadow-md font-sans text-muted-foreground"
   );
 
   const metadata = hydroBasinsControlMetadata();
@@ -35,7 +35,7 @@
 
   function rowClass(visible: boolean): string {
     if (visible) {
-      return "border-border bg-background shadow-[0_1px_2px_rgba(15,23,42,0.04)]";
+      return "border-border bg-background shadow-sm";
     }
 
     return "border-transparent bg-card hover:border-border hover:bg-background";

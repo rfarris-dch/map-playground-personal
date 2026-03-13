@@ -70,17 +70,17 @@
   <Transition enter-active-class="transition-opacity duration-100" enter-from-class="opacity-0">
     <aside
       v-if="props.hoverState !== null"
-      class="pointer-events-none absolute z-30 rounded-sm border p-[2px]"
+      class="pointer-events-none absolute z-30 rounded-sm border p-0.5"
       :class="accentClass()"
       :style="positionStyle"
       aria-label="Facility hover details"
     >
       <div
-        class="flex w-[min(190px,calc(100vw-2rem))] flex-col gap-[8px] rounded-sm bg-card p-[8px] shadow-sm"
+        class="flex w-[min(190px,calc(100vw-2rem))] flex-col gap-2 rounded-sm bg-card p-2 shadow-sm"
       >
         <!-- Header: Title + Status + close -->
         <div class="flex items-center justify-between gap-1">
-          <div class="flex items-center gap-[4px] overflow-hidden leading-none">
+          <div class="flex items-center gap-1 overflow-hidden leading-none">
             <span class="truncate text-xs font-semibold" :class="accentTextClass()">
               {{ props.hoverState.facilityName }}
             </span>
@@ -105,11 +105,11 @@
         </div>
 
         <!-- Power metric boxes -->
-        <div v-if="powerMetrics().length > 0" class="flex gap-[4px]">
+        <div v-if="powerMetrics().length > 0" class="flex gap-1">
           <div
             v-for="(metric, i) in powerMetrics()"
             :key="i"
-            class="flex w-[40px] flex-col items-center gap-[2px] rounded-sm px-[4px] py-[4px]"
+            class="flex w-[40px] flex-col items-center gap-0.5 rounded-sm px-1 py-1"
             :class="accentBgClass()"
           >
             <span class="text-xs leading-none text-white/80">{{ metric.label }}</span>
@@ -118,7 +118,7 @@
         </div>
 
         <!-- View Details link -->
-        <div class="flex items-center gap-[2px]" :class="accentTextClass()">
+        <div class="flex items-center gap-0.5" :class="accentTextClass()">
           <span class="text-xs">View Details</span>
           <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
             <path

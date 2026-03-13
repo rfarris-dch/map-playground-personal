@@ -328,7 +328,7 @@
             <div class="flex items-center gap-1 truncate pr-2">
               <span
                 class="inline-block h-2 w-2 rounded-full"
-                :class="facility.perspective === 'colocation' ? 'bg-cyan-500' : 'bg-amber-500'"
+                :class="facility.perspective === 'colocation' ? 'bg-colocation' : 'bg-hyperscale'"
               />
               <span class="truncate font-medium text-foreground/70"
                 >{{ facility.facilityName }}</span

@@ -31,10 +31,10 @@
 
   const dotClass = computed(() => {
     if (props.accent === "colocation") {
-      return "bg-cyan-500";
+      return "bg-colocation";
     }
 
-    return "bg-amber-500";
+    return "bg-hyperscale";
   });
 
   const providerItems = computed(() => props.providers ?? []);
@@ -42,7 +42,7 @@
 
 <template>
   <article
-    class="rounded-sm border border-border bg-card p-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+    class="rounded-sm border border-border bg-card p-2 shadow-sm"
   >
     <div class="mb-1 flex items-center gap-1.5">
       <span class="inline-block h-2 w-2 rounded-full" :class="dotClass" />

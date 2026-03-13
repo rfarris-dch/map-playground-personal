@@ -66,7 +66,7 @@
   const containerClass = computed(() =>
     props.embedded
       ? "w-full font-sans text-muted-foreground"
-      : "w-full rounded-sm border border-border bg-card p-3 shadow-[0_4px_8px_rgba(0,0,0,0.06)] font-sans text-muted-foreground"
+      : "w-full rounded-sm border border-border bg-card p-3 shadow-md font-sans text-muted-foreground"
   );
 
   const heatStops = boundaryHeatStops();
@@ -260,7 +260,7 @@
 
   function sectionClass(visible: boolean): string {
     if (visible) {
-      return "border-border bg-background shadow-[0_1px_2px_rgba(15,23,42,0.04)]";
+      return "border-border bg-background shadow-sm";
     }
 
     return "border-transparent bg-card hover:border-border hover:bg-background";
@@ -374,7 +374,7 @@
         <Accordion
           type="single"
           collapsible
-          class="mt-2 rounded-sm border border-border bg-card px-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+          class="mt-2 rounded-sm border border-border bg-card px-2 shadow-sm"
         >
           <AccordionItem value="filters" class="border-b-0">
             <AccordionTrigger
@@ -392,7 +392,7 @@
                 <Input
                   :value="section.searchQuery"
                   :placeholder="section.searchPlaceholder"
-                  class="h-8 rounded-sm border border-border bg-card px-2 text-xs text-muted-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] placeholder:text-border focus-visible:border-border focus-visible:ring-2 focus-visible:ring-border"
+                  class="h-8 rounded-sm border border-border bg-card px-2 text-xs text-muted-foreground shadow-sm placeholder:text-border focus-visible:border-border focus-visible:ring-2 focus-visible:ring-border"
                   @input="onSearchInput(section.level, $event)"
                 />
 
@@ -400,7 +400,7 @@
                   <Button
                     size="sm"
                     variant="glass"
-                    class="h-[22px] rounded-sm border border-border bg-card px-2 text-xs font-normal text-muted-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:border-border hover:bg-background hover:text-foreground/70"
+                    class="h-[22px] rounded-sm border border-border bg-card px-2 text-xs font-normal text-muted-foreground shadow-sm hover:border-border hover:bg-background hover:text-foreground/70"
                     @click="onSelectAll(section.level)"
                   >
                     Select all
@@ -408,7 +408,7 @@
                   <Button
                     size="sm"
                     variant="glass"
-                    class="h-[22px] rounded-sm border border-border bg-card px-2 text-xs font-normal text-muted-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:border-border hover:bg-background hover:text-foreground/70"
+                    class="h-[22px] rounded-sm border border-border bg-card px-2 text-xs font-normal text-muted-foreground shadow-sm hover:border-border hover:bg-background hover:text-foreground/70"
                     @click="onClearAll(section.level)"
                   >
                     Clear all
@@ -416,7 +416,7 @@
                 </div>
 
                 <div
-                  class="max-h-44 overflow-y-auto rounded-sm border border-border bg-card p-1 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+                  class="max-h-44 overflow-y-auto rounded-sm border border-border bg-card p-1 shadow-sm"
                 >
                   <p
                     v-if="section.filteredOptions.length === 0"
@@ -469,7 +469,7 @@
     </div>
 
     <section
-      class="mt-3 rounded-sm border border-border bg-card p-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+      class="mt-3 rounded-sm border border-border bg-card p-2 shadow-sm"
       aria-label="Commissioned power legend"
     >
       <h3 class="text-xs font-semibold text-muted-foreground">Commissioned Power (MW)</h3>

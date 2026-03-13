@@ -296,7 +296,7 @@
               <!-- Metro source layers -->
               <p
                 v-if="props.fiberSourceLayerOptions.metro.length === 0 && props.visibleFiberLayers.metro"
-                class="py-3 text-center text-xs text-[#94A3B8] animate-pulse"
+                class="py-3 text-center text-xs text-muted-foreground animate-pulse"
               >
                 Loading metro sources...
               </p>
@@ -310,17 +310,17 @@
                   class="flex h-7 cursor-pointer items-center gap-2 rounded-sm px-1 transition-colors hover:bg-background"
                 >
                   <span
-                    class="flex size-[14px] shrink-0 items-center justify-center rounded-sm border transition-colors"
+                    class="flex size-3.5 shrink-0 items-center justify-center rounded-sm border transition-colors"
                     :class="
                     isFiberSourceLayerSelected('metro', layer.layerName)
                       ? 'border-foreground/65 bg-foreground/65'
-                      : 'border-border bg-white'
+                      : 'border-border bg-card'
                   "
                   >
                     <svg
                       v-if="isFiberSourceLayerSelected('metro', layer.layerName)"
                       aria-hidden="true"
-                      class="size-[10px] text-white"
+                      class="size-2.5 text-white"
                       viewBox="0 0 10 10"
                       fill="none"
                     >
@@ -359,7 +359,7 @@
               >
                 <div class="flex w-full items-center justify-between">
                   <div class="flex items-center gap-2">
-                    <span class="h-3 w-3 rounded-full bg-cyan-500" aria-hidden="true" />
+                    <span class="h-3 w-3 rounded-full bg-colocation" aria-hidden="true" />
                     <span
                       class="text-sm font-medium leading-none"
                       :class="props.visibleFiberLayers.longhaul ? 'text-foreground/85' : 'text-foreground/70'"
@@ -384,7 +384,7 @@
               <!-- Longhaul source layers -->
               <p
                 v-if="props.fiberSourceLayerOptions.longhaul.length === 0 && props.visibleFiberLayers.longhaul"
-                class="py-3 text-center text-xs text-[#94A3B8] animate-pulse"
+                class="py-3 text-center text-xs text-muted-foreground animate-pulse"
               >
                 Loading longhaul sources...
               </p>
@@ -398,17 +398,17 @@
                   class="flex h-7 cursor-pointer items-center gap-2 rounded-sm px-1 transition-colors hover:bg-background"
                 >
                   <span
-                    class="flex size-[14px] shrink-0 items-center justify-center rounded-sm border transition-colors"
+                    class="flex size-3.5 shrink-0 items-center justify-center rounded-sm border transition-colors"
                     :class="
                     isFiberSourceLayerSelected('longhaul', layer.layerName)
                       ? 'border-foreground/65 bg-foreground/65'
-                      : 'border-border bg-white'
+                      : 'border-border bg-card'
                   "
                   >
                     <svg
                       v-if="isFiberSourceLayerSelected('longhaul', layer.layerName)"
                       aria-hidden="true"
-                      class="size-[10px] text-white"
+                      class="size-2.5 text-white"
                       viewBox="0 0 10 10"
                       fill="none"
                     >

@@ -250,11 +250,11 @@
     }
 
     if (status === "error") {
-      return "bg-red-500";
+      return "bg-[var(--error)]";
     }
 
     if (status === "running") {
-      return "bg-cyan-500";
+      return "bg-info";
     }
 
     return "bg-muted-foreground/50";
@@ -331,7 +331,7 @@
 
     <p
       v-if="props.errorMessage !== null"
-      class="mb-3 rounded-sm border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700"
+      class="mb-3 rounded-sm border border-[var(--error)]/20 bg-[var(--error)]/5 px-3 py-2 text-xs text-[var(--error)]"
     >
       {{ props.errorMessage }}
     </p>

@@ -231,6 +231,20 @@ export function mountFacilitiesLayer(
     emitViewportUpdate(viewportFeatures, requestId, state.lastTruncated);
   };
 
+  const readFacilityIdFromProperties = (properties: unknown): string | null => {
+    if (typeof properties !== "object" || properties === null) {
+      return null;
+    }
+
+    const facilityId = Reflect.get(properties, "facilityId");
+    return typeof facilityId === "string" && facilityId.length > 0 ? facilityId : null;
+  };
+
+  const resolveSelectedFacilityId = (featureId: number | string): string => {
+    const cachedFeature = state.cachedFeatures.find((feature) => feature.id === featureId);
+    return readFacilityIdFromProperties(cachedFeature?.properties) ?? toFacilityId(featureId);
+  };
+
   const emitSelectedFacility = (featureId: number | string | null): void => {
     if (featureId === null) {
       options.onSelectFacility?.(null);
@@ -238,7 +252,7 @@ export function mountFacilitiesLayer(
     }
 
     options.onSelectFacility?.({
-      facilityId: toFacilityId(featureId),
+      facilityId: resolveSelectedFacilityId(featureId),
       perspective,
     });
   };

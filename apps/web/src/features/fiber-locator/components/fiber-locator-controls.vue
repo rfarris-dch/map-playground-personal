@@ -69,7 +69,7 @@
   const containerClass = computed(() =>
     props.embedded
       ? "w-full font-sans text-muted-foreground"
-      : "w-full rounded-sm border border-border bg-card p-3 shadow-[0_4px_8px_rgba(0,0,0,0.06)] font-sans text-muted-foreground"
+      : "w-full rounded-sm border border-border bg-card p-3 shadow-md font-sans text-muted-foreground"
   );
 
   function onToggleMetro(event: Event): void {
@@ -110,7 +110,7 @@
 
   function rowClass(visible: boolean): string {
     if (visible) {
-      return "border-border bg-background shadow-[0_1px_2px_rgba(15,23,42,0.04)]";
+      return "border-border bg-background shadow-sm";
     }
 
     return "border-transparent bg-card hover:border-border hover:bg-background";
@@ -214,14 +214,14 @@
         <div class="flex items-center gap-2 text-xs">
           <button
             type="button"
-            class="h-[22px] rounded-sm border border-border bg-card px-2 text-xs font-normal text-muted-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-border hover:bg-background hover:text-foreground/70"
+            class="h-[22px] rounded-sm border border-border bg-card px-2 text-xs font-normal text-muted-foreground shadow-sm transition-colors hover:border-border hover:bg-background hover:text-foreground/70"
             @click="emit('setAllSourceLayers', 'metro', true)"
           >
             All
           </button>
           <button
             type="button"
-            class="h-[22px] rounded-sm border border-border bg-card px-2 text-xs font-normal text-muted-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-border hover:bg-background hover:text-foreground/70"
+            class="h-[22px] rounded-sm border border-border bg-card px-2 text-xs font-normal text-muted-foreground shadow-sm transition-colors hover:border-border hover:bg-background hover:text-foreground/70"
             @click="emit('setAllSourceLayers', 'metro', false)"
           >
             None
@@ -270,14 +270,14 @@
         <div class="flex items-center gap-2 text-xs">
           <button
             type="button"
-            class="h-[22px] rounded-sm border border-border bg-card px-2 text-xs font-normal text-muted-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-border hover:bg-background hover:text-foreground/70"
+            class="h-[22px] rounded-sm border border-border bg-card px-2 text-xs font-normal text-muted-foreground shadow-sm transition-colors hover:border-border hover:bg-background hover:text-foreground/70"
             @click="emit('setAllSourceLayers', 'longhaul', true)"
           >
             All
           </button>
           <button
             type="button"
-            class="h-[22px] rounded-sm border border-border bg-card px-2 text-xs font-normal text-muted-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-border hover:bg-background hover:text-foreground/70"
+            class="h-[22px] rounded-sm border border-border bg-card px-2 text-xs font-normal text-muted-foreground shadow-sm transition-colors hover:border-border hover:bg-background hover:text-foreground/70"
             @click="emit('setAllSourceLayers', 'longhaul', false)"
           >
             None

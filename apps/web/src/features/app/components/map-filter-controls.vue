@@ -100,12 +100,12 @@
             :class="
               activeStatuses.has(opt.id)
                 ? 'border-foreground/65 bg-foreground/65'
-                : 'border-border bg-white'
+                : 'border-border bg-card'
             "
           >
             <svg
               v-if="activeStatuses.has(opt.id)"
-              class="size-[10px] text-white"
+              class="size-2.5 text-white"
               viewBox="0 0 10 10"
               fill="none"
               aria-hidden="true"
@@ -151,12 +151,12 @@
             :class="
               activeProviders.has(name)
                 ? 'border-foreground/65 bg-foreground/65'
-                : 'border-border bg-white'
+                : 'border-border bg-card'
             "
           >
             <svg
               v-if="activeProviders.has(name)"
-              class="size-[10px] text-white"
+              class="size-2.5 text-white"
               viewBox="0 0 10 10"
               fill="none"
               aria-hidden="true"
@@ -207,10 +207,10 @@
             :class="
               activeVoltageId === opt.id
                 ? 'border-foreground/65 bg-foreground/65'
-                : 'border-border bg-white'
+                : 'border-border bg-card'
             "
           >
-            <span v-if="activeVoltageId === opt.id" class="size-[6px] rounded-full bg-card" />
+            <span v-if="activeVoltageId === opt.id" class="size-1.5 rounded-full bg-card" />
           </span>
           <span
             class="text-sm leading-none"

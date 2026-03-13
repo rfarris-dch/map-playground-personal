@@ -86,7 +86,7 @@
 <template>
   <table class="w-full min-w-[640px] border-collapse text-xs text-muted-foreground">
     <thead
-      class="sticky top-0 z-10 border-b border-border bg-card shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+      class="sticky top-0 z-10 border-b border-border bg-card shadow-sm"
     >
       <tr class="text-left text-xs uppercase tracking-wide text-muted-foreground">
         <th class="px-2 py-1.5">{{ useBadgePerspective ? "Perspective" : "" }}</th>
@@ -115,15 +115,15 @@
             v-if="useBadgePerspective"
             class="inline-flex rounded-sm border border-border px-1.5 py-0.5 text-xs"
             :class="facility.perspective === 'colocation'
-              ? 'bg-white text-muted-foreground'
-              : 'bg-white text-muted-foreground'"
+              ? 'bg-card text-muted-foreground'
+              : 'bg-card text-muted-foreground'"
           >
             {{ toSpatialAnalysisPerspectiveLabel(facility.perspective) }}
           </span>
           <span
             v-else
             class="inline-block h-2 w-2 rounded-full"
-            :class="facility.perspective === 'colocation' ? 'bg-cyan-500' : 'bg-amber-500'"
+            :class="facility.perspective === 'colocation' ? 'bg-colocation' : 'bg-hyperscale'"
             :title="toSpatialAnalysisPerspectiveLabel(facility.perspective)"
           />
         </td>

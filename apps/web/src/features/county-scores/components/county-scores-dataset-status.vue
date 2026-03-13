@@ -35,7 +35,7 @@
 
 <template>
   <section
-    class="space-y-3 rounded-sm border border-border bg-card p-3 text-muted-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+    class="space-y-3 rounded-sm border border-border bg-card p-3 text-muted-foreground shadow-sm"
   >
     <div class="flex flex-wrap items-start justify-between gap-3">
       <div>
@@ -48,7 +48,7 @@
 
       <div
         v-if="props.status !== null"
-        class="rounded-sm border px-2.5 py-1 text-xs font-medium shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+        class="rounded-sm border px-2.5 py-1 text-xs font-medium shadow-sm"
         :class="statusToneClass"
       >
         {{ statusLabel }}
@@ -57,7 +57,7 @@
 
     <p
       v-if="props.errorMessage"
-      class="rounded-sm border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700"
+      class="rounded-sm border border-[var(--error)]/20 bg-[var(--error)]/5 px-3 py-2 text-xs text-[var(--error)]"
     >
       {{ props.errorMessage }}
     </p>
@@ -75,7 +75,7 @@
     <div v-else-if="props.status !== null" class="space-y-3">
       <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         <div
-          class="rounded-sm border border-border bg-card px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+          class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm"
         >
           <div class="text-xs uppercase tracking-wide text-muted-foreground">Published</div>
           <div class="mt-1 text-sm font-semibold text-foreground/70">
@@ -83,7 +83,7 @@
           </div>
         </div>
         <div
-          class="rounded-sm border border-border bg-card px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+          class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm"
         >
           <div class="text-xs uppercase tracking-wide text-muted-foreground">Data Version</div>
           <div class="mt-1 break-all text-sm font-semibold text-foreground/70">
@@ -91,7 +91,7 @@
           </div>
         </div>
         <div
-          class="rounded-sm border border-border bg-card px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+          class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm"
         >
           <div class="text-xs uppercase tracking-wide text-muted-foreground">Formula Version</div>
           <div class="mt-1 break-all text-sm font-semibold text-foreground/70">
@@ -99,7 +99,7 @@
           </div>
         </div>
         <div
-          class="rounded-sm border border-border bg-card px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+          class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm"
         >
           <div class="text-xs uppercase tracking-wide text-muted-foreground">Methodology</div>
           <div class="mt-1 break-all text-sm font-semibold text-foreground/70">
@@ -107,7 +107,7 @@
           </div>
         </div>
         <div
-          class="rounded-sm border border-border bg-card px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+          class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm"
         >
           <div class="text-xs uppercase tracking-wide text-muted-foreground">Publication Run</div>
           <div class="mt-1 break-all text-xs font-semibold text-foreground/70">
@@ -115,7 +115,7 @@
           </div>
         </div>
         <div
-          class="rounded-sm border border-border bg-card px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+          class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm"
         >
           <div class="text-xs uppercase tracking-wide text-muted-foreground">
             Ranked / Deferred / Blocked
@@ -127,13 +127,13 @@
           </div>
         </div>
         <div
-          class="rounded-sm border border-border bg-card px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+          class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm"
         >
           <div class="text-xs uppercase tracking-wide text-muted-foreground">Confidence</div>
           <div class="mt-1 text-sm font-semibold text-foreground/70">{{ confidenceSummary }}</div>
         </div>
         <div
-          class="rounded-sm border border-border bg-card px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+          class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm"
         >
           <div class="text-xs uppercase tracking-wide text-muted-foreground">Fresh Counties</div>
           <div class="mt-1 text-sm font-semibold text-foreground/70">
@@ -145,7 +145,7 @@
 
       <dl class="grid gap-2 text-xs sm:grid-cols-2">
         <div
-          class="rounded-sm border border-border bg-card px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+          class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm"
         >
           <dt class="text-xs uppercase tracking-wide text-muted-foreground">Input Data</dt>
           <dd class="mt-1 break-all text-xs font-medium text-foreground/70">
@@ -153,7 +153,7 @@
           </dd>
         </div>
         <div
-          class="rounded-sm border border-border bg-card px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+          class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm"
         >
           <dt class="text-xs uppercase tracking-wide text-muted-foreground">Rows Published</dt>
           <dd class="mt-1 text-xs font-medium text-foreground/70">
@@ -165,7 +165,7 @@
 
       <div class="grid gap-2 text-xs lg:grid-cols-2">
         <div
-          class="rounded-sm border border-border bg-card px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+          class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm"
         >
           <div class="text-xs uppercase tracking-wide text-muted-foreground">
             Available Feature Families
@@ -178,7 +178,7 @@
         </div>
 
         <div
-          class="rounded-sm border border-border bg-card px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+          class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm"
         >
           <div class="text-xs uppercase tracking-wide text-muted-foreground">
             Missing Feature Families
@@ -194,7 +194,7 @@
 
     <p
       v-else
-      class="rounded-sm border border-border bg-card px-3 py-2 text-xs text-muted-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+      class="rounded-sm border border-border bg-card px-3 py-2 text-xs text-muted-foreground shadow-sm"
     >
       County market-pressure publication metadata is not available for this selection.
     </p>
