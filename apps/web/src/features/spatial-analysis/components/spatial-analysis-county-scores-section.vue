@@ -63,9 +63,7 @@
 </script>
 
 <template>
-  <article
-    class="space-y-3 rounded-sm border border-border bg-card p-3 text-muted-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-  >
+  <article class="space-y-4 text-muted-foreground">
     <div class="flex items-center gap-2">
       <span class="inline-block h-2 w-2 rounded-full bg-sky-500" />
       <div>
@@ -102,45 +100,37 @@
       <div class="h-28 animate-pulse rounded-sm bg-muted" />
     </div>
 
-    <div v-else-if="hasCountySummary" class="space-y-3">
-      <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-        <div
-          class="rounded-sm border border-border bg-card px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-border hover:bg-background"
-        >
-          <div class="text-xs uppercase tracking-wide text-muted-foreground">Selected Counties</div>
+    <div v-else-if="hasCountySummary" class="space-y-4">
+      <!-- Summary counters — flat, no card wrappers -->
+      <div class="grid gap-x-4 gap-y-2 text-xs sm:grid-cols-2 xl:grid-cols-5">
+        <div>
+          <div class="uppercase tracking-wide text-muted-foreground">Selected Counties</div>
           <div class="text-lg font-semibold text-foreground/70">{{ requestedCountyIds.length }}</div>
         </div>
-        <div
-          class="rounded-sm border border-border bg-card px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-        >
-          <div class="text-xs uppercase tracking-wide text-muted-foreground">Ranked</div>
+        <div>
+          <div class="uppercase tracking-wide text-muted-foreground">Ranked</div>
           <div class="text-lg font-semibold text-foreground/70">{{ rankedCountyCount }}</div>
         </div>
-        <div
-          class="rounded-sm border border-border bg-card px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-        >
-          <div class="text-xs uppercase tracking-wide text-muted-foreground">Deferred</div>
+        <div>
+          <div class="uppercase tracking-wide text-muted-foreground">Deferred</div>
           <div class="text-lg font-semibold text-foreground/70">{{ deferredCountyIds.length }}</div>
         </div>
-        <div
-          class="rounded-sm border border-border bg-card px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-        >
-          <div class="text-xs uppercase tracking-wide text-muted-foreground">Blocked</div>
+        <div>
+          <div class="uppercase tracking-wide text-muted-foreground">Blocked</div>
           <div class="text-lg font-semibold text-foreground/70">{{ blockedCountyIds.length }}</div>
         </div>
-        <div
-          class="rounded-sm border border-border bg-card px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-        >
-          <div class="text-xs uppercase tracking-wide text-muted-foreground">Missing Geography</div>
+        <div>
+          <div class="uppercase tracking-wide text-muted-foreground">Missing Geography</div>
           <div class="text-lg font-semibold text-foreground/70">{{ missingCountyIds.length }}</div>
         </div>
       </div>
 
-      <div v-if="hasRows" class="space-y-3">
+      <!-- County rows -->
+      <div v-if="hasRows" class="space-y-6">
         <div
           v-for="row in rows"
           :key="row.countyFips"
-          class="space-y-3 rounded-sm border border-border bg-card px-3 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-border"
+          class="space-y-3 border-t border-border/60 pt-4"
         >
           <div class="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -150,79 +140,77 @@
 
             <div class="flex flex-wrap items-center gap-2 text-xs">
               <span
-                class="rounded-sm border px-2.5 py-1 font-medium shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+                class="rounded-sm border px-2.5 py-1 font-medium"
                 :class="rankToneClass(row.rankStatus)"
               >
                 {{ formatRankStatus(row.rankStatus) }}
               </span>
               <span
-                class="rounded-sm border px-2.5 py-1 font-medium shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+                class="rounded-sm border px-2.5 py-1 font-medium"
                 :class="confidenceToneClass(row.confidenceBadge)"
               >
-                {{ row.confidenceBadge.toUpperCase() }}
-                confidence
+                {{ row.confidenceBadge.toUpperCase() }} confidence
               </span>
             </div>
           </div>
 
-          <div class="grid gap-2 lg:grid-cols-[1.3fr_1fr]">
-            <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-              <div class="rounded-sm border border-border bg-background px-2 py-1.5">
-                <div class="text-xs uppercase tracking-wide text-muted-foreground">Pressure Index</div>
-                <div class="text-sm font-semibold text-foreground/70">
-                  {{ formatMetric(row.marketPressureIndex) }}
-                </div>
-              </div>
-              <div class="rounded-sm border border-border bg-background px-2 py-1.5">
-                <div class="text-xs uppercase tracking-wide text-muted-foreground">Tier</div>
-                <div class="text-sm font-semibold text-foreground/70">
-                  {{ formatTier(row.attractivenessTier) }}
-                </div>
-              </div>
-              <div class="rounded-sm border border-border bg-background px-2 py-1.5">
-                <div class="text-xs uppercase tracking-wide text-muted-foreground">Freshness</div>
-                <div class="text-sm font-semibold text-foreground/70">
-                  {{ formatMetric(row.freshnessScore) }}
-                </div>
-              </div>
-              <div class="rounded-sm border border-border bg-background px-2 py-1.5">
-                <div class="text-xs uppercase tracking-wide text-muted-foreground">Updated</div>
-                <div class="text-sm font-semibold text-foreground/70">
-                  {{ formatDateTime(row.lastUpdatedAt) }}
-                </div>
+          <!-- Key scores — flat row -->
+          <div class="grid gap-x-4 gap-y-2 text-xs sm:grid-cols-2 xl:grid-cols-4">
+            <div class="rounded-sm bg-background px-2 py-1.5">
+              <div class="uppercase tracking-wide text-muted-foreground">Pressure Index</div>
+              <div class="text-sm font-semibold text-foreground/70">
+                {{ formatMetric(row.marketPressureIndex) }}
               </div>
             </div>
-
-            <div
-              class="rounded-sm border border-border bg-card px-3 py-2 text-xs shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-border hover:bg-background"
-            >
-              <div class="text-xs uppercase tracking-wide text-muted-foreground">Narrative</div>
-              <p class="mt-1 mb-0 text-foreground/70">
-                {{ row.narrativeSummary ?? "No county narrative is available." }}
-              </p>
+            <div class="rounded-sm bg-background px-2 py-1.5">
+              <div class="uppercase tracking-wide text-muted-foreground">Tier</div>
+              <div class="text-sm font-semibold text-foreground/70">
+                {{ formatTier(row.attractivenessTier) }}
+              </div>
+            </div>
+            <div class="rounded-sm bg-background px-2 py-1.5">
+              <div class="uppercase tracking-wide text-muted-foreground">Freshness</div>
+              <div class="text-sm font-semibold text-foreground/70">
+                {{ formatMetric(row.freshnessScore) }}
+              </div>
+            </div>
+            <div class="rounded-sm bg-background px-2 py-1.5">
+              <div class="uppercase tracking-wide text-muted-foreground">Updated</div>
+              <div class="text-sm font-semibold text-foreground/70">
+                {{ formatDateTime(row.lastUpdatedAt) }}
+              </div>
             </div>
           </div>
 
-          <dl class="grid gap-2 text-xs sm:grid-cols-2 xl:grid-cols-4">
-            <div class="rounded-sm border border-border bg-background px-2 py-1.5">
+          <!-- Narrative -->
+          <div class="text-xs">
+            <div class="uppercase tracking-wide text-muted-foreground">Narrative</div>
+            <p class="mt-1 mb-0 text-foreground/70">
+              {{ row.narrativeSummary ?? "No county narrative is available." }}
+            </p>
+          </div>
+
+          <!-- Score breakdown — flat row -->
+          <dl class="grid gap-x-4 gap-y-2 text-xs sm:grid-cols-2 xl:grid-cols-4">
+            <div class="rounded-sm bg-background px-2 py-1.5">
               <dt class="text-muted-foreground">Demand Pressure</dt>
               <dd class="m-0 font-medium text-foreground/70">
                 {{ formatMetric(row.demandPressureScore) }}
               </dd>
             </div>
-            <div class="rounded-sm border border-border bg-background px-2 py-1.5">
+            <div class="rounded-sm bg-background px-2 py-1.5">
               <dt class="text-muted-foreground">Supply Timeline</dt>
               <dd class="m-0 font-medium text-foreground/70">
                 {{ formatMetric(row.supplyTimelineScore) }}
               </dd>
             </div>
-            <div class="rounded-sm border border-border bg-background px-2 py-1.5">
+            <div class="rounded-sm bg-background px-2 py-1.5">
               <dt class="text-muted-foreground">Grid Friction</dt>
               <dd class="m-0 font-medium text-foreground/70">
                 {{ formatMetric(row.gridFrictionScore) }}
               </dd>
             </div>
-            <div class="rounded-sm border border-border bg-background px-2 py-1.5">
+            <div class="rounded-sm bg-background px-2 py-1.5">
               <dt class="text-muted-foreground">Policy Constraint</dt>
               <dd class="m-0 font-medium text-foreground/70">
                 {{ formatMetric(row.policyConstraintScore) }}
@@ -230,11 +218,10 @@
             </div>
           </dl>
 
-          <dl class="grid gap-2 text-xs lg:grid-cols-3">
-            <div
-              class="rounded-sm border border-border bg-card px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-border hover:bg-background"
-            >
-              <dt class="text-xs uppercase tracking-wide text-muted-foreground">Demand</dt>
+          <!-- Detail sections — flat, no card wrappers -->
+          <dl class="grid gap-6 text-xs lg:grid-cols-3">
+            <div>
+              <dt class="uppercase tracking-wide text-muted-foreground">Demand</dt>
               <dd class="mt-1 space-y-1 text-foreground/70">
                 <div>0-24m expected MW: {{ formatMetric(row.expectedMw0To24m) }}</div>
                 <div>24-60m expected MW: {{ formatMetric(row.expectedMw24To60m) }}</div>
@@ -243,10 +230,8 @@
               </dd>
             </div>
 
-            <div
-              class="rounded-sm border border-border bg-card px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-            >
-              <dt class="text-xs uppercase tracking-wide text-muted-foreground">Supply + Friction</dt>
+            <div>
+              <dt class="uppercase tracking-wide text-muted-foreground">Supply + Friction</dt>
               <dd class="mt-1 space-y-1 text-foreground/70">
                 <div>0-36m expected supply MW: {{ formatMetric(row.expectedSupplyMw0To36m) }}</div>
                 <div>Signed IA MW: {{ formatMetric(row.signedIaMw) }}</div>
@@ -256,10 +241,8 @@
               </dd>
             </div>
 
-            <div
-              class="rounded-sm border border-border bg-card px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-            >
-              <dt class="text-xs uppercase tracking-wide text-muted-foreground">Policy + Context</dt>
+            <div>
+              <dt class="uppercase tracking-wide text-muted-foreground">Policy + Context</dt>
               <dd class="mt-1 space-y-1 text-foreground/70">
                 <div>Moratorium: {{ row.moratoriumStatus }}</div>
                 <div>Policy momentum: {{ formatMetric(row.policyMomentumScore) }}</div>
@@ -269,14 +252,13 @@
             </div>
           </dl>
 
+          <!-- Drivers, Deferred, Changes -->
           <div
             v-if="row.topDrivers.length > 0 || row.deferredReasonCodes.length > 0 || visibleChanges(row).length > 0"
-            class="grid gap-2 text-xs lg:grid-cols-3"
+            class="grid gap-6 text-xs lg:grid-cols-3"
           >
-            <div
-              class="rounded-sm border border-border bg-card px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-            >
-              <div class="text-xs uppercase tracking-wide text-muted-foreground">Top Drivers</div>
+            <div>
+              <div class="uppercase tracking-wide text-muted-foreground">Top Drivers</div>
               <ul class="mt-1 mb-0 space-y-1 pl-4 text-foreground/70">
                 <li v-for="driver in row.topDrivers" :key="driver.code">
                   {{ driver.label }}: {{ driver.summary }}
@@ -284,10 +266,8 @@
               </ul>
             </div>
 
-            <div
-              class="rounded-sm border border-border bg-card px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-            >
-              <div class="text-xs uppercase tracking-wide text-muted-foreground">Deferred Reasons</div>
+            <div>
+              <div class="uppercase tracking-wide text-muted-foreground">Deferred Reasons</div>
               <p v-if="row.deferredReasonCodes.length === 0" class="mt-1 mb-0 text-foreground/70">
                 No deferred reasons.
               </p>
@@ -298,10 +278,8 @@
               </ul>
             </div>
 
-            <div
-              class="rounded-sm border border-border bg-card px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-            >
-              <div class="text-xs uppercase tracking-wide text-muted-foreground">What Changed</div>
+            <div>
+              <div class="uppercase tracking-wide text-muted-foreground">What Changed</div>
               <p v-if="visibleChanges(row).length === 0" class="mt-1 mb-0 text-foreground/70">
                 No tracked change yet.
               </p>

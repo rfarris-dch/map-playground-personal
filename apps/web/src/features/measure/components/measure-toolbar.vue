@@ -109,7 +109,7 @@
 
 <template>
   <aside
-    class="map-glass-panel pointer-events-auto absolute bottom-16 left-4 z-20 w-[min(28rem,calc(100%-2rem))] rounded-xl p-3"
+    class="map-glass-elevated pointer-events-auto absolute bottom-16 left-4 z-20 w-[min(28rem,calc(100%-2rem))] rounded-xl p-3"
     aria-label="Measurement tools"
   >
     <header class="mb-3 flex items-start justify-between gap-3">
@@ -118,7 +118,7 @@
         <p class="m-0 text-xs text-muted-foreground">{{ helperText }}</p>
       </div>
       <span
-        class="map-glass-pill inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium text-muted-foreground"
+        class="map-glass-subtle inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium text-muted-foreground"
       >
         {{ panelStatus }}
       </span>
@@ -128,7 +128,7 @@
       <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         Output
       </p>
-      <div class="map-glass-segment inline-flex rounded-lg p-1">
+      <div class="map-glass-surface inline-flex rounded-lg p-1">
         <button
           type="button"
           class="rounded-md px-2.5 py-1 text-xs font-medium transition"
@@ -225,33 +225,33 @@
     </section>
 
     <section class="mb-3 grid gap-2 sm:grid-cols-2" role="region" aria-label="Measurement readings">
-      <div class="map-glass-card rounded-md px-3 py-2">
+      <div class="map-glass-surface rounded-md px-3 py-2">
         <div class="text-xs uppercase tracking-wide text-muted-foreground">Mode</div>
         <div class="text-sm font-medium">{{ props.state.mode }}</div>
       </div>
-      <div class="map-glass-card rounded-md px-3 py-2">
+      <div class="map-glass-surface rounded-md px-3 py-2">
         <div class="text-xs uppercase tracking-wide text-muted-foreground">Area Shape</div>
         <div class="text-sm font-medium">
           {{ props.state.mode === "area" ? props.state.areaShape : "n/a" }}
         </div>
       </div>
-      <div class="map-glass-card rounded-md px-3 py-2">
+      <div class="map-glass-surface rounded-md px-3 py-2">
         <div class="text-xs uppercase tracking-wide text-muted-foreground">Distance</div>
         <div class="text-sm font-medium tabular-nums">
           {{ formatDistance(props.state.distanceKm) }}
         </div>
       </div>
-      <div class="map-glass-card rounded-md px-3 py-2">
+      <div class="map-glass-surface rounded-md px-3 py-2">
         <div class="text-xs uppercase tracking-wide text-muted-foreground">Area</div>
         <div class="text-sm font-medium tabular-nums">{{ formatArea(props.state.areaSqKm) }}</div>
       </div>
-      <div class="map-glass-card rounded-md px-3 py-2">
+      <div class="map-glass-surface rounded-md px-3 py-2">
         <div class="text-xs uppercase tracking-wide text-muted-foreground">Selection</div>
         <div class="text-sm font-medium">
           {{ props.state.isSelectionComplete ? "Complete" : "In progress" }}
         </div>
       </div>
-      <div class="map-glass-card rounded-md px-3 py-2">
+      <div class="map-glass-surface rounded-md px-3 py-2">
         <div class="text-xs uppercase tracking-wide text-muted-foreground">Vertices</div>
         <div class="text-sm font-medium tabular-nums">{{ props.state.vertexCount }}</div>
       </div>

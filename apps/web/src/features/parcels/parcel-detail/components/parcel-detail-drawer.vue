@@ -44,7 +44,7 @@
 <template>
   <aside
     v-if="selectedParcel !== null"
-    class="map-glass-panel pointer-events-auto absolute right-4 top-4 z-10 w-[min(32rem,calc(100%-2rem))] rounded-lg p-4"
+    class="map-glass-elevated pointer-events-auto absolute right-4 top-4 z-10 w-[min(32rem,calc(100%-2rem))] rounded-lg p-4"
     aria-label="Parcel detail"
   >
     <header class="mb-3 flex items-center gap-2">
@@ -90,7 +90,7 @@
         <dd class="m-0 font-mono">{{ detail.response.feature.lineage.ingestionRunId ?? "n/a" }}</dd>
       </dl>
 
-      <section class="map-glass-card mb-3 rounded-md p-3">
+      <section class="mb-3 border-t border-border/50 pt-3">
         <h3 class="mb-2 mt-0 text-xs font-semibold tracking-wide">Flood context</h3>
         <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-xs">
           <dt class="text-muted-foreground">Classification</dt>
@@ -108,15 +108,15 @@
         </dl>
       </section>
 
-      <section>
+      <section class="border-t border-border/50 pt-3">
         <h3 class="mb-2 mt-0 text-xs font-semibold tracking-wide">Full Attributes</h3>
         <p class="mb-2 mt-0 text-xs text-muted-foreground">
           {{ attributeEntries.length }}
           keys in payload
         </p>
-        <div class="map-glass-card max-h-96 overflow-auto rounded-md">
+        <div class="max-h-96 overflow-auto rounded-md border border-border/40">
           <table class="w-full border-collapse text-xs">
-            <thead class="map-glass-panel-soft sticky top-0">
+            <thead class="sticky top-0 bg-background/95">
               <tr>
                 <th class="px-2 py-1 text-left font-semibold">Field</th>
                 <th class="px-2 py-1 text-left font-semibold">Value</th>
