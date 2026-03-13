@@ -162,6 +162,16 @@
   --size-10: 36px;
   --size-11: 42px;
   --size-12: 48px;
+
+  /* Figma dcH Design System — Icon Sizes */
+  --icon-1: 16px; /* stroke-1.5 */
+  --icon-2: 20px; /* stroke-2, space-1 (4px) padding — table rows, small buttons */
+  --icon-3: 24px; /* stroke-3, space-1 (4px) padding — headers, subheads, large buttons */
+
+  /* Figma dcH Design System — Stroke Widths */
+  --stroke-1: 0.5px;
+  --stroke-2: 1px; /* borders: buttons, cards, dividers */
+  --stroke-3: 1.5px;
 }
 
 * {
