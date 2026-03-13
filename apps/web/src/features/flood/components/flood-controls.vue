@@ -63,7 +63,7 @@
         :class="rowClass(props.flood100Visible)"
       >
         <input
-          class="mt-[1px] h-4 w-4 shrink-0 rounded-sm border border-border accent-muted-foreground"
+          class="h-4 w-4 shrink-0 rounded-sm border border-border accent-muted-foreground"
           type="checkbox"
           :checked="props.flood100Visible"
           @change="onToggleFlood100"
@@ -99,7 +99,7 @@
         :class="rowClass(props.flood500Visible)"
       >
         <input
-          class="mt-[1px] h-4 w-4 shrink-0 rounded-sm border border-border accent-muted-foreground"
+          class="h-4 w-4 shrink-0 rounded-sm border border-border accent-muted-foreground"
           type="checkbox"
           :checked="props.flood500Visible"
           @change="onToggleFlood500"

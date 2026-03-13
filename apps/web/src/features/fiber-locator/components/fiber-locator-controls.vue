@@ -140,7 +140,7 @@
         :class="rowClass(props.metroVisible)"
       >
         <input
-          class="mt-[1px] h-4 w-4 shrink-0 rounded-sm border border-border accent-muted-foreground"
+          class="h-4 w-4 shrink-0 rounded-sm border border-border accent-muted-foreground"
           type="checkbox"
           :checked="props.metroVisible"
           @change="onToggleMetro"
@@ -168,7 +168,7 @@
         :class="rowClass(props.longhaulVisible)"
       >
         <input
-          class="mt-[1px] h-4 w-4 shrink-0 rounded-sm border border-border accent-muted-foreground"
+          class="h-4 w-4 shrink-0 rounded-sm border border-border accent-muted-foreground"
           type="checkbox"
           :checked="props.longhaulVisible"
           @change="onToggleLonghaul"
@@ -237,12 +237,12 @@
           :class="sourceLayerRowClass(isSourceLayerSelected('metro', layer.layerName))"
         >
           <input
-            class="mt-[1px] h-4 w-4 shrink-0 rounded-sm border border-border accent-muted-foreground"
+            class="h-4 w-4 shrink-0 rounded-sm border border-border accent-muted-foreground"
             type="checkbox"
             :checked="isSourceLayerSelected('metro', layer.layerName)"
             @change="onToggleSourceLayer('metro', layer.layerName, $event)"
           >
-          <span class="mt-[6px] h-[3px] w-4 rounded-full bg-pink-500" aria-hidden="true" />
+          <span class="mt-1.5 h-0.5 w-4 rounded-full bg-pink-500" aria-hidden="true" />
           <span
             class="min-w-0 flex-1 truncate text-xs transition-colors"
             :class="
@@ -293,12 +293,12 @@
           :class="sourceLayerRowClass(isSourceLayerSelected('longhaul', layer.layerName))"
         >
           <input
-            class="mt-[1px] h-4 w-4 shrink-0 rounded-sm border border-border accent-muted-foreground"
+            class="h-4 w-4 shrink-0 rounded-sm border border-border accent-muted-foreground"
             type="checkbox"
             :checked="isSourceLayerSelected('longhaul', layer.layerName)"
             @change="onToggleSourceLayer('longhaul', layer.layerName, $event)"
           >
-          <span class="mt-[6px] h-[3px] w-4 rounded-full bg-cyan-500" aria-hidden="true" />
+          <span class="mt-1.5 h-0.5 w-4 rounded-full bg-cyan-500" aria-hidden="true" />
           <span
             class="min-w-0 flex-1 truncate text-xs transition-colors"
             :class="

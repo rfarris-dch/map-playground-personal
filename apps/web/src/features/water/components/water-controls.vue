@@ -50,7 +50,7 @@
       :class="rowClass(props.visible)"
     >
       <input
-        class="mt-[1px] h-4 w-4 shrink-0 rounded-sm border border-border accent-muted-foreground"
+        class="h-4 w-4 shrink-0 rounded-sm border border-border accent-muted-foreground"
         type="checkbox"
         :checked="props.visible"
         @change="onToggle"

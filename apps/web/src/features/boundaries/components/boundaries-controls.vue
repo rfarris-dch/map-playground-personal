@@ -349,7 +349,7 @@
         <div class="flex items-start gap-2">
           <Checkbox
             :checked="section.visible"
-            class="mt-[1px] h-4 w-4 shrink-0 rounded-sm border border-border bg-card text-muted-foreground shadow-none data-[state=checked]:border-muted-foreground data-[state=checked]:bg-muted-foreground data-[state=checked]:text-white"
+            class="h-4 w-4 shrink-0 rounded-sm border border-border bg-card text-muted-foreground shadow-none data-[state=checked]:border-muted-foreground data-[state=checked]:bg-muted-foreground data-[state=checked]:text-white"
             @update:checked="onToggleVisibility(section.level, $event)"
           />
 

@@ -62,7 +62,7 @@
         :class="rowClass(props.colocationVisible)"
       >
         <input
-          class="mt-[1px] h-4 w-4 shrink-0 rounded-sm border border-border accent-muted-foreground"
+          class="h-4 w-4 shrink-0 rounded-sm border border-border accent-muted-foreground"
           type="checkbox"
           :checked="props.colocationVisible"
           @change="onToggleColocation"
@@ -90,7 +90,7 @@
         :class="rowClass(props.hyperscaleVisible)"
       >
         <input
-          class="mt-[1px] h-4 w-4 shrink-0 rounded-sm border border-border accent-muted-foreground"
+          class="h-4 w-4 shrink-0 rounded-sm border border-border accent-muted-foreground"
           type="checkbox"
           :checked="props.hyperscaleVisible"
           @change="onToggleHyperscale"
