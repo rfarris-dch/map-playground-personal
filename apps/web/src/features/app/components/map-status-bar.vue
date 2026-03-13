@@ -7,7 +7,7 @@
 <template>
   <div
     v-if="props.overlayStatusMessage !== null"
-    class="map-glass-pill pointer-events-none absolute bottom-4 left-1/2 z-20 -translate-x-1/2 rounded-full px-3 py-1 text-[11px] text-muted-foreground"
+    class="map-glass-subtle pointer-events-none absolute bottom-4 left-1/2 z-20 -translate-x-1/2 rounded-full px-3 py-1 text-[11px] text-muted-foreground"
   >
     {{ props.overlayStatusMessage }}
   </div>

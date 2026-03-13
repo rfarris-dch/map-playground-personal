@@ -111,10 +111,9 @@
 </script>
 
 <template>
-  <article
-    class="rounded-[4px] border border-[#E2E8F0] bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-[#CBD5E1]"
-  >
-    <div class="mb-3 flex items-start justify-between gap-3">
+  <article class="space-y-4 p-3">
+    <!-- Header row -->
+    <div class="flex items-start justify-between gap-3">
       <div>
         <div class="mb-1 flex items-center gap-1.5">
           <span class="inline-block h-2 w-2 rounded-full bg-[#0EA5E9]" />
@@ -124,41 +123,32 @@
           Power, provider mix, parcel candidates, and facility preview.
         </p>
       </div>
-      <div
-        class="rounded-[4px] border border-[#E2E8F0] bg-white px-2 py-1 text-right shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-[#CBD5E1] hover:bg-[#F8FAFC]"
-      >
+      <div class="text-right">
         <div class="text-[10px] uppercase tracking-wide text-[#94A3B8]">Facilities</div>
         <div class="text-sm font-semibold text-[#64748B]">{{ metrics.totalFacilities }}</div>
       </div>
     </div>
 
-    <div class="mb-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-      <div
-        class="rounded-[4px] border border-[#E2E8F0] bg-white p-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-[#CBD5E1] hover:bg-[#F8FAFC]"
-      >
-        <div class="text-[10px] uppercase tracking-wide text-[#94A3B8]">Colocation</div>
+    <!-- Key metrics — flat grid, no card wrappers -->
+    <div class="grid gap-x-4 gap-y-2 text-[10px] sm:grid-cols-2 xl:grid-cols-3">
+      <div>
+        <div class="uppercase tracking-wide text-[#94A3B8]">Colocation</div>
         <div class="text-lg font-semibold text-[#64748B]">{{ metrics.colocationCount }}</div>
-        <div class="text-[10px] text-[#94A3B8]">
-          {{ props.formatPower(metrics.colocationCommissionedPowerMw) }}
-          commissioned
+        <div class="text-[#94A3B8]">
+          {{ props.formatPower(metrics.colocationCommissionedPowerMw) }} commissioned
         </div>
       </div>
 
-      <div
-        class="rounded-[4px] border border-[#E2E8F0] bg-white p-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-      >
-        <div class="text-[10px] uppercase tracking-wide text-[#94A3B8]">Hyperscale</div>
+      <div>
+        <div class="uppercase tracking-wide text-[#94A3B8]">Hyperscale</div>
         <div class="text-lg font-semibold text-[#64748B]">{{ metrics.hyperscaleCount }}</div>
-        <div class="text-[10px] text-[#94A3B8]">
-          {{ props.formatPower(metrics.hyperscaleCommissionedPowerMw) }}
-          commissioned
+        <div class="text-[#94A3B8]">
+          {{ props.formatPower(metrics.hyperscaleCommissionedPowerMw) }} commissioned
         </div>
       </div>
 
-      <div
-        class="rounded-[4px] border border-[#E2E8F0] bg-white p-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-      >
-        <div class="text-[10px] uppercase tracking-wide text-[#94A3B8]">Avg MW / Facility</div>
+      <div>
+        <div class="uppercase tracking-wide text-[#94A3B8]">Avg MW / Facility</div>
         <div class="text-lg font-semibold text-[#64748B]">
           {{ metrics.totalFacilities > 0
               ? props.formatPower(metrics.averageCommissionedPowerMwPerFacility)
@@ -166,74 +156,61 @@
         </div>
       </div>
 
-      <div
-        class="rounded-[4px] border border-[#E2E8F0] bg-white p-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-      >
-        <div class="text-[10px] uppercase tracking-wide text-[#94A3B8]">Total Commissioned</div>
+      <div>
+        <div class="uppercase tracking-wide text-[#94A3B8]">Total Commissioned</div>
         <div class="text-lg font-semibold text-[#64748B]">
           {{ props.formatPower(metrics.totalCommissionedPowerMw) }}
         </div>
       </div>
 
-      <div
-        class="rounded-[4px] border border-[#E2E8F0] bg-white p-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-      >
-        <div class="text-[10px] uppercase tracking-wide text-[#94A3B8]">Pipeline Power</div>
+      <div>
+        <div class="uppercase tracking-wide text-[#94A3B8]">Pipeline Power</div>
         <div class="text-lg font-semibold text-[#64748B]">
           {{ props.formatPower(metrics.totalPipelinePowerMw) }}
         </div>
       </div>
 
-      <div
-        class="rounded-[4px] border border-[#E2E8F0] bg-white p-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-      >
-        <div class="text-[10px] uppercase tracking-wide text-[#94A3B8]">Total Space</div>
+      <div>
+        <div class="uppercase tracking-wide text-[#94A3B8]">Total Space</div>
         <div class="text-lg font-semibold text-[#64748B]">
           {{ formatNullableSquareFootage(metrics.totalSquareFootage) }}
         </div>
       </div>
     </div>
 
-    <div class="mb-3 grid gap-3 lg:grid-cols-2">
-      <section
-        class="rounded-[4px] border border-[#E2E8F0] bg-white p-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-      >
-        <div class="mb-1 flex items-center gap-1.5">
+    <!-- Commissioned Mix + Status Breakdown -->
+    <div class="grid gap-6 lg:grid-cols-2">
+      <section>
+        <div class="mb-2 flex items-center gap-1.5">
           <span class="inline-block h-2 w-2 rounded-full bg-[#64748B]" />
           <h4 class="m-0 text-[10px] font-semibold text-[#94A3B8]">Commissioned Mix</h4>
         </div>
-        <div class="grid gap-2 text-[10px] sm:grid-cols-2">
-          <div class="rounded-[4px] border border-[#E2E8F0] bg-[#F8FAFC] px-2 py-1.5">
-            <div class="text-[10px] uppercase tracking-wide text-[#94A3B8]">Colocation</div>
+        <div class="grid gap-x-4 gap-y-1 text-[10px] sm:grid-cols-2">
+          <div>
+            <div class="uppercase tracking-wide text-[#94A3B8]">Colocation</div>
             <div class="font-medium text-[#64748B]">
               {{ props.formatPower(metrics.colocationCommissionedPowerMw) }}
             </div>
             <div class="text-[#94A3B8]">
-              {{ metrics.colocationCount }}
-              facilities ·
-              {{ props.formatPower(metrics.colocationPipelinePowerMw) }}
-              pipe
+              {{ metrics.colocationCount }} facilities ·
+              {{ props.formatPower(metrics.colocationPipelinePowerMw) }} pipe
             </div>
           </div>
-          <div class="rounded-[4px] border border-[#E2E8F0] bg-[#F8FAFC] px-2 py-1.5">
-            <div class="text-[10px] uppercase tracking-wide text-[#94A3B8]">Hyperscale</div>
+          <div>
+            <div class="uppercase tracking-wide text-[#94A3B8]">Hyperscale</div>
             <div class="font-medium text-[#64748B]">
               {{ props.formatPower(metrics.hyperscaleCommissionedPowerMw) }}
             </div>
             <div class="text-[#94A3B8]">
-              {{ metrics.hyperscaleCount }}
-              facilities ·
-              {{ props.formatPower(metrics.hyperscalePipelinePowerMw) }}
-              pipe
+              {{ metrics.hyperscaleCount }} facilities ·
+              {{ props.formatPower(metrics.hyperscalePipelinePowerMw) }} pipe
             </div>
           </div>
         </div>
       </section>
 
-      <section
-        class="rounded-[4px] border border-[#E2E8F0] bg-white p-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-      >
-        <div class="mb-1 flex items-center gap-1.5">
+      <section>
+        <div class="mb-2 flex items-center gap-1.5">
           <span class="inline-block h-2 w-2 rounded-full bg-[#10B981]" />
           <h4 class="m-0 text-[10px] font-semibold text-[#94A3B8]">Status Breakdown</h4>
         </div>
@@ -242,11 +219,10 @@
           <span
             v-for="item in statusItems"
             :key="item.label"
-            class="inline-flex items-center rounded-[4px] border border-[#E2E8F0] bg-white px-2 py-0.5 text-[10px] font-medium shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+            class="inline-flex items-center rounded-[4px] border px-2 py-0.5 text-[10px] font-medium"
             :class="statusToneClass(item.tone)"
           >
-            {{ item.label }}
-            · {{ item.count }}
+            {{ item.label }} · {{ item.count }}
           </span>
         </div>
 
@@ -254,22 +230,22 @@
       </section>
     </div>
 
-    <div class="mb-3 grid gap-3 lg:grid-cols-2">
-      <section
-        class="rounded-[4px] border border-[#E2E8F0] bg-white p-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-      >
-        <div class="mb-1 flex items-center gap-1.5">
+    <hr class="border-t border-border/50" />
+
+    <!-- Top Providers + Parcel Candidates -->
+    <div class="grid gap-6 lg:grid-cols-2">
+      <section>
+        <div class="mb-2 flex items-center gap-1.5">
           <span class="inline-block h-2 w-2 rounded-full bg-[#8B5CF6]" />
           <h4 class="m-0 text-[10px] font-semibold text-[#94A3B8]">Top Providers</h4>
         </div>
 
-        <div v-if="providers.length > 0" class="space-y-2">
+        <div v-if="providers.length > 0" class="space-y-1.5">
           <div v-for="provider in providers" :key="provider.providerId ?? provider.providerName">
-            <div class="mb-1 flex items-center justify-between gap-2 text-[10px]">
+            <div class="flex items-center justify-between gap-2 text-[10px]">
               <span class="truncate font-medium text-[#64748B]">{{ provider.providerName }}</span>
               <span class="shrink-0 text-[#94A3B8]">
-                {{ provider.count }}
-                · {{ props.formatPower(provider.commissionedPowerMw) }}
+                {{ provider.count }} · {{ props.formatPower(provider.commissionedPowerMw) }}
               </span>
             </div>
           </div>
@@ -278,34 +254,26 @@
         <p v-else class="text-[10px] text-[#94A3B8]">No provider totals available.</p>
       </section>
 
-      <section
-        class="rounded-[4px] border border-[#E2E8F0] bg-white p-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-      >
-        <div class="mb-1 flex items-center gap-1.5">
+      <section>
+        <div class="mb-2 flex items-center gap-1.5">
           <span class="inline-block h-2 w-2 rounded-full bg-[#10B981]" />
           <h4 class="m-0 text-[10px] font-semibold text-[#94A3B8]">Parcel Candidates</h4>
         </div>
 
-        <div class="grid grid-cols-3 gap-2 text-[10px]">
-          <div
-            class="rounded-[4px] border border-[#E2E8F0] bg-white px-2 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-          >
+        <div class="grid grid-cols-3 gap-x-3 gap-y-1 text-[10px]">
+          <div>
             <span class="text-[#94A3B8]">Total acres:</span>
             <span class="font-medium tabular-nums text-[#64748B]">
               {{ formatNullableAcres(parcelCandidates.totalAcres) }}
             </span>
           </div>
-          <div
-            class="rounded-[4px] border border-[#E2E8F0] bg-white px-2 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-          >
+          <div>
             <span class="text-[#94A3B8]">Avg acres:</span>
             <span class="font-medium tabular-nums text-[#64748B]">
               {{ formatNullableAcres(parcelCandidates.averageAcres) }}
             </span>
           </div>
-          <div
-            class="rounded-[4px] border border-[#E2E8F0] bg-white px-2 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-          >
+          <div>
             <span class="text-[#94A3B8]">Max acres:</span>
             <span class="font-medium tabular-nums text-[#64748B]">
               {{ formatNullableAcres(parcelCandidates.maxAcres) }}
@@ -317,7 +285,7 @@
           <div
             v-for="(parcel, index) in parcelCandidates.sample"
             :key="`${parcel.parcelNumber ?? parcel.address ?? 'parcel'}-${String(index)}`"
-            class="rounded-[4px] border border-[#E2E8F0] bg-white px-2 py-1.5 text-[10px] shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+            class="border-t border-[#E2E8F0]/60 pt-1 text-[10px]"
           >
             <div class="flex items-center justify-between gap-2">
               <span class="truncate font-medium text-[#64748B]">
@@ -338,10 +306,9 @@
       </section>
     </div>
 
-    <section
-      class="rounded-[4px] border border-[#E2E8F0] bg-white p-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-    >
-      <div class="mb-1 flex items-center gap-1.5">
+    <!-- Facilities preview -->
+    <section>
+      <div class="mb-2 flex items-center gap-1.5">
         <span class="inline-block h-2 w-2 rounded-full bg-[#64748B]" />
         <h4 class="m-0 text-[10px] font-semibold text-[#94A3B8]">Facilities</h4>
       </div>
@@ -351,7 +318,7 @@
           v-for="facility in facilityPreview"
           :key="`${facility.perspective}:${facility.facilityId}`"
           type="button"
-          class="flex w-full items-start justify-between gap-2 rounded-[4px] border border-[#E2E8F0] bg-white px-2 py-1.5 text-left text-[10px] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-[#CBD5E1] hover:bg-[#F8FAFC]"
+          class="flex w-full items-start justify-between gap-2 rounded-[4px] border border-[#E2E8F0] px-2 py-1.5 text-left text-[10px] transition-colors hover:border-[#CBD5E1] hover:bg-[#F8FAFC]"
           @click="selectFacility(facility)"
         >
           <div class="min-w-0">

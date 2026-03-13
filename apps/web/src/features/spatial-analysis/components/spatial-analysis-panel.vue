@@ -394,7 +394,7 @@
           <div
             v-for="stage in visibleProgressStages"
             :key="stage.key"
-            class="rounded-[4px] border border-[#E2E8F0] bg-white px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+            class="border-t border-[#E2E8F0]/60 px-1 pt-2"
           >
             <div class="flex items-center justify-between gap-2">
               <div class="flex items-center gap-2">
@@ -453,46 +453,40 @@
             :power-label="props.perspectivePowerLabel ?? 'Commissioned'"
           />
 
-          <article
+          <section
             v-if="hasMarkets || marketSelectionUnavailableReason !== null"
-            class="rounded-[4px] border border-[#E2E8F0] bg-white p-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)] lg:col-span-2"
+            class="lg:col-span-2"
             aria-label="Market summary"
           >
-            <div class="mb-1 flex items-center gap-1.5">
+            <div class="mb-2 flex items-center gap-1.5">
               <span class="inline-block h-2 w-2 rounded-full bg-[#8B5CF6]" />
               <h3 class="m-0 text-[10px] font-semibold text-[#94A3B8]">Market Coverage</h3>
             </div>
 
             <p
               v-if="marketSelectionUnavailableReason !== null"
-              class="mb-2 rounded-[4px] border border-[#E2E8F0] bg-[#F8FAFC] px-2 py-1.5 text-[10px] text-[#94A3B8]"
+              class="mb-2 rounded-[4px] bg-[#F8FAFC] px-2 py-1.5 text-[10px] text-[#94A3B8]"
             >
               {{ marketSelectionUnavailableReason }}
             </p>
 
             <dl
               v-if="hasMarkets"
-              class="grid grid-cols-[1fr_auto] gap-x-2 gap-y-1 text-[11px] sm:grid-cols-[repeat(3,minmax(0,1fr))]"
+              class="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 text-[11px] sm:grid-cols-[repeat(3,minmax(0,1fr))]"
             >
-              <div
-                class="flex items-center justify-between gap-2 rounded-[4px] border border-[#E2E8F0] bg-white px-2 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-              >
+              <div class="flex items-center justify-between gap-2">
                 <dt class="text-[#94A3B8]">Matches</dt>
                 <dd class="m-0 font-medium text-[#64748B]">
                   {{ panelSummary.marketSelection?.matchCount ?? 0 }}
                 </dd>
               </div>
-              <div
-                class="flex items-center justify-between gap-2 rounded-[4px] border border-[#E2E8F0] bg-white px-2 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-              >
+              <div class="flex items-center justify-between gap-2">
                 <dt class="text-[#94A3B8]">Primary</dt>
                 <dd class="m-0 font-medium text-[#64748B]">
                   {{ panelSummary.marketSelection?.primaryMarket?.name ?? "-" }}
                 </dd>
               </div>
-              <div
-                class="flex items-center justify-between gap-2 rounded-[4px] border border-[#E2E8F0] bg-white px-2 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-              >
+              <div class="flex items-center justify-between gap-2">
                 <dt class="text-[#94A3B8]">Selection Area</dt>
                 <dd class="m-0 font-medium text-[#64748B]">
                   {{ panelSummary.marketSelection?.selectionAreaSqKm.toFixed(1) ?? "0.0" }}
@@ -505,7 +499,7 @@
               <div
                 v-for="market in matchedMarkets"
                 :key="market.marketId"
-                class="rounded-[4px] border border-[#E2E8F0] bg-white px-2 py-1.5 text-[10px] shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+                class="border-t border-[#E2E8F0]/60 pt-1.5 text-[10px]"
               >
                 <div class="flex items-center justify-between gap-2">
                   <span class="truncate font-medium text-[#64748B]">{{ market.name }}</span>
@@ -528,52 +522,42 @@
                 </div>
               </div>
             </div>
-          </article>
+          </section>
 
-          <article
+          <section
             v-if="hasParcels || props.isParcelsLoading"
-            class="rounded-[4px] border border-[#E2E8F0] bg-white p-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)] lg:col-span-2"
+            class="lg:col-span-2"
             aria-label="Parcel summary"
           >
-            <div class="mb-1 flex items-center gap-1.5">
+            <div class="mb-2 flex items-center gap-1.5">
               <span class="inline-block h-2 w-2 rounded-full bg-[#10B981]" />
               <h3 class="m-0 text-[10px] font-semibold text-[#94A3B8]">Parcel Coverage</h3>
             </div>
 
             <dl
-              class="grid grid-cols-[1fr_auto] gap-x-2 gap-y-1 text-[11px] sm:grid-cols-[repeat(3,minmax(0,1fr))]"
+              class="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 text-[11px] sm:grid-cols-[repeat(3,minmax(0,1fr))]"
             >
-              <div
-                class="flex items-center justify-between gap-2 rounded-[4px] border border-[#E2E8F0] bg-white px-2 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-              >
+              <div class="flex items-center justify-between gap-2">
                 <dt class="text-[#94A3B8]">Records</dt>
                 <dd class="m-0 font-medium text-[#64748B]">
                   {{ panelSummary.parcelSelection.count }}
                 </dd>
               </div>
-              <div
-                class="flex items-center justify-between gap-2 rounded-[4px] border border-[#E2E8F0] bg-white px-2 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-              >
+              <div class="flex items-center justify-between gap-2">
                 <dt class="text-[#94A3B8]">States</dt>
                 <dd class="m-0 font-medium text-[#64748B]">{{ parcelOverview.stateCount }}</dd>
               </div>
-              <div
-                class="flex items-center justify-between gap-2 rounded-[4px] border border-[#E2E8F0] bg-white px-2 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-              >
+              <div class="flex items-center justify-between gap-2">
                 <dt class="text-[#94A3B8]">Counties</dt>
                 <dd class="m-0 font-medium text-[#64748B]">{{ parcelOverview.countyCount }}</dd>
               </div>
-              <div
-                class="flex items-center justify-between gap-2 rounded-[4px] border border-[#E2E8F0] bg-white px-2 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-              >
+              <div class="flex items-center justify-between gap-2">
                 <dt class="text-[#94A3B8]">Truncated</dt>
                 <dd class="m-0 font-medium text-[#64748B]">
                   {{ panelSummary.parcelSelection.truncated ? "Yes" : "No" }}
                 </dd>
               </div>
-              <div
-                class="flex items-center justify-between gap-2 rounded-[4px] border border-[#E2E8F0] bg-white px-2 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:col-span-2"
-              >
+              <div class="flex items-center justify-between gap-2 sm:col-span-2">
                 <dt class="text-[#94A3B8]">Next Cursor</dt>
                 <dd class="m-0 max-w-[18rem] truncate text-[10px] text-[#64748B]">
                   {{ panelSummary.parcelSelection.nextCursor ?? "-" }}
@@ -584,7 +568,7 @@
             <p v-if="props.isParcelsLoading" class="mt-2 text-[10px] text-[#94A3B8]">
               Refreshing parcels…
             </p>
-          </article>
+          </section>
         </div>
       </div>
     </section>
