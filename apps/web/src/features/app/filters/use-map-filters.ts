@@ -13,6 +13,11 @@ import type {
 } from "./map-filters.types";
 import { VOLTAGE_THRESHOLDS } from "./map-filters.types";
 
+type ToggleSetField = Extract<
+  keyof MapFiltersState,
+  "activeMarkets" | "activeUsers" | "powerTypes" | "gasCapacities" | "gasStatuses" | "zoningTypes" | "floodZones"
+>;
+
 type FacilitiesFeatures = FacilitiesFeatureCollection["features"];
 
 export interface UseMapFiltersResult {
@@ -35,6 +40,18 @@ export interface UseMapFiltersResult {
 
   toggleFacilityStatus(id: FacilityStatusFilterId): void;
   readonly transmissionFilter: Readonly<ReturnType<typeof shallowRef<MapExpression | null>>>;
+
+  togglePowerType(id: string): void;
+  toggleMarket(id: string): void;
+  toggleUser(id: string): void;
+  setInterconnectivityHub(enabled: boolean): void;
+  toggleGasCapacity(id: string): void;
+  toggleGasStatus(id: string): void;
+  setParcelDataset(value: string): void;
+  setParcelStyleAcres(value: string): void;
+  setParcelDavPercent(value: string): void;
+  toggleZoningType(id: string): void;
+  toggleFloodZone(id: string): void;
 }
 
 function createInitialState(): MapFiltersState {
@@ -42,6 +59,17 @@ function createInitialState(): MapFiltersState {
     facilityStatuses: new Set(),
     facilityProviders: new Set(),
     transmissionMinVoltage: null,
+    activeMarkets: new Set(),
+    activeUsers: new Set(),
+    interconnectivityHub: false,
+    powerTypes: new Set(),
+    gasCapacities: new Set(),
+    gasStatuses: new Set(),
+    parcelDataset: "",
+    parcelStyleAcres: "",
+    parcelDavPercent: "",
+    zoningTypes: new Set(),
+    floodZones: new Set(),
   };
 }
 
@@ -106,6 +134,62 @@ export function useMapFilters(): UseMapFiltersResult {
     }));
   }
 
+  function toggleSetField(field: ToggleSetField, id: string): void {
+    updateState((prev) => {
+      const next = new Set(prev[field]);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return { ...prev, [field]: next };
+    });
+  }
+
+  function togglePowerType(id: string): void {
+    toggleSetField("powerTypes", id);
+  }
+
+  function toggleMarket(id: string): void {
+    toggleSetField("activeMarkets", id);
+  }
+
+  function toggleUser(id: string): void {
+    toggleSetField("activeUsers", id);
+  }
+
+  function setInterconnectivityHub(enabled: boolean): void {
+    updateState((prev) => ({ ...prev, interconnectivityHub: enabled }));
+  }
+
+  function toggleGasCapacity(id: string): void {
+    toggleSetField("gasCapacities", id);
+  }
+
+  function toggleGasStatus(id: string): void {
+    toggleSetField("gasStatuses", id);
+  }
+
+  function setParcelDataset(value: string): void {
+    updateState((prev) => ({ ...prev, parcelDataset: value }));
+  }
+
+  function setParcelStyleAcres(value: string): void {
+    updateState((prev) => ({ ...prev, parcelStyleAcres: value }));
+  }
+
+  function setParcelDavPercent(value: string): void {
+    updateState((prev) => ({ ...prev, parcelDavPercent: value }));
+  }
+
+  function toggleZoningType(id: string): void {
+    toggleSetField("zoningTypes", id);
+  }
+
+  function toggleFloodZone(id: string): void {
+    toggleSetField("floodZones", id);
+  }
+
   function clearAll(): void {
     state.value = createInitialState();
     knownProviders.value = new Set();
@@ -155,5 +239,16 @@ export function useMapFilters(): UseMapFiltersResult {
     availableProviders,
     availableMarkets,
     setAvailableFeatures,
+    togglePowerType,
+    toggleMarket,
+    toggleUser,
+    setInterconnectivityHub,
+    toggleGasCapacity,
+    toggleGasStatus,
+    setParcelDataset,
+    setParcelStyleAcres,
+    setParcelDavPercent,
+    toggleZoningType,
+    toggleFloodZone,
   };
 }

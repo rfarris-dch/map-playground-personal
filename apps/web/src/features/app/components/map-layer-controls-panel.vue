@@ -1,12 +1,14 @@
 <script setup lang="ts">
   import type { FacilityPerspective } from "@map-migration/contracts";
-  import { computed, ref } from "vue";
+  import { computed, inject, ref } from "vue";
   import MapNavIcon from "@/components/icons/map-nav-icon.vue";
-  import MapFilterControls from "@/features/app/components/map-filter-controls.vue";
+  import AppFilterPanel from "@/features/app/components/app-filter-panel.vue";
+  import type { FilterOption } from "@/features/app/components/app-filter-panel.vue";
   import type {
     MapLayerControlsPanelEmits,
     MapLayerControlsPanelProps,
   } from "@/features/app/components/map-layer-controls-panel.types";
+  import { MAP_FILTERS_KEY } from "@/features/app/filters/map-filters.keys";
   import type { MapNavViewModeId } from "@/features/app/components/map-nav.types";
   import MapNavLayerRow from "@/features/app/components/map-nav-layer-row.vue";
   import MapNavViewModes from "@/features/app/components/map-nav-view-modes.vue";
@@ -20,10 +22,113 @@
   const props = defineProps<MapLayerControlsPanelProps>();
   const emit = defineEmits<MapLayerControlsPanelEmits>();
 
+  const mapFilters = inject(MAP_FILTERS_KEY);
+
   const activeTab = ref<PanelTab>("layers");
   const colocationViewMode = ref<MapNavViewModeId>("clusters");
   const hyperscaleViewMode = ref<MapNavViewModeId>("clusters");
   const fiberExpanded = ref(false);
+
+  /* ------------------------------------------------------------------ */
+  /*  Filter panel option arrays & computed props                        */
+  /* ------------------------------------------------------------------ */
+
+  const powerTypeOptions: readonly FilterOption[] = [
+    { id: "commissioned", label: "Commissioned/Owned" },
+    { id: "available", label: "Available (Colo Only)" },
+    { id: "under-construction", label: "Under Construction" },
+    { id: "planned", label: "Planned" },
+  ];
+
+  const statusOptions: readonly FilterOption[] = [
+    { id: "commissioned", label: "Operational/Owned" },
+    { id: "under-construction", label: "Under Construction" },
+    { id: "planned", label: "Planned" },
+    { id: "unknown", label: "Other" },
+  ];
+
+  const voltageOptions: readonly FilterOption[] = [
+    { id: "ge-25", label: "25 kV+" },
+    { id: "ge-50", label: "50 kV+" },
+    { id: "ge-100", label: "100 kV+" },
+    { id: "ge-230", label: "230 kV+" },
+    { id: "ge-765", label: "765 kV+" },
+  ];
+
+  const gasCapacityOptions: readonly FilterOption[] = [
+    { id: "0-10", label: "0 – 10 BWh" },
+    { id: "25-100", label: "25 – 100 BWh" },
+    { id: "100-500", label: "100 – 500 BWh" },
+    { id: "500-1000", label: "500 – 1,000 BWh" },
+    { id: "1000+", label: "1,000+ BWh" },
+  ];
+
+  const gasStatusOptions: readonly FilterOption[] = [
+    { id: "operating", label: "Operating" },
+    { id: "proposed", label: "Proposed" },
+    { id: "announced", label: "Announced" },
+    { id: "discontinued", label: "Discontinued" },
+    { id: "in-development", label: "In Development" },
+  ];
+
+  const parcelDatasetOptions: readonly FilterOption[] = [
+    { id: "", label: "All Datasets" },
+  ];
+
+  const parcelStyleOptions: readonly FilterOption[] = [
+    { id: "", label: "All Sizes" },
+  ];
+
+  const parcelDavOptions: readonly FilterOption[] = [
+    { id: "", label: "Any %" },
+  ];
+
+  const zoningTypeOptions: readonly FilterOption[] = [
+    { id: "residential", label: "Residential" },
+    { id: "commercial", label: "Commercial" },
+    { id: "industrial", label: "Industrial" },
+    { id: "agriculture", label: "Agriculture" },
+    { id: "exempt", label: "Exempt" },
+    { id: "farmland", label: "Farmland" },
+    { id: "mixed", label: "Mixed" },
+    { id: "unzoned", label: "Unzoned" },
+  ];
+
+  const floodZoneOptions: readonly FilterOption[] = [
+    { id: "low-risk", label: "Low Risk" },
+    { id: "high-risk", label: "High Risk" },
+    { id: "coastal-high-risk", label: "Coastal High Risk" },
+  ];
+
+  const marketOptions = computed<readonly FilterOption[]>(() =>
+    mapFilters?.availableMarkets.value?.map((m) => ({ id: m, label: m })) ?? []
+  );
+
+  const providerOptions = computed<readonly FilterOption[]>(() =>
+    mapFilters?.availableProviders.value?.map((p) => ({ id: p, label: p })) ?? []
+  );
+
+  const userOptions = computed<readonly FilterOption[]>(() => []);
+
+  const activeVoltages = computed<ReadonlySet<string>>(() => {
+    const v = mapFilters?.state.value?.transmissionMinVoltage ?? null;
+    if (v === null) return new Set();
+    const entry = voltageOptions.find(
+      (opt) =>
+        (opt.id === "ge-25" && v === 25_000) ||
+        (opt.id === "ge-50" && v === 50_000) ||
+        (opt.id === "ge-100" && v === 100_000) ||
+        (opt.id === "ge-230" && v === 230_000) ||
+        (opt.id === "ge-765" && v === 765_000)
+    );
+    return entry ? new Set([entry.id]) : new Set();
+  });
+
+  const parcelDropdowns = computed(() => ({
+    dataset: mapFilters?.state.value?.parcelDataset ?? "",
+    styleAcres: mapFilters?.state.value?.parcelStyleAcres ?? "",
+    davPercent: mapFilters?.state.value?.parcelDavPercent ?? "",
+  }));
 
   const fiberRoutesVisible = computed(
     () => props.visibleFiberLayers.longhaul || props.visibleFiberLayers.metro
@@ -548,7 +653,49 @@
           </section>
         </div>
 
-        <div v-else class="flex-1 overflow-y-auto pt-2"><MapFilterControls /></div>
+        <div v-else class="flex-1 overflow-y-auto pt-2">
+          <AppFilterPanel
+            :power-type-options="powerTypeOptions"
+            :active-power-types="mapFilters?.state.value?.powerTypes ?? new Set()"
+            :status-options="statusOptions"
+            :active-statuses="mapFilters?.state.value?.facilityStatuses ?? new Set()"
+            :market-options="marketOptions"
+            :active-markets="mapFilters?.state.value?.activeMarkets ?? new Set()"
+            :provider-options="providerOptions"
+            :active-providers="mapFilters?.state.value?.facilityProviders ?? new Set()"
+            :user-options="userOptions"
+            :active-users="mapFilters?.state.value?.activeUsers ?? new Set()"
+            :interconnectivity-hub="mapFilters?.state.value?.interconnectivityHub ?? false"
+            :voltage-options="voltageOptions"
+            :active-voltages="activeVoltages"
+            :gas-capacity-options="gasCapacityOptions"
+            :active-gas-capacities="mapFilters?.state.value?.gasCapacities ?? new Set()"
+            :gas-status-options="gasStatusOptions"
+            :active-gas-statuses="mapFilters?.state.value?.gasStatuses ?? new Set()"
+            :parcel-dataset-options="parcelDatasetOptions"
+            :parcel-style-options="parcelStyleOptions"
+            :parcel-dav-options="parcelDavOptions"
+            :parcel-dropdowns="parcelDropdowns"
+            :zoning-type-options="zoningTypeOptions"
+            :active-zoning-types="mapFilters?.state.value?.zoningTypes ?? new Set()"
+            :flood-zone-options="floodZoneOptions"
+            :active-flood-zones="mapFilters?.state.value?.floodZones ?? new Set()"
+            @toggle:power-type="mapFilters?.togglePowerType($event)"
+            @toggle:status="mapFilters?.toggleFacilityStatus($event)"
+            @toggle:market="mapFilters?.toggleMarket($event)"
+            @toggle:provider="mapFilters?.toggleFacilityProvider($event)"
+            @toggle:user="mapFilters?.toggleUser($event)"
+            @update:interconnectivity-hub="mapFilters?.setInterconnectivityHub($event)"
+            @toggle:voltage="mapFilters?.setTransmissionVoltage($event as any)"
+            @toggle:gas-capacity="mapFilters?.toggleGasCapacity($event)"
+            @toggle:gas-status="mapFilters?.toggleGasStatus($event)"
+            @update:parcel-dataset="mapFilters?.setParcelDataset($event)"
+            @update:parcel-style="mapFilters?.setParcelStyleAcres($event)"
+            @update:parcel-dav="mapFilters?.setParcelDavPercent($event)"
+            @toggle:zoning-type="mapFilters?.toggleZoningType($event)"
+            @toggle:flood-zone="mapFilters?.toggleFloodZone($event)"
+          />
+        </div>
       </div>
     </aside>
   </Transition>

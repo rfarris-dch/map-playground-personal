@@ -17,4 +17,5 @@ export type FacilityDetailQueryKey = readonly [
   "facility-detail",
   FacilityPerspective | null,
   string | null,
+  number,
 ];

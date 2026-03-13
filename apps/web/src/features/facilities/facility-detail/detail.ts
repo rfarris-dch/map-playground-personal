@@ -7,17 +7,28 @@ import { unwrapFacilityDetailResult } from "@/features/facilities/facility-detai
 import type { FacilityDetailQueryKey } from "./detail.types";
 
 function buildFacilityDetailQueryKey(
-  selectedFacility: SelectedFacilityRef | null
+  selectedFacility: SelectedFacilityRef | null,
+  selectionNonce: number
 ): FacilityDetailQueryKey {
   if (selectedFacility === null) {
-    return ["facility-detail", null, null];
+    return ["facility-detail", null, null, selectionNonce];
   }
 
-  return ["facility-detail", selectedFacility.perspective, selectedFacility.facilityId];
+  return [
+    "facility-detail",
+    selectedFacility.perspective,
+    selectedFacility.facilityId,
+    selectionNonce,
+  ];
 }
 
-export function useFacilityDetailQuery(selectedFacility: Ref<SelectedFacilityRef | null>) {
-  const queryKey = computed(() => buildFacilityDetailQueryKey(selectedFacility.value));
+export function useFacilityDetailQuery(
+  selectedFacility: Ref<SelectedFacilityRef | null>,
+  selectionNonce: Ref<number>
+) {
+  const queryKey = computed(() =>
+    buildFacilityDetailQueryKey(selectedFacility.value, selectionNonce.value)
+  );
   const enabled = computed(() => selectedFacility.value !== null);
 
   return useQuery({

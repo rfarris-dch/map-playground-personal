@@ -7,9 +7,13 @@ import type { SelectedParcelRef } from "@/features/parcels/parcels.types";
 
 export function useAppShellSelection(options: UseAppShellSelectionOptions) {
   const selectedFacility = shallowRef<SelectedFacilityRef | null>(null);
+  const selectedFacilitySelectionNonce = shallowRef(0);
   const selectedParcel = shallowRef<SelectedParcelRef | null>(null);
 
-  const facilityDetailQuery = useFacilityDetailQuery(selectedFacility);
+  const facilityDetailQuery = useFacilityDetailQuery(
+    selectedFacility,
+    selectedFacilitySelectionNonce
+  );
   const parcelDetailQuery = useParcelDetailQuery(selectedParcel);
 
   function clearSelectedFacility(): void {
@@ -25,10 +29,14 @@ export function useAppShellSelection(options: UseAppShellSelectionOptions) {
       controller.clearSelection();
       return 0;
     }, 0);
+    selectedFacilitySelectionNonce.value += 1;
     selectedFacility.value = facility;
   }
 
   function setSelectedFacility(facility: SelectedFacilityRef | null): void {
+    if (facility !== null) {
+      selectedFacilitySelectionNonce.value += 1;
+    }
     selectedFacility.value = facility;
   }
 

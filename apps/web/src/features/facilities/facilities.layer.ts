@@ -31,6 +31,7 @@ import type {
   FacilitiesLayerState,
   FacilitiesStatus,
   FacilitiesViewMode,
+  SelectedFacilityRef,
 } from "@/features/facilities/facilities.types";
 import {
   buildFacilitiesClusterProperties,
@@ -245,16 +246,34 @@ export function mountFacilitiesLayer(
     return readFacilityIdFromProperties(cachedFeature?.properties) ?? toFacilityId(featureId);
   };
 
-  const emitSelectedFacility = (featureId: number | string | null): void => {
-    if (featureId === null) {
+  const toSelectedFacilityRef = (
+    featureId: number | string,
+    properties: unknown
+  ): SelectedFacilityRef => {
+    return {
+      facilityId: readFacilityIdFromProperties(properties) ?? resolveSelectedFacilityId(featureId),
+      perspective,
+    };
+  };
+
+  const emitSelectedFacility = (
+    featureId: number | string | null,
+    selectedFacilityOverride?: SelectedFacilityRef
+  ): void => {
+    if (featureId === null && typeof selectedFacilityOverride === "undefined") {
       options.onSelectFacility?.(null);
       return;
     }
 
-    options.onSelectFacility?.({
-      facilityId: resolveSelectedFacilityId(featureId),
-      perspective,
-    });
+    options.onSelectFacility?.(
+      selectedFacilityOverride ??
+        (featureId === null
+          ? null
+          : {
+              facilityId: resolveSelectedFacilityId(featureId),
+              perspective,
+            })
+    );
   };
 
   const removeFacilitiesLayers = (): void => {
@@ -664,7 +683,10 @@ export function mountFacilitiesLayer(
     }
   };
 
-  const setSelectedFeatureId = (nextFeatureId: number | string | null): void => {
+  const setSelectedFeatureId = (
+    nextFeatureId: number | string | null,
+    selectedFacilityOverride?: SelectedFacilityRef
+  ): void => {
     const previousFeatureId = state.selectedFeatureId;
     if (previousFeatureId === nextFeatureId) {
       return;
@@ -692,7 +714,7 @@ export function mountFacilitiesLayer(
       );
     }
 
-    emitSelectedFacility(nextFeatureId);
+    emitSelectedFacility(nextFeatureId, selectedFacilityOverride);
   };
 
   const clearSelection = (): void => {
@@ -864,7 +886,15 @@ export function mountFacilitiesLayer(
       return;
     }
 
-    setSelectedFeatureId(selectedFeature.id);
+    const selectedFacility = toSelectedFacilityRef(selectedFeature.id, selectedFeature.properties);
+
+    if (selectedFeature.id === state.selectedFeatureId) {
+      emitSelectedFacility(selectedFeature.id, selectedFacility);
+      focusSelectedFeature(selectedFeature);
+      return;
+    }
+
+    setSelectedFeatureId(selectedFeature.id, selectedFacility);
     focusSelectedFeature(selectedFeature);
   };
 

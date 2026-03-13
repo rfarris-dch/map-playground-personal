@@ -29,6 +29,12 @@ export const VOLTAGE_THRESHOLDS: Record<TransmissionVoltageFilterId, number> = {
   "ge-765": 765_000,
 };
 
+export type PowerTypeFilterId = "commissioned" | "available" | "under-construction" | "planned";
+export type GasCapacityFilterId = "0-10" | "25-100" | "100-500" | "500-1000" | "1000+";
+export type GasStatusFilterId = "operating" | "proposed" | "announced" | "discontinued" | "in-development";
+export type ZoningTypeFilterId = "residential" | "commercial" | "industrial" | "agriculture" | "exempt" | "farmland" | "mixed" | "unzoned";
+export type FloodZoneFilterId = "low-risk" | "high-risk" | "coastal-high-risk";
+
 export interface MapFiltersState {
   /** Active provider name filters. Empty = show all. */
   readonly facilityProviders: ReadonlySet<string>;
@@ -37,6 +43,29 @@ export interface MapFiltersState {
 
   /** Minimum transmission voltage threshold in volts, or null = show all. */
   readonly transmissionMinVoltage: number | null;
+
+  /** Active market filters. Empty = show all. */
+  readonly activeMarkets: ReadonlySet<string>;
+  /** Active user filters. Empty = show all. */
+  readonly activeUsers: ReadonlySet<string>;
+  /** Whether the interconnectivity hub filter is enabled. */
+  readonly interconnectivityHub: boolean;
+  /** Active power type filters. Empty = show all. */
+  readonly powerTypes: ReadonlySet<string>;
+  /** Active gas capacity filters. Empty = show all. */
+  readonly gasCapacities: ReadonlySet<string>;
+  /** Active gas status filters. Empty = show all. */
+  readonly gasStatuses: ReadonlySet<string>;
+  /** Selected parcel dataset value. */
+  readonly parcelDataset: string;
+  /** Selected parcel style (acres) value. */
+  readonly parcelStyleAcres: string;
+  /** Selected parcel DAV percent value. */
+  readonly parcelDavPercent: string;
+  /** Active zoning type filters. Empty = show all. */
+  readonly zoningTypes: ReadonlySet<string>;
+  /** Active flood zone filters. Empty = show all. */
+  readonly floodZones: ReadonlySet<string>;
 }
 
 export type FacilitiesFeature = FacilitiesFeatureCollection["features"][number];
