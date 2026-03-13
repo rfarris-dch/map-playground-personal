@@ -38,7 +38,7 @@
         {{ props.selectedFacility.perspective }}
         facility
       </h2>
-      <p class="m-0 truncate text-xs font-medium">{{ facilityName }}</p>
+      <p class="m-0 truncate text-base font-semibold">{{ facilityName }}</p>
       <Button variant="glass" size="sm" class="ml-auto" @click="onClose">Close</Button>
     </header>
 
@@ -57,42 +57,46 @@
       Facility detail failed to load. Try selecting the facility again.
     </p>
     <template v-else-if="props.detail !== null">
-      <dl class="m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-xs">
-        <dt class="text-muted-foreground">Request</dt>
-        <dd class="m-0 font-mono">{{ props.detail.requestId }}</dd>
+      <dl class="m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-2">
+        <dt class="text-xs text-muted-foreground">Request</dt>
+        <dd class="m-0 text-sm font-mono">{{ props.detail.requestId }}</dd>
 
-        <dt class="text-muted-foreground">Facility</dt>
-        <dd class="m-0">{{ facilityName }}</dd>
+        <dt class="text-xs text-muted-foreground">Facility</dt>
+        <dd class="m-0 text-sm">{{ facilityName }}</dd>
 
-        <dt class="text-muted-foreground">Provider</dt>
-        <dd class="m-0">{{ providerName }}</dd>
+        <dt class="text-xs text-muted-foreground">Provider</dt>
+        <dd class="m-0 text-sm">{{ providerName }}</dd>
 
-        <dt class="text-muted-foreground">County FIPS</dt>
-        <dd class="m-0">{{ props.detail.response.feature.properties.countyFips }}</dd>
+        <dt class="text-xs text-muted-foreground">County FIPS</dt>
+        <dd class="m-0 text-sm">{{ props.detail.response.feature.properties.countyFips }}</dd>
 
-        <dt class="text-muted-foreground">Semantic</dt>
-        <dd class="m-0">{{ props.detail.response.feature.properties.commissionedSemantic }}</dd>
+        <dt class="text-xs text-muted-foreground">Semantic</dt>
+        <dd class="m-0 text-sm">
+          {{ props.detail.response.feature.properties.commissionedSemantic }}
+        </dd>
 
-        <dt class="text-muted-foreground">Lease / Own</dt>
-        <dd class="m-0">{{ props.detail.response.feature.properties.leaseOrOwn ?? "n/a" }}</dd>
+        <dt class="text-xs text-muted-foreground">Lease / Own</dt>
+        <dd class="m-0 text-sm">
+          {{ props.detail.response.feature.properties.leaseOrOwn ?? "n/a" }}
+        </dd>
 
-        <dt class="text-muted-foreground">Commissioned</dt>
-        <dd class="m-0">
+        <dt class="text-xs text-muted-foreground">Commissioned</dt>
+        <dd class="m-0 text-sm">
           {{ formatNullableMw(props.detail.response.feature.properties.commissionedPowerMw) }}
         </dd>
 
-        <dt class="text-muted-foreground">Available</dt>
-        <dd class="m-0">
+        <dt class="text-xs text-muted-foreground">Available</dt>
+        <dd class="m-0 text-sm">
           {{ formatNullableMw(props.detail.response.feature.properties.availablePowerMw) }}
         </dd>
 
-        <dt class="text-muted-foreground">Under Construction</dt>
-        <dd class="m-0">
+        <dt class="text-xs text-muted-foreground">Under Construction</dt>
+        <dd class="m-0 text-sm">
           {{ formatNullableMw(props.detail.response.feature.properties.underConstructionPowerMw) }}
         </dd>
 
-        <dt class="text-muted-foreground">Planned</dt>
-        <dd class="m-0">
+        <dt class="text-xs text-muted-foreground">Planned</dt>
+        <dd class="m-0 text-sm">
           {{ formatNullableMw(props.detail.response.feature.properties.plannedPowerMw) }}
         </dd>
       </dl>

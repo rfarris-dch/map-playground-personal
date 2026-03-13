@@ -202,7 +202,9 @@
     <p
       v-if="totalSourceLayerCount === 0"
       class="py-3 text-center text-xs text-muted-foreground animate-pulse"
-    >Loading fiber sources...</p>
+    >
+      Loading fiber sources...
+    </p>
 
     <section v-if="props.metroVisible" class="mt-2">
       <div class="mb-1 flex items-center justify-between">

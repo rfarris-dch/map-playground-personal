@@ -49,9 +49,7 @@
   >
     <header class="mb-3 flex items-center gap-2">
       <h2 class="m-0 text-sm font-semibold tracking-tight">Parcel detail</h2>
-      <p class="m-0 truncate text-xs font-mono text-muted-foreground">
-        {{ selectedParcel.parcelId }}
-      </p>
+      <p class="m-0 truncate text-base font-semibold">{{ selectedParcel.parcelId }}</p>
       <Button variant="glass" size="sm" class="ml-auto" @click="onClose">Close</Button>
     </header>
 
@@ -70,39 +68,41 @@
       Parcel detail failed to load. Try selecting the parcel again.
     </p>
     <template v-else-if="detail !== null">
-      <dl class="mb-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-xs">
-        <dt class="text-muted-foreground">Request</dt>
-        <dd class="m-0 font-mono">{{ detail.requestId }}</dd>
+      <dl class="mb-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-2">
+        <dt class="text-xs text-muted-foreground">Request</dt>
+        <dd class="m-0 text-sm font-mono">{{ detail.requestId }}</dd>
 
-        <dt class="text-muted-foreground">Data version</dt>
-        <dd class="m-0 font-mono">{{ detail.response.meta.dataVersion }}</dd>
+        <dt class="text-xs text-muted-foreground">Data version</dt>
+        <dd class="m-0 text-sm font-mono">{{ detail.response.meta.dataVersion }}</dd>
 
-        <dt class="text-muted-foreground">Source mode</dt>
-        <dd class="m-0 font-mono">{{ detail.response.meta.sourceMode }}</dd>
+        <dt class="text-xs text-muted-foreground">Source mode</dt>
+        <dd class="m-0 text-sm font-mono">{{ detail.response.meta.sourceMode }}</dd>
 
-        <dt class="text-muted-foreground">State</dt>
-        <dd class="m-0">{{ detail.response.feature.properties.state2 ?? "n/a" }}</dd>
+        <dt class="text-xs text-muted-foreground">State</dt>
+        <dd class="m-0 text-sm">{{ detail.response.feature.properties.state2 ?? "n/a" }}</dd>
 
-        <dt class="text-muted-foreground">GEOID</dt>
-        <dd class="m-0">{{ detail.response.feature.properties.geoid ?? "n/a" }}</dd>
+        <dt class="text-xs text-muted-foreground">GEOID</dt>
+        <dd class="m-0 text-sm">{{ detail.response.feature.properties.geoid ?? "n/a" }}</dd>
 
-        <dt class="text-muted-foreground">Ingestion run</dt>
-        <dd class="m-0 font-mono">{{ detail.response.feature.lineage.ingestionRunId ?? "n/a" }}</dd>
+        <dt class="text-xs text-muted-foreground">Ingestion run</dt>
+        <dd class="m-0 text-sm font-mono">
+          {{ detail.response.feature.lineage.ingestionRunId ?? "n/a" }}
+        </dd>
       </dl>
 
       <section class="mb-3 border-t border-border/50 pt-3">
         <h3 class="mb-2 mt-0 text-xs font-semibold tracking-wide">Flood context</h3>
-        <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-xs">
-          <dt class="text-muted-foreground">Classification</dt>
-          <dd class="m-0">{{ floodClassification?.label ?? "Flood zone unavailable" }}</dd>
+        <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2">
+          <dt class="text-xs text-muted-foreground">Classification</dt>
+          <dd class="m-0 text-sm">{{ floodClassification?.label ?? "Flood zone unavailable" }}</dd>
 
-          <dt class="text-muted-foreground">Zone</dt>
-          <dd class="m-0 font-mono">
+          <dt class="text-xs text-muted-foreground">Zone</dt>
+          <dd class="m-0 text-sm font-mono">
             {{ floodClassification?.normalizedZone ?? detail.response.feature.properties.attrs.fema_flood_zone ?? "n/a" }}
           </dd>
 
-          <dt class="text-muted-foreground">Subtype</dt>
-          <dd class="m-0 font-mono">
+          <dt class="text-xs text-muted-foreground">Subtype</dt>
+          <dd class="m-0 text-sm font-mono">
             {{ floodClassification?.normalizedZoneSubtype ?? detail.response.feature.properties.attrs.fema_flood_zone_subtype ?? "n/a" }}
           </dd>
         </dl>

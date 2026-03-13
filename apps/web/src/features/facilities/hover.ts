@@ -4,7 +4,7 @@ import {
   parseFacilityPerspective,
   parseLeaseOrOwn,
 } from "@map-migration/contracts";
-import type { IMap, MapPointerEvent } from "@map-migration/map-engine";
+import type { IMap, MapPointerEvent, MapRenderedFeature } from "@map-migration/map-engine";
 import { isFeatureId } from "@/features/facilities/facilities.service";
 import { createFacilityClusterSummary } from "@/features/facilities/facilities-cluster.service";
 import type { FacilityClusterSummary } from "@/features/facilities/facilities-cluster.types";
@@ -165,6 +165,25 @@ function aggregateClusterLeaves(
   };
 }
 
+function readPointCenter(coordinates: unknown): readonly [number, number] | null {
+  if (!Array.isArray(coordinates) || coordinates.length < 2) {
+    return null;
+  }
+
+  const longitude = coordinates[0];
+  const latitude = coordinates[1];
+  if (
+    typeof longitude !== "number" ||
+    !Number.isFinite(longitude) ||
+    typeof latitude !== "number" ||
+    !Number.isFinite(latitude)
+  ) {
+    return null;
+  }
+
+  return [longitude, latitude];
+}
+
 export function mountFacilitiesHover(
   map: IMap,
   options: FacilitiesHoverOptions
@@ -281,21 +300,20 @@ export function mountFacilitiesHover(
 
   const readClusterCenter = (
     event: MapPointerEvent,
-    clusterFeature: { geometry: { coordinates: readonly [number, number]; type: string } }
+    clusterFeature: Pick<MapRenderedFeature, "geometry">
   ): readonly [number, number] => {
     if (clusterFeature.geometry.type === "Point") {
-      return [clusterFeature.geometry.coordinates[0], clusterFeature.geometry.coordinates[1]];
+      const center = readPointCenter(clusterFeature.geometry.coordinates);
+      if (center !== null) {
+        return center;
+      }
     }
 
     return [event.lngLat.lng, event.lngLat.lat];
   };
 
   const emitClusterHover = (args: {
-    readonly clusterFeature: {
-      geometry: { coordinates: readonly [number, number]; type: string };
-      layer?: { id?: string };
-      properties: unknown;
-    };
+    readonly clusterFeature: Pick<MapRenderedFeature, "geometry" | "layer" | "properties">;
     readonly clusterId: number;
     readonly pointCount: number;
     readonly screenPoint: readonly [number, number];

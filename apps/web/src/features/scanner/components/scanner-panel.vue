@@ -300,7 +300,7 @@
               </div>
             </div>
             <div class="relative size-[100px]">
-              <svg width="100" height="100" viewBox="0 0 100 100">
+              <svg width="100" height="100" viewBox="0 0 100 100" aria-hidden="true">
                 <circle
                   cx="50"
                   cy="50"
@@ -350,7 +350,7 @@
               </div>
             </div>
             <div class="relative size-[100px]">
-              <svg width="100" height="100" viewBox="0 0 100 100">
+              <svg width="100" height="100" viewBox="0 0 100 100" aria-hidden="true">
                 <circle
                   cx="50"
                   cy="50"
@@ -417,7 +417,7 @@
                   <div class="font-medium text-foreground/85">{{ p.providerName }}</div>
                   <div class="flex gap-3 text-xs text-muted-foreground">
                     <span>Comm. {{ formatScannerPowerMw(p.commissionedPowerMw) }}</span>
-                    <span>Facilities: {{ p.facilityCount }}</span>
+                    <span>Facilities: {{ p.count }}</span>
                   </div>
                 </div>
               </div>
@@ -435,7 +435,7 @@
                   <div class="font-medium text-foreground/85">{{ p.providerName }}</div>
                   <div class="flex gap-3 text-xs text-muted-foreground">
                     <span>Comm. {{ formatScannerPowerMw(p.commissionedPowerMw) }}</span>
-                    <span>Facilities: {{ p.facilityCount }}</span>
+                    <span>Facilities: {{ p.count }}</span>
                   </div>
                 </div>
               </div>
@@ -468,7 +468,9 @@
         >
           <span>{{ row.label }}</span>
           <ChevronDown v-if="row.value === ''" class="size-3.5" />
-          <span v-else class="text-sm font-semibold tabular-nums text-foreground/85">{{ row.value }}</span>
+          <span v-else class="text-sm font-semibold tabular-nums text-foreground/85"
+            >{{ row.value }}</span
+          >
         </div>
       </section>
 
@@ -496,7 +498,9 @@
         >
           <span>{{ row.label }}</span>
           <ChevronDown v-if="row.value === ''" class="size-3.5" />
-          <span v-else class="text-sm font-semibold tabular-nums text-foreground/85">{{ row.value }}</span>
+          <span v-else class="text-sm font-semibold tabular-nums text-foreground/85"
+            >{{ row.value }}</span
+          >
         </div>
       </section>
 

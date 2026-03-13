@@ -21,63 +21,59 @@
 </script>
 
 <template>
-  <Transition
-    enter-active-class="transition-opacity duration-100"
-    enter-from-class="opacity-0"
-  >
-  <aside
-    v-if="props.hoverState !== null"
-    class="map-glass-surface pointer-events-none absolute z-30 min-w-56 rounded-md p-2"
-    :style="{
+  <Transition enter-active-class="transition-opacity duration-100" enter-from-class="opacity-0">
+    <aside
+      v-if="props.hoverState !== null"
+      class="map-glass-surface pointer-events-none absolute z-30 min-w-56 rounded-md p-2"
+      :style="{
       left: `${props.hoverState.screenPoint[0] + 12}px`,
       top: `${props.hoverState.screenPoint[1] + 12}px`,
     }"
-    aria-label="Power hover details"
-  >
-    <header class="mb-1 flex items-center gap-2">
-      <span class="text-xs font-semibold uppercase tracking-wide">
-        {{ props.hoverState.layerLabel }}
-      </span>
-      <span
-        v-if="props.hoverState.name !== null"
-        class="max-w-52 truncate text-xs text-muted-foreground"
-      >
-        {{ props.hoverState.name }}
-      </span>
-    </header>
+      aria-label="Power hover details"
+    >
+      <header class="mb-1 flex items-center gap-2">
+        <span class="text-xs font-semibold uppercase tracking-wide">
+          {{ props.hoverState.layerLabel }}
+        </span>
+        <span
+          v-if="props.hoverState.name !== null"
+          class="max-w-52 truncate text-xs text-muted-foreground"
+        >
+          {{ props.hoverState.name }}
+        </span>
+      </header>
 
-    <dl class="m-0 grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-xs leading-tight">
-      <template v-if="props.hoverState.name !== null">
-        <dt class="text-muted-foreground">Name</dt>
-        <dd class="m-0 break-words">{{ props.hoverState.name }}</dd>
-      </template>
+      <dl class="m-0 grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-xs leading-tight">
+        <template v-if="props.hoverState.name !== null">
+          <dt class="text-muted-foreground">Name</dt>
+          <dd class="m-0 break-words">{{ props.hoverState.name }}</dd>
+        </template>
 
-      <template v-if="props.hoverState.operatorName !== null">
-        <dt class="text-muted-foreground">Operator</dt>
-        <dd class="m-0 break-words">{{ props.hoverState.operatorName }}</dd>
-      </template>
+        <template v-if="props.hoverState.operatorName !== null">
+          <dt class="text-muted-foreground">Operator</dt>
+          <dd class="m-0 break-words">{{ props.hoverState.operatorName }}</dd>
+        </template>
 
-      <template v-if="props.hoverState.status !== null">
-        <dt class="text-muted-foreground">Status</dt>
-        <dd class="m-0">{{ props.hoverState.status }}</dd>
-      </template>
+        <template v-if="props.hoverState.status !== null">
+          <dt class="text-muted-foreground">Status</dt>
+          <dd class="m-0">{{ props.hoverState.status }}</dd>
+        </template>
 
-      <template v-if="props.hoverState.sourceDetail !== null">
-        <dt class="text-muted-foreground">Source</dt>
-        <dd class="m-0 break-words">{{ props.hoverState.sourceDetail }}</dd>
-      </template>
+        <template v-if="props.hoverState.sourceDetail !== null">
+          <dt class="text-muted-foreground">Source</dt>
+          <dd class="m-0 break-words">{{ props.hoverState.sourceDetail }}</dd>
+        </template>
 
-      <template v-if="props.hoverState.outputMw !== null">
-        <dt class="text-muted-foreground">Output</dt>
-        <dd class="m-0">{{ formatMegawatts(props.hoverState.outputMw) }}</dd>
-      </template>
+        <template v-if="props.hoverState.outputMw !== null">
+          <dt class="text-muted-foreground">Output</dt>
+          <dd class="m-0">{{ formatMegawatts(props.hoverState.outputMw) }}</dd>
+        </template>
 
-      <template v-if="props.hoverState.voltageKv !== null">
-        <dt class="text-muted-foreground">Voltage</dt>
-        <dd class="m-0">{{ formatKilovolts(props.hoverState.voltageKv) }}</dd>
-      </template>
-
-    </dl>
-  </aside>
+        <template v-if="props.hoverState.voltageKv !== null">
+          <dt class="text-muted-foreground">Voltage</dt>
+          <dd class="m-0">{{ formatKilovolts(props.hoverState.voltageKv) }}</dd>
+        </template>
+      </dl>
+    </aside>
   </Transition>
 </template>

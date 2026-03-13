@@ -783,9 +783,33 @@ export function mountFacilitiesLayer(
     return queryLayers;
   };
 
+  const readPointCenter = (coordinates: unknown): readonly [number, number] | null => {
+    if (!Array.isArray(coordinates) || coordinates.length < 2) {
+      return null;
+    }
+
+    const longitude = coordinates[0];
+    const latitude = coordinates[1];
+    if (
+      typeof longitude !== "number" ||
+      !Number.isFinite(longitude) ||
+      typeof latitude !== "number" ||
+      !Number.isFinite(latitude)
+    ) {
+      return null;
+    }
+
+    return [longitude, latitude];
+  };
+
   const focusSelectedFeature = (feature: MapRenderedFeature): void => {
     const geom = feature.geometry;
     if (geom.type !== "Point") {
+      return;
+    }
+
+    const center = readPointCenter(geom.coordinates);
+    if (center === null) {
       return;
     }
 
@@ -797,7 +821,7 @@ export function mountFacilitiesLayer(
 
     map.setViewport({
       type: "center",
-      center: [geom.coordinates[0], geom.coordinates[1]],
+      center: [center[0], center[1]],
       zoom: targetZoom,
       animate: true,
     });

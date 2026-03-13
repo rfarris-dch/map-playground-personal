@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { Download, LayoutDashboard, X } from "lucide-vue-next";
   import { computed, shallowRef, watch } from "vue";
+  import Button from "@/components/ui/button/button.vue";
   import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";
   import SpatialAnalysisCountyScoresSection from "@/features/spatial-analysis/components/spatial-analysis-county-scores-section.vue";
   import SpatialAnalysisFacilitiesTable from "@/features/spatial-analysis/components/spatial-analysis-facilities-table.vue";
@@ -615,31 +616,20 @@
     </section>
 
     <footer class="mt-3 flex items-center gap-2">
-      <button
-        type="button"
-        class="inline-flex h-[22px] flex-1 items-center justify-center gap-1.5 rounded-sm border border-border bg-background px-3 text-xs font-medium text-foreground/70 shadow-xs transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+      <Button
+        variant="glass-active"
+        class="flex-1"
         :disabled="props.dashboardDisabled"
         @click="emit('open-dashboard')"
       >
         <LayoutDashboard class="h-3.5 w-3.5" />
         {{ props.dashboardLabel }}
-      </button>
-      <button
-        type="button"
-        class="inline-flex h-[22px] items-center justify-center gap-1.5 rounded-sm border border-border bg-card px-3 text-xs font-normal text-muted-foreground shadow-xs transition-colors hover:border-border hover:bg-background hover:text-foreground/70 disabled:cursor-not-allowed disabled:opacity-60"
-        :disabled="props.exportDisabled"
-        @click="emit('export')"
-      >
+      </Button>
+      <Button variant="glass" :disabled="props.exportDisabled" @click="emit('export')">
         <Download class="h-3.5 w-3.5" />
         {{ props.exportLabel }}
-      </button>
-      <button
-        type="button"
-        class="inline-flex h-[22px] items-center justify-center rounded-sm border border-border bg-card px-3 text-xs font-normal text-muted-foreground shadow-xs transition-colors hover:border-border hover:bg-background hover:text-foreground/70"
-        @click="emit('dismiss')"
-      >
-        {{ props.dismissLabel }}
-      </button>
+      </Button>
+      <Button variant="glass" @click="emit('dismiss')"> {{ props.dismissLabel }} </Button>
     </footer>
   </aside>
 </template>

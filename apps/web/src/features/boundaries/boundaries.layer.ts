@@ -1,5 +1,5 @@
 import { runEffectPromise } from "@map-migration/core-runtime/effect";
-import type { IMap } from "@map-migration/map-engine";
+import type { IMap, MapPointerEvent } from "@map-migration/map-engine";
 import { getBoundaryStyleLayerIds } from "@map-migration/map-style";
 import { Effect, Either } from "effect";
 import { fetchBoundaryPowerEffect } from "@/features/boundaries/api";
@@ -269,7 +269,7 @@ export function mountBoundaryLayer(
     state.dataLoaded = true;
   }
 
-  function onPointerMove(event: { point: readonly [number, number] }): void {
+  function onPointerMove(event: MapPointerEvent): void {
     if (!(options.isInteractionEnabled?.() ?? true)) {
       clearHover();
       return;

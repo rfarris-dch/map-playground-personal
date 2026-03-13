@@ -1,8 +1,8 @@
 <script setup lang="ts">
   import { computed } from "vue";
-  import Button from "@/components/ui/button/button.vue";
   import MapMetricCard from "@/components/map/map-metric-card.vue";
   import MapToolPanel from "@/components/map/map-tool-panel.vue";
+  import Button from "@/components/ui/button/button.vue";
   import type {
     MeasureSelectionImageSubject,
     MeasureSelectionOutputMode,

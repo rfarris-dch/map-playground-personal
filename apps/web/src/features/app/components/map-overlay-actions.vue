@@ -22,7 +22,9 @@
 </script>
 
 <template>
-  <div class="map-quick-actions pointer-events-auto absolute z-40 flex gap-1.5">
+  <div
+    class="map-quick-actions pointer-events-auto absolute z-40 flex gap-1.5 overflow-x-auto scrollbar-hide"
+  >
     <DropdownMenu :open="isExportMenuOpen" @update:open="isExportMenuOpen = $event">
       <DropdownMenuTrigger as-child>
         <Button

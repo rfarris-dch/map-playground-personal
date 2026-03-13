@@ -144,6 +144,25 @@ export function buildFacilityClusterPowerSegments(
   ];
 }
 
+function readPointCenter(coordinates: unknown): readonly [number, number] | null {
+  if (!Array.isArray(coordinates) || coordinates.length < 2) {
+    return null;
+  }
+
+  const longitude = coordinates[0];
+  const latitude = coordinates[1];
+  if (
+    typeof longitude !== "number" ||
+    !Number.isFinite(longitude) ||
+    typeof latitude !== "number" ||
+    !Number.isFinite(latitude)
+  ) {
+    return null;
+  }
+
+  return [longitude, latitude];
+}
+
 export function readFacilityClusterSummary(
   feature: Pick<MapRenderedFeature, "geometry" | "properties">,
   perspective: FacilityPerspective
@@ -154,12 +173,13 @@ export function readFacilityClusterSummary(
 
   const clusterId = readNullableNumberProperty(feature.properties, "cluster_id");
   const facilityCount = readNullableNumberProperty(feature.properties, "point_count");
-  if (clusterId === null || facilityCount === null) {
+  const center = readPointCenter(feature.geometry.coordinates);
+  if (clusterId === null || facilityCount === null || center === null) {
     return null;
   }
 
   return createFacilityClusterSummary({
-    center: [feature.geometry.coordinates[0], feature.geometry.coordinates[1]],
+    center,
     clusterId,
     facilityCount,
     perspective,
@@ -366,14 +386,6 @@ export function createFacilityClusterMarkerElement(model: FacilityClusterMarkerM
   mwText.style.fontWeight = "700";
   mwText.style.letterSpacing = "-0.02em";
   centerText.append(mwText);
-
-  const countText = document.createElement("div");
-  countText.textContent = `${formatCompactCount(model.facilityCount)} sites`;
-  countText.style.marginTop = "2px";
-  countText.style.color = MARKER_MUTED_TEXT;
-  countText.style.fontSize = "9px";
-  countText.style.fontWeight = "600";
-  centerText.append(countText);
 
   const countBadge = document.createElement("div");
   countBadge.textContent = formatCompactCount(model.facilityCount);

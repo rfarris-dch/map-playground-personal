@@ -1,5 +1,6 @@
 import type {
   IMap,
+  MapExpression,
   MapProjectionSpecification,
   MapStyleLayer,
   MapStyleSpecification,
@@ -623,8 +624,8 @@ function add3DBuildings(map: IMap, profile: BasemapProfile, sourceId: string): v
   }
 
   const firstLabelLayerId = findFirstLabelLayerId(map);
-  const buildingHeight = ["coalesce", ["get", "render_height"], 0];
-  const buildingBaseHeight = ["coalesce", ["get", "render_min_height"], 0];
+  const buildingHeight: MapExpression = ["coalesce", ["get", "render_height"], 0];
+  const buildingBaseHeight: MapExpression = ["coalesce", ["get", "render_min_height"], 0];
   const buildingZoomRampStart = profile.buildingsMinZoom - 1;
   const buildingZoomRampEnd = profile.buildingsMinZoom + 1;
 

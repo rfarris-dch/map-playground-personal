@@ -94,11 +94,9 @@
           v-for="opt in statusOptions"
           :key="opt.id"
           class="flex min-h-[44px] cursor-pointer items-center gap-2.5 px-3 transition-colors hover:bg-background focus-within:ring-2 focus-within:ring-primary/40 focus-within:outline-none"
-          role="checkbox"
-          :aria-checked="activeStatuses.has(opt.id)"
         >
           <span
-            class="flex size-[14px] shrink-0 items-center justify-center rounded-sm border transition-colors"
+            class="flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border transition-colors"
             :class="
               activeStatuses.has(opt.id)
                 ? 'border-foreground/65 bg-foreground/65'
@@ -110,6 +108,7 @@
               class="size-[10px] text-white"
               viewBox="0 0 10 10"
               fill="none"
+              aria-hidden="true"
             >
               <path
                 d="M2 5l2 2 4-4"
@@ -148,7 +147,7 @@
           class="flex min-h-[44px] cursor-pointer items-center gap-2.5 px-3 transition-colors hover:bg-background focus-within:ring-2 focus-within:ring-primary/40 focus-within:outline-none"
         >
           <span
-            class="flex size-[14px] shrink-0 items-center justify-center rounded-sm border transition-colors"
+            class="flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border transition-colors"
             :class="
               activeProviders.has(name)
                 ? 'border-foreground/65 bg-foreground/65'
@@ -160,6 +159,7 @@
               class="size-[10px] text-white"
               viewBox="0 0 10 10"
               fill="none"
+              aria-hidden="true"
             >
               <path
                 d="M2 5l2 2 4-4"
@@ -203,7 +203,7 @@
           class="flex min-h-[44px] cursor-pointer items-center gap-2.5 px-3 transition-colors hover:bg-background focus-within:ring-2 focus-within:ring-primary/40 focus-within:outline-none"
         >
           <span
-            class="flex size-[14px] shrink-0 items-center justify-center rounded-full border transition-colors"
+            class="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors"
             :class="
               activeVoltageId === opt.id
                 ? 'border-foreground/65 bg-foreground/65'

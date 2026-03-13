@@ -6,10 +6,7 @@ import type {
   BoundaryLayerState,
 } from "@/features/boundaries/boundaries.types";
 
-export const BASEMAP_BOUNDARY_LAYER_IDS: readonly string[] = [
-  "boundary_2",
-  "boundary_disputed",
-];
+export const BASEMAP_BOUNDARY_LAYER_IDS: readonly string[] = ["boundary_2", "boundary_disputed"];
 
 export const BASEMAP_COUNTRY_LAYER_IDS: readonly string[] = ["boundary_2", "boundary_disputed"];
 

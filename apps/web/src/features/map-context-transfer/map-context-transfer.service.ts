@@ -13,7 +13,7 @@ import {
 import { LAYER_IDS } from "@map-migration/map-layer-catalog";
 import type {
   LocationQueryRaw,
-  LocationQueryValue,
+  LocationQueryValueRaw,
   RouteLocationNormalizedLoaded,
 } from "vue-router";
 import {
@@ -113,7 +113,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function readFirstQueryValue(
-  value: LocationQueryValue | readonly LocationQueryValue[] | undefined
+  value: LocationQueryValueRaw | readonly LocationQueryValueRaw[] | undefined
 ): string | null {
   if (typeof value === "string") {
     return value;
@@ -128,7 +128,7 @@ function readFirstQueryValue(
 }
 
 function readStringList(
-  value: LocationQueryValue | readonly LocationQueryValue[] | undefined
+  value: LocationQueryValueRaw | readonly LocationQueryValueRaw[] | undefined
 ): readonly string[] | undefined {
   const rawValue = readFirstQueryValue(value);
   if (rawValue === null) {
@@ -170,7 +170,7 @@ function parseSurface(value: string | null): MapContextSurface | undefined {
 }
 
 function parsePerspectives(
-  value: LocationQueryValue | readonly LocationQueryValue[] | undefined
+  value: LocationQueryValueRaw | readonly LocationQueryValueRaw[] | undefined
 ): readonly FacilityPerspective[] | undefined {
   const rawPerspectives = readStringList(value);
   if (typeof rawPerspectives === "undefined") {

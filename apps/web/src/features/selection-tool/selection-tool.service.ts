@@ -230,8 +230,8 @@ function buildLargeSelectionFallbackSummary(args: {
       selectionAreaSqKm: args.marketSelection.selectionAreaSqKm,
     },
     summary: {
+      ...baseSummary.summary,
       ...measureSummary,
-      flood: baseSummary.summary.flood,
       marketSelection: args.marketSelection,
     },
   };
