@@ -1,0 +1,610 @@
+<script setup lang="ts">
+  import { ChevronDown, Search } from "lucide-vue-next";
+  import { CheckboxIndicator, CheckboxRoot } from "reka-ui";
+  import { computed, ref } from "vue";
+  import Accordion from "@/components/ui/accordion/accordion.vue";
+  import AccordionContent from "@/components/ui/accordion/accordion-content.vue";
+  import AccordionItem from "@/components/ui/accordion/accordion-item.vue";
+  import AccordionTrigger from "@/components/ui/accordion/accordion-trigger.vue";
+
+  /* ------------------------------------------------------------------ */
+  /*  Types                                                              */
+  /* ------------------------------------------------------------------ */
+
+  export interface FilterOption {
+    readonly id: string;
+    readonly label: string;
+  }
+
+  export interface ParcelDropdownState {
+    readonly dataset: string;
+    readonly styleAcres: string;
+    readonly davPercent: string;
+  }
+
+  export interface AppFilterPanelProps {
+    /** Power Type (MW) */
+    readonly powerTypeOptions: readonly FilterOption[];
+    readonly activePowerTypes: ReadonlySet<string>;
+
+    /** Status */
+    readonly statusOptions: readonly FilterOption[];
+    readonly activeStatuses: ReadonlySet<string>;
+
+    /** Markets */
+    readonly marketOptions: readonly FilterOption[];
+    readonly activeMarkets: ReadonlySet<string>;
+
+    /** Providers */
+    readonly providerOptions: readonly FilterOption[];
+    readonly activeProviders: ReadonlySet<string>;
+
+    /** Users */
+    readonly userOptions: readonly FilterOption[];
+    readonly activeUsers: ReadonlySet<string>;
+
+    /** Interconnectivity Hub */
+    readonly interconnectivityHub: boolean;
+
+    /** Infrastructure — Transmission Lines Voltage (kV) */
+    readonly voltageOptions: readonly FilterOption[];
+    readonly activeVoltages: ReadonlySet<string>;
+
+    /** Infrastructure — Natural Gas Lines Capacity (BWh) */
+    readonly gasCapacityOptions: readonly FilterOption[];
+    readonly activeGasCapacities: ReadonlySet<string>;
+
+    /** Infrastructure — Natural Gas Lines Status */
+    readonly gasStatusOptions: readonly FilterOption[];
+    readonly activeGasStatuses: ReadonlySet<string>;
+
+    /** Parcels — Dropdowns */
+    readonly parcelDatasetOptions: readonly FilterOption[];
+    readonly parcelStyleOptions: readonly FilterOption[];
+    readonly parcelDavOptions: readonly FilterOption[];
+    readonly parcelDropdowns: ParcelDropdownState;
+
+    /** Parcels — Zoning Type */
+    readonly zoningTypeOptions: readonly FilterOption[];
+    readonly activeZoningTypes: ReadonlySet<string>;
+
+    /** Parcels — Flood Zone */
+    readonly floodZoneOptions: readonly FilterOption[];
+    readonly activeFloodZones: ReadonlySet<string>;
+  }
+
+  type ToggleFilterEmit =
+    | "toggle:power-type"
+    | "toggle:status"
+    | "toggle:market"
+    | "toggle:provider"
+    | "toggle:user"
+    | "toggle:voltage"
+    | "toggle:gas-capacity"
+    | "toggle:gas-status"
+    | "toggle:zoning-type"
+    | "toggle:flood-zone";
+
+  interface AppFilterPanelEmits {
+    (e: ToggleFilterEmit, id: string): void;
+    (e: "update:interconnectivity-hub", value: boolean): void;
+    (e: "update:parcel-dataset", value: string): void;
+    (e: "update:parcel-style", value: string): void;
+    (e: "update:parcel-dav", value: string): void;
+  }
+
+  const props = defineProps<AppFilterPanelProps>();
+  const emit = defineEmits<AppFilterPanelEmits>();
+
+  /* ------------------------------------------------------------------ */
+  /*  Search state for searchable sections                               */
+  /* ------------------------------------------------------------------ */
+
+  const marketSearch = ref("");
+  const providerSearch = ref("");
+  const userSearch = ref("");
+
+  const filteredMarkets = computed(() =>
+    filterOptions(props.marketOptions, marketSearch.value)
+  );
+  const filteredProviders = computed(() =>
+    filterOptions(props.providerOptions, providerSearch.value)
+  );
+  const filteredUsers = computed(() =>
+    filterOptions(props.userOptions, userSearch.value)
+  );
+
+  function filterOptions(
+    options: readonly FilterOption[],
+    query: string
+  ): readonly FilterOption[] {
+    const q = query.trim().toLowerCase();
+    if (q.length === 0) return options;
+    return options.filter((o) => o.label.toLowerCase().includes(q));
+  }
+
+  /* ------------------------------------------------------------------ */
+  /*  Accordion open state — all open by default                         */
+  /* ------------------------------------------------------------------ */
+
+  const openSections = ref<string[]>([
+    "power-type",
+    "status",
+    "markets",
+    "providers",
+    "users",
+    "infrastructure",
+    "parcels",
+  ]);
+
+  const openInfraSections = ref<string[]>([
+    "voltage",
+    "gas-capacity",
+    "gas-status",
+  ]);
+
+  const openParcelSections = ref<string[]>(["zoning-type", "flood-zone"]);
+</script>
+
+<template>
+  <div class="flex flex-col bg-card font-sans">
+    <Accordion v-model="openSections" type="multiple" class="flex flex-col">
+      <!-- ============================================================ -->
+      <!-- Power Type (MW)                                               -->
+      <!-- ============================================================ -->
+      <AccordionItem value="power-type" class="border-b border-border">
+        <AccordionTrigger
+          class="flex h-8 items-center justify-between px-3 text-[length:var(--size-2)] font-[number:var(--weight-3)] uppercase tracking-wide text-muted-foreground hover:no-underline"
+        >
+          Power Type (MW)
+        </AccordionTrigger>
+        <AccordionContent>
+          <div class="flex flex-col gap-[var(--space-1)] px-3 pb-2">
+            <label
+              v-for="opt in props.powerTypeOptions"
+              :key="opt.id"
+              class="flex cursor-pointer items-center gap-2 py-1 transition-colors hover:bg-background"
+            >
+              <CheckboxRoot
+                :model-value="props.activePowerTypes.has(opt.id)"
+                class="flex h-[10px] w-[10px] shrink-0 items-center justify-center rounded-[2px] border border-border bg-white data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
+                @update:model-value="emit('toggle:power-type', opt.id)"
+              >
+                <CheckboxIndicator class="flex items-center justify-center text-white">
+                  <svg class="size-[8px]" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                    <path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </CheckboxIndicator>
+              </CheckboxRoot>
+              <span class="text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground">{{ opt.label }}</span>
+            </label>
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+
+      <!-- ============================================================ -->
+      <!-- Status                                                        -->
+      <!-- ============================================================ -->
+      <AccordionItem value="status" class="border-b border-border">
+        <AccordionTrigger
+          class="flex h-8 items-center justify-between px-3 text-[length:var(--size-2)] font-[number:var(--weight-3)] uppercase tracking-wide text-muted-foreground hover:no-underline"
+        >
+          Status
+        </AccordionTrigger>
+        <AccordionContent>
+          <div class="flex flex-col gap-[var(--space-1)] px-3 pb-2">
+            <label
+              v-for="opt in props.statusOptions"
+              :key="opt.id"
+              class="flex cursor-pointer items-center gap-2 py-1 transition-colors hover:bg-background"
+            >
+              <CheckboxRoot
+                :model-value="props.activeStatuses.has(opt.id)"
+                class="flex h-[10px] w-[10px] shrink-0 items-center justify-center rounded-[2px] border border-border bg-white data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
+                @update:model-value="emit('toggle:status', opt.id)"
+              >
+                <CheckboxIndicator class="flex items-center justify-center text-white">
+                  <svg class="size-[8px]" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                    <path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </CheckboxIndicator>
+              </CheckboxRoot>
+              <span class="text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground">{{ opt.label }}</span>
+            </label>
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+
+      <!-- ============================================================ -->
+      <!-- Markets (searchable)                                          -->
+      <!-- ============================================================ -->
+      <AccordionItem value="markets" class="border-b border-border">
+        <AccordionTrigger
+          class="flex h-8 items-center justify-between px-3 text-[length:var(--size-2)] font-[number:var(--weight-3)] uppercase tracking-wide text-muted-foreground hover:no-underline"
+        >
+          Markets
+        </AccordionTrigger>
+        <AccordionContent>
+          <div class="flex flex-col gap-[var(--space-1)] px-3 pb-2">
+            <div class="relative">
+              <Search class="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+              <input
+                v-model="marketSearch"
+                type="text"
+                placeholder="Search markets..."
+                class="h-7 w-full rounded-[var(--radius-1)] border border-border bg-background pl-7 pr-2 text-[length:var(--size-2)] text-foreground/85 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              >
+            </div>
+            <div class="flex max-h-[180px] flex-col gap-[var(--space-1)] overflow-y-auto">
+              <label
+                v-for="opt in filteredMarkets"
+                :key="opt.id"
+                class="flex cursor-pointer items-center gap-2 py-1 transition-colors hover:bg-background"
+              >
+                <CheckboxRoot
+                  :model-value="props.activeMarkets.has(opt.id)"
+                  class="flex h-[10px] w-[10px] shrink-0 items-center justify-center rounded-[2px] border border-border bg-white data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
+                  @update:model-value="emit('toggle:market', opt.id)"
+                >
+                  <CheckboxIndicator class="flex items-center justify-center text-white">
+                    <svg class="size-[8px]" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                      <path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                  </CheckboxIndicator>
+                </CheckboxRoot>
+                <span class="truncate text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground">{{ opt.label }}</span>
+              </label>
+              <p v-if="filteredMarkets.length === 0" class="py-1 text-[length:var(--size-2)] italic text-muted-foreground">
+                No markets match "{{ marketSearch }}"
+              </p>
+            </div>
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+
+      <!-- ============================================================ -->
+      <!-- Providers (searchable)                                        -->
+      <!-- ============================================================ -->
+      <AccordionItem value="providers" class="border-b border-border">
+        <AccordionTrigger
+          class="flex h-8 items-center justify-between px-3 text-[length:var(--size-2)] font-[number:var(--weight-3)] uppercase tracking-wide text-muted-foreground hover:no-underline"
+        >
+          Providers
+        </AccordionTrigger>
+        <AccordionContent>
+          <div class="flex flex-col gap-[var(--space-1)] px-3 pb-2">
+            <div class="relative">
+              <Search class="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+              <input
+                v-model="providerSearch"
+                type="text"
+                placeholder="Search providers..."
+                class="h-7 w-full rounded-[var(--radius-1)] border border-border bg-background pl-7 pr-2 text-[length:var(--size-2)] text-foreground/85 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              >
+            </div>
+            <div class="flex max-h-[180px] flex-col gap-[var(--space-1)] overflow-y-auto">
+              <label
+                v-for="opt in filteredProviders"
+                :key="opt.id"
+                class="flex cursor-pointer items-center gap-2 py-1 transition-colors hover:bg-background"
+              >
+                <CheckboxRoot
+                  :model-value="props.activeProviders.has(opt.id)"
+                  class="flex h-[10px] w-[10px] shrink-0 items-center justify-center rounded-[2px] border border-border bg-white data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
+                  @update:model-value="emit('toggle:provider', opt.id)"
+                >
+                  <CheckboxIndicator class="flex items-center justify-center text-white">
+                    <svg class="size-[8px]" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                      <path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                  </CheckboxIndicator>
+                </CheckboxRoot>
+                <span class="truncate text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground">{{ opt.label }}</span>
+              </label>
+              <p v-if="filteredProviders.length === 0" class="py-1 text-[length:var(--size-2)] italic text-muted-foreground">
+                No providers match "{{ providerSearch }}"
+              </p>
+            </div>
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+
+      <!-- ============================================================ -->
+      <!-- Users (searchable)                                            -->
+      <!-- ============================================================ -->
+      <AccordionItem value="users" class="border-b border-border">
+        <AccordionTrigger
+          class="flex h-8 items-center justify-between px-3 text-[length:var(--size-2)] font-[number:var(--weight-3)] uppercase tracking-wide text-muted-foreground hover:no-underline"
+        >
+          Users
+        </AccordionTrigger>
+        <AccordionContent>
+          <div class="flex flex-col gap-[var(--space-1)] px-3 pb-2">
+            <div class="relative">
+              <Search class="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+              <input
+                v-model="userSearch"
+                type="text"
+                placeholder="Search users..."
+                class="h-7 w-full rounded-[var(--radius-1)] border border-border bg-background pl-7 pr-2 text-[length:var(--size-2)] text-foreground/85 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              >
+            </div>
+            <div class="flex max-h-[180px] flex-col gap-[var(--space-1)] overflow-y-auto">
+              <label
+                v-for="opt in filteredUsers"
+                :key="opt.id"
+                class="flex cursor-pointer items-center gap-2 py-1 transition-colors hover:bg-background"
+              >
+                <CheckboxRoot
+                  :model-value="props.activeUsers.has(opt.id)"
+                  class="flex h-[10px] w-[10px] shrink-0 items-center justify-center rounded-[2px] border border-border bg-white data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
+                  @update:model-value="emit('toggle:user', opt.id)"
+                >
+                  <CheckboxIndicator class="flex items-center justify-center text-white">
+                    <svg class="size-[8px]" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                      <path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                  </CheckboxIndicator>
+                </CheckboxRoot>
+                <span class="truncate text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground">{{ opt.label }}</span>
+              </label>
+              <p v-if="filteredUsers.length === 0" class="py-1 text-[length:var(--size-2)] italic text-muted-foreground">
+                No users match "{{ userSearch }}"
+              </p>
+            </div>
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
+
+    <!-- ============================================================ -->
+    <!-- Interconnectivity Hub (toggle, not accordion)                  -->
+    <!-- ============================================================ -->
+    <div class="flex items-center justify-between border-b border-border px-3 py-2">
+      <span class="text-[length:var(--size-2)] font-[number:var(--weight-3)] uppercase tracking-wide text-muted-foreground">
+        Interconnectivity Hub
+      </span>
+      <button
+        type="button"
+        role="switch"
+        :aria-checked="props.interconnectivityHub"
+        class="relative inline-flex h-4 w-7 shrink-0 cursor-pointer items-center rounded-full border border-border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        :class="props.interconnectivityHub ? 'bg-primary' : 'bg-muted'"
+        @click="emit('update:interconnectivity-hub', !props.interconnectivityHub)"
+      >
+        <span
+          class="pointer-events-none inline-block h-3 w-3 rounded-full bg-white shadow-sm transition-transform"
+          :class="props.interconnectivityHub ? 'translate-x-3' : 'translate-x-0.5'"
+        />
+      </button>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- Infrastructure                                                 -->
+    <!-- ============================================================ -->
+    <Accordion v-model="openSections" type="multiple">
+      <AccordionItem value="infrastructure" class="border-b border-border">
+        <AccordionTrigger
+          class="flex h-8 items-center justify-between px-3 text-[length:var(--size-2)] font-[number:var(--weight-3)] uppercase tracking-wide text-muted-foreground hover:no-underline"
+        >
+          Infrastructure
+        </AccordionTrigger>
+        <AccordionContent>
+          <Accordion v-model="openInfraSections" type="multiple" class="flex flex-col">
+            <!-- Transmission Lines Voltage (kV) -->
+            <AccordionItem value="voltage" class="border-b-0">
+              <AccordionTrigger
+                class="flex h-7 items-center justify-between px-3 pl-5 text-[length:var(--size-2)] font-[number:var(--weight-2)] text-foreground/70 hover:no-underline"
+              >
+                Transmission Lines Voltage (kV)
+              </AccordionTrigger>
+              <AccordionContent>
+                <div class="flex flex-col gap-[var(--space-1)] px-3 pl-5 pb-2">
+                  <label
+                    v-for="opt in props.voltageOptions"
+                    :key="opt.id"
+                    class="flex cursor-pointer items-center gap-2 py-1 transition-colors hover:bg-background"
+                  >
+                    <CheckboxRoot
+                      :model-value="props.activeVoltages.has(opt.id)"
+                      class="flex h-[10px] w-[10px] shrink-0 items-center justify-center rounded-[2px] border border-border bg-white data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
+                      @update:model-value="emit('toggle:voltage', opt.id)"
+                    >
+                      <CheckboxIndicator class="flex items-center justify-center text-white">
+                        <svg class="size-[8px]" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                          <path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                      </CheckboxIndicator>
+                    </CheckboxRoot>
+                    <span class="text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground">{{ opt.label }}</span>
+                  </label>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <!-- Natural Gas Lines Capacity (BWh) -->
+            <AccordionItem value="gas-capacity" class="border-b-0">
+              <AccordionTrigger
+                class="flex h-7 items-center justify-between px-3 pl-5 text-[length:var(--size-2)] font-[number:var(--weight-2)] text-foreground/70 hover:no-underline"
+              >
+                Natural Gas Lines Capacity (BWh)
+              </AccordionTrigger>
+              <AccordionContent>
+                <div class="flex flex-col gap-[var(--space-1)] px-3 pl-5 pb-2">
+                  <label
+                    v-for="opt in props.gasCapacityOptions"
+                    :key="opt.id"
+                    class="flex cursor-pointer items-center gap-2 py-1 transition-colors hover:bg-background"
+                  >
+                    <CheckboxRoot
+                      :model-value="props.activeGasCapacities.has(opt.id)"
+                      class="flex h-[10px] w-[10px] shrink-0 items-center justify-center rounded-[2px] border border-border bg-white data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
+                      @update:model-value="emit('toggle:gas-capacity', opt.id)"
+                    >
+                      <CheckboxIndicator class="flex items-center justify-center text-white">
+                        <svg class="size-[8px]" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                          <path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                      </CheckboxIndicator>
+                    </CheckboxRoot>
+                    <span class="text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground">{{ opt.label }}</span>
+                  </label>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <!-- Natural Gas Lines Status -->
+            <AccordionItem value="gas-status" class="border-b-0">
+              <AccordionTrigger
+                class="flex h-7 items-center justify-between px-3 pl-5 text-[length:var(--size-2)] font-[number:var(--weight-2)] text-foreground/70 hover:no-underline"
+              >
+                Natural Gas Lines Status
+              </AccordionTrigger>
+              <AccordionContent>
+                <div class="flex flex-col gap-[var(--space-1)] px-3 pl-5 pb-2">
+                  <label
+                    v-for="opt in props.gasStatusOptions"
+                    :key="opt.id"
+                    class="flex cursor-pointer items-center gap-2 py-1 transition-colors hover:bg-background"
+                  >
+                    <CheckboxRoot
+                      :model-value="props.activeGasStatuses.has(opt.id)"
+                      class="flex h-[10px] w-[10px] shrink-0 items-center justify-center rounded-[2px] border border-border bg-white data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
+                      @update:model-value="emit('toggle:gas-status', opt.id)"
+                    >
+                      <CheckboxIndicator class="flex items-center justify-center text-white">
+                        <svg class="size-[8px]" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                          <path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                      </CheckboxIndicator>
+                    </CheckboxRoot>
+                    <span class="text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground">{{ opt.label }}</span>
+                  </label>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </AccordionContent>
+      </AccordionItem>
+
+      <!-- ============================================================ -->
+      <!-- Parcels                                                       -->
+      <!-- ============================================================ -->
+      <AccordionItem value="parcels" class="border-b border-border">
+        <AccordionTrigger
+          class="flex h-8 items-center justify-between px-3 text-[length:var(--size-2)] font-[number:var(--weight-3)] uppercase tracking-wide text-muted-foreground hover:no-underline"
+        >
+          Parcels
+        </AccordionTrigger>
+        <AccordionContent>
+          <div class="flex flex-col gap-[var(--space-2)] px-3 pb-2">
+            <!-- Parcel Dataset -->
+            <div class="flex flex-col gap-1">
+              <span class="text-[length:var(--size-2)] font-[number:var(--weight-2)] leading-none text-foreground/70">Parcel Dataset</span>
+              <select
+                :value="props.parcelDropdowns.dataset"
+                class="h-7 w-full rounded-[var(--radius-1)] border border-border bg-background px-2 text-[length:var(--size-2)] text-foreground/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                @change="emit('update:parcel-dataset', ($event.target as HTMLSelectElement).value)"
+              >
+                <option v-for="opt in props.parcelDatasetOptions" :key="opt.id" :value="opt.id">
+                  {{ opt.label }}
+                </option>
+              </select>
+            </div>
+
+            <!-- Parcel Style (Acres) -->
+            <div class="flex flex-col gap-1">
+              <span class="text-[length:var(--size-2)] font-[number:var(--weight-2)] leading-none text-foreground/70">Parcel Style (Acres)</span>
+              <select
+                :value="props.parcelDropdowns.styleAcres"
+                class="h-7 w-full rounded-[var(--radius-1)] border border-border bg-background px-2 text-[length:var(--size-2)] text-foreground/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                @change="emit('update:parcel-style', ($event.target as HTMLSelectElement).value)"
+              >
+                <option v-for="opt in props.parcelStyleOptions" :key="opt.id" :value="opt.id">
+                  {{ opt.label }}
+                </option>
+              </select>
+            </div>
+
+            <!-- DAV % -->
+            <div class="flex flex-col gap-1">
+              <span class="text-[length:var(--size-2)] font-[number:var(--weight-2)] leading-none text-foreground/70">Display at % Down-Assessed Value (DAV)</span>
+              <select
+                :value="props.parcelDropdowns.davPercent"
+                class="h-7 w-full rounded-[var(--radius-1)] border border-border bg-background px-2 text-[length:var(--size-2)] text-foreground/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                @change="emit('update:parcel-dav', ($event.target as HTMLSelectElement).value)"
+              >
+                <option v-for="opt in props.parcelDavOptions" :key="opt.id" :value="opt.id">
+                  {{ opt.label }}
+                </option>
+              </select>
+            </div>
+
+            <!-- Zoning Type & Flood Zone sub-accordions -->
+            <Accordion v-model="openParcelSections" type="multiple" class="flex flex-col">
+              <AccordionItem value="zoning-type" class="border-b-0">
+                <AccordionTrigger
+                  class="flex h-7 items-center justify-between text-[length:var(--size-2)] font-[number:var(--weight-2)] text-foreground/70 hover:no-underline"
+                >
+                  Zoning Type
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div class="flex flex-col gap-[var(--space-1)] pb-1">
+                    <label
+                      v-for="opt in props.zoningTypeOptions"
+                      :key="opt.id"
+                      class="flex cursor-pointer items-center gap-2 py-1 transition-colors hover:bg-background"
+                    >
+                      <CheckboxRoot
+                        :model-value="props.activeZoningTypes.has(opt.id)"
+                        class="flex h-[10px] w-[10px] shrink-0 items-center justify-center rounded-[2px] border border-border bg-white data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
+                        @update:model-value="emit('toggle:zoning-type', opt.id)"
+                      >
+                        <CheckboxIndicator class="flex items-center justify-center text-white">
+                          <svg class="size-[8px]" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                            <path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                          </svg>
+                        </CheckboxIndicator>
+                      </CheckboxRoot>
+                      <span class="text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground">{{ opt.label }}</span>
+                    </label>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="flood-zone" class="border-b-0">
+                <AccordionTrigger
+                  class="flex h-7 items-center justify-between text-[length:var(--size-2)] font-[number:var(--weight-2)] text-foreground/70 hover:no-underline"
+                >
+                  Flood Zone
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div class="flex flex-col gap-[var(--space-1)] pb-1">
+                    <label
+                      v-for="opt in props.floodZoneOptions"
+                      :key="opt.id"
+                      class="flex cursor-pointer items-center gap-2 py-1 transition-colors hover:bg-background"
+                    >
+                      <CheckboxRoot
+                        :model-value="props.activeFloodZones.has(opt.id)"
+                        class="flex h-[10px] w-[10px] shrink-0 items-center justify-center rounded-[2px] border border-border bg-white data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
+                        @update:model-value="emit('toggle:flood-zone', opt.id)"
+                      >
+                        <CheckboxIndicator class="flex items-center justify-center text-white">
+                          <svg class="size-[8px]" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                            <path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                          </svg>
+                        </CheckboxIndicator>
+                      </CheckboxRoot>
+                      <span class="text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground">{{ opt.label }}</span>
+                    </label>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
+  </div>
+</template>
