@@ -285,6 +285,26 @@ function queryLargeSelectionToolSummaryEffect(
       } satisfies QuerySelectionToolSummaryResult;
     }
 
+    const hasFacilitiesError = facilitiesResults.some((r) => Either.isLeft(r));
+    const hasMarketsError = Either.isLeft(marketsResult);
+
+    if (hasFacilitiesError || hasMarketsError) {
+      yield* Effect.sync(() => {
+        publishSelectionProgress(
+          args,
+          buildSelectionProgress([
+            hasFacilitiesError
+              ? createProgressStage("facilities", "error", "Failed to load facilities.", 0)
+              : createProgressStage("facilities", "complete", "Facilities loaded.", perspectives.length, perspectives.length),
+            hasMarketsError
+              ? createProgressStage("markets", "error", "Failed to load markets.", 0)
+              : createProgressStage("markets", "complete", "Markets loaded.", 1),
+            createProgressStage("parcels", "skipped", "Parcel enrichment disabled.", 1),
+          ])
+        );
+      });
+    }
+
     const facilitiesFeatures = facilitiesResults.flatMap((facilitiesResult) =>
       Either.isRight(facilitiesResult) ? facilitiesResult.right.data.features : []
     );
@@ -396,6 +416,20 @@ export function querySelectionToolSummaryEffect(
           reason: "aborted",
         } satisfies QuerySelectionToolSummaryResult;
       }
+
+      yield* Effect.sync(() => {
+        publishSelectionProgress(
+          args,
+          buildSelectionProgress([
+            createProgressStage("facilities", "error", "Failed to load facilities.", 0),
+            createProgressStage("markets", "error", "Failed to load markets.", 0),
+            includeParcels
+              ? createProgressStage("parcels", "error", "Failed to load parcels.", 0)
+              : createProgressStage("parcels", "skipped", "Parcel enrichment disabled.", 1),
+          ])
+        );
+      });
+
       return {
         ok: true,
         value: {

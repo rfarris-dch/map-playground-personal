@@ -335,10 +335,9 @@ export class FakeMap implements IMap {
   }
 }
 
-export function createTestMapControl(id: string): MapControl {
+export function createTestMapControl(_id: string): MapControl {
   return {
-    id,
-    onAdd(): HTMLElement {
+    onAdd(_map): HTMLElement {
       throw new Error("test control onAdd should not be called");
     },
     onRemove(): void {

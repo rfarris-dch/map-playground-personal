@@ -23,10 +23,11 @@ WITH selection AS (
 ),
 dataset_meta AS (
   SELECT
-    COUNT(*)::bigint AS dataset_feature_count,
-    MAX(data_version)::text AS data_version,
-    MAX(run_id)::text AS run_id
+    1::bigint AS dataset_feature_count,
+    data_version::text AS data_version,
+    run_id::text AS run_id
   FROM environmental_current.flood_hazard
+  LIMIT 1
 ),
 flood_100 AS (
   SELECT ST_UnaryUnion(ST_Collect(ST_Intersection(flood.geom_3857, selection.geom_3857))) AS geom
