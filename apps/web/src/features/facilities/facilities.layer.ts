@@ -57,9 +57,9 @@ export function mountFacilitiesLayer(
   const limit = options.limit ?? 2000;
   const debounceMs = options.debounceMs ?? 250;
   const fetchPaddingFactor = 0.5;
-  const defaultCircleColor = perspective === "hyperscale" ? "#f97316" : "#3b82f6";
-  const hoverCircleColor = perspective === "hyperscale" ? "#ea580c" : "#2563eb";
-  const selectedCircleColor = perspective === "hyperscale" ? "#c2410c" : "#1d4ed8";
+  const defaultCircleColor = perspective === "hyperscale" ? "#10b981" : "#3b82f6";
+  const hoverCircleColor = perspective === "hyperscale" ? "#059669" : "#2563eb";
+  const selectedCircleColor = perspective === "hyperscale" ? "#047857" : "#1d4ed8";
 
   const heatmapLayerId = `${sourceId}.heatmap`;
   const iconFallbackLayerId = `${sourceId}.icon-fallback`;
@@ -332,15 +332,15 @@ export function mountFacilitiesLayer(
             0,
             "rgba(0,0,0,0)",
             0.2,
-            perspective === "hyperscale" ? "#fed7aa" : "#bfdbfe",
+            perspective === "hyperscale" ? "#d1fae5" : "#bfdbfe",
             0.4,
-            perspective === "hyperscale" ? "#fdba74" : "#93c5fd",
+            perspective === "hyperscale" ? "#6ee7b7" : "#93c5fd",
             0.6,
-            perspective === "hyperscale" ? "#fb923c" : "#60a5fa",
+            perspective === "hyperscale" ? "#34d399" : "#60a5fa",
             0.8,
-            perspective === "hyperscale" ? "#f97316" : "#3b82f6",
+            perspective === "hyperscale" ? "#10b981" : "#3b82f6",
             1,
-            perspective === "hyperscale" ? "#c2410c" : "#1d4ed8",
+            perspective === "hyperscale" ? "#047857" : "#1d4ed8",
           ],
         },
       } as unknown as Parameters<typeof map.addLayer>[0]);
@@ -568,9 +568,38 @@ export function mountFacilitiesLayer(
     scheduleRefresh();
   };
 
+  const zoomToCluster = (clusterId: number, center: [number, number]): void => {
+    map
+      .getClusterExpansionZoom(sourceId, clusterId)
+      .then((zoom) => {
+        map.setViewport({
+          type: "center",
+          center,
+          zoom: Math.min(zoom, 18),
+          animate: true,
+        });
+      })
+      .catch(() => {});
+  };
+
   const onClick = (event: MapClickEvent): void => {
     if (!(state.ready && state.visible && isInteractionEnabled())) {
       return;
+    }
+
+    // Check cluster layer click first (zoom into cluster)
+    if (state.viewMode === "clusters" && map.hasLayer(clusterLayerId)) {
+      const clusterFeatures = map.queryRenderedFeatures(event.point, {
+        layers: [clusterLayerId],
+      });
+      if (clusterFeatures.length > 0) {
+        const cluster = clusterFeatures[0];
+        const clusterId = cluster.properties?.cluster_id;
+        if (typeof clusterId === "number") {
+          zoomToCluster(clusterId, [event.lngLat.lng, event.lngLat.lat]);
+          return;
+        }
+      }
     }
 
     if (!map.hasLayer(pointLayerId)) {
@@ -593,6 +622,20 @@ export function mountFacilitiesLayer(
     }
 
     setSelectedFeatureId(selectedFeature.id);
+
+    const geom = selectedFeature.geometry;
+    if (geom.type === "Point") {
+      const currentZoom = map.getZoom();
+      const targetZoom = Math.max(currentZoom, 17);
+      if (targetZoom > currentZoom + 0.5) {
+        map.setViewport({
+          type: "center",
+          center: [geom.coordinates[0], geom.coordinates[1]],
+          zoom: targetZoom,
+          animate: true,
+        });
+      }
+    }
   };
 
   const scheduleRefresh = (): void => {
@@ -837,6 +880,7 @@ export function mountFacilitiesLayer(
     perspective,
     setViewMode,
     setVisible,
+    zoomToCluster,
     destroy(): void {
       state.requestSequence += 1;
       clearSelection();

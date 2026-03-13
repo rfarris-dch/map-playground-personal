@@ -62,12 +62,10 @@ export interface ApiRoutesTable {
   readonly fiberLocatorLayersInView: string;
   readonly fiberLocatorTile: string;
   readonly fiberLocatorVectorTile: string;
-  readonly floodSyncStatus: string;
   readonly health: string;
   readonly markets: string;
   readonly marketsSelection: string;
   readonly parcels: string;
-  readonly parcelsSyncStatus: string;
   readonly pipelines: string;
   readonly providers: string;
 }
@@ -110,7 +108,6 @@ export const ApiRoutes = Object.freeze<ApiRoutesTable>({
   boundariesPower: "/api/geo/boundaries/power",
   countyScores: "/api/geo/counties/scores",
   countyScoresStatus: "/api/geo/counties/scores/status",
-  floodSyncStatus: "/api/geo/flood/sync/status",
   fiberLocatorLayers: "/api/geo/fiber-locator/layers",
   fiberLocatorLayersInView: "/api/geo/fiber-locator/layers/inview",
   fiberLocatorTile: "/api/geo/fiber-locator/tile",
@@ -122,7 +119,6 @@ export const ApiRoutes = Object.freeze<ApiRoutesTable>({
   marketsSelection: "/api/geo/markets/selection",
   providers: "/api/geo/providers",
   parcels: "/api/geo/parcels",
-  parcelsSyncStatus: "/api/geo/parcels/sync/status",
   pipelines: "/api/pipelines",
 });
 
@@ -290,14 +286,6 @@ export function buildFiberLocatorVectorTileRoute(
   y: number | string
 ): string {
   return `${ApiRoutes.fiberLocatorVectorTile}/${encodeURIComponent(layerName)}/${String(z)}/${String(x)}/${String(y)}.pbf`;
-}
-
-export function buildParcelsSyncStatusRoute(): string {
-  return ApiRoutes.parcelsSyncStatus;
-}
-
-export function buildFloodSyncStatusRoute(): string {
-  return ApiRoutes.floodSyncStatus;
 }
 
 export function buildPipelineStatusRoute(dataset: PipelineDataset): string {

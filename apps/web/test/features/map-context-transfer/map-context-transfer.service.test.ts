@@ -169,6 +169,43 @@ describe("map-context-transfer service", () => {
     });
   });
 
+  it("reuses a preferred context token for oversized state writes", () => {
+    const context: MapContextTransfer = {
+      schemaVersion: MAP_CONTEXT_TRANSFER_SCHEMA_VERSION,
+      sourceSurface: "global-map",
+      targetSurface: "global-map",
+      facilityIds: [
+        "facility-alpha-0001",
+        "facility-beta-0002",
+        "facility-gamma-0003",
+        "facility-delta-0004",
+        "facility-epsilon-0005",
+        "facility-zeta-0006",
+        "facility-eta-0007",
+        "facility-theta-0008",
+        "facility-iota-0009",
+        "facility-kappa-0010",
+      ],
+    };
+
+    const query = buildMapContextTransferQuery(
+      context,
+      {
+        load() {
+          return null;
+        },
+        save(savedContext, token) {
+          expect(savedContext).toEqual(context);
+          expect(token).toBe("existing-token");
+          return token ?? "unexpected-token";
+        },
+      },
+      "existing-token"
+    );
+
+    expect(query.mapContextToken).toBe("existing-token");
+  });
+
   it("builds query state with camera, layer, basemap, and fiber selections", () => {
     const context = buildMapContextTransferFromAppShell({
       basemapVisibility: {

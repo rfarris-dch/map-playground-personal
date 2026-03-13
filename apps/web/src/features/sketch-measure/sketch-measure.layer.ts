@@ -22,6 +22,8 @@ function initialRuntimeState(): SketchMeasureRuntimeState {
     cursorVertex: null,
     areaShape: "freeform",
     areaComplete: false,
+    project: null,
+    unproject: null,
   };
 }
 
@@ -83,6 +85,8 @@ export function mountSketchMeasureLayer(
   const vertexLayerId = "sketch-measure.overlay.vertices";
 
   const state = initialRuntimeState();
+  state.project = (lngLat) => map.project(lngLat);
+  state.unproject = (point) => map.unproject(point);
 
   const emitState = (): void => {
     options.onStateChange?.(buildSketchMeasureState(state));

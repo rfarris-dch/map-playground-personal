@@ -125,7 +125,7 @@
       return props.compactWidthClass ?? "w-[min(32rem,calc(100%-1.5rem))]";
     }
 
-    return props.expandedWidthClass ?? "w-[min(88rem,calc(100%-1.5rem))]";
+    return props.expandedWidthClass ?? "w-[min(52rem,calc(100%-1.5rem))]";
   });
 
   const parcelOverview = computed(() => summarizeSpatialAnalysisParcels(orderedParcels.value));

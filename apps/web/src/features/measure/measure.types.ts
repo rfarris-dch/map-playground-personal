@@ -31,6 +31,8 @@ export interface MeasureRuntimeState {
   areaShape: MeasureAreaShape;
   cursorVertex: LngLat | null;
   mode: MeasureMode;
+  project: ((lngLat: LngLat) => [number, number]) | null;
   ready: boolean;
+  unproject: ((point: [number, number]) => LngLat) | null;
   vertices: LngLat[];
 }

@@ -251,6 +251,11 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
     };
 
     options.layerRuntime.value?.setUserVisible(fiberLayerId(lineId), visible);
+
+    if (visible) {
+      setAllFiberSourceLayers(lineId, true);
+    }
+
     clearFiberHover();
   }
 

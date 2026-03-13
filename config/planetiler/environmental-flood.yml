@@ -1,0 +1,34 @@
+schema_name: Environmental Flood
+schema_description: Flood hazard overlay tiles built from persisted PostGIS exports.
+
+sources:
+  flood_overlay:
+    type: geojson
+    local_path: '${ args.input_path }'
+
+layers:
+  - id: flood-hazard
+    features:
+      - source: flood_overlay
+        geometry: polygon
+        attributes:
+          - key: FLD_ZONE
+            tag_value: FLD_ZONE
+          - key: ZONE_SUBTY
+            tag_value: ZONE_SUBTY
+          - key: SFHA_TF
+            tag_value: SFHA_TF
+          - key: SOURCE_CIT
+            tag_value: SOURCE_CIT
+          - key: is_flood_100
+            tag_value: is_flood_100
+            type: integer
+          - key: is_flood_500
+            tag_value: is_flood_500
+            type: integer
+          - key: flood_band
+            tag_value: flood_band
+          - key: legend_key
+            tag_value: legend_key
+          - key: data_version
+            tag_value: data_version

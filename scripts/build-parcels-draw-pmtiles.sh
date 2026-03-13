@@ -16,14 +16,14 @@ if [[ -z "${DB_URL}" ]]; then
   exit 1
 fi
 
-for bin in psql tippecanoe pmtiles jq; do
+for bin in psql jq bash; do
   if ! command -v "${bin}" >/dev/null 2>&1; then
     echo "[tiles] ERROR: missing dependency in PATH: ${bin}" >&2
     exit 1
   fi
 done
 
-RUN_ID="${1:-$(date -u +%Y%m%dT%H%M%SZ)}"
+RUN_ID="${1:-${RUN_ID:-$(date -u +%Y%m%dT%H%M%SZ)}}"
 DATASET="${PARCELS_TILE_DATASET:-parcels-draw-v1}"
 LAYER_NAME="${PARCELS_TILE_LAYER_NAME:-parcels}"
 PROFILE="${PARCELS_TILES_PROFILE:-thin}"
@@ -34,31 +34,24 @@ else
   MAX_Z_DEFAULT="16"
 fi
 MAX_Z="${PARCELS_TILES_MAX_ZOOM:-${MAX_Z_DEFAULT}}"
+PLANETILER_THREADS="${PARCELS_TILE_THREADS:-4}"
 GEOJSON_MAX_DIGITS="${PARCELS_TILES_GEOJSON_MAX_DIGITS:-6}"
-MAX_TILE_BYTES="${PARCELS_TILES_MAX_TILE_BYTES:-2000000}"
 OUT_DIR="${PARCELS_TILES_OUT_DIR:-${ROOT_DIR}/.cache/tiles/${DATASET}}"
 SNAPSHOT_ROOT="${PARCEL_SYNC_OUTPUT_DIR:-${ROOT_DIR}/var/parcels-sync}"
 SCHEMA_FILE_DEFAULT="${SNAPSHOT_ROOT}/${RUN_ID}/layer-metadata.json"
 SCHEMA_FILE="${PARCELS_TILE_SCHEMA_FILE:-${SCHEMA_FILE_DEFAULT}}"
-TIPPECANOE_TMP_DIR="${PARCELS_TILES_TMP_DIR:-${OUT_DIR}/tmp-${RUN_ID}}"
-PMTILES_TMP_DIR="${PARCELS_PMTILES_TMP_DIR:-${TIPPECANOE_TMP_DIR}}"
-PMTILES_NO_DEDUPLICATION="${PARCELS_PMTILES_NO_DEDUPLICATION:-0}"
 STAGE_GEOJSON_FILE="${PARCELS_TILES_STAGE_GEOJSON_FILE:-1}"
 KEEP_STAGED_GEOJSON_FILE="${PARCELS_TILES_KEEP_STAGED_GEOJSON_FILE:-1}"
 REUSE_GEOJSON_FILE="${PARCELS_TILES_REUSE_GEOJSON_FILE:-1}"
-DETECT_SHARED_BORDERS="${PARCELS_TILES_DETECT_SHARED_BORDERS:-0}"
-BUILD_RETRY_ATTEMPTS="${PARCELS_TILES_BUILD_RETRY_ATTEMPTS:-5}"
-BUILD_RETRY_DELAY_SECONDS="${PARCELS_TILES_BUILD_RETRY_DELAY_SECONDS:-8}"
-CONVERT_RETRY_ATTEMPTS="${PARCELS_PMTILES_CONVERT_RETRY_ATTEMPTS:-3}"
-CONVERT_RETRY_DELAY_SECONDS="${PARCELS_PMTILES_CONVERT_RETRY_DELAY_SECONDS:-5}"
+PLANETILER_SCHEMA_TMP_DIR="${PARCELS_TILES_TMP_DIR:-${OUT_DIR}/tmp-${RUN_ID}}"
 
-mkdir -p "${OUT_DIR}" "${TIPPECANOE_TMP_DIR}" "${PMTILES_TMP_DIR}"
+mkdir -p "${OUT_DIR}" "${PLANETILER_SCHEMA_TMP_DIR}"
 
-MBTILES_PATH="${OUT_DIR}/${DATASET}_${RUN_ID}.mbtiles"
 PMTILES_PATH="${OUT_DIR}/${DATASET}_${RUN_ID}.pmtiles"
 SCHEMA_OUTPUT_PATH="${OUT_DIR}/${DATASET}_${RUN_ID}.tile-schema.json"
 GEOJSONL_PATH="${PARCELS_TILES_GEOJSONL_PATH:-${OUT_DIR}/${DATASET}_${RUN_ID}.geojsonl}"
 GEOJSONL_TMP_PATH="${GEOJSONL_PATH}.tmp-${RUN_ID}-$$"
+PLANETILER_SCHEMA_RUNTIME_PATH="${PLANETILER_SCHEMA_TMP_DIR}/${DATASET}_${RUN_ID}.planetiler.yml"
 BUILD_LOCK_DIR="${OUT_DIR}/${DATASET}_${RUN_ID}.build.lock"
 BUILD_LOCK_PID_FILE="${BUILD_LOCK_DIR}/pid"
 
@@ -85,13 +78,7 @@ acquire_build_lock() {
 
 acquire_build_lock
 
-echo "[tiles] building MBTiles from parcel_current.parcels" >&2
-echo "[tiles] dataset=${DATASET} layer=${LAYER_NAME} profile=${PROFILE} z=${MIN_Z}-${MAX_Z}" >&2
-echo "[tiles] stage_geojson_file=${STAGE_GEOJSON_FILE} reuse_geojson_file=${REUSE_GEOJSON_FILE} detect_shared_borders=${DETECT_SHARED_BORDERS}" >&2
-echo "[tiles] build_retries=${BUILD_RETRY_ATTEMPTS} convert_retries=${CONVERT_RETRY_ATTEMPTS}" >&2
-
-TIPPECANOE_INCLUDE_ARGS=(--exclude-all --include=pid)
-TIPPECANOE_LIMIT_ARGS=(--maximum-tile-bytes="${MAX_TILE_BYTES}" --drop-densest-as-needed --extend-zooms-if-still-dropping)
+TIPPECANOE_FIELDS=(pid)
 FIELDS_JSON='["pid"]'
 PROPERTIES_SQL="jsonb_build_object('pid', parcel_id::text)"
 
@@ -110,36 +97,14 @@ if [[ "${PROFILE}" == "full_170" ]]; then
     exit 1
   fi
 
-  for FIELD_NAME in "${SCHEMA_FIELDS[@]}"; do
-    if [[ "${FIELD_NAME}" == "pid" ]]; then
-      continue
-    fi
-    TIPPECANOE_INCLUDE_ARGS+=("--include=${FIELD_NAME}")
-  done
-
+  TIPPECANOE_FIELDS=(pid "${SCHEMA_FIELDS[@]}")
   FIELDS_JSON="$(jq -c '["pid"] + ([.fields[]?.name | select(type == "string" and length > 0)] | unique | sort)' "${SCHEMA_FILE}")"
   PROPERTIES_SQL="jsonb_build_object('pid', parcel_id::text) || COALESCE(attrs, '{}'::jsonb)"
-  TIPPECANOE_LIMIT_ARGS=(--no-feature-limit --no-tile-size-limit)
 fi
 
 if [[ "${PROFILE}" != "full_170" && "${PROFILE}" != "thin" ]]; then
   echo "[tiles] ERROR: unsupported PARCELS_TILES_PROFILE=${PROFILE}. Expected full_170 or thin." >&2
   exit 1
-fi
-
-TIPPECANOE_COMMON_ARGS=(
-  --force
-  --layer="${LAYER_NAME}"
-  -Z "${MIN_Z}"
-  -z "${MAX_Z}"
-  --simplify-only-low-zooms
-  --temporary-directory="${TIPPECANOE_TMP_DIR}"
-  "${TIPPECANOE_LIMIT_ARGS[@]}"
-  "${TIPPECANOE_INCLUDE_ARGS[@]}"
-)
-
-if [[ "${DETECT_SHARED_BORDERS}" == "1" ]]; then
-  TIPPECANOE_COMMON_ARGS+=(--detect-shared-borders)
 fi
 
 jq -n \
@@ -167,13 +132,14 @@ SELECT jsonb_build_object(
   'geometry', ST_AsGeoJSON(geom, ${GEOJSON_MAX_DIGITS})::jsonb,
   'properties', ${PROPERTIES_SQL}
 )::text
-FROM parcel_current.parcels;
+FROM parcel_tiles.parcels_draw_source;
 EOF
 )
 
 cleanup() {
   rm -rf "${BUILD_LOCK_DIR}" 2>/dev/null || true
   rm -f "${GEOJSONL_TMP_PATH}"
+  rm -f "${PLANETILER_SCHEMA_RUNTIME_PATH}"
   if [[ "${STAGE_GEOJSON_FILE}" == "1" && "${KEEP_STAGED_GEOJSON_FILE}" != "1" ]]; then
     rm -f "${GEOJSONL_PATH}"
   fi
@@ -182,7 +148,8 @@ trap cleanup EXIT
 
 prepare_geojsonl_if_needed() {
   if [[ "${STAGE_GEOJSON_FILE}" != "1" ]]; then
-    return 0
+    echo "[tiles] ERROR: Planetiler parcel builds require staged GeoJSONL input" >&2
+    exit 1
   fi
 
   if [[ "${REUSE_GEOJSON_FILE}" == "1" && -s "${GEOJSONL_PATH}" ]]; then
@@ -196,76 +163,40 @@ prepare_geojsonl_if_needed() {
   mv -f "${GEOJSONL_TMP_PATH}" "${GEOJSONL_PATH}"
 }
 
-run_tippecanoe_attempt() {
-  local output_path="$1"
-  if [[ "${STAGE_GEOJSON_FILE}" == "1" ]]; then
-    tippecanoe "${TIPPECANOE_COMMON_ARGS[@]}" --output="${output_path}" -P "${GEOJSONL_PATH}"
-    return 0
-  fi
-
-  psql "${DB_URL}" -v ON_ERROR_STOP=1 -X -q -A -t -c "${SQL}" |
-    tippecanoe "${TIPPECANOE_COMMON_ARGS[@]}" --output="${output_path}" --read-parallel
-}
-
-build_mbtiles_with_retries() {
-  local attempt
-  local attempt_output
-  for ((attempt = 1; attempt <= BUILD_RETRY_ATTEMPTS; attempt += 1)); do
-    attempt_output="${MBTILES_PATH}.attempt-${attempt}"
-    rm -f "${attempt_output}"
-    echo "[tiles] build attempt ${attempt}/${BUILD_RETRY_ATTEMPTS}" >&2
-
-    if run_tippecanoe_attempt "${attempt_output}"; then
-      mv -f "${attempt_output}" "${MBTILES_PATH}"
-      return 0
-    fi
-
-    rm -f "${attempt_output}"
-    if (( attempt < BUILD_RETRY_ATTEMPTS )); then
-      echo "[tiles] build attempt ${attempt} failed, retrying in ${BUILD_RETRY_DELAY_SECONDS}s" >&2
-      sleep "${BUILD_RETRY_DELAY_SECONDS}"
-    fi
-  done
-
-  echo "[tiles] ERROR: failed to build MBTiles after ${BUILD_RETRY_ATTEMPTS} attempts" >&2
-  return 1
-}
-
-convert_pmtiles_with_retries() {
-  local attempt
-  local attempt_output
-  local convert_args
-  convert_args=(--tmpdir="${PMTILES_TMP_DIR}")
-  if [[ "${PMTILES_NO_DEDUPLICATION}" == "1" ]]; then
-    convert_args+=(--no-deduplication)
-  fi
-
-  for ((attempt = 1; attempt <= CONVERT_RETRY_ATTEMPTS; attempt += 1)); do
-    attempt_output="${PMTILES_PATH}.attempt-${attempt}"
-    rm -f "${attempt_output}"
-    echo "[tiles] pmtiles convert attempt ${attempt}/${CONVERT_RETRY_ATTEMPTS}" >&2
-
-    if pmtiles convert "${MBTILES_PATH}" "${attempt_output}" "${convert_args[@]}"; then
-      mv -f "${attempt_output}" "${PMTILES_PATH}"
-      return 0
-    fi
-
-    rm -f "${attempt_output}"
-    if (( attempt < CONVERT_RETRY_ATTEMPTS )); then
-      echo "[tiles] convert attempt ${attempt} failed, retrying in ${CONVERT_RETRY_DELAY_SECONDS}s" >&2
-      sleep "${CONVERT_RETRY_DELAY_SECONDS}"
-    fi
-  done
-
-  echo "[tiles] ERROR: failed to convert PMTiles after ${CONVERT_RETRY_ATTEMPTS} attempts" >&2
-  return 1
+write_planetiler_schema() {
+  {
+    printf 'schema_name: Parcels Draw\n'
+    printf 'schema_description: Parcel tiles built from parcel_tiles.parcels_draw_source.\n\n'
+    printf 'sources:\n'
+    printf '  parcels:\n'
+    printf '    type: geojson\n'
+    printf "    local_path: '\${ args.input_path }'\n\n"
+    printf 'layers:\n'
+    printf '  - id: %s\n' "${LAYER_NAME}"
+    printf '    features:\n'
+    printf '      - source: parcels\n'
+    printf '        geometry: polygon\n'
+    printf '        attributes:\n'
+    for field_name in "${TIPPECANOE_FIELDS[@]}"; do
+      printf '          - key: %s\n' "${field_name}"
+      printf '            tag_value: %s\n' "${field_name}"
+    done
+  } > "${PLANETILER_SCHEMA_RUNTIME_PATH}"
 }
 
 prepare_geojsonl_if_needed
-build_mbtiles_with_retries
+write_planetiler_schema
 
-echo "[tiles] converting MBTiles -> PMTiles" >&2
-convert_pmtiles_with_retries
+echo "[tiles] building parcel PMTiles with Planetiler" >&2
+echo "[tiles] dataset=${DATASET} layer=${LAYER_NAME} profile=${PROFILE} z=${MIN_Z}-${MAX_Z} threads=${PLANETILER_THREADS}" >&2
+
+bash "${ROOT_DIR}/scripts/run-planetiler-custom.sh" \
+  "${PLANETILER_SCHEMA_RUNTIME_PATH}" \
+  "${PMTILES_PATH}" \
+  "--input_path=${GEOJSONL_PATH}" \
+  "--minzoom=${MIN_Z}" \
+  "--maxzoom=${MAX_Z}" \
+  "--threads=${PLANETILER_THREADS}"
 
 echo "[tiles] PMTiles ready" >&2
 echo "PMTILES_PATH=${PMTILES_PATH}"

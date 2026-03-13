@@ -109,8 +109,16 @@ function toHoverState(
   const providerName = readStringProperty(feature.properties, "providerName") ?? "Unknown provider";
   const leaseOrOwn = parseLeaseOrOwn(readStringProperty(feature.properties, "leaseOrOwn"));
   const commissionedPowerMw = readNullableNumberProperty(feature.properties, "commissionedPowerMw");
+  const underConstructionPowerMw = readNullableNumberProperty(
+    feature.properties,
+    "underConstructionPowerMw"
+  );
+  const plannedPowerMw = readNullableNumberProperty(feature.properties, "plannedPowerMw");
+  const availablePowerMw = readNullableNumberProperty(feature.properties, "availablePowerMw");
+  const statusLabel = readStringProperty(feature.properties, "statusLabel");
 
   return {
+    availablePowerMw,
     perspective,
     facilityId,
     facilityName,
@@ -119,15 +127,20 @@ function toHoverState(
     commissionedPowerMw,
     commissionedSemantic,
     leaseOrOwn,
+    plannedPowerMw,
     screenPoint,
+    statusLabel,
+    underConstructionPowerMw,
   };
 }
 
 function aggregateClusterLeaves(
   leaves: readonly { properties: unknown }[],
+  totalFacilityCount: number,
   perspective: FacilityPerspective,
   clusterId: number,
-  screenPoint: readonly [number, number]
+  screenPoint: readonly [number, number],
+  center: readonly [number, number]
 ): FacilityClusterHoverState {
   let commissionedPowerMw = 0;
   let underConstructionPowerMw = 0;
@@ -157,8 +170,9 @@ function aggregateClusterLeaves(
   const totalPowerMw = commissionedPowerMw + underConstructionPowerMw + plannedPowerMw;
 
   return {
+    center,
     perspective,
-    facilityCount: leaves.length,
+    facilityCount: totalFacilityCount,
     commissionedPowerMw,
     underConstructionPowerMw,
     plannedPowerMw,
@@ -268,10 +282,15 @@ export function mountFacilitiesHover(
           }
 
           const sourceId = sourceIdForPerspective(perspective);
-          const leafLimit = Math.min(pointCount, 100);
+
+          const geom = clusterFeature.geometry;
+          const clusterCenter: readonly [number, number] =
+            geom.type === "Point"
+              ? [geom.coordinates[0], geom.coordinates[1]]
+              : [event.lngLat.lng, event.lngLat.lat];
 
           map
-            .getClusterLeaves(sourceId, clusterId, leafLimit)
+            .getClusterLeaves(sourceId, clusterId, pointCount)
             .then((leaves) => {
               if (clusterFetchSequence !== currentSequence) {
                 return;
@@ -279,9 +298,11 @@ export function mountFacilitiesHover(
 
               const clusterState = aggregateClusterLeaves(
                 leaves,
+                pointCount,
                 perspective,
                 clusterId,
-                screenPoint
+                screenPoint,
+                clusterCenter
               );
               options.onClusterHoverChange?.(clusterState);
             })

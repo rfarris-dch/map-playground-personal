@@ -87,7 +87,7 @@
 
     <section class="flex flex-col">
       <div class="flex h-7 items-center bg-white px-2">
-        <span class="text-[10px] font-normal leading-none text-[#94A3B8]">FACILITY STATUS</span>
+        <span class="text-[10px] font-normal leading-none text-[#64748B]">FACILITY STATUS</span>
       </div>
       <div class="flex flex-col">
         <label
@@ -120,7 +120,7 @@
           </span>
           <span
             class="text-[13px] leading-none"
-            :class="activeStatuses.has(opt.id) ? 'text-[#334155]' : 'text-[#94A3B8]'"
+            :class="activeStatuses.has(opt.id) ? 'text-[#334155]' : 'text-[#64748B]'"
             >{{ opt.label }}</span
           >
           <input
@@ -137,9 +137,9 @@
 
     <section class="flex flex-col">
       <div class="flex h-7 items-center bg-white px-2">
-        <span class="text-[10px] font-normal leading-none text-[#94A3B8]">PROVIDERS</span>
+        <span class="text-[10px] font-normal leading-none text-[#64748B]">PROVIDERS</span>
       </div>
-      <div v-if="providers.length > 0" class="flex max-h-[200px] flex-col overflow-y-auto">
+      <div v-if="providers.length > 0" class="flex max-h-[200px] flex-col gap-0.5 overflow-y-auto">
         <label
           v-for="name in providers"
           :key="name"
@@ -170,7 +170,7 @@
           </span>
           <span
             class="truncate text-[13px] leading-none"
-            :class="activeProviders.has(name) ? 'text-[#334155]' : 'text-[#94A3B8]'"
+            :class="activeProviders.has(name) ? 'text-[#334155]' : 'text-[#64748B]'"
             >{{ name }}</span
           >
           <input
@@ -182,7 +182,7 @@
         </label>
       </div>
       <div v-else class="px-3 py-2">
-        <span class="text-[11px] italic text-[#CBD5E1]">Zoom in to see providers</span>
+        <span class="text-[11px] italic text-[#94A3B8]">Zoom in to see providers</span>
       </div>
     </section>
 
@@ -190,7 +190,7 @@
 
     <section class="flex flex-col">
       <div class="flex h-7 items-center bg-white px-2">
-        <span class="text-[10px] font-normal leading-none text-[#94A3B8]"
+        <span class="text-[10px] font-normal leading-none text-[#64748B]"
           >TRANSMISSION VOLTAGE</span
         >
       </div>
@@ -212,7 +212,7 @@
           </span>
           <span
             class="text-[13px] leading-none"
-            :class="activeVoltageId === opt.id ? 'text-[#334155]' : 'text-[#94A3B8]'"
+            :class="activeVoltageId === opt.id ? 'text-[#334155]' : 'text-[#64748B]'"
             >{{ opt.label }}</span
           >
           <input

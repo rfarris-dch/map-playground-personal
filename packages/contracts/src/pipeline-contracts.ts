@@ -7,7 +7,7 @@ export const PipelineDatasetFamilySchema = z.enum(["parcels", "environmental"]);
 export const PipelinePlatformSchema = z.object({
   orchestration: z.literal("dagster"),
   canonicalStore: z.literal("postgis"),
-  tileBuild: z.literal("pmtiles"),
+  tileBuild: z.literal("planetiler"),
   tileServe: z.literal("martin"),
   tilePublish: z.literal("pmtiles-cdn"),
 });
@@ -36,7 +36,7 @@ export type PipelineStatusResponse = z.infer<typeof PipelineStatusResponseSchema
 export const PIPELINE_PLATFORM: PipelinePlatform = Object.freeze({
   orchestration: "dagster",
   canonicalStore: "postgis",
-  tileBuild: "pmtiles",
+  tileBuild: "planetiler",
   tileServe: "martin",
   tilePublish: "pmtiles-cdn",
 });
@@ -54,7 +54,8 @@ export const PIPELINE_DATASETS = Object.freeze<Record<PipelineDataset, PipelineD
       "canonical_parcels",
       "parcel_tilesource",
       "parcel_pmtiles",
-      "published_manifest",
+      "parcel_manifest_publish",
+      "validate",
     ],
   },
   flood: {
@@ -67,10 +68,11 @@ export const PIPELINE_DATASETS = Object.freeze<Record<PipelineDataset, PipelineD
     assetChain: [
       "raw_fema_extract",
       "canonical_flood_hazard",
-      "flood_overlay_100_tilesource",
-      "flood_overlay_500_tilesource",
+      "flood100_tilesource",
+      "flood500_tilesource",
       "flood_pmtiles",
-      "published_manifest",
+      "flood_manifest_publish",
+      "validate",
     ],
   },
   "hydro-basins": {
@@ -82,10 +84,11 @@ export const PIPELINE_DATASETS = Object.freeze<Record<PipelineDataset, PipelineD
     syncCommand: "bun run sync:environmental-hydro-basins",
     assetChain: [
       "raw_hydro_source",
-      "canonical_hydro_tables",
+      "canonical_huc_polygons",
       "hydro_tilesource",
       "hydro_pmtiles",
-      "published_manifest",
+      "hydro_manifest_publish",
+      "validate",
     ],
   },
 });

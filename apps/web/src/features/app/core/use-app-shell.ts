@@ -252,6 +252,18 @@ export function useAppShell() {
     }
   }
 
+  function zoomToCluster(
+    perspective: FacilityPerspective,
+    clusterId: number,
+    center: readonly [number, number]
+  ): void {
+    for (const controller of state.facilitiesControllers.value) {
+      if (controller.perspective === perspective) {
+        controller.zoomToCluster(clusterId, [center[0], center[1]]);
+      }
+    }
+  }
+
   return {
     mapFilters,
     mapContainer: state.mapContainer,
@@ -315,6 +327,7 @@ export function useAppShell() {
     facilityDetailQuery: selection.facilityDetailQuery,
     parcelDetailQuery: selection.parcelDetailQuery,
     setPerspectiveViewMode,
+    zoomToCluster,
     setPerspectiveVisibility: visibility.setPerspectiveVisibility,
     setBoundaryVisible: visibility.setBoundaryVisible,
     setBoundarySelectedRegionIds: mapLifecycle.setBoundarySelectedRegionIds,

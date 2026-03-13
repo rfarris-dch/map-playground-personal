@@ -87,7 +87,23 @@ function buildFreeformAreaRing(vertices: readonly LngLat[], cursorVertex: LngLat
   return closeRing(polygonVertices);
 }
 
-function buildRectangleAreaRing(anchor: LngLat, opposite: LngLat): LngLat[] {
+function buildRectangleAreaRing(
+  anchor: LngLat,
+  opposite: LngLat,
+  project: ((lngLat: LngLat) => [number, number]) | null,
+  unproject: ((point: [number, number]) => LngLat) | null
+): LngLat[] {
+  if (project !== null && unproject !== null) {
+    const screenA = project(anchor);
+    const screenB = project(opposite);
+    return closeRing([
+      unproject([screenA[0], screenA[1]]),
+      unproject([screenB[0], screenA[1]]),
+      unproject([screenB[0], screenB[1]]),
+      unproject([screenA[0], screenB[1]]),
+    ]);
+  }
+
   return closeRing([
     createLngLat(anchor[0], anchor[1]),
     createLngLat(opposite[0], anchor[1]),
@@ -174,7 +190,7 @@ function buildAreaRing(runtime: SketchMeasureRuntimeState): LngLat[] {
   }
 
   if (runtime.areaShape === "rectangle") {
-    return buildRectangleAreaRing(anchor, edge);
+    return buildRectangleAreaRing(anchor, edge, runtime.project, runtime.unproject);
   }
 
   return buildCircleAreaRing(anchor, edge);

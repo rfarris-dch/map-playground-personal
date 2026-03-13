@@ -63,7 +63,7 @@
         :class="
           props.activeMode === mode.id
             ? 'rounded-full bg-[#647287] text-white'
-            : 'rounded-[4px] text-[#CBD5E1] hover:text-[#94A3B8]'
+            : 'rounded-[4px] text-[#94A3B8] hover:text-[#64748B]'
         "
         @click="selectMode(mode.id)"
       >

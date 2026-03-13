@@ -206,6 +206,46 @@ function buildHydroBasinsPolygonFileFromSourceLayer(
   ]);
 }
 
+function buildPolygonFileFromSourceLayer(
+  level: number,
+  ogrDataSourcePath: string,
+  sourceLayer: string,
+  outputPath: string,
+  dataVersion: string
+): void {
+  const fieldNames = readOgrFieldNames(ogrDataSourcePath, sourceLayer);
+  const geometryField = readOgrGeometryFieldName(ogrDataSourcePath, sourceLayer);
+  const nameField = resolveOgrFieldName(fieldNames, ["name", "NAME"], true);
+  const hucField = resolveOgrFieldName(
+    fieldNames,
+    [`huc${String(level)}`, `HUC${String(level)}`, "huc", "HUC"],
+    true
+  );
+  const areaField = resolveOgrFieldName(fieldNames, ["areasqkm", "AreaSqKm", "areasqkm"], false);
+  const statesField = resolveOgrFieldName(fieldNames, ["states", "States"], false);
+
+  const sql = [
+    "SELECT",
+    `${sqlFieldExpression(hucField, "TEXT")} AS huc,`,
+    `${sqlFieldExpression(nameField, "TEXT")} AS name,`,
+    `${sqlFieldExpression(areaField, "REAL")} AS areasqkm,`,
+    `${sqlFieldExpression(statesField, "TEXT")} AS states,`,
+    `${quoteSqlString(dataVersion)} AS data_version,`,
+    `${quoteSqlIdentifier(geometryField)} AS geometry FROM ${quoteSqlIdentifier(sourceLayer)}`,
+  ].join(" ");
+
+  runCommand("ogr2ogr", [
+    "-f",
+    "GeoJSON",
+    outputPath,
+    ogrDataSourcePath,
+    "-dialect",
+    "SQLite",
+    "-sql",
+    sql,
+  ]);
+}
+
 function readRunConfig(path: string): RunConfigRecord {
   const parsed = JSON.parse(readFileSync(path, "utf8"));
   if (
@@ -510,6 +550,10 @@ function normalizeDirectorySource(
       readGeoJsonFeatureCollection(polygonPath),
       dataVersion
     );
+    writeFeatureCollection(
+      join(contextRunDir, "normalized", `huc${String(level)}-polygon.geojson`),
+      normalizedPolygons.features
+    );
     const lineFeatures = buildBoundaryLineFeatures(
       normalizedPolygons,
       buildLineProperties(level, dataVersion)
@@ -538,6 +582,16 @@ function normalizeGpkgSource(
   const lineLayer = resolveOgrLayerName(ogrDataSourcePath, null, ["WBDLine"]);
 
   for (const level of HUC_LEVELS) {
+    const polygonLayer = resolveSourceLayer(level, ogrDataSourcePath, runConfig.options);
+    const polygonPath = join(contextRunDir, "normalized", `huc${String(level)}-polygon.geojson`);
+    buildPolygonFileFromSourceLayer(
+      level,
+      ogrDataSourcePath,
+      polygonLayer,
+      polygonPath,
+      dataVersion
+    );
+
     buildLineFileFromSourceLayer(
       level,
       ogrDataSourcePath,
@@ -550,7 +604,7 @@ function normalizeGpkgSource(
       buildLabelFileFromSourceLayer(
         level,
         ogrDataSourcePath,
-        resolveSourceLayer(level, ogrDataSourcePath, runConfig.options),
+        polygonLayer,
         join(contextRunDir, "normalized", `huc${String(level)}-label.geojson`),
         dataVersion
       );

@@ -104,6 +104,10 @@ interface StoredMapContextTransferRecord {
   readonly expiresAt: number;
 }
 
+function buildMapContextStorageKey(token: string): string {
+  return `${MAP_CONTEXT_STORAGE_KEY_PREFIX}.${token}`;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -609,6 +613,10 @@ function createStoredRecord(context: MapContextTransfer): StoredMapContextTransf
   };
 }
 
+function isQuotaExceededError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "QuotaExceededError";
+}
+
 function generateContextToken(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();
@@ -644,6 +652,49 @@ function readStoredRecord(rawValue: string): StoredMapContextTransferRecord | nu
   }
 }
 
+function removeExpiredStoredMapContextTransfers(storage: Storage): void {
+  const keysToRemove: string[] = [];
+
+  for (let index = 0; index < storage.length; index += 1) {
+    const key = storage.key(index);
+    if (typeof key !== "string" || !key.startsWith(`${MAP_CONTEXT_STORAGE_KEY_PREFIX}.`)) {
+      continue;
+    }
+
+    const rawRecord = storage.getItem(key);
+    if (rawRecord === null || readStoredRecord(rawRecord) === null) {
+      keysToRemove.push(key);
+    }
+  }
+
+  for (const key of keysToRemove) {
+    storage.removeItem(key);
+  }
+}
+
+function removeStoredMapContextTransfers(storage: Storage, tokenToPreserve?: string): void {
+  const preservedKey =
+    typeof tokenToPreserve === "string" ? buildMapContextStorageKey(tokenToPreserve) : null;
+  const keysToRemove: string[] = [];
+
+  for (let index = 0; index < storage.length; index += 1) {
+    const key = storage.key(index);
+    if (typeof key !== "string" || !key.startsWith(`${MAP_CONTEXT_STORAGE_KEY_PREFIX}.`)) {
+      continue;
+    }
+
+    if (key === preservedKey) {
+      continue;
+    }
+
+    keysToRemove.push(key);
+  }
+
+  for (const key of keysToRemove) {
+    storage.removeItem(key);
+  }
+}
+
 export function createSessionStorageMapContextTransferStore(): MapContextTransferStore {
   return {
     load(token: string): MapContextTransfer | null {
@@ -651,35 +702,47 @@ export function createSessionStorageMapContextTransferStore(): MapContextTransfe
         return null;
       }
 
-      const rawRecord = window.sessionStorage.getItem(`${MAP_CONTEXT_STORAGE_KEY_PREFIX}.${token}`);
+      const rawRecord = window.sessionStorage.getItem(buildMapContextStorageKey(token));
       if (rawRecord === null) {
         return null;
       }
 
       const storedRecord = readStoredRecord(rawRecord);
       if (storedRecord === null) {
-        window.sessionStorage.removeItem(`${MAP_CONTEXT_STORAGE_KEY_PREFIX}.${token}`);
+        window.sessionStorage.removeItem(buildMapContextStorageKey(token));
         return null;
       }
 
       return storedRecord.context;
     },
-    save(context: MapContextTransfer): string {
+    save(context: MapContextTransfer, preferredToken?: string): string {
       const parsedContext = MapContextTransferSchema.safeParse(context);
       if (!parsedContext.success) {
         throw new Error("Cannot persist an invalid map context transfer payload.");
       }
 
-      const token = generateContextToken();
+      const token = preferredToken ?? generateContextToken();
       if (typeof window === "undefined") {
         return token;
       }
 
+      const storage = window.sessionStorage;
+      removeExpiredStoredMapContextTransfers(storage);
+
       const record = createStoredRecord(parsedContext.data);
-      window.sessionStorage.setItem(
-        `${MAP_CONTEXT_STORAGE_KEY_PREFIX}.${token}`,
-        JSON.stringify(record)
-      );
+      const key = buildMapContextStorageKey(token);
+      const serializedRecord = JSON.stringify(record);
+
+      try {
+        storage.setItem(key, serializedRecord);
+      } catch (error) {
+        if (!isQuotaExceededError(error)) {
+          throw error;
+        }
+
+        removeStoredMapContextTransfers(storage, token);
+        storage.setItem(key, serializedRecord);
+      }
 
       return token;
     },
@@ -714,9 +777,15 @@ export function readMapContextTransferFromRoute(
   return parsedContext.success ? parsedContext.data : null;
 }
 
+export function readMapContextTransferTokenFromQuery(query: LocationQueryRaw): string | undefined {
+  const token = readFirstQueryValue(query[mapContextQueryKeys.contextToken]);
+  return typeof token === "string" && token.length > 0 ? token : undefined;
+}
+
 export function buildMapContextTransferQuery(
   context: MapContextTransfer,
-  store: MapContextTransferStore = createSessionStorageMapContextTransferStore()
+  store: MapContextTransferStore = createSessionStorageMapContextTransferStore(),
+  preferredContextToken?: string
 ): LocationQueryRaw {
   const inlineMarketIds = inlineOrOmit(context.marketIds);
   const inlineCompanyIds = inlineOrOmit(context.companyIds);
@@ -743,7 +812,7 @@ export function buildMapContextTransferQuery(
   if (typeof context.contextToken === "string") {
     contextToken = context.contextToken;
   } else if (requiresStoredContext) {
-    contextToken = store.save(context);
+    contextToken = store.save(context, preferredContextToken);
   }
   const viewportQuery = formatViewport(context);
 

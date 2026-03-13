@@ -1,6 +1,5 @@
 <script setup lang="ts">
   import { computed } from "vue";
-  import Button from "@/components/ui/button/button.vue";
   import { formatArea, formatDistance } from "@/features/sketch-measure/sketch-measure.service";
   import type {
     SketchMeasureAreaShape,
@@ -24,180 +23,112 @@
 
   const helperText = computed(() => {
     if (props.state.mode === "off") {
-      return "Choose a sketch or measure tool to start.";
+      return "Choose a tool";
     }
-
     if (props.state.mode === "distance") {
-      return "Click the map to add path vertices. Press Esc to cancel.";
+      return "Click to add vertices";
     }
-
-    if (props.state.isAreaComplete) {
-      return "Sketch complete. Use it as a selection or clear to start over.";
-    }
-
-    if (props.state.areaShape === "freeform") {
-      return "Click points, then click the first point or press Enter to close.";
-    }
-
-    return "Click once to anchor and again to finalize the shape.";
-  });
-
-  const panelStatus = computed(() => {
-    if (props.state.mode === "off") {
-      return "Idle";
-    }
-
-    if (props.state.mode === "distance") {
-      return "Measuring distance";
-    }
-
     if (props.state.isAreaComplete) {
       return "Sketch complete";
     }
-
-    return "Sketching area";
+    if (props.state.areaShape === "freeform") {
+      return "Click points, Enter to close";
+    }
+    return "Click to anchor, click to finalize";
   });
 
-  function setMode(mode: SketchMeasureMode): void {
-    emit("set-mode", mode);
+  interface ToolOption {
+    action: () => void;
+    active: boolean;
+    label: string;
   }
 
-  function activateAreaShape(shape: SketchMeasureAreaShape): void {
-    emit("set-mode", "area");
-    emit("set-area-shape", shape);
-  }
-
-  function clearSketchMeasure(): void {
-    emit("clear");
-  }
-
-  function finishArea(): void {
-    emit("finish");
-  }
-
-  function useAsSelection(): void {
-    emit("use-as-selection");
-  }
+  const tools = computed<ToolOption[]>(() => [
+    {
+      label: "Polygon",
+      active: props.state.mode === "area" && props.state.areaShape === "freeform",
+      action: () => {
+        emit("set-mode", "area");
+        emit("set-area-shape", "freeform");
+      },
+    },
+    {
+      label: "Rectangle",
+      active: props.state.mode === "area" && props.state.areaShape === "rectangle",
+      action: () => {
+        emit("set-mode", "area");
+        emit("set-area-shape", "rectangle");
+      },
+    },
+    {
+      label: "Circle",
+      active: props.state.mode === "area" && props.state.areaShape === "circle",
+      action: () => {
+        emit("set-mode", "area");
+        emit("set-area-shape", "circle");
+      },
+    },
+    {
+      label: "Distance",
+      active: props.state.mode === "distance",
+      action: () => emit("set-mode", "distance"),
+    },
+  ]);
 </script>
 
 <template>
   <aside
-    class="map-glass-panel pointer-events-auto absolute bottom-16 left-4 z-20 w-[min(28rem,calc(100%-2rem))] rounded-xl p-3"
+    class="pointer-events-auto absolute bottom-10 left-[420px] z-20 flex items-center gap-2 rounded-lg border border-white/30 bg-[#1e293b]/90 px-3 py-1.5 shadow-lg backdrop-blur-sm"
     aria-label="Sketch and measure tools"
   >
-    <header class="mb-3 flex items-start justify-between gap-3">
-      <div>
-        <h2 class="m-0 text-sm font-semibold">Sketch / Measure</h2>
-        <p class="m-0 text-[11px] text-muted-foreground">{{ helperText }}</p>
-      </div>
-      <span
-        class="map-glass-pill inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
-      >
-        {{ panelStatus }}
-      </span>
-    </header>
+    <!-- Tool buttons -->
+    <button
+      v-for="tool in tools"
+      :key="tool.label"
+      type="button"
+      class="rounded px-2 py-1 text-[11px] font-medium transition-colors"
+      :class="tool.active ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white'"
+      @click="tool.action()"
+    >
+      {{ tool.label }}
+    </button>
 
-    <section class="mb-3">
-      <p class="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-        Tools
-      </p>
-      <div class="grid gap-2 sm:grid-cols-2">
-        <Button
-          size="sm"
-          :variant="props.state.mode === 'off' ? 'glass-active' : 'glass'"
-          class="justify-start"
-          @click="setMode('off')"
-        >
-          Off
-        </Button>
-        <Button
-          size="sm"
-          :variant="props.state.mode === 'distance' ? 'glass-active' : 'glass'"
-          class="justify-start"
-          @click="setMode('distance')"
-        >
-          Distance
-        </Button>
-        <Button
-          size="sm"
-          :variant="props.state.mode === 'area' && props.state.areaShape === 'freeform' ? 'glass-active' : 'glass'"
-          class="justify-start"
-          @click="activateAreaShape('freeform')"
-        >
-          Polygon
-        </Button>
-        <Button
-          size="sm"
-          :variant="props.state.mode === 'area' && props.state.areaShape === 'rectangle' ? 'glass-active' : 'glass'"
-          class="justify-start"
-          @click="activateAreaShape('rectangle')"
-        >
-          Rectangle
-        </Button>
-        <Button
-          size="sm"
-          :variant="props.state.mode === 'area' && props.state.areaShape === 'circle' ? 'glass-active' : 'glass'"
-          class="justify-start sm:col-span-2"
-          @click="activateAreaShape('circle')"
-        >
-          Circle
-        </Button>
-      </div>
-    </section>
+    <div class="h-4 w-px bg-white/20" />
 
-    <section class="mb-3 grid gap-2 sm:grid-cols-2">
-      <div class="map-glass-card rounded-md px-3 py-2">
-        <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Mode</div>
-        <div class="text-sm font-medium">{{ props.state.mode }}</div>
-      </div>
-      <div class="map-glass-card rounded-md px-3 py-2">
-        <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Area Shape</div>
-        <div class="text-sm font-medium">
-          {{ props.state.mode === "area" ? props.state.areaShape : "n/a" }}
-        </div>
-      </div>
-      <div class="map-glass-card rounded-md px-3 py-2">
-        <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Distance</div>
-        <div class="text-sm font-medium tabular-nums">
-          {{ formatDistance(props.state.distanceKm) }}
-        </div>
-      </div>
-      <div class="map-glass-card rounded-md px-3 py-2">
-        <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Area</div>
-        <div class="text-sm font-medium tabular-nums">{{ formatArea(props.state.areaSqKm) }}</div>
-      </div>
-      <div class="map-glass-card rounded-md px-3 py-2">
-        <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Sketch</div>
-        <div class="text-sm font-medium">
-          {{ props.state.isAreaComplete ? "Complete" : "In progress" }}
-        </div>
-      </div>
-      <div class="map-glass-card rounded-md px-3 py-2">
-        <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Vertices</div>
-        <div class="text-sm font-medium tabular-nums">{{ props.state.vertexCount }}</div>
-      </div>
-    </section>
+    <!-- Measurements -->
+    <span class="text-[10px] tabular-nums text-white/50">
+      {{ formatDistance(props.state.distanceKm) }}
+      · {{ formatArea(props.state.areaSqKm) }}
+    </span>
 
-    <footer class="flex flex-wrap items-center gap-2">
-      <Button
-        size="sm"
-        variant="glass-active"
-        class="flex-1"
-        :disabled="props.state.mode !== 'area' || !props.state.canFinishArea"
-        @click="finishArea"
-      >
-        Finish sketch
-      </Button>
-      <Button
-        size="sm"
-        variant="glass"
-        class="flex-1"
-        :disabled="props.state.completedAreaGeometry === null"
-        @click="useAsSelection"
-      >
-        Use Sketch As Selection
-      </Button>
-      <Button size="sm" variant="glass" @click="clearSketchMeasure">Clear</Button>
-    </footer>
+    <div class="h-4 w-px bg-white/20" />
+
+    <!-- Actions -->
+    <button
+      type="button"
+      class="rounded px-2 py-1 text-[11px] font-medium text-emerald-400 hover:bg-white/10 disabled:text-white/20"
+      :disabled="props.state.mode !== 'area' || !props.state.canFinishArea"
+      @click="emit('finish')"
+    >
+      Finish
+    </button>
+    <button
+      type="button"
+      class="rounded px-2 py-1 text-[11px] font-medium text-blue-400 hover:bg-white/10 disabled:text-white/20"
+      :disabled="props.state.completedAreaGeometry === null"
+      @click="emit('use-as-selection')"
+    >
+      Use as Selection
+    </button>
+    <button
+      type="button"
+      class="rounded px-2 py-1 text-[11px] font-medium text-white/60 hover:text-white"
+      @click="emit('clear')"
+    >
+      Clear
+    </button>
+
+    <!-- Helper -->
+    <span class="text-[10px] text-white/40">{{ helperText }}</span>
   </aside>
 </template>

@@ -13,11 +13,11 @@
         class="group flex w-full items-center justify-between gap-3 rounded-[4px] border border-transparent px-3 py-1 text-left transition-colors hover:border-[#E2E8F0] hover:bg-[#F8FAFC] data-[state=open]:border-[#E2E8F0] data-[state=open]:bg-[#F8FAFC] [&[data-state=open]>span>svg]:rotate-180"
       >
         <span
-          class="text-[10px] font-semibold tracking-[0.01em] text-[#94A3B8] transition-colors group-data-[state=open]:text-[#64748B]"
+          class="text-[10px] font-semibold tracking-[0.01em] text-[#64748B] transition-colors group-data-[state=open]:text-[#475569]"
           >{{ props.title }}</span
         >
         <span
-          class="flex h-4 w-4 items-center justify-center text-[#94A3B8] transition-colors group-data-[state=open]:text-[#64748B]"
+          class="flex h-4 w-4 items-center justify-center text-[#64748B] transition-colors group-data-[state=open]:text-[#475569]"
         >
           <FilterChevronIcon class="shrink-0 transition-transform duration-200" />
         </span>

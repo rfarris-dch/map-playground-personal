@@ -4,6 +4,7 @@ import { useRoute, useRouter } from "vue-router";
 import {
   applyMapContextTransferToAppShell,
   readMapContextTransferFromRoute,
+  readMapContextTransferTokenFromQuery,
 } from "@/features/map-context-transfer/map-context-transfer.service";
 import { createLatestRunner } from "@/lib/effect/latest-runner";
 import {
@@ -36,6 +37,9 @@ function normalizeViewportForMap(
 export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
   const route = useRoute();
   const router = useRouter();
+  const contextToken = shallowRef<string | null>(
+    readMapContextTransferTokenFromQuery(route.query) ?? null
+  );
   const lastWrittenQuerySignature = shallowRef<string | null>(null);
   const viewportVersion = shallowRef(0);
   const replaceRunner = createLatestRunner({
@@ -49,8 +53,13 @@ export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
       return Promise.resolve();
     }
 
-    const nextQuery = buildAppShellUrlStateQuery(options, route.query);
+    const nextQuery = buildAppShellUrlStateQuery(
+      options,
+      route.query,
+      contextToken.value ?? undefined
+    );
     const nextSignature = serializeNormalizedMapContextQuery(nextQuery);
+    contextToken.value = readMapContextTransferTokenFromQuery(nextQuery) ?? null;
     lastWrittenQuerySignature.value = nextSignature;
 
     return replaceRunner.run(
@@ -73,6 +82,8 @@ export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
   watch(
     () => serializeNormalizedMapContextQuery(route.query),
     (routeQuerySignature) => {
+      contextToken.value = readMapContextTransferTokenFromQuery(route.query) ?? null;
+
       if (routeQuerySignature === lastWrittenQuerySignature.value) {
         lastWrittenQuerySignature.value = null;
         return;

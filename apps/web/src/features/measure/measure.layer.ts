@@ -22,6 +22,8 @@ function initialRuntimeState(): MeasureRuntimeState {
     cursorVertex: null,
     areaShape: "freeform",
     areaComplete: false,
+    project: null,
+    unproject: null,
   };
 }
 
@@ -83,6 +85,8 @@ export function mountMeasureLayer(
   const vertexLayerId = "measure.overlay.vertices";
 
   const state = initialRuntimeState();
+  state.project = (lngLat) => map.project(lngLat);
+  state.unproject = (point) => map.unproject(point);
 
   const emitState = (): void => {
     options.onStateChange?.(buildMeasureState(state));

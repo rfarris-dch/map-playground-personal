@@ -80,6 +80,7 @@ export interface IMap {
   setStyle(style: StyleInput): void;
   setTerrain(terrain: MapTerrainSpecification | null): void;
   setViewport(viewport: MapViewport): void;
+  unproject(point: [number, number]): LngLat;
 }
 
 export interface MapPointerEvent {
@@ -154,6 +155,7 @@ export type MapRenderedFeature = MapGeoJSONFeature;
 export type MapRequestParameters = RequestParameters;
 export type MapViewport =
   | {
+      readonly animate?: boolean;
       readonly bearing?: number;
       readonly center: LngLat;
       readonly pitch?: number;
@@ -161,8 +163,10 @@ export type MapViewport =
       readonly zoom: number;
     }
   | {
+      readonly animate?: boolean;
       readonly bearing?: number;
       readonly bounds: LngLatBounds;
+      readonly padding?: number;
       readonly pitch?: number;
       readonly type: "bounds";
     };

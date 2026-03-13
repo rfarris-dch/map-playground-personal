@@ -1,3 +1,4 @@
+import type { FacilityPerspective } from "@map-migration/contracts";
 import type { IMap } from "@map-migration/map-engine";
 import type { BoundaryHoverState } from "@/features/boundaries/boundaries.types";
 import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";
@@ -48,4 +49,9 @@ export interface MapPageOverlaysEmits {
   "open-scanner-dashboard": [];
   "quick-view-object-count": [count: number];
   "select-facility": [facility: SelectedFacilityRef];
+  "zoom-to-cluster": [
+    perspective: FacilityPerspective,
+    clusterId: number,
+    center: readonly [number, number],
+  ];
 }

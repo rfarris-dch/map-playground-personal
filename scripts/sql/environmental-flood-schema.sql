@@ -5,6 +5,7 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE SCHEMA IF NOT EXISTS environmental_meta;
 CREATE SCHEMA IF NOT EXISTS environmental_build;
 CREATE SCHEMA IF NOT EXISTS environmental_current;
+CREATE SCHEMA IF NOT EXISTS environmental_tiles;
 
 CREATE TABLE IF NOT EXISTS environmental_meta.flood_runs (
   run_id text PRIMARY KEY,
@@ -56,5 +57,51 @@ CREATE INDEX IF NOT EXISTS flood_hazard_flood_100_idx
 
 CREATE INDEX IF NOT EXISTS flood_hazard_flood_500_idx
   ON environmental_current.flood_hazard (is_flood_500);
+
+CREATE TABLE IF NOT EXISTS environmental_tiles.flood_overlay_100 (
+  overlay_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  run_id text NOT NULL REFERENCES environmental_meta.flood_runs(run_id) ON DELETE CASCADE,
+  dfirm_id text NOT NULL,
+  flood_band text NOT NULL,
+  legend_key text NOT NULL,
+  data_version text NOT NULL,
+  geom_3857 geometry(MultiPolygon, 3857) NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS flood_overlay_100_run_id_idx
+  ON environmental_tiles.flood_overlay_100 (run_id);
+
+CREATE INDEX IF NOT EXISTS flood_overlay_100_data_version_idx
+  ON environmental_tiles.flood_overlay_100 (data_version DESC);
+
+CREATE INDEX IF NOT EXISTS flood_overlay_100_dfirm_id_idx
+  ON environmental_tiles.flood_overlay_100 (dfirm_id);
+
+CREATE INDEX IF NOT EXISTS flood_overlay_100_geom_3857_gist_idx
+  ON environmental_tiles.flood_overlay_100 USING gist (geom_3857);
+
+CREATE TABLE IF NOT EXISTS environmental_tiles.flood_overlay_500 (
+  overlay_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  run_id text NOT NULL REFERENCES environmental_meta.flood_runs(run_id) ON DELETE CASCADE,
+  dfirm_id text NOT NULL,
+  flood_band text NOT NULL,
+  legend_key text NOT NULL,
+  data_version text NOT NULL,
+  geom_3857 geometry(MultiPolygon, 3857) NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS flood_overlay_500_run_id_idx
+  ON environmental_tiles.flood_overlay_500 (run_id);
+
+CREATE INDEX IF NOT EXISTS flood_overlay_500_data_version_idx
+  ON environmental_tiles.flood_overlay_500 (data_version DESC);
+
+CREATE INDEX IF NOT EXISTS flood_overlay_500_dfirm_id_idx
+  ON environmental_tiles.flood_overlay_500 (dfirm_id);
+
+CREATE INDEX IF NOT EXISTS flood_overlay_500_geom_3857_gist_idx
+  ON environmental_tiles.flood_overlay_500 USING gist (geom_3857);
 
 COMMIT;

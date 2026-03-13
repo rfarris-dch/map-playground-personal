@@ -1,0 +1,249 @@
+schema_name: Environmental Hydro Basins
+schema_description: Hydro basin polygon, line, and label tiles built from persisted PostGIS exports.
+
+sources:
+  huc4_polygon:
+    type: geojson
+    local_path: '${ args.huc4_polygon }'
+  huc4_line:
+    type: geojson
+    local_path: '${ args.huc4_line }'
+  huc4_label:
+    type: geojson
+    local_path: '${ args.huc4_label }'
+  huc6_polygon:
+    type: geojson
+    local_path: '${ args.huc6_polygon }'
+  huc6_line:
+    type: geojson
+    local_path: '${ args.huc6_line }'
+  huc6_label:
+    type: geojson
+    local_path: '${ args.huc6_label }'
+  huc8_polygon:
+    type: geojson
+    local_path: '${ args.huc8_polygon }'
+  huc8_line:
+    type: geojson
+    local_path: '${ args.huc8_line }'
+  huc8_label:
+    type: geojson
+    local_path: '${ args.huc8_label }'
+  huc10_polygon:
+    type: geojson
+    local_path: '${ args.huc10_polygon }'
+  huc10_line:
+    type: geojson
+    local_path: '${ args.huc10_line }'
+  huc10_label:
+    type: geojson
+    local_path: '${ args.huc10_label }'
+  huc12_polygon:
+    type: geojson
+    local_path: '${ args.huc12_polygon }'
+  huc12_line:
+    type: geojson
+    local_path: '${ args.huc12_line }'
+
+layers:
+  - id: huc4-fill
+    features:
+      - source: huc4_polygon
+        geometry: polygon
+        attributes:
+          - key: huc
+            tag_value: huc
+          - key: name
+            tag_value: name
+          - key: areasqkm
+            tag_value: areasqkm
+            type: double
+          - key: states
+            tag_value: states
+          - key: data_version
+            tag_value: data_version
+  - id: huc4-line
+    features:
+      - source: huc4_line
+        geometry: line
+        attributes:
+          - key: huc_level
+            tag_value: huc_level
+          - key: data_version
+            tag_value: data_version
+  - id: huc4-label
+    features:
+      - source: huc4_label
+        geometry: point
+        attributes:
+          - key: name
+            tag_value: name
+          - key: huc
+            tag_value: huc
+          - key: areasqkm
+            tag_value: areasqkm
+            type: double
+          - key: label_rank
+            tag_value: label_rank
+            type: integer
+          - key: states
+            tag_value: states
+          - key: data_version
+            tag_value: data_version
+  - id: huc6-fill
+    features:
+      - source: huc6_polygon
+        geometry: polygon
+        attributes:
+          - key: huc
+            tag_value: huc
+          - key: name
+            tag_value: name
+          - key: areasqkm
+            tag_value: areasqkm
+            type: double
+          - key: states
+            tag_value: states
+          - key: data_version
+            tag_value: data_version
+  - id: huc6-line
+    features:
+      - source: huc6_line
+        geometry: line
+        attributes:
+          - key: huc_level
+            tag_value: huc_level
+          - key: data_version
+            tag_value: data_version
+  - id: huc6-label
+    features:
+      - source: huc6_label
+        geometry: point
+        attributes:
+          - key: name
+            tag_value: name
+          - key: huc
+            tag_value: huc
+          - key: areasqkm
+            tag_value: areasqkm
+            type: double
+          - key: label_rank
+            tag_value: label_rank
+            type: integer
+          - key: states
+            tag_value: states
+          - key: data_version
+            tag_value: data_version
+  - id: huc8-fill
+    features:
+      - source: huc8_polygon
+        geometry: polygon
+        attributes:
+          - key: huc
+            tag_value: huc
+          - key: name
+            tag_value: name
+          - key: areasqkm
+            tag_value: areasqkm
+            type: double
+          - key: states
+            tag_value: states
+          - key: data_version
+            tag_value: data_version
+  - id: huc8-line
+    features:
+      - source: huc8_line
+        geometry: line
+        attributes:
+          - key: huc_level
+            tag_value: huc_level
+          - key: data_version
+            tag_value: data_version
+  - id: huc8-label
+    features:
+      - source: huc8_label
+        geometry: point
+        attributes:
+          - key: name
+            tag_value: name
+          - key: huc
+            tag_value: huc
+          - key: areasqkm
+            tag_value: areasqkm
+            type: double
+          - key: label_rank
+            tag_value: label_rank
+            type: integer
+          - key: states
+            tag_value: states
+          - key: data_version
+            tag_value: data_version
+  - id: huc10-fill
+    features:
+      - source: huc10_polygon
+        geometry: polygon
+        attributes:
+          - key: huc
+            tag_value: huc
+          - key: name
+            tag_value: name
+          - key: areasqkm
+            tag_value: areasqkm
+            type: double
+          - key: states
+            tag_value: states
+          - key: data_version
+            tag_value: data_version
+  - id: huc10-line
+    features:
+      - source: huc10_line
+        geometry: line
+        attributes:
+          - key: huc_level
+            tag_value: huc_level
+          - key: data_version
+            tag_value: data_version
+  - id: huc10-label
+    features:
+      - source: huc10_label
+        geometry: point
+        attributes:
+          - key: name
+            tag_value: name
+          - key: huc
+            tag_value: huc
+          - key: areasqkm
+            tag_value: areasqkm
+            type: double
+          - key: label_rank
+            tag_value: label_rank
+            type: integer
+          - key: states
+            tag_value: states
+          - key: data_version
+            tag_value: data_version
+  - id: huc12-fill
+    features:
+      - source: huc12_polygon
+        geometry: polygon
+        attributes:
+          - key: huc
+            tag_value: huc
+          - key: name
+            tag_value: name
+          - key: areasqkm
+            tag_value: areasqkm
+            type: double
+          - key: states
+            tag_value: states
+          - key: data_version
+            tag_value: data_version
+  - id: huc12-line
+    features:
+      - source: huc12_line
+        geometry: line
+        attributes:
+          - key: huc_level
+            tag_value: huc_level
+          - key: data_version
+            tag_value: data_version

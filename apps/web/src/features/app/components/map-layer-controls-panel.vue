@@ -10,6 +10,7 @@
   import type { MapNavViewModeId } from "@/features/app/components/map-nav.types";
   import MapNavLayerRow from "@/features/app/components/map-nav-layer-row.vue";
   import MapNavViewModes from "@/features/app/components/map-nav-view-modes.vue";
+  import type { BasemapLayerId } from "@/features/basemap/basemap.types";
   import type { FacilitiesViewMode } from "@/features/facilities/facilities.types";
   import type { FiberLocatorLineId } from "@/features/fiber-locator/fiber-locator.types";
   import type { PowerLayerId } from "@/features/power/power.types";
@@ -94,6 +95,10 @@
     hyperscaleViewMode.value = mode;
     emit("update:perspective-view-mode", "hyperscale", mode as FacilitiesViewMode);
   }
+
+  function toggleBasemapLayer(layerId: BasemapLayerId): void {
+    emit("update:basemap-layer-visible", layerId, !props.basemapVisibility[layerId]);
+  }
 </script>
 
 <template>
@@ -105,7 +110,7 @@
   >
     <button
       type="button"
-      class="flex items-center gap-1 rounded-[4px] p-2 text-[#94A3B8] transition-colors hover:bg-[#F8FAFC] hover:text-[#647287]"
+      class="flex items-center gap-1 rounded-[4px] p-2 text-[#64748B] transition-colors hover:bg-[#F8FAFC] hover:text-[#475569]"
       aria-label="Open layers panel"
       @click="openAs('layers')"
     >
@@ -119,7 +124,7 @@
 
     <button
       type="button"
-      class="flex items-center gap-1 rounded-[4px] p-2 text-[#94A3B8] transition-colors hover:bg-[#F8FAFC] hover:text-[#647287]"
+      class="flex items-center gap-1 rounded-[4px] p-2 text-[#64748B] transition-colors hover:bg-[#F8FAFC] hover:text-[#475569]"
       aria-label="Open filters panel"
       @click="openAs('filters')"
     >
@@ -154,7 +159,7 @@
 
         <button
           type="button"
-          class="flex size-4 items-center justify-center rounded-[4px] text-[#94A3B8] transition-colors hover:bg-[#F8FAFC] hover:text-[#647287]"
+          class="flex size-4 items-center justify-center rounded-[4px] text-[#64748B] transition-colors hover:bg-[#F8FAFC] hover:text-[#475569]"
           aria-label="Collapse panel"
           @click="togglePanel"
         >
@@ -205,7 +210,7 @@
             <div class="flex w-full items-center justify-between">
               <button type="button" class="flex items-center gap-2" @click="toggleFiberExpanded">
                 <svg
-                  class="h-[5px] w-2 text-[#94A3B8] transition-transform"
+                  class="h-[5px] w-2 text-[#64748B] transition-transform"
                   :class="fiberExpanded ? 'rotate-180' : 'rotate-90'"
                   width="8"
                   height="5"
@@ -224,7 +229,7 @@
                 <span class="h-3 w-3 rounded-full bg-[#EEEEEE]" aria-hidden="true" />
                 <span
                   class="text-sm font-medium leading-none"
-                  :class="fiberRoutesVisible ? 'text-[#334155]' : 'text-[#94A3B8]'"
+                  :class="fiberRoutesVisible ? 'text-[#334155]' : 'text-[#64748B]'"
                   >Fiber Routes</span
                 >
               </button>
@@ -238,7 +243,7 @@
                 <MapNavIcon
                   name="eye"
                   class="h-[9.672px] w-4"
-                  :class="fiberRoutesVisible ? 'text-[#475569]' : 'text-[#CBD5E1]'"
+                  :class="fiberRoutesVisible ? 'text-[#475569]' : 'text-[#94A3B8]'"
                 />
               </button>
             </div>
@@ -253,7 +258,7 @@
                   <span class="h-3 w-3 rounded-full bg-[#EC4899]" aria-hidden="true" />
                   <span
                     class="text-sm font-medium leading-none"
-                    :class="props.visibleFiberLayers.metro ? 'text-[#334155]' : 'text-[#94A3B8]'"
+                    :class="props.visibleFiberLayers.metro ? 'text-[#334155]' : 'text-[#64748B]'"
                     >Metro</span
                   >
                 </div>
@@ -266,7 +271,7 @@
                   <MapNavIcon
                     name="eye"
                     class="h-[9.672px] w-4"
-                    :class="props.visibleFiberLayers.metro ? 'text-[#475569]' : 'text-[#CBD5E1]'"
+                    :class="props.visibleFiberLayers.metro ? 'text-[#475569]' : 'text-[#94A3B8]'"
                   />
                 </button>
               </div>
@@ -313,7 +318,7 @@
                 />
                 <span
                   class="min-w-0 flex-1 truncate text-[11px] leading-none"
-                  :class="isFiberSourceLayerSelected('metro', layer.layerName) ? 'text-[#64748B]' : 'text-[#94A3B8]'"
+                  :class="isFiberSourceLayerSelected('metro', layer.layerName) ? 'text-[#64748B]' : 'text-[#64748B]'"
                   >{{ layer.label }}</span
                 >
                 <input
@@ -332,7 +337,7 @@
                   <span class="h-3 w-3 rounded-full bg-[#06B6D4]" aria-hidden="true" />
                   <span
                     class="text-sm font-medium leading-none"
-                    :class="props.visibleFiberLayers.longhaul ? 'text-[#334155]' : 'text-[#94A3B8]'"
+                    :class="props.visibleFiberLayers.longhaul ? 'text-[#334155]' : 'text-[#64748B]'"
                     >Longhaul</span
                   >
                 </div>
@@ -345,7 +350,7 @@
                   <MapNavIcon
                     name="eye"
                     class="h-[9.672px] w-4"
-                    :class="props.visibleFiberLayers.longhaul ? 'text-[#475569]' : 'text-[#CBD5E1]'"
+                    :class="props.visibleFiberLayers.longhaul ? 'text-[#475569]' : 'text-[#94A3B8]'"
                   />
                 </button>
               </div>
@@ -392,7 +397,7 @@
                 />
                 <span
                   class="min-w-0 flex-1 truncate text-[11px] leading-none"
-                  :class="isFiberSourceLayerSelected('longhaul', layer.layerName) ? 'text-[#64748B]' : 'text-[#94A3B8]'"
+                  :class="isFiberSourceLayerSelected('longhaul', layer.layerName) ? 'text-[#64748B]' : 'text-[#64748B]'"
                   >{{ layer.label }}</span
                 >
                 <input
@@ -424,6 +429,84 @@
             label="US Parcels"
             :visible="props.parcelsVisible"
             @toggle="toggleParcels"
+          />
+        </section>
+
+        <div class="my-0 h-px w-full bg-[#E2E8F0]" />
+
+        <section class="flex flex-col">
+          <div class="flex h-7 items-center bg-white px-2">
+            <span class="text-[10px] font-normal leading-none text-[#64748B]">ENVIRONMENTAL</span>
+          </div>
+
+          <MapNavLayerRow
+            label="Flood Zones (100yr)"
+            :visible="props.floodVisibility.flood100"
+            @toggle="emit('update:flood-layer-visible', 'flood100', !props.floodVisibility.flood100)"
+          />
+          <MapNavLayerRow
+            label="Flood Zones (500yr)"
+            :visible="props.floodVisibility.flood500"
+            @toggle="emit('update:flood-layer-visible', 'flood500', !props.floodVisibility.flood500)"
+          />
+          <MapNavLayerRow
+            label="Hydro Basins"
+            :visible="props.hydroBasinsVisible"
+            @toggle="emit('update:hydro-basins-visible', !props.hydroBasinsVisible)"
+          />
+          <MapNavLayerRow
+            label="Water Features"
+            :visible="props.waterVisible"
+            @toggle="emit('update:water-visible', !props.waterVisible)"
+          />
+        </section>
+
+        <div class="my-0 h-px w-full bg-[#E2E8F0]" />
+
+        <section class="flex flex-col pb-4">
+          <div class="flex h-7 items-center bg-white px-2">
+            <span class="text-[10px] font-normal leading-none text-[#64748B]">BASEMAP</span>
+          </div>
+
+          <MapNavLayerRow
+            label="Color Map"
+            :visible="props.basemapVisibility.color"
+            @toggle="toggleBasemapLayer('color')"
+          />
+          <MapNavLayerRow
+            label="Globe Projection"
+            :visible="props.basemapVisibility.globe"
+            @toggle="toggleBasemapLayer('globe')"
+          />
+          <MapNavLayerRow
+            label="Satellite Imagery"
+            :visible="props.basemapVisibility.satellite"
+            @toggle="toggleBasemapLayer('satellite')"
+          />
+          <MapNavLayerRow
+            label="3D Buildings"
+            :visible="props.basemapVisibility.buildings3d"
+            @toggle="toggleBasemapLayer('buildings3d')"
+          />
+          <MapNavLayerRow
+            label="Labels"
+            :visible="props.basemapVisibility.labels"
+            @toggle="toggleBasemapLayer('labels')"
+          />
+          <MapNavLayerRow
+            label="Roads"
+            :visible="props.basemapVisibility.roads"
+            @toggle="toggleBasemapLayer('roads')"
+          />
+          <MapNavLayerRow
+            label="Boundaries"
+            :visible="props.basemapVisibility.boundaries"
+            @toggle="toggleBasemapLayer('boundaries')"
+          />
+          <MapNavLayerRow
+            label="Landmarks"
+            :visible="props.basemapVisibility.landmarks"
+            @toggle="toggleBasemapLayer('landmarks')"
           />
         </section>
       </div>

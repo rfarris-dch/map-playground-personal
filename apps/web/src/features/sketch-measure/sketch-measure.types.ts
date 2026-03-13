@@ -39,6 +39,8 @@ export interface SketchMeasureRuntimeState {
   areaShape: SketchMeasureAreaShape;
   cursorVertex: LngLat | null;
   mode: SketchMeasureMode;
+  project: ((lngLat: LngLat) => [number, number]) | null;
   ready: boolean;
+  unproject: ((point: [number, number]) => LngLat) | null;
   vertices: LngLat[];
 }

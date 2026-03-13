@@ -65,6 +65,7 @@
     facilityDetailQuery,
     parcelDetailQuery,
     setPerspectiveViewMode,
+    zoomToCluster,
     setPerspectiveVisibility,
     setBoundaryVisible,
     setBoundarySelectedRegionIds,
@@ -217,6 +218,7 @@
         @select-facility="selectFacilityFromAnalysis"
         @close-facility-detail="clearSelectedFacility"
         @close-parcel-detail="clearSelectedParcel"
+        @zoom-to-cluster="zoomToCluster"
       />
     </section>
   </main>

@@ -252,6 +252,11 @@ class MapLibreEngine implements IMap {
     return [point.x, point.y];
   }
 
+  unproject(point: [number, number]): LngLat {
+    const lngLat = this.map.unproject(point);
+    return [lngLat.lng, lngLat.lat];
+  }
+
   getCanvasSize(): { readonly height: number; readonly width: number } {
     const container = this.map.getContainer();
     return {
@@ -313,6 +318,7 @@ class MapLibreEngine implements IMap {
 
   setViewport(viewport: MapViewport): void {
     const cameraOptions = buildViewportCameraOptions(viewport);
+    const shouldAnimate = viewport.animate === true;
 
     if (viewport.type === "bounds") {
       this.map.fitBounds(
@@ -321,10 +327,22 @@ class MapLibreEngine implements IMap {
           [viewport.bounds.east, viewport.bounds.north],
         ],
         {
-          animate: false,
+          animate: shouldAnimate,
+          ...(shouldAnimate ? { duration: 800 } : {}),
+          ...(typeof viewport.padding === "number" ? { padding: viewport.padding } : {}),
           ...cameraOptions,
         }
       );
+      return;
+    }
+
+    if (shouldAnimate) {
+      this.map.flyTo({
+        center: viewport.center,
+        ...cameraOptions,
+        zoom: viewport.zoom,
+        duration: 800,
+      });
       return;
     }
 

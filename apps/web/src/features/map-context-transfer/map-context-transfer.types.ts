@@ -22,7 +22,7 @@ import type { PowerLayerId } from "@/features/power/power.types";
 
 export interface MapContextTransferStore {
   load(token: string): MapContextTransfer | null;
-  save(context: MapContextTransfer): string;
+  save(context: MapContextTransfer, token?: string): string;
 }
 
 export interface ReadMapContextTransferFromRouteArgs {

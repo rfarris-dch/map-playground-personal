@@ -4,6 +4,7 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 
 CREATE SCHEMA IF NOT EXISTS parcel_meta;
 CREATE SCHEMA IF NOT EXISTS parcel_current;
+CREATE SCHEMA IF NOT EXISTS parcel_tiles;
 
 DO $$
 DECLARE
@@ -91,5 +92,23 @@ CREATE INDEX IF NOT EXISTS parcels_geom_3857_gist_idx
 
 CREATE INDEX IF NOT EXISTS parcels_attrs_gin_idx
   ON parcel_current.parcels USING gin (attrs jsonb_path_ops);
+
+CREATE TABLE IF NOT EXISTS parcel_tiles.parcels_draw_source (
+  parcel_id text NOT NULL PRIMARY KEY,
+  ingestion_run_id text NOT NULL,
+  attrs jsonb NOT NULL DEFAULT '{}'::jsonb,
+  geom geometry(MultiPolygon, 4326) NOT NULL,
+  geom_3857 geometry(MultiPolygon, 3857) NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS parcels_draw_source_ingestion_run_id_idx
+  ON parcel_tiles.parcels_draw_source (ingestion_run_id);
+
+CREATE INDEX IF NOT EXISTS parcels_draw_source_geom_3857_gist_idx
+  ON parcel_tiles.parcels_draw_source USING gist (geom_3857);
+
+CREATE INDEX IF NOT EXISTS parcels_draw_source_attrs_gin_idx
+  ON parcel_tiles.parcels_draw_source USING gin (attrs jsonb_path_ops);
 
 COMMIT;

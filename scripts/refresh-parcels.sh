@@ -28,6 +28,7 @@ RUN_DIR=""
 RUN_SUMMARY_PATH=""
 LOAD_COMPLETE_MARKER_PATH=""
 BUILD_COMPLETE_MARKER_PATH=""
+TILESOURCE_COMPLETE_MARKER_PATH=""
 PUBLISH_COMPLETE_MARKER_PATH=""
 RUN_CONFIG_PATH=""
 TILES_DATASET="${PARCELS_TILE_DATASET:-parcels-draw-v1}"
@@ -241,6 +242,7 @@ RUN_DIR="${SNAPSHOT_ROOT}/${RUN_ID}"
 RUN_SUMMARY_PATH="${RUN_DIR}/run-summary.json"
 LOAD_COMPLETE_MARKER_PATH="${RUN_DIR}/load-complete.json"
 BUILD_COMPLETE_MARKER_PATH="${RUN_DIR}/tile-build-complete.json"
+TILESOURCE_COMPLETE_MARKER_PATH="${RUN_DIR}/tilesource-complete.json"
 PUBLISH_COMPLETE_MARKER_PATH="${RUN_DIR}/publish-complete.json"
 RUN_CONFIG_PATH="${RUN_DIR}/run-config.json"
 
@@ -305,6 +307,15 @@ else
 fi
 
 PMTILES_PATH="${TILES_OUT_DIR}/${TILES_DATASET}_${RUN_ID}.pmtiles"
+if [[ -f "${TILESOURCE_COMPLETE_MARKER_PATH}" ]]; then
+  echo "[parcels] tilesource refresh already complete for runId=${RUN_ID}; skipping"
+else
+  echo "[parcels] refreshing parcel tilesource table"
+  write_active_status "building" "1" "tilesource:refreshing" '{"schemaVersion":1,"phase":"building","tileBuild":{"stage":"tilesource"}}'
+  bash "${ROOT_DIR}/scripts/refresh-parcel-tilesource.sh" "${RUN_ID}"
+  write_phase_marker "${TILESOURCE_COMPLETE_MARKER_PATH}" "building" "tilesource-refresh-complete"
+fi
+
 if [[ -f "${BUILD_COMPLETE_MARKER_PATH}" && -f "${PMTILES_PATH}" ]]; then
   echo "[parcels] tile build already complete for runId=${RUN_ID}; skipping build"
 else
@@ -317,12 +328,7 @@ else
   : "${PARCELS_TILES_DETECT_SHARED_BORDERS:=0}"
   : "${PARCELS_TILES_MIN_ZOOM:=0}"
   : "${PARCELS_TILES_THIN_DEFAULT_MAX_ZOOM:=15}"
-  : "${PARCELS_TILES_BUILD_RETRY_ATTEMPTS:=5}"
-  : "${PARCELS_TILES_BUILD_RETRY_DELAY_SECONDS:=8}"
-  : "${PARCELS_TILES_TMP_DIR:=${ROOT_DIR}/var/parcels-sync/tippecanoe-tmp}"
-  : "${PARCELS_PMTILES_TMP_DIR:=${ROOT_DIR}/var/parcels-sync/pmtiles-tmp}"
-  : "${PARCELS_PMTILES_CONVERT_RETRY_ATTEMPTS:=3}"
-  : "${PARCELS_PMTILES_CONVERT_RETRY_DELAY_SECONDS:=5}"
+  : "${PARCELS_TILES_TMP_DIR:=${ROOT_DIR}/var/parcels-sync/planetiler-tmp}"
   SCHEMA_METADATA_PATH="${PARCELS_TILE_SCHEMA_FILE:-${RUN_DIR}/layer-metadata.json}"
   BUILD_LOG_PATH="${SNAPSHOT_ROOT}/postextract-${RUN_ID}.log"
   echo "[parcels] tile schema metadata=${SCHEMA_METADATA_PATH}"

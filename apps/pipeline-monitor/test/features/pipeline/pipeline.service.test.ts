@@ -186,7 +186,7 @@ describe("fetchPipelineStatus", () => {
     expect(result.payload.response.run.states[0]?.isCompleted).toBe(true);
   });
 
-  it("targets the flood sync-status route for flood monitor requests", async () => {
+  it("targets the generic pipeline route for flood monitor requests", async () => {
     let capturedUrl = "";
 
     globalThis.fetch = mock((input: RequestInfo | URL) => {

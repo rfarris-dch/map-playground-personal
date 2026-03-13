@@ -18,8 +18,8 @@
 
   const emit = defineEmits<MapNavLayerRowEmits>();
 
-  const eyeColorClass = computed(() => (props.visible ? "text-[#475569]" : "text-[#CBD5E1]"));
-  const rowStateClass = computed(() => (props.visible ? "text-[#334155]" : "text-[#94A3B8]"));
+  const eyeColorClass = computed(() => (props.visible ? "text-[#475569]" : "text-[#94A3B8]"));
+  const rowStateClass = computed(() => (props.visible ? "text-[#334155]" : "text-[#64748B]"));
 
   function handleToggle(): void {
     if (!props.actionable) {
@@ -54,7 +54,7 @@
       </button>
 
       <span v-else class="flex size-6 items-center justify-center" aria-hidden="true">
-        <MapNavIcon name="eye" class="h-[9.672px] w-4 text-[#94A3B8]" />
+        <MapNavIcon name="eye" class="h-[9.672px] w-4 text-[#64748B]" />
       </span>
     </div>
   </div>

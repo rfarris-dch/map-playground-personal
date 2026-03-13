@@ -3,20 +3,47 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-for bin in tippecanoe pmtiles; do
+resolve_latest_run_id() {
+  python3 - "${ROOT_DIR}/var/environmental-sync/environmental-hydro-basins/latest.json" <<'PY'
+import json
+import sys
+
+path = sys.argv[1]
+try:
+    with open(path, "r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+except Exception:
+    raise SystemExit(0)
+
+run_id = payload.get("runId")
+if isinstance(run_id, str) and run_id.strip():
+    print(run_id.strip())
+PY
+}
+
+for bin in bash; do
   if ! command -v "${bin}" >/dev/null 2>&1; then
     echo "[tiles] ERROR: missing dependency in PATH: ${bin}" >&2
     exit 1
   fi
 done
 
-RUN_ID="${1:-sample}"
+RUN_ID="${1:-${RUN_ID:-sample}}"
+if [[ "${RUN_ID}" == "sample" ]]; then
+  LATEST_RUN_ID="$(resolve_latest_run_id)"
+  if [[ -n "${LATEST_RUN_ID}" ]]; then
+    RUN_ID="${LATEST_RUN_ID}"
+  fi
+fi
+
 DATASET="${ENVIRONMENTAL_HYDRO_TILE_DATASET:-environmental-hydro-basins}"
 OUT_DIR="${ENVIRONMENTAL_HYDRO_TILES_OUT_DIR:-${ROOT_DIR}/.cache/tiles/${DATASET}}"
-SOURCE_ROOT="${ENVIRONMENTAL_HYDRO_SOURCE_ROOT:-${ROOT_DIR}/data/environmental/hydro-basins}"
-MBTILES_PATH="${OUT_DIR}/${DATASET}_${RUN_ID}.mbtiles"
+SOURCE_ROOT="${ENVIRONMENTAL_HYDRO_SOURCE_ROOT:-${ROOT_DIR}/.cache/tilesources/environmental-hydro-basins/${RUN_ID}}"
 PMTILES_PATH="${OUT_DIR}/${DATASET}_${RUN_ID}.pmtiles"
-TMP_DIR="${ENVIRONMENTAL_HYDRO_TMP_DIR:-${OUT_DIR}/tmp-${RUN_ID}}"
+MIN_Z="${ENVIRONMENTAL_HYDRO_MIN_ZOOM:-5}"
+MAX_Z="${ENVIRONMENTAL_HYDRO_MAX_ZOOM:-12}"
+PLANETILER_THREADS="${ENVIRONMENTAL_HYDRO_TILE_THREADS:-4}"
+PLANETILER_SCHEMA_PATH="${ROOT_DIR}/config/planetiler/environmental-hydro-basins.yml"
 
 SOURCE_FILES=(
   "${SOURCE_ROOT}/huc4-polygon.geojson"
@@ -42,34 +69,31 @@ for source_file in "${SOURCE_FILES[@]}"; do
   fi
 done
 
-mkdir -p "${OUT_DIR}" "${TMP_DIR}"
-rm -f "${MBTILES_PATH}" "${PMTILES_PATH}"
+mkdir -p "${OUT_DIR}"
 
-echo "[tiles] building environmental hydro basins PMTiles" >&2
-echo "[tiles] dataset=${DATASET} source_root=${SOURCE_ROOT}" >&2
+echo "[tiles] building environmental hydro basins PMTiles with Planetiler" >&2
+echo "[tiles] dataset=${DATASET} source_root=${SOURCE_ROOT} z=${MIN_Z}-${MAX_Z} threads=${PLANETILER_THREADS}" >&2
 
-tippecanoe \
-  --force \
-  --temporary-directory="${TMP_DIR}" \
-  --output="${MBTILES_PATH}" \
-  -Z 5 \
-  -z 12 \
-  -L "huc4-fill:${SOURCE_ROOT}/huc4-polygon.geojson" \
-  -L "huc4-line:${SOURCE_ROOT}/huc4-line.geojson" \
-  -L "huc4-label:${SOURCE_ROOT}/huc4-label.geojson" \
-  -L "huc6-fill:${SOURCE_ROOT}/huc6-polygon.geojson" \
-  -L "huc6-line:${SOURCE_ROOT}/huc6-line.geojson" \
-  -L "huc6-label:${SOURCE_ROOT}/huc6-label.geojson" \
-  -L "huc8-fill:${SOURCE_ROOT}/huc8-polygon.geojson" \
-  -L "huc8-line:${SOURCE_ROOT}/huc8-line.geojson" \
-  -L "huc8-label:${SOURCE_ROOT}/huc8-label.geojson" \
-  -L "huc10-fill:${SOURCE_ROOT}/huc10-polygon.geojson" \
-  -L "huc10-line:${SOURCE_ROOT}/huc10-line.geojson" \
-  -L "huc10-label:${SOURCE_ROOT}/huc10-label.geojson" \
-  -L "huc12-fill:${SOURCE_ROOT}/huc12-polygon.geojson" \
-  -L "huc12-line:${SOURCE_ROOT}/huc12-line.geojson"
-
-pmtiles convert "${MBTILES_PATH}" "${PMTILES_PATH}" --tmpdir="${TMP_DIR}"
+bash "${ROOT_DIR}/scripts/run-planetiler-custom.sh" \
+  "${PLANETILER_SCHEMA_PATH}" \
+  "${PMTILES_PATH}" \
+  "--minzoom=${MIN_Z}" \
+  "--maxzoom=${MAX_Z}" \
+  "--threads=${PLANETILER_THREADS}" \
+  "--huc4_polygon=${SOURCE_ROOT}/huc4-polygon.geojson" \
+  "--huc4_line=${SOURCE_ROOT}/huc4-line.geojson" \
+  "--huc4_label=${SOURCE_ROOT}/huc4-label.geojson" \
+  "--huc6_polygon=${SOURCE_ROOT}/huc6-polygon.geojson" \
+  "--huc6_line=${SOURCE_ROOT}/huc6-line.geojson" \
+  "--huc6_label=${SOURCE_ROOT}/huc6-label.geojson" \
+  "--huc8_polygon=${SOURCE_ROOT}/huc8-polygon.geojson" \
+  "--huc8_line=${SOURCE_ROOT}/huc8-line.geojson" \
+  "--huc8_label=${SOURCE_ROOT}/huc8-label.geojson" \
+  "--huc10_polygon=${SOURCE_ROOT}/huc10-polygon.geojson" \
+  "--huc10_line=${SOURCE_ROOT}/huc10-line.geojson" \
+  "--huc10_label=${SOURCE_ROOT}/huc10-label.geojson" \
+  "--huc12_polygon=${SOURCE_ROOT}/huc12-polygon.geojson" \
+  "--huc12_line=${SOURCE_ROOT}/huc12-line.geojson"
 
 echo "[tiles] PMTiles ready" >&2
 echo "PMTILES_PATH=${PMTILES_PATH}"

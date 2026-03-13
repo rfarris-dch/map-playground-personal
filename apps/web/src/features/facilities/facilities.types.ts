@@ -73,6 +73,7 @@ export interface FacilitiesLayerController {
   readonly perspective: FacilityPerspective;
   setViewMode(mode: FacilitiesViewMode): void;
   setVisible(visible: boolean): void;
+  zoomToCluster(clusterId: number, center: [number, number]): void;
 }
 
 export interface FacilitiesLayerState {

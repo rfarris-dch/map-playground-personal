@@ -1,0 +1,52 @@
+listen_addresses: "0.0.0.0:3000"
+base_path: /martin
+route_prefix: /martin
+worker_processes: ${MARTIN_WORKERS:-4}
+cache_size_mb: ${MARTIN_CACHE_SIZE_MB:-512}
+preferred_encoding: brotli
+
+postgres:
+  connection_string: ${DATABASE_URL}
+  default_srid: 3857
+  auto_bounds: skip
+  tables:
+    parcels_draw_source:
+      schema: parcel_tiles
+      table: parcels_draw_source
+      geometry_column: geom_3857
+      srid: 3857
+      id_column: parcel_id
+    flood_overlay_100:
+      schema: environmental_tiles
+      table: flood_overlay_100
+      geometry_column: geom_3857
+      srid: 3857
+      id_column: overlay_id
+    flood_overlay_500:
+      schema: environmental_tiles
+      table: flood_overlay_500
+      geometry_column: geom_3857
+      srid: 3857
+      id_column: overlay_id
+    hydro_huc_polygons:
+      schema: environmental_current
+      table: hydro_huc_polygons
+      geometry_column: geom_3857
+      srid: 3857
+      id_column: feature_id
+    hydro_huc_lines:
+      schema: environmental_current
+      table: hydro_huc_lines
+      geometry_column: geom_3857
+      srid: 3857
+      id_column: feature_id
+    hydro_huc_labels:
+      schema: environmental_current
+      table: hydro_huc_labels
+      geometry_column: geom_3857
+      srid: 3857
+      id_column: feature_id
+
+pmtiles:
+  paths:
+    - ${MARTIN_PMTILES_ROOT:-./apps/web/public/tiles}

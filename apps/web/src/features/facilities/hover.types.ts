@@ -5,15 +5,19 @@ import type {
 } from "@map-migration/contracts";
 
 export interface FacilityHoverState {
+  readonly availablePowerMw: number | null;
   readonly commissionedPowerMw: number | null;
   readonly commissionedSemantic: CommissionedSemantic;
   readonly facilityId: string;
   readonly facilityName: string;
   readonly leaseOrOwn: LeaseOrOwn | null;
   readonly perspective: FacilityPerspective;
+  readonly plannedPowerMw: number | null;
   readonly providerId: string;
   readonly providerName: string;
   readonly screenPoint: readonly [number, number];
+  readonly statusLabel: string | null;
+  readonly underConstructionPowerMw: number | null;
 }
 
 export interface ClusterProviderSummary {
@@ -22,6 +26,7 @@ export interface ClusterProviderSummary {
 }
 
 export interface FacilityClusterHoverState {
+  readonly center: readonly [number, number];
   readonly clusterId: number;
   readonly commissionedPowerMw: number;
   readonly facilityCount: number;

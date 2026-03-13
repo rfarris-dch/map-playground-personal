@@ -3,13 +3,15 @@ import {
   buildMapContextTransferFromAppShell,
   buildMapContextTransferQuery,
   normalizeMapContextTransferQuery,
+  readMapContextTransferTokenFromQuery,
   replaceMapContextTransferQuery,
 } from "@/features/map-context-transfer/map-context-transfer.service";
 import type { UseAppShellUrlStateOptions } from "./app-shell-url-state.types";
 
 export function buildAppShellUrlStateQuery(
   options: UseAppShellUrlStateOptions,
-  currentQuery: LocationQueryRaw
+  currentQuery: LocationQueryRaw,
+  preferredContextToken?: string
 ): LocationQueryRaw {
   const mapContext = buildMapContextTransferFromAppShell({
     basemapVisibility: options.basemapVisibility.value,
@@ -29,7 +31,13 @@ export function buildAppShellUrlStateQuery(
     waterVisible: options.waterVisible.value,
   });
 
-  return replaceMapContextTransferQuery(currentQuery, buildMapContextTransferQuery(mapContext));
+  const activeContextToken =
+    preferredContextToken ?? readMapContextTransferTokenFromQuery(currentQuery);
+
+  return replaceMapContextTransferQuery(
+    currentQuery,
+    buildMapContextTransferQuery(mapContext, undefined, activeContextToken)
+  );
 }
 
 export function serializeNormalizedMapContextQuery(query: LocationQueryRaw): string {

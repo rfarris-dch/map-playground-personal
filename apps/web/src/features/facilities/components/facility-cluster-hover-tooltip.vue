@@ -1,12 +1,34 @@
 <script setup lang="ts">
   import { ref, watch } from "vue";
   import type { FacilityClusterHoverState } from "@/features/facilities/hover.types";
+  import { buildDonutChartArcSegments } from "@/lib/donut-chart.service";
 
   interface FacilityClusterHoverTooltipProps {
     readonly hoverState: FacilityClusterHoverState | null;
   }
 
+  interface FacilityClusterHoverTooltipEmits {
+    "zoom-to-cluster": [
+      perspective: FacilityClusterHoverState["perspective"],
+      clusterId: number,
+      center: readonly [number, number],
+    ];
+  }
+
   const props = defineProps<FacilityClusterHoverTooltipProps>();
+  const emit = defineEmits<FacilityClusterHoverTooltipEmits>();
+
+  function onZoomClick(): void {
+    if (!displayState.value) {
+      return;
+    }
+    emit(
+      "zoom-to-cluster",
+      displayState.value.perspective,
+      displayState.value.clusterId,
+      displayState.value.center
+    );
+  }
 
   const isMouseOver = ref(false);
   const displayState = ref<FacilityClusterHoverState | null>(null);
@@ -101,33 +123,13 @@
     ];
   }
 
-  // Stroke-based donut segments: each is a <circle> with stroke-dasharray
-  function donutCircles(): { color: string; dashArray: string; dashOffset: number }[] {
-    const segments = pieSegments();
-    const total = segments.reduce((sum, s) => sum + s.value, 0);
-    if (total === 0) {
-      return [];
-    }
-
-    const r = 24;
-    const circumference = 2 * Math.PI * r;
-    const circles: { color: string; dashArray: string; dashOffset: number }[] = [];
-    let consumedLength = 0;
-
-    for (const segment of segments) {
-      if (segment.value <= 0) {
-        continue;
-      }
-      const segmentLength = (segment.value / total) * circumference;
-      circles.push({
-        color: segment.color,
-        dashArray: `${segmentLength} ${circumference - segmentLength}`,
-        dashOffset: -consumedLength,
-      });
-      consumedLength += segmentLength;
-    }
-
-    return circles;
+  function donutSegments() {
+    return buildDonutChartArcSegments({
+      centerX: 34,
+      centerY: 34,
+      radius: 24,
+      segments: pieSegments(),
+    });
   }
 </script>
 
@@ -176,23 +178,34 @@
             <!-- Background ring -->
             <circle cx="34" cy="34" r="24" fill="none" stroke="#f1f5f9" stroke-width="10" />
             <!-- Data segments -->
-            <circle
-              v-for="(seg, i) in donutCircles()"
-              :key="i"
-              cx="34"
-              cy="34"
-              r="24"
-              fill="none"
-              :stroke="seg.color"
-              stroke-width="10"
-              :stroke-dasharray="seg.dashArray"
-              :stroke-dashoffset="seg.dashOffset"
-              transform="rotate(-90 34 34)"
-            />
+            <template v-for="(seg, i) in donutSegments()" :key="`cluster-${String(i)}`">
+              <circle
+                v-if="seg.path === null"
+                cx="34"
+                cy="34"
+                r="24"
+                fill="none"
+                :stroke="seg.color"
+                stroke-width="10"
+                stroke-linecap="butt"
+              />
+              <path
+                v-else
+                :d="seg.path"
+                fill="none"
+                :stroke="seg.color"
+                stroke-width="10"
+                stroke-linecap="butt"
+              />
+            </template>
           </svg>
           <!-- Center text -->
-          <div class="absolute inset-0 flex items-center justify-center">
-            <span class="text-[8px] text-[#94a3b8]">{{ formatMw(displayState.totalPowerMw) }}</span>
+          <div class="pointer-events-none absolute inset-0 grid place-items-center px-2">
+            <span
+              class="block max-w-[38px] text-center text-[7px] leading-none tracking-tight text-[#94a3b8]"
+            >
+              {{ formatMw(displayState.totalPowerMw) }}
+            </span>
           </div>
         </div>
 
@@ -227,7 +240,10 @@
 
       <!-- Controls -->
       <div class="flex items-center gap-[6px]">
-        <div class="flex cursor-pointer items-center gap-0 opacity-60 hover:opacity-100">
+        <div
+          class="flex cursor-pointer items-center gap-0 opacity-60 hover:opacity-100"
+          @click="onZoomClick"
+        >
           <svg width="16" height="16" viewBox="0 0 16 16">
             <circle cx="7" cy="7" r="3.5" stroke="#94a3b8" stroke-width="1" fill="none" />
             <line x1="9.5" y1="9.5" x2="12.5" y2="12.5" stroke="#94a3b8" stroke-width="1" />

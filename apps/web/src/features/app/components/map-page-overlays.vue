@@ -55,7 +55,12 @@
   <MapStatusBar :overlay-status-message="props.overlayStatusMessage" />
 
   <FacilityHoverTooltip :hover-state="props.hoveredFacility" />
-  <FacilityClusterHoverTooltip :hover-state="props.hoveredFacilityCluster" />
+  <FacilityClusterHoverTooltip
+    :hover-state="props.hoveredFacilityCluster"
+    @zoom-to-cluster="
+      (perspective, clusterId, center) => emit('zoom-to-cluster', perspective, clusterId, center)
+    "
+  />
   <BoundaryHoverTooltip :hover-state="props.hoveredBoundary" />
   <FiberLocatorHoverTooltip :hover-state="props.hoveredFiber" />
   <PowerHoverTooltip :hover-state="props.hoveredPower" />
