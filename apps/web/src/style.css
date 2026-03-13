@@ -3,8 +3,11 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: "Sora", "Avenir Next", "Segoe UI", sans-serif;
+  /* Figma dcH Design System — Font Family */
+  --font-sans: "Inter", "Avenir Next", "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", "SF Mono", Menlo, monospace;
+
+  /* Semantic Colors */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -18,34 +21,147 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-border: var(--border);
+
+  /* Facility Colors */
   --color-colocation: var(--colocation);
   --color-colocation-foreground: var(--colocation-foreground);
   --color-hyperscale: var(--hyperscale);
   --color-hyperscale-foreground: var(--hyperscale-foreground);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
+  --color-enterprise: var(--enterprise);
+  --color-enterprise-foreground: var(--enterprise-foreground);
+
+  /* Spot / Semantic Colors */
+  --color-error: var(--error);
+  --color-success: var(--success);
+  --color-info: var(--info);
+  --color-warning: var(--warning);
+
+  /* Corner Radius — Figma radius-0 through radius-4 */
+  --radius-sm: 4px; /* radius-1 */
+  --radius-md: 8px; /* radius-2 */
+  --radius-lg: 16px; /* radius-3 */
+  --radius-full: 9999px; /* radius-4 */
+
+  /* Shadows — Figma elevation-1 through elevation-3 */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06); /* elevation-1 */
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.06); /* elevation-2 */
+  --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.08); /* elevation-3 */
 }
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(0.985 0.01 95);
-  --foreground: oklch(0.22 0.01 260);
-  --card: oklch(0.99 0.005 95);
-  --card-foreground: oklch(0.22 0.01 260);
-  --primary: oklch(0.55 0.11 252);
-  --primary-foreground: oklch(0.985 0.01 95);
-  --secondary: oklch(0.93 0.02 250);
-  --secondary-foreground: oklch(0.26 0.02 250);
-  --muted: oklch(0.94 0.01 95);
-  --muted-foreground: oklch(0.45 0.02 255);
-  --accent: oklch(0.9 0.05 200);
-  --accent-foreground: oklch(0.26 0.02 250);
-  --border: oklch(0.88 0.01 250);
-  --colocation: oklch(0.62 0.14 250);
-  --colocation-foreground: oklch(0.985 0.01 95);
-  --hyperscale: oklch(0.65 0.15 162);
-  --hyperscale-foreground: oklch(0.985 0.01 95);
+
+  /* Figma dcH Design System — Neutrals */
+  --background: #f8fafc; /* neutral/100 */
+  --foreground: #0f172a; /* neutral/900 */
+  --card: #ffffff; /* neutral/0 */
+  --card-foreground: #0f172a; /* neutral/900 */
+  --primary: #2563eb; /* brand/100 */
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9; /* neutral/200 */
+  --secondary-foreground: #1e293b; /* neutral/800 */
+  --muted: #f1f5f9; /* neutral/200 */
+  --muted-foreground: #647287; /* neutral/600 */
+  --accent: #e2e8f0; /* neutral/300 */
+  --accent-foreground: #1e293b; /* neutral/800 */
+  --border: #e2e8f0; /* neutral/300 */
+
+  /* Figma dcH Design System — Facility Colors */
+  --colocation: #3b82f6; /* blue/500 — Colocation Facilities */
+  --colocation-foreground: #ffffff;
+  --hyperscale: #059669; /* green/600 — Hyperscale Facilities */
+  --hyperscale-foreground: #ffffff;
+  --enterprise: #4f46e5; /* purple/100 — Enterprise Facilities */
+  --enterprise-foreground: #ffffff;
+
+  /* Figma dcH Design System — Spot Colors */
+  --error: #be123c; /* red/700 */
+  --success: #0b8a6d; /* green/700 */
+  --info: #2563eb; /* brand/100 */
+  --warning: #fbbf24; /* yellow/700 */
+
+  /* Figma dcH Design System — Hyperscale Company Colors (spectral scale) */
+  --hs-microsoft: #9e0142; /* hyperscale/1400 */
+  --hs-oracle: #d53e4f; /* hyperscale/1300 */
+  --hs-huawei: #ea4f60; /* hyperscale/1200 */
+  --hs-bytedance: #f46d43; /* hyperscale/1100 */
+  --hs-alibaba: #f9983a; /* hyperscale/1000 */
+  --hs-aws: #fdae61; /* hyperscale/900 */
+  --hs-coreweave: #fee08b; /* hyperscale/800 */
+  --hs-nebius: #e6f598; /* hyperscale/700 */
+  --hs-tencent: #abdda4; /* hyperscale/600 */
+  --hs-google: #66c2a5; /* hyperscale/500 */
+  --hs-linkedin: #38a9c8; /* hyperscale/400 */
+  --hs-meta: #3288bd; /* hyperscale/300 */
+  --hs-lambda: #5e4fa2; /* hyperscale/200 */
+  --hs-apple: #2e1f71; /* hyperscale/100 */
+
+  /* Figma dcH Design System — Colocation Blue Scale */
+  --colo-600: #1e40af; /* blue/600 */
+  --colo-500: #3b82f6; /* blue/500 */
+  --colo-400: #60a5fa; /* blue/400 */
+  --colo-300: #93c5fd; /* blue/300 */
+  --colo-200: #bfdbfe; /* blue/200 */
+  --colo-100: #dbeafe; /* blue/100 */
+
+  /* Figma dcH Design System — Hyperscale Green Scale */
+  --hyper-600: #059669; /* green/600 */
+  --hyper-500: #10b981; /* green/500 */
+  --hyper-400: #34d399; /* green/400 */
+  --hyper-300: #6ee7b7; /* green/300 */
+  --hyper-200: #a7f3d0; /* green/200 */
+  --hyper-100: #d1fae5; /* green/100 */
+
+  /* Figma dcH Design System — Spacing Scale */
+  --space-0: 0px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 80px;
+  --space-10: 96px;
+
+  /* Figma dcH Design System — Corner Radius */
+  --radius-0: 0px;
+  --radius-1: 4px;
+  --radius-2: 8px;
+  --radius-3: 16px;
+  --radius-4: 9999px;
+
+  /* Figma dcH Design System — Opacity */
+  --opacity-1: 0.2;
+  --opacity-2: 0.4;
+  --opacity-3: 0.6;
+  --opacity-4: 0.8;
+
+  /* Figma dcH Design System — Shadows (Elevations) */
+  --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --elevation-2: 0 4px 8px rgba(0, 0, 0, 0.06);
+  --elevation-3: 0 12px 24px rgba(0, 0, 0, 0.08);
+
+  /* Figma dcH Design System — Font Weight Scale */
+  --weight-1: 400; /* Regular */
+  --weight-2: 500; /* Medium */
+  --weight-3: 600; /* Semibold */
+  --weight-4: 700; /* Bold */
+
+  /* Figma dcH Design System — Font Size Scale */
+  --size-1: 8px;
+  --size-2: 10px;
+  --size-3: 12px;
+  --size-4: 14px;
+  --size-5: 16px;
+  --size-6: 18px;
+  --size-7: 20px;
+  --size-8: 24px;
+  --size-9: 30px;
+  --size-10: 36px;
+  --size-11: 42px;
+  --size-12: 48px;
 }
 
 * {
