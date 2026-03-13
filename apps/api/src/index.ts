@@ -2,16 +2,33 @@ import { execFileSync } from "node:child_process";
 import { type ServerType, serve } from "@hono/node-server";
 import { Effect } from "effect";
 import { createApiApp } from "@/app";
-import { assertPostgresReady, closePostgresPool } from "@/db/postgres";
+import { assertPostgresReady, closePostgresPool, isConnectionClosedError } from "@/db/postgres";
 import { describeEffectDevToolsConnection, runApiEffect } from "@/effect/api-effect-runtime";
 import { recordRuntimeEffectFailure } from "@/effect/effect-failure-trail.service";
 import { readFiberLocatorConfig } from "@/geo/fiber-locator/fiber-locator.service";
+
+interface ApiImportMetaHotData {
+  previousShutdownPromise?: Promise<void> | undefined;
+}
+
+interface ApiImportMetaHot {
+  accept(): void;
+  readonly data: ApiImportMetaHotData;
+  dispose(callback: (data: ApiImportMetaHotData) => void): void;
+}
+
+declare global {
+  interface ImportMeta {
+    hot?: ApiImportMetaHot;
+  }
+}
 
 const app = createApiApp();
 let server: ServerType | null = null;
 let shutdownPromise: Promise<void> | null = null;
 const whitespacePattern = /\s+/;
 const effectDevToolsConnection = describeEffectDevToolsConnection();
+const importMetaHot = import.meta.hot;
 
 function resolvePort(): number {
   const rawPort = process.env.PORT ?? "3001";
@@ -103,6 +120,29 @@ function closeServerEffect(): Effect.Effect<void, Error> {
   });
 }
 
+function assertStartupPostgresReadyEffect(): Effect.Effect<void, Error> {
+  return Effect.gen(function* () {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      try {
+        yield* Effect.tryPromise({
+          try: assertPostgresReady,
+          catch: (error) => (error instanceof Error ? error : new Error(String(error))),
+        });
+        return;
+      } catch (error) {
+        if (!(error instanceof Error && isConnectionClosedError(error)) || attempt === 4) {
+          yield* Effect.fail(error instanceof Error ? error : new Error(String(error)));
+        }
+
+        console.warn(
+          `[api] startup Postgres probe hit a closed connection; retrying (${String(attempt + 1)}/5)`
+        );
+        yield* Effect.sleep("150 millis");
+      }
+    }
+  });
+}
+
 function shutdown(signal: string): Promise<void> {
   if (shutdownPromise !== null) {
     return shutdownPromise;
@@ -123,7 +163,7 @@ function shutdown(signal: string): Promise<void> {
   return shutdownPromise;
 }
 
-process.on("SIGINT", () => {
+function handleSigint(): void {
   shutdown("SIGINT").catch((error) => {
     recordRuntimeEffectFailure({
       cause:
@@ -136,9 +176,9 @@ process.on("SIGINT", () => {
     console.error("[api] shutdown failure", error);
     process.exit(1);
   });
-});
+}
 
-process.on("SIGTERM", () => {
+function handleSigterm(): void {
   shutdown("SIGTERM").catch((error) => {
     recordRuntimeEffectFailure({
       cause:
@@ -151,14 +191,26 @@ process.on("SIGTERM", () => {
     console.error("[api] shutdown failure", error);
     process.exit(1);
   });
-});
+}
+
+function registerProcessSignalHandlers(): void {
+  process.on("SIGINT", handleSigint);
+  process.on("SIGTERM", handleSigterm);
+}
+
+function unregisterProcessSignalHandlers(): void {
+  process.off("SIGINT", handleSigint);
+  process.off("SIGTERM", handleSigterm);
+}
 
 function startServerEffect(): Effect.Effect<void, Error> {
   return Effect.gen(function* () {
-    yield* Effect.tryPromise({
-      try: assertPostgresReady,
-      catch: (error) => (error instanceof Error ? error : new Error(String(error))),
-    });
+    const previousShutdownPromise = importMetaHot?.data.previousShutdownPromise;
+    if (previousShutdownPromise) {
+      yield* Effect.tryPromise(() => previousShutdownPromise);
+      importMetaHot.data.previousShutdownPromise = undefined;
+    }
+    yield* assertStartupPostgresReadyEffect();
     yield* Effect.try({
       try: () => readFiberLocatorConfig(),
       catch: (error) => (error instanceof Error ? error : new Error(String(error))),
@@ -179,6 +231,16 @@ function startServerEffect(): Effect.Effect<void, Error> {
         console.log(`[api] Effect issues: http://localhost:${info.port}/api/debug/effect/issues`);
       }
     );
+  });
+}
+
+registerProcessSignalHandlers();
+
+if (importMetaHot) {
+  importMetaHot.accept();
+  importMetaHot.dispose((data) => {
+    unregisterProcessSignalHandlers();
+    data.previousShutdownPromise = shutdown("HOT_RELOAD");
   });
 }
 

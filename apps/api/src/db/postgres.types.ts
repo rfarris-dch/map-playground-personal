@@ -1,8 +1,26 @@
-export interface PostgresConnectionState {
-  sqlClientPromise: Promise<BunSqlClient> | null;
+export interface BunSqlQuery<TValue> extends Promise<TValue> {
+  cancel(): BunSqlQuery<TValue>;
+  execute(): BunSqlQuery<TValue>;
 }
 
 export interface BunSqlClient {
-  close(): Promise<void>;
-  unsafe<T extends object>(query: string, params?: ReadonlyArray<number | string>): Promise<T[]>;
+  begin<TValue>(options: string, fn: (sql: BunSqlClient) => Promise<TValue>): Promise<TValue>;
+  close(options?: { readonly timeout?: number }): Promise<void>;
+  reserve(): Promise<BunReservedSqlClient>;
+  unsafe<TValue = unknown>(
+    query: string,
+    params?: ReadonlyArray<number | string>
+  ): BunSqlQuery<TValue>;
+  <TValue = unknown>(
+    strings: TemplateStringsArray,
+    ...values: readonly unknown[]
+  ): BunSqlQuery<TValue>;
+}
+
+export interface BunReservedSqlClient extends BunSqlClient {
+  release(): void;
+}
+
+export interface PostgresConnectionState {
+  sqlClientPromise: Promise<BunSqlClient> | null;
 }

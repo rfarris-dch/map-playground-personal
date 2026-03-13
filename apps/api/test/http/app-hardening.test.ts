@@ -123,6 +123,40 @@ describe("api hardening middleware", () => {
     expect(payload.error.code).toBe("INVALID_SELECTION_REQUEST");
   });
 
+  it("rejects oversized facilities selection AOIs before hitting the database", async () => {
+    const app = createApiApp();
+
+    const response = await app.request(ApiRoutes.facilitiesSelection, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [-101, 30],
+              [-97, 30],
+              [-97, 33],
+              [-101, 33],
+              [-101, 30],
+            ],
+          ],
+        },
+        limitPerPerspective: 10,
+        perspectives: ["colocation"],
+      }),
+    });
+    const payload = await response.json();
+
+    expect(response.status).toBe(422);
+    expect(payload.error.code).toBe("POLICY_REJECTED");
+    expect(payload.error.message).toBe(
+      "selection polygon AOI exceeds the facilities selection extent limit"
+    );
+  });
+
   it("allows longer timeouts for parcels lookup routes", async () => {
     const app = createApiApp({
       requestTimeoutMs: 1,

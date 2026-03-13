@@ -543,6 +543,279 @@ describe("flood sync status service", () => {
     expect(snapshot.run.progress?.tileBuild?.workDone).toBeGreaterThan(0);
   });
 
+  it("uses tippecanoe json progress lines for streamed flood builds", async () => {
+    const runningRunDir = join(snapshotRoot, "running-run");
+    mkdirSync(runningRunDir, { recursive: true });
+
+    const nowIso = new Date().toISOString();
+
+    writeJson(join(runningRunDir, "run-config.json"), {
+      createdAt: nowIso,
+      options: {
+        normalizeStrategy: "direct-postgres",
+      },
+      runId: "running-run",
+    });
+    writeJson(join(runningRunDir, "run-summary.json"), {
+      completedAt: nowIso,
+      featureCount: 4_505_932,
+      runId: "running-run",
+    });
+    writeJson(join(runningRunDir, "active-run.json"), {
+      isRunning: true,
+      phase: "building",
+      reason: "manual",
+      runId: "running-run",
+      startedAt: nowIso,
+      summary: "tiles:building",
+      updatedAt: nowIso,
+    });
+    writeJson(join(runningRunDir, "normalize-progress.json"), {
+      outputBytes: 0,
+      outputKind: "direct-postgres",
+      processedCount: 4_505_932,
+      updatedAt: nowIso,
+      writtenCount: 4_505_932,
+    });
+    writeJson(join(runningRunDir, "normalize-complete.json"), {
+      completedAt: nowIso,
+      phase: "normalizing",
+      runId: "running-run",
+      summary: "normalization-complete",
+    });
+    writeJson(join(runningRunDir, "load-complete.json"), {
+      completedAt: nowIso,
+      phase: "loading",
+      runId: "running-run",
+      summary: "database-load-complete",
+    });
+    writeFileSync(
+      join(runningRunDir, "runner.log"),
+      [
+        "[tiles] building environmental flood PMTiles",
+        "[tiles] dataset=environmental-flood layer=flood-hazard z=0-14 threads=7",
+        "[tiles] reduced-feature-count=1200",
+        '{"progress":34.2}',
+        '{"progress":68.4}',
+        '{"progress":71.0}',
+      ].join("\n"),
+      "utf8"
+    );
+
+    const snapshot = await getFloodSyncStatusSnapshot();
+
+    expect(snapshot.run.phase).toBe("building");
+    expect(snapshot.run.isRunning).toBe(true);
+    expect(snapshot.run.progress?.tileBuild?.percent).toBe(71);
+    expect(snapshot.run.progress?.tileBuild?.workDone).toBeGreaterThan(0);
+    expect(snapshot.run.progress?.tileBuild?.workTotal).toBe(1200);
+  });
+
+  it("uses reduced export row counts before tippecanoe progress is available", async () => {
+    const runningRunDir = join(snapshotRoot, "running-run");
+    mkdirSync(runningRunDir, { recursive: true });
+
+    const nowIso = new Date().toISOString();
+
+    writeJson(join(runningRunDir, "run-config.json"), {
+      createdAt: nowIso,
+      options: {
+        normalizeStrategy: "direct-postgres",
+      },
+      runId: "running-run",
+    });
+    writeJson(join(runningRunDir, "run-summary.json"), {
+      completedAt: nowIso,
+      featureCount: 4_505_932,
+      runId: "running-run",
+    });
+    writeJson(join(runningRunDir, "active-run.json"), {
+      isRunning: true,
+      phase: "building",
+      reason: "manual",
+      runId: "running-run",
+      startedAt: nowIso,
+      summary: "tiles:building",
+      updatedAt: nowIso,
+    });
+    writeJson(join(runningRunDir, "normalize-progress.json"), {
+      outputBytes: 0,
+      outputKind: "direct-postgres",
+      processedCount: 4_505_932,
+      updatedAt: nowIso,
+      writtenCount: 4_505_932,
+    });
+    writeJson(join(runningRunDir, "normalize-complete.json"), {
+      completedAt: nowIso,
+      phase: "normalizing",
+      runId: "running-run",
+      summary: "normalization-complete",
+    });
+    writeJson(join(runningRunDir, "load-complete.json"), {
+      completedAt: nowIso,
+      phase: "loading",
+      runId: "running-run",
+      summary: "database-load-complete",
+    });
+    writeFileSync(
+      join(runningRunDir, "runner.log"),
+      [
+        "[tiles] building environmental flood PMTiles",
+        "[tiles] dataset=environmental-flood layer=flood-hazard z=0-13 threads=7",
+        "[tiles] build-mode=reduced-overlay subdivide=255",
+        "[tiles] reduced-export-count=5000",
+        "[tiles] reduced-export-count=125000",
+      ].join("\n"),
+      "utf8"
+    );
+
+    const snapshot = await getFloodSyncStatusSnapshot();
+
+    expect(snapshot.run.phase).toBe("building");
+    expect(snapshot.run.progress?.tileBuild?.workDone).toBe(125_000);
+    expect(snapshot.run.progress?.tileBuild?.workTotal).toBeNull();
+    expect(snapshot.run.summary).toContain("phase=reduced-export");
+  });
+
+  it("treats live reduced export copy progress as open-ended until reduced totals are known", async () => {
+    const runningRunDir = join(snapshotRoot, "running-run");
+    mkdirSync(runningRunDir, { recursive: true });
+
+    const nowIso = new Date().toISOString();
+
+    writeJson(join(runningRunDir, "run-config.json"), {
+      createdAt: nowIso,
+      options: {
+        normalizeStrategy: "direct-postgres",
+      },
+      runId: "running-run",
+    });
+    writeJson(join(runningRunDir, "run-summary.json"), {
+      completedAt: nowIso,
+      featureCount: 4_505_932,
+      runId: "running-run",
+    });
+    writeJson(join(runningRunDir, "active-run.json"), {
+      isRunning: true,
+      phase: "building",
+      reason: "manual",
+      runId: "running-run",
+      startedAt: nowIso,
+      summary: "tiles:building",
+      updatedAt: nowIso,
+    });
+    writeJson(join(runningRunDir, "normalize-progress.json"), {
+      outputBytes: 0,
+      outputKind: "direct-postgres",
+      processedCount: 4_505_932,
+      updatedAt: nowIso,
+      writtenCount: 4_505_932,
+    });
+    writeJson(join(runningRunDir, "normalize-complete.json"), {
+      completedAt: nowIso,
+      phase: "normalizing",
+      runId: "running-run",
+      summary: "normalization-complete",
+    });
+    writeJson(join(runningRunDir, "load-complete.json"), {
+      completedAt: nowIso,
+      phase: "loading",
+      runId: "running-run",
+      summary: "database-load-complete",
+    });
+
+    runQueryMock.mockImplementation((queryText: string) => {
+      if (
+        queryText.includes("pg_stat_progress_copy") &&
+        queryText.includes("activity.query ILIKE $1")
+      ) {
+        return Promise.resolve([
+          {
+            bytes_processed: 277_493_885,
+            bytes_total: 0,
+            elapsed_seconds: 490,
+            pid: 1753,
+            tuples_processed: 64_029,
+          },
+        ]);
+      }
+
+      return Promise.resolve([]);
+    });
+
+    const snapshot = await getFloodSyncStatusSnapshot();
+
+    expect(snapshot.run.phase).toBe("building");
+    expect(snapshot.run.progress?.tileBuild?.workDone).toBe(64_029);
+    expect(snapshot.run.progress?.tileBuild?.workTotal).toBeNull();
+    expect(snapshot.run.progress?.tileBuild?.percent).toBeNull();
+    expect(snapshot.run.summary).toContain("phase=reduced-export");
+  });
+
+  it("prefers fresh flood build log activity over a stale failed marker", async () => {
+    const runningRunDir = join(snapshotRoot, "running-run");
+    mkdirSync(runningRunDir, { recursive: true });
+
+    const nowIso = new Date().toISOString();
+
+    writeJson(join(runningRunDir, "run-config.json"), {
+      createdAt: nowIso,
+      options: {
+        normalizeStrategy: "direct-postgres",
+      },
+      runId: "running-run",
+    });
+    writeJson(join(runningRunDir, "run-summary.json"), {
+      completedAt: nowIso,
+      featureCount: 4_505_932,
+      runId: "running-run",
+    });
+    writeJson(join(runningRunDir, "active-run.json"), {
+      isRunning: true,
+      phase: "failed",
+      reason: "manual",
+      runId: "running-run",
+      startedAt: "2026-03-11T16:05:20Z",
+      summary: "tiles:building",
+      updatedAt: "2026-03-12T09:00:00Z",
+    });
+    writeJson(join(runningRunDir, "normalize-progress.json"), {
+      outputBytes: 0,
+      outputKind: "direct-postgres",
+      processedCount: 4_505_932,
+      updatedAt: nowIso,
+      writtenCount: 4_505_932,
+    });
+    writeJson(join(runningRunDir, "normalize-complete.json"), {
+      completedAt: nowIso,
+      phase: "normalizing",
+      runId: "running-run",
+      summary: "normalization-complete",
+    });
+    writeJson(join(runningRunDir, "load-complete.json"), {
+      completedAt: nowIso,
+      phase: "loading",
+      runId: "running-run",
+      summary: "database-load-complete",
+    });
+    writeFileSync(
+      join(runningRunDir, "runner.log"),
+      [
+        "[tiles] building environmental flood PMTiles",
+        "[tiles] dataset=environmental-flood layer=flood-hazard z=0-14 threads=7",
+        '{"progress":12.5}',
+      ].join("\n"),
+      "utf8"
+    );
+
+    const snapshot = await getFloodSyncStatusSnapshot();
+
+    expect(snapshot.run.phase).toBe("building");
+    expect(snapshot.run.isRunning).toBe(true);
+    expect(snapshot.run.exitCode).toBeNull();
+    expect(snapshot.run.progress?.tileBuild?.percent).toBe(12.5);
+  });
+
   it("surfaces a newer stale active run without overwriting the latest completed pointer", async () => {
     const staleRunDir = join(snapshotRoot, "stale-run");
     const completedRunDir = join(snapshotRoot, "completed-run");
@@ -728,6 +1001,76 @@ describe("flood sync status service", () => {
     expect(snapshot.run.phase).toBe("failed");
     expect(snapshot.run.isRunning).toBe(false);
     expect(snapshot.run.summary).toContain("normalize integrity error");
+    expect(snapshot.latestRunId).toBe("completed-run");
+  });
+
+  it("ignores malformed per-run snapshot json files during status reads", async () => {
+    const completedRunDir = join(snapshotRoot, "completed-run");
+    mkdirSync(completedRunDir, { recursive: true });
+
+    writeJson(join(completedRunDir, "run-config.json"), {
+      createdAt: "2026-03-10T11:00:00Z",
+      runId: "completed-run",
+    });
+    writeJson(join(completedRunDir, "run-summary.json"), {
+      completedAt: "2026-03-10T11:30:00Z",
+      featureCount: 42,
+      runId: "completed-run",
+    });
+    writeJson(join(completedRunDir, "publish-complete.json"), {
+      completedAt: "2026-03-10T11:30:00Z",
+      phase: "publishing",
+      runId: "completed-run",
+      summary: "manifest-published",
+    });
+    writeJson(join(snapshotRoot, "latest.json"), {
+      completedAt: "2026-03-10T11:30:00Z",
+      dataset: "environmental-flood",
+      runDir: completedRunDir,
+      runId: "completed-run",
+    });
+    writeFileSync(join(completedRunDir, "load-progress.json"), "{invalid", "utf8");
+
+    const snapshot = await getFloodSyncStatusSnapshot();
+
+    expect(snapshot.status).toBe("ok");
+    expect(snapshot.run.runId).toBe("completed-run");
+    expect(snapshot.latestRunId).toBe("completed-run");
+  });
+
+  it("degrades when flood copy progress queries fail", async () => {
+    const completedRunDir = join(snapshotRoot, "completed-run");
+    mkdirSync(completedRunDir, { recursive: true });
+
+    runQueryMock.mockRejectedValueOnce(new Error("pg_stat_progress_copy unavailable"));
+
+    writeJson(join(completedRunDir, "run-config.json"), {
+      createdAt: "2026-03-10T11:00:00Z",
+      runId: "completed-run",
+    });
+    writeJson(join(completedRunDir, "run-summary.json"), {
+      completedAt: "2026-03-10T11:30:00Z",
+      featureCount: 42,
+      runId: "completed-run",
+    });
+    writeJson(join(completedRunDir, "publish-complete.json"), {
+      completedAt: "2026-03-10T11:30:00Z",
+      phase: "publishing",
+      runId: "completed-run",
+      summary: "manifest-published",
+    });
+    writeJson(join(snapshotRoot, "latest.json"), {
+      completedAt: "2026-03-10T11:30:00Z",
+      dataset: "environmental-flood",
+      runDir: completedRunDir,
+      runId: "completed-run",
+    });
+
+    const snapshot = await getFloodSyncStatusSnapshot();
+
+    expect(snapshot.status).toBe("ok");
+    expect(snapshot.run.runId).toBe("completed-run");
+    expect(snapshot.run.phase).toBe("completed");
     expect(snapshot.latestRunId).toBe("completed-run");
   });
 });

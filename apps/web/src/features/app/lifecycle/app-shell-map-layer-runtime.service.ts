@@ -39,10 +39,16 @@ export function initializeMapLayerRuntime(options: UseAppShellMapLifecycleOption
   initializeParcelsRuntime(options);
   initializeFloodRuntime(options);
   initializeHydroBasinsRuntime(options);
-  options.fiber.initialize(currentMap);
+  initializeMeasureRuntime(options);
+
+  try {
+    options.fiber.initialize(currentMap);
+  } catch (error: unknown) {
+    console.error("Fiber runtime initialization failed", error);
+  }
+
   initializePowerRuntime(options);
   initializeWaterRuntime(options);
-  initializeMeasureRuntime(options);
   options.layers.environmentalStressController.value =
     initializeEnvironmentalStressRuntime(options);
 }

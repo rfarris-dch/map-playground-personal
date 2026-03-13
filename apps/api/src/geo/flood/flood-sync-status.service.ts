@@ -173,8 +173,11 @@ const FLOOD_BUILD_LOG_MAX_BYTES = 1_048_576;
 const FLOOD_BUILD_START_MARKER = "[tiles] building environmental flood PMTiles";
 const FLOOD_ACTIVE_RANGE_PATTERN =
   /stage\.ogr_fid\s*>=\s*([0-9]+)\s+AND\s+stage\.ogr_fid\s*<=\s*([0-9]+)/i;
-const FLOOD_BUILD_EXPORT_COPY_FILTER = "%FROM environmental_current.flood_hazard%";
-const FLOOD_BUILD_EXPORT_JSON_FILTER = "%ST_AsGeoJSON%";
+const FLOOD_BUILD_EXPORT_SOURCE_FILTER = "%FROM environmental_current.flood_hazard AS flood%";
+const FLOOD_BUILD_EXPORT_CTE_FILTER = "%WITH flood_overlay_source AS (%";
+const FLOOD_BUILD_JSON_PROGRESS_PATTERN = /{"progress":\s*([0-9]+(?:\.[0-9]+)?)\s*}/g;
+const FLOOD_BUILD_REDUCED_EXPORT_COUNT_PATTERN = /\breduced-export-count=([0-9]+)\b/g;
+const FLOOD_BUILD_REDUCED_FEATURE_COUNT_PATTERN = /\breduced-feature-count=([0-9]+)\b/g;
 const FLOOD_BUILD_READ_FEATURES_PATTERN = /Read\s+([0-9]+(?:\.[0-9]+)?)\s+million features/g;
 const FLOOD_BUILD_REORDER_PERCENT_PATTERN = /Reordering geometry:\s*([0-9]+(?:\.[0-9]+)?)%/g;
 const FLOOD_BUILD_WRITE_PERCENT_PATTERN = /(^|[\r\n])\s*([0-9]+(?:\.[0-9]+)?)%\s+\d+\/\d+\/\d+\s*/g;
@@ -200,13 +203,17 @@ function readJsonFile(path: string): Record<string, unknown> | null {
     return null;
   }
 
-  const raw = readFileSync(path, "utf8");
-  if (raw.trim().length === 0) {
+  try {
+    const raw = readFileSync(path, "utf8");
+    if (raw.trim().length === 0) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw);
+    return isRecord(parsed) ? parsed : null;
+  } catch {
     return null;
   }
-
-  const parsed = JSON.parse(raw);
-  return isRecord(parsed) ? parsed : null;
 }
 
 function readFileTail(
@@ -557,7 +564,7 @@ async function queryFloodCopyProgress(): Promise<FloodCopyProgress | null> {
       LIMIT 1;
     `,
     []
-  );
+  ).catch(() => []);
 
   const progressRow = progressRows[0];
   if (typeof progressRow === "undefined") {
@@ -659,10 +666,10 @@ async function queryFloodBuildExportProgress(): Promise<FloodBuildExportProgress
       WHERE progress.command = 'COPY TO'
         AND activity.query ILIKE $1
         AND activity.query ILIKE $2
-      ORDER BY COALESCE(progress.tuples_processed, 0) DESC, activity.query_start ASC
+      ORDER BY activity.query_start DESC, progress.pid DESC
       LIMIT 1;
     `,
-    [FLOOD_BUILD_EXPORT_COPY_FILTER, FLOOD_BUILD_EXPORT_JSON_FILTER]
+    [FLOOD_BUILD_EXPORT_SOURCE_FILTER, FLOOD_BUILD_EXPORT_CTE_FILTER]
   ).catch(() => []);
 
   const row = rows[0];
@@ -752,8 +759,67 @@ function buildFloodBuildTelemetryFromExport(
   featureCount: number | null,
   exportProgress: FloodBuildExportProgress
 ): FloodBuildTelemetry {
-  const workTotal = featureCount;
+  const hasUnknownExportTotal = (readNullableInteger(exportProgress.bytesTotal) ?? 0) === 0;
+  const workTotal = hasUnknownExportTotal ? null : featureCount;
   const workDone = clampCount(exportProgress.tuplesProcessed, workTotal);
+  const workLeft =
+    typeof workDone === "number" && typeof workTotal === "number"
+      ? Math.max(0, workTotal - workDone)
+      : null;
+  const stagePercent =
+    typeof workDone === "number" && typeof workTotal === "number" && workTotal > 0
+      ? (workDone / workTotal) * 100
+      : null;
+  let sourceLabel = "export";
+  if (hasUnknownExportTotal) {
+    sourceLabel = "reduced-export";
+  } else if (typeof exportProgress.elapsedSeconds === "number") {
+    sourceLabel = `export ${String(exportProgress.elapsedSeconds)}s`;
+  }
+
+  return {
+    stage: "build",
+    percent: hasUnknownExportTotal ? null : buildWeightedPercent("export", stagePercent),
+    logBytes: exportProgress.bytesProcessed ?? exportProgress.bytesTotal,
+    workDone,
+    workLeft,
+    workTotal,
+    sourceLabel,
+  };
+}
+
+function buildFloodTelemetryFromOverallPercent(
+  workTotal: number | null,
+  logBytes: number,
+  phaseLabel: string,
+  overallPercent: number | null
+): FloodBuildTelemetry {
+  const workDone =
+    typeof workTotal === "number" && overallPercent !== null
+      ? Math.round((workTotal * overallPercent) / 100)
+      : null;
+  const workLeft =
+    typeof workDone === "number" && typeof workTotal === "number"
+      ? Math.max(0, workTotal - workDone)
+      : null;
+
+  return {
+    stage: "build",
+    percent: overallPercent,
+    logBytes,
+    workDone,
+    workLeft,
+    workTotal,
+    sourceLabel: phaseLabel,
+  };
+}
+
+function buildFloodTelemetryFromReadCount(
+  workTotal: number | null,
+  logBytes: number,
+  readFeatures: number
+): FloodBuildTelemetry {
+  const workDone = clampCount(readFeatures, workTotal);
   const workLeft =
     typeof workDone === "number" && typeof workTotal === "number"
       ? Math.max(0, workTotal - workDone)
@@ -765,67 +831,33 @@ function buildFloodBuildTelemetryFromExport(
 
   return {
     stage: "build",
-    percent: buildWeightedPercent("export", stagePercent),
-    logBytes: exportProgress.bytesProcessed ?? exportProgress.bytesTotal,
-    workDone,
-    workLeft,
-    workTotal,
-    sourceLabel:
-      typeof exportProgress.elapsedSeconds === "number"
-        ? `export ${String(exportProgress.elapsedSeconds)}s`
-        : "export",
-  };
-}
-
-function buildFloodTelemetryFromOverallPercent(
-  featureCount: number | null,
-  logBytes: number,
-  phaseLabel: string,
-  overallPercent: number | null
-): FloodBuildTelemetry {
-  const workDone =
-    typeof featureCount === "number" && overallPercent !== null
-      ? Math.round((featureCount * overallPercent) / 100)
-      : null;
-  const workLeft =
-    typeof workDone === "number" && typeof featureCount === "number"
-      ? Math.max(0, featureCount - workDone)
-      : null;
-
-  return {
-    stage: "build",
-    percent: overallPercent,
-    logBytes,
-    workDone,
-    workLeft,
-    workTotal: featureCount,
-    sourceLabel: phaseLabel,
-  };
-}
-
-function buildFloodTelemetryFromReadCount(
-  featureCount: number | null,
-  logBytes: number,
-  readFeatures: number
-): FloodBuildTelemetry {
-  const workDone = clampCount(readFeatures, featureCount);
-  const workLeft =
-    typeof workDone === "number" && typeof featureCount === "number"
-      ? Math.max(0, featureCount - workDone)
-      : null;
-  const stagePercent =
-    typeof workDone === "number" && typeof featureCount === "number" && featureCount > 0
-      ? (workDone / featureCount) * 100
-      : null;
-
-  return {
-    stage: "build",
     percent: buildWeightedPercent("read", stagePercent),
     logBytes,
     workDone,
     workLeft,
-    workTotal: featureCount,
+    workTotal,
     sourceLabel: "read",
+  };
+}
+
+function buildFloodTelemetryFromReducedExportCount(
+  workDone: number,
+  workTotal: number | null,
+  logBytes: number
+): FloodBuildTelemetry {
+  const clampedWorkDone = clampCount(workDone, workTotal) ?? workDone;
+  const workLeft = typeof workTotal === "number" ? Math.max(0, workTotal - clampedWorkDone) : null;
+  const percent =
+    typeof workTotal === "number" && workTotal > 0 ? (clampedWorkDone / workTotal) * 100 : null;
+
+  return {
+    stage: "build",
+    percent,
+    logBytes,
+    workDone: clampedWorkDone,
+    workLeft,
+    workTotal,
+    sourceLabel: "reduced-export",
   };
 }
 
@@ -848,6 +880,15 @@ function parseFloodBuildTelemetryFromLog(
   const buildText =
     latestBuildStartIndex >= 0 ? normalizedText.slice(latestBuildStartIndex) : normalizedText;
 
+  const jsonProgressText = extractLatestProgressMatch(FLOOD_BUILD_JSON_PROGRESS_PATTERN, buildText);
+  const reducedExportCountText = extractLatestProgressMatch(
+    FLOOD_BUILD_REDUCED_EXPORT_COUNT_PATTERN,
+    buildText
+  );
+  const reducedFeatureCountText = extractLatestProgressMatch(
+    FLOOD_BUILD_REDUCED_FEATURE_COUNT_PATTERN,
+    buildText
+  );
   const writePercentText = extractLatestProgressMatch(FLOOD_BUILD_WRITE_PERCENT_PATTERN, buildText);
   const reorderPercentText = extractLatestProgressMatch(
     FLOOD_BUILD_REORDER_PERCENT_PATTERN,
@@ -855,11 +896,30 @@ function parseFloodBuildTelemetryFromLog(
   );
   const readFeaturesText = extractLatestProgressMatch(FLOOD_BUILD_READ_FEATURES_PATTERN, buildText);
 
+  const reducedFeatureCount =
+    typeof reducedFeatureCountText === "string"
+      ? readNullableInteger(reducedFeatureCountText)
+      : null;
+  const reducedExportCount =
+    typeof reducedExportCountText === "string" ? readNullableInteger(reducedExportCountText) : null;
+  const buildWorkTotal = reducedFeatureCount ?? featureCount;
+
+  const jsonProgress =
+    typeof jsonProgressText === "string" ? Number.parseFloat(jsonProgressText) : Number.NaN;
+  if (Number.isFinite(jsonProgress)) {
+    return buildFloodTelemetryFromOverallPercent(
+      buildWorkTotal,
+      logTail.size,
+      "json",
+      jsonProgress
+    );
+  }
+
   const writePercent =
     typeof writePercentText === "string" ? Number.parseFloat(writePercentText) : Number.NaN;
   if (Number.isFinite(writePercent)) {
     return buildFloodTelemetryFromOverallPercent(
-      featureCount,
+      buildWorkTotal,
       logTail.size,
       "write",
       buildWeightedPercent("write", writePercent)
@@ -870,7 +930,7 @@ function parseFloodBuildTelemetryFromLog(
     typeof reorderPercentText === "string" ? Number.parseFloat(reorderPercentText) : Number.NaN;
   if (Number.isFinite(reorderPercent)) {
     return buildFloodTelemetryFromOverallPercent(
-      featureCount,
+      buildWorkTotal,
       logTail.size,
       "reorder",
       buildWeightedPercent("reorder", reorderPercent)
@@ -882,7 +942,15 @@ function parseFloodBuildTelemetryFromLog(
       ? Math.round(Number.parseFloat(readFeaturesText) * 1_000_000)
       : Number.NaN;
   if (Number.isFinite(readFeatures)) {
-    return buildFloodTelemetryFromReadCount(featureCount, logTail.size, readFeatures);
+    return buildFloodTelemetryFromReadCount(buildWorkTotal, logTail.size, readFeatures);
+  }
+
+  if (typeof reducedExportCount === "number" && reducedExportCount >= 0) {
+    return buildFloodTelemetryFromReducedExportCount(
+      reducedExportCount,
+      reducedFeatureCount,
+      logTail.size
+    );
   }
 
   return logTail.size > 0
@@ -892,10 +960,32 @@ function parseFloodBuildTelemetryFromLog(
         logBytes: logTail.size,
         workDone: null,
         workLeft: null,
-        workTotal: featureCount,
+        workTotal: buildWorkTotal,
         sourceLabel: "build",
       }
     : null;
+}
+
+function hasFreshFloodBuildLogActivity(
+  artifacts: EnvironmentalRunArtifacts | null,
+  nowMs = Date.now()
+): boolean {
+  const runDir = readNullableString(artifacts?.runDir);
+  if (runDir === null) {
+    return false;
+  }
+
+  const logPath = join(runDir, "runner.log");
+  if (!existsSync(logPath)) {
+    return false;
+  }
+
+  const modifiedAtMs = statSync(logPath).mtimeMs;
+  if (!Number.isFinite(modifiedAtMs)) {
+    return false;
+  }
+
+  return Math.max(0, nowMs - modifiedAtMs) <= FLOOD_ACTIVE_RUN_STALE_MS;
 }
 
 function resolveFloodTileBuildTelemetry(
@@ -1227,7 +1317,9 @@ function resolveEffectiveFloodArtifacts(
 function resolveFloodPhase(
   artifacts: EnvironmentalRunArtifacts | null,
   copyProgress: FloodCopyProgress | null,
-  materializeProgress: FloodMaterializeProgress | null
+  materializeProgress: FloodMaterializeProgress | null,
+  buildExportProgress: FloodBuildExportProgress | null,
+  buildLogTelemetry: FloodBuildTelemetry | null
 ): ParcelsSyncStatusResponse["run"]["phase"] {
   if (readNullableString(artifacts?.normalizeArtifactHealth?.mismatchReason) !== null) {
     return "failed";
@@ -1235,6 +1327,14 @@ function resolveFloodPhase(
 
   if (copyProgress !== null || materializeProgress !== null) {
     return "loading";
+  }
+
+  if (buildExportProgress !== null) {
+    return "building";
+  }
+
+  if (buildLogTelemetry !== null && hasFreshFloodBuildLogActivity(artifacts)) {
+    return "building";
   }
 
   const activePhase = readNullablePhase(artifacts?.activeRun?.phase);
@@ -1774,9 +1874,16 @@ export async function getFloodSyncStatusSnapshot(): Promise<ParcelsSyncStatusRes
   const artifacts = selectCurrentRunArtifacts(snapshotRoot);
   const copyProgress = await queryFloodCopyProgress();
   const materializeProgress = copyProgress === null ? await queryFloodMaterializeProgress() : null;
-  const phase = resolveFloodPhase(artifacts, copyProgress, materializeProgress);
   const featureCount = resolveFloodFeatureCount(artifacts);
-  const buildExportProgress = phase === "building" ? await queryFloodBuildExportProgress() : null;
+  const buildExportProgress = await queryFloodBuildExportProgress();
+  const buildLogTelemetry = parseFloodBuildTelemetryFromLog(artifacts, featureCount);
+  const phase = resolveFloodPhase(
+    artifacts,
+    copyProgress,
+    materializeProgress,
+    buildExportProgress,
+    buildLogTelemetry
+  );
   const buildTelemetry = resolveFloodTileBuildTelemetry(
     phase,
     artifacts,
@@ -1795,6 +1902,7 @@ export async function getFloodSyncStatusSnapshot(): Promise<ParcelsSyncStatusRes
     (copyProgress !== null ||
       materializeProgress !== null ||
       buildExportProgress !== null ||
+      (buildLogTelemetry !== null && hasFreshFloodBuildLogActivity(artifacts)) ||
       isFreshRunningActiveRun(artifacts));
   const states = buildFloodStates(artifacts, copyProgress, materializeProgress, buildTelemetry);
   const statesCompleted = states.reduce((count, stateRow) => {

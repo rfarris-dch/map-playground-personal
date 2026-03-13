@@ -3,12 +3,14 @@ import {
   type MarketSelectionResponse,
   type MarketSortBy,
   MarketSortBySchema,
+  type MarketsSelectionRequest,
   MarketsSelectionRequestSchema,
   MarketsSelectionResponseSchema,
   type MarketsTableResponse,
   MarketsTableResponseSchema,
   type SortDirection,
   SortDirectionSchema,
+  type Warning,
 } from "@map-migration/contracts";
 import type { Context, Env, Hono } from "hono";
 import { queryMarketsTable } from "@/geo/markets/markets-query.service";
@@ -22,6 +24,10 @@ import { jsonOk, toDebugDetails } from "@/http/api-response";
 import { fromApiRequest, routeError, runEffectRoute } from "@/http/effect-route";
 import { readJsonBody } from "@/http/json-request.service";
 import { resolvePaginationParams, totalPages } from "@/http/pagination-params.service";
+import {
+  buildPolygonRepairWarning,
+  normalizePolygonGeometryGeoJson,
+} from "@/http/polygon-normalization.service";
 
 function resolveMarketSortBy(value: string | undefined): MarketSortBy | null {
   if (typeof value === "undefined") {
@@ -103,6 +109,94 @@ function buildMarketsTableRouteError(error: unknown, reason: "mapping_failed" | 
   });
 }
 
+async function readMarketsSelectionRequest(c: Context, requestId: string) {
+  const bodyResult = await readJsonBody(c, {
+    requestId,
+    invalidJsonMessage: "invalid JSON body",
+  });
+  if (!bodyResult.ok) {
+    return bodyResult;
+  }
+
+  const parsedRequest = MarketsSelectionRequestSchema.safeParse(bodyResult.value);
+  if (!parsedRequest.success) {
+    throw routeError({
+      httpStatus: 400,
+      code: "INVALID_MARKET_SELECTION_REQUEST",
+      message: "invalid market selection request payload",
+      details: toDebugDetails(parsedRequest.error),
+    });
+  }
+
+  return {
+    ok: true as const,
+    value: parsedRequest.data,
+  };
+}
+
+async function normalizeMarketSelectionGeometry(
+  geometry: MarketsSelectionRequest["geometry"]
+): Promise<{
+  readonly geometryText: string;
+  readonly warnings: readonly Warning[];
+}> {
+  const geometryWarnings: Warning[] = [];
+  const normalizedGeometry = await normalizePolygonGeometryGeoJson(JSON.stringify(geometry));
+
+  if (normalizedGeometry.wasRepaired) {
+    geometryWarnings.push(
+      buildPolygonRepairWarning("market selection", normalizedGeometry.invalidReason)
+    );
+  }
+
+  return {
+    geometryText: normalizedGeometry.geometryText,
+    warnings: geometryWarnings,
+  };
+}
+
+function throwMarketsSelectionRouteError(
+  result: Exclude<Awaited<ReturnType<typeof queryMarketsBySelection>>, { readonly ok: true }>
+): never {
+  if (result.value.reason === "boundary_source_unavailable") {
+    throw buildMarketsBoundarySourceUnavailableRouteError(result.value.error);
+  }
+
+  throw result.value.reason === "query_failed"
+    ? buildMarketsSelectionQueryRouteError(result.value.error)
+    : buildMarketsSelectionMappingRouteError(result.value.error);
+}
+
+function buildMarketsSelectionPayload(args: {
+  readonly geometryWarnings: readonly Warning[];
+  readonly requestId: string;
+  readonly request: MarketsSelectionRequest;
+  readonly result: Extract<
+    Awaited<ReturnType<typeof queryMarketsBySelection>>,
+    { readonly ok: true }
+  >;
+}): MarketSelectionResponse {
+  return {
+    matchedMarkets: [...args.result.value.matchedMarkets],
+    meta: {
+      requestId: args.requestId,
+      sourceMode: "postgis",
+      dataVersion: "dev",
+      generatedAt: new Date().toISOString(),
+      recordCount: args.result.value.matchedMarkets.length,
+      truncated: args.result.value.truncated,
+      warnings: [...args.geometryWarnings, ...args.result.value.warnings],
+    },
+    primaryMarket: args.result.value.primaryMarket,
+    selection: {
+      matchCount: args.result.value.matchedMarkets.length,
+      minimumSelectionOverlapPercent: args.request.minimumSelectionOverlapPercent,
+      primaryMarketId: args.result.value.primaryMarket?.marketId ?? null,
+      selectionAreaSqKm: args.result.value.selectionAreaSqKm,
+    },
+  };
+}
+
 export function registerMarketsRoute<E extends Env>(app: Hono<E>): void {
   app.get(ApiRoutes.markets, (c) =>
     runEffectRoute(
@@ -140,59 +234,40 @@ export function registerMarketsRoute<E extends Env>(app: Hono<E>): void {
     runEffectRoute(
       c,
       fromApiRequest(async ({ honoContext, requestId }) => {
-        const bodyResult = await readJsonBody(honoContext, {
-          requestId,
-          invalidJsonMessage: "invalid JSON body",
-        });
-        if (!bodyResult.ok) {
-          return bodyResult.response;
+        const requestResult = await readMarketsSelectionRequest(honoContext, requestId);
+        if (!requestResult.ok) {
+          return requestResult.response;
         }
 
-        const parsedRequest = MarketsSelectionRequestSchema.safeParse(bodyResult.value);
-        if (!parsedRequest.success) {
+        const normalizedSelection = await normalizeMarketSelectionGeometry(
+          requestResult.value.geometry
+        ).catch((error: unknown) => {
           throw routeError({
-            httpStatus: 400,
-            code: "INVALID_MARKET_SELECTION_REQUEST",
-            message: "invalid market selection request payload",
-            details: toDebugDetails(parsedRequest.error),
+            httpStatus: 422,
+            code: "POLICY_REJECTED",
+            message:
+              error instanceof Error
+                ? `market selection polygon is invalid after repair: ${error.message}`
+                : "market selection polygon is invalid after repair",
           });
-        }
+        });
 
         const selectionResult = await queryMarketsBySelection({
-          geometryGeoJson: JSON.stringify(parsedRequest.data.geometry),
-          limit: parsedRequest.data.limit,
-          minimumSelectionOverlapPercent: parsedRequest.data.minimumSelectionOverlapPercent,
+          geometryGeoJson: normalizedSelection.geometryText,
+          limit: requestResult.value.limit,
+          minimumSelectionOverlapPercent: requestResult.value.minimumSelectionOverlapPercent,
         });
 
         if (!selectionResult.ok) {
-          if (selectionResult.value.reason === "boundary_source_unavailable") {
-            throw buildMarketsBoundarySourceUnavailableRouteError(selectionResult.value.error);
-          }
-
-          throw selectionResult.value.reason === "query_failed"
-            ? buildMarketsSelectionQueryRouteError(selectionResult.value.error)
-            : buildMarketsSelectionMappingRouteError(selectionResult.value.error);
+          throwMarketsSelectionRouteError(selectionResult);
         }
 
-        const payload: MarketSelectionResponse = {
-          matchedMarkets: [...selectionResult.value.matchedMarkets],
-          meta: {
-            requestId,
-            sourceMode: "postgis",
-            dataVersion: "dev",
-            generatedAt: new Date().toISOString(),
-            recordCount: selectionResult.value.matchedMarkets.length,
-            truncated: false,
-            warnings: [],
-          },
-          primaryMarket: selectionResult.value.primaryMarket,
-          selection: {
-            matchCount: selectionResult.value.matchedMarkets.length,
-            minimumSelectionOverlapPercent: parsedRequest.data.minimumSelectionOverlapPercent,
-            primaryMarketId: selectionResult.value.primaryMarket?.marketId ?? null,
-            selectionAreaSqKm: selectionResult.value.selectionAreaSqKm,
-          },
-        };
+        const payload = buildMarketsSelectionPayload({
+          geometryWarnings: normalizedSelection.warnings,
+          requestId,
+          request: requestResult.value,
+          result: selectionResult,
+        });
 
         return jsonOk(honoContext, MarketsSelectionResponseSchema, payload, requestId);
       })

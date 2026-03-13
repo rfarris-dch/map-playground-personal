@@ -1,3 +1,4 @@
+import { equalAreaSqKmSql } from "@/db/postgis-analysis-sql.service";
 import { runQuery } from "@/db/postgres";
 import type {
   AnalysisSummaryAreaRow,
@@ -17,16 +18,23 @@ export function listIntersectedCountyIds(
 WITH selection AS (
   SELECT
     ST_SetSRID(ST_GeomFromGeoJSON($1), 4326) AS geom_4326,
-    ST_Area(ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON($1), 4326), 3857)) / 1000000.0
-      AS selection_area_sq_km
+    ST_Envelope(ST_SetSRID(ST_GeomFromGeoJSON($1), 4326)) AS bbox_4326,
+    ${equalAreaSqKmSql("ST_SetSRID(ST_GeomFromGeoJSON($1), 4326)")} AS selection_area_sq_km
+),
+intersections AS (
+  SELECT county.county_fips::text AS county_fips
+  FROM serve.boundary_county_geom_lod1 AS county
+  CROSS JOIN selection
+  WHERE county.geom && selection.bbox_4326
+    AND ST_Intersects(county.geom, selection.geom_4326)
 )
 SELECT
-  county.county_fips::text AS county_fips,
+  intersections.county_fips,
   selection.selection_area_sq_km
-FROM serve.boundary_county_geom_lod1 AS county
-CROSS JOIN selection
-WHERE ST_Intersects(county.geom, selection.geom_4326)
-ORDER BY county.county_fips ASC;
+FROM selection
+LEFT JOIN intersections
+  ON TRUE
+ORDER BY intersections.county_fips ASC NULLS LAST;
 `,
     [geometryGeoJson]
   );

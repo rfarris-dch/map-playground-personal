@@ -1,14 +1,49 @@
-import type { BunSqlClient } from "./postgres.types";
+import { parsePositiveIntFlag } from "@/config/env-parsing.service";
+import { readApiRequestContextStorage } from "@/http/api-request-context-storage.service";
+import type { BunReservedSqlClient, BunSqlClient } from "./postgres.types";
 
 declare const Bun: {
-  sql: {
-    close(): Promise<void>;
-    unsafe<T extends object>(query: string, params?: ReadonlyArray<number | string>): Promise<T[]>;
-  };
+  sql: BunSqlClient;
 };
 
 const CONNECTION_CLOSED_RE = /connection closed/i;
 const POSTGRES_READY_QUERY = "select 1 as db_ready";
+const DEFAULT_DB_STATEMENT_TIMEOUT_MS = parsePositiveIntFlag(
+  process.env.API_DB_STATEMENT_TIMEOUT_MS,
+  180_000
+);
+const DEFAULT_DB_LOCK_TIMEOUT_MS = parsePositiveIntFlag(process.env.API_DB_LOCK_TIMEOUT_MS, 5000);
+
+export interface RunQueryOptions {
+  readonly lockTimeoutMs?: number;
+  readonly signal?: AbortSignal;
+  readonly statementTimeoutMs?: number;
+}
+
+interface ResolvedRunQueryOptions {
+  readonly lockTimeoutMs: number;
+  readonly signal: AbortSignal | null;
+  readonly statementTimeoutMs: number;
+}
+
+function noop(): void {
+  // Intentionally empty.
+}
+
+function sanitizeTimeoutMs(value: number, fallback: number): number {
+  if (!Number.isFinite(value) || value <= 0) {
+    return fallback;
+  }
+
+  return Math.floor(value);
+}
+
+function renderSetLocalTimeoutSql(
+  settingName: "lock_timeout" | "statement_timeout",
+  value: number
+): string {
+  return `SET LOCAL ${settingName} = ${String(sanitizeTimeoutMs(value, settingName === "lock_timeout" ? DEFAULT_DB_LOCK_TIMEOUT_MS : DEFAULT_DB_STATEMENT_TIMEOUT_MS))}`;
+}
 
 function getConnectionString(): string {
   const connectionString = process.env.DATABASE_URL ?? process.env.POSTGRES_URL;
@@ -26,7 +61,7 @@ function getSqlClient(): BunSqlClient {
   return Bun.sql;
 }
 
-function isConnectionClosedError(error: unknown): boolean {
+export function isConnectionClosedError(error: unknown): boolean {
   if (error instanceof Error) {
     return CONNECTION_CLOSED_RE.test(error.message);
   }
@@ -42,38 +77,113 @@ function isConnectionClosedError(error: unknown): boolean {
 function runQueryWithClient<T extends object>(
   sqlClient: BunSqlClient,
   text: string,
-  values: ReadonlyArray<number | string>
+  values: ReadonlyArray<number | string>,
+  options: ResolvedRunQueryOptions
 ): Promise<T[]> {
-  return sqlClient.unsafe<T>(text, values);
+  return sqlClient.reserve().then(async (reserved: BunReservedSqlClient) => {
+    try {
+      return await runQueryWithReservedClient(reserved, text, values, options);
+    } finally {
+      reserved.release();
+    }
+  });
+}
+
+function resolveRunQueryOptions(options: RunQueryOptions | undefined): ResolvedRunQueryOptions {
+  const requestContext = readApiRequestContextStorage();
+
+  return {
+    lockTimeoutMs: sanitizeTimeoutMs(
+      options?.lockTimeoutMs ?? DEFAULT_DB_LOCK_TIMEOUT_MS,
+      DEFAULT_DB_LOCK_TIMEOUT_MS
+    ),
+    signal: options?.signal ?? requestContext?.signal ?? null,
+    statementTimeoutMs: sanitizeTimeoutMs(
+      options?.statementTimeoutMs ?? DEFAULT_DB_STATEMENT_TIMEOUT_MS,
+      DEFAULT_DB_STATEMENT_TIMEOUT_MS
+    ),
+  };
+}
+
+function attachAbortHandler<TValue extends object[]>(
+  query: Promise<TValue> & { cancel(): unknown },
+  signal: AbortSignal | null
+): () => void {
+  if (signal === null) {
+    return noop;
+  }
+
+  const cancel = () => {
+    query.cancel();
+  };
+
+  if (signal.aborted) {
+    cancel();
+    return noop;
+  }
+
+  signal.addEventListener("abort", cancel, { once: true });
+  return () => {
+    signal.removeEventListener("abort", cancel);
+  };
+}
+
+function runQueryWithReservedClient<T extends object>(
+  reserved: BunReservedSqlClient,
+  text: string,
+  values: ReadonlyArray<number | string>,
+  options: ResolvedRunQueryOptions
+): Promise<T[]> {
+  return reserved.begin("read only", async (sql: BunSqlClient) => {
+    await sql
+      .unsafe(renderSetLocalTimeoutSql("statement_timeout", options.statementTimeoutMs))
+      .execute();
+    await sql.unsafe(renderSetLocalTimeoutSql("lock_timeout", options.lockTimeoutMs)).execute();
+    const query = sql.unsafe<T[]>(text, [...values]).execute();
+    const detachAbortHandler = attachAbortHandler(query, options.signal);
+
+    try {
+      return await query;
+    } finally {
+      detachAbortHandler();
+    }
+  });
 }
 
 async function runQueryWithReconnect<T extends object>(
   sqlClient: BunSqlClient,
   text: string,
-  values: ReadonlyArray<number | string>
+  values: ReadonlyArray<number | string>,
+  options: ResolvedRunQueryOptions
 ): Promise<T[]> {
   try {
-    return await runQueryWithClient<T>(sqlClient, text, values);
+    return await runQueryWithClient<T>(sqlClient, text, values, options);
   } catch (error) {
     if (!isConnectionClosedError(error)) {
       throw error;
     }
 
-    return runQueryWithClient<T>(getSqlClient(), text, values);
+    return runQueryWithClient<T>(getSqlClient(), text, values, options);
   }
 }
 
 export function runQuery<T extends object>(
   text: string,
-  values: ReadonlyArray<number | string>
+  values: ReadonlyArray<number | string>,
+  options?: RunQueryOptions
 ): Promise<T[]> {
   const sqlClient = getSqlClient();
-  return runQueryWithReconnect<T>(sqlClient, text, values);
+  return runQueryWithReconnect<T>(sqlClient, text, values, resolveRunQueryOptions(options));
 }
 
 export async function assertPostgresReady(): Promise<void> {
   const sqlClient = getSqlClient();
-  await runQueryWithReconnect<{ readonly db_ready: number }>(sqlClient, POSTGRES_READY_QUERY, []);
+  await runQueryWithReconnect<{ readonly db_ready: number }>(
+    sqlClient,
+    POSTGRES_READY_QUERY,
+    [],
+    resolveRunQueryOptions(undefined)
+  );
 }
 
 export async function closePostgresPool(): Promise<void> {

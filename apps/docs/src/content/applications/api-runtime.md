@@ -29,7 +29,7 @@ flowchart LR
 - traps `SIGINT` and `SIGTERM`
 - closes the shared Bun SQL pool during shutdown
 
-The matching package script is `apps/api/package.json#scripts.dev`, which runs `bun --env-file .env --watch src/index.ts`.
+The matching package script is `apps/api/package.json#scripts.dev`, which runs `nodemon` to watch `src` and the required workspace-package `dist` folders before executing `bun --env-file .env src/index.ts`.
 
 ### Background worker entrypoint
 
@@ -40,7 +40,7 @@ The matching package script is `apps/api/package.json#scripts.dev`, which runs `
 - shuts down both controllers and the shared Bun SQL pool on `SIGINT` and `SIGTERM`
 - fails fast if neither loop starts successfully
 
-The matching package script is `apps/api/package.json#scripts.dev:sync-worker`, which runs `bun --env-file .env --watch src/sync-worker.ts`.
+The matching package script is `apps/api/package.json#scripts.dev:sync-worker`, which runs `nodemon` to watch `src` and the required workspace-package `dist` folders before executing `bun --env-file .env src/sync-worker.ts`.
 
 :::note Runtime Split
 The HTTP server and sync worker share infrastructure such as contracts, ops helpers, and the Bun SQL client, but they are intentionally separate processes. Request handling should not own long-running sync lifecycle management.

@@ -123,6 +123,7 @@ export function registerParcelsEnrichRoute<E extends Env>(app: Hono<E>): void {
         const features = paginated.features;
         const hasMore = paginated.hasMore;
         const responseWarnings = [
+          ...enrichRowsResult.warnings,
           ...warnings,
           ...profileMetadataWarnings(requestResult.value.profile),
         ];

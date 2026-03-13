@@ -8,10 +8,25 @@
   } from "@/features/pipeline/components/pipeline-dashboard/pipeline-dashboard-format.service";
   import { formatCount } from "@/features/pipeline/pipeline.service";
 
+  const BUILD_EXPORT_ELAPSED_PATTERN = /phase=export\s+([0-9]+)s\b/;
+
   const props = defineProps<PipelineDashboardProgressProps>();
 
   const buildStageLabel = computed(() => {
     const summary = props.run?.summary ?? "";
+    if (
+      props.dataset === "flood" &&
+      summary.includes("phase=export") &&
+      (props.buildProgress?.workDone ?? 0) === 0 &&
+      (props.buildProgress?.logBytes ?? 0) === 0
+    ) {
+      return "Prepare Reduced Overlay Geometry";
+    }
+
+    if (summary.includes("phase=reduced-export")) {
+      return "Export Reduced Overlay";
+    }
+
     if (summary.includes("phase=export")) {
       return "Export Source Features";
     }
@@ -41,6 +56,50 @@
     }
 
     return "Finalize Build";
+  });
+
+  const buildExportElapsedLabel = computed(() => {
+    const summary = props.run?.summary ?? "";
+    const match = BUILD_EXPORT_ELAPSED_PATTERN.exec(summary);
+    if (match === null) {
+      return null;
+    }
+
+    return `${match[1]}s elapsed`;
+  });
+
+  const isPreparingReducedOverlay = computed(() => {
+    const summary = props.run?.summary ?? "";
+    return (
+      props.dataset === "flood" &&
+      summary.includes("phase=export") &&
+      (props.buildProgress?.workDone ?? 0) === 0 &&
+      (props.buildProgress?.logBytes ?? 0) === 0
+    );
+  });
+
+  const buildPercentLabel = computed(() => {
+    if (isPreparingReducedOverlay.value) {
+      return "preparing";
+    }
+
+    const buildPercent = props.buildProgress?.percent ?? null;
+    if (buildPercent === null) {
+      return "n/a";
+    }
+
+    return `${buildPercent.toFixed(2)}%`;
+  });
+
+  const buildRateLabel = computed(() => {
+    if (isPreparingReducedOverlay.value) {
+      return "waiting for first export batch";
+    }
+
+    return formatBuildRate(
+      props.buildRateEstimate.percentPerSecond,
+      props.buildRateEstimate.rateBasis
+    );
   });
 </script>
 
@@ -93,9 +152,7 @@
   >
     <header class="mb-2 flex items-center justify-between">
       <h2 class="m-0 text-sm font-semibold">Tile Build Progress</h2>
-      <span class="text-xs font-mono text-muted-foreground">
-        {{ props.buildProgress?.percent === null ? "n/a" : `${(props.buildProgress?.percent ?? 0).toFixed(2)}%` }}
-      </span>
+      <span class="text-xs font-mono text-muted-foreground"> {{ buildPercentLabel }} </span>
     </header>
     <p class="text-xs">
       Step:
@@ -105,34 +162,47 @@
       Build log size:
       <span class="font-mono">{{ formatBytes(props.buildProgress?.logBytes ?? null) }}</span>
     </p>
+    <p v-if="isPreparingReducedOverlay && buildExportElapsedLabel !== null" class="mt-1 text-xs">
+      Elapsed:
+      <span class="font-mono">{{ buildExportElapsedLabel }}</span>
+    </p>
     <p v-if="props.buildProgress?.stage !== null" class="mt-1 text-xs">
       Build stage:
       <span class="font-mono">{{ buildStageLabel }}</span>
     </p>
-    <p
-      v-if="props.buildProgress?.workDone !== null && props.buildProgress?.workTotal !== null"
-      class="mt-1 text-xs"
-    >
-      Tile work:
+    <p v-if="isPreparingReducedOverlay" class="mt-1 text-xs text-muted-foreground">
+      Building the reduced overlay geometry in PostGIS before export begins.
+    </p>
+    <p v-if="props.buildProgress?.workDone !== null" class="mt-1 text-xs">
+      {{ props.buildProgress?.workTotal === null ? "Exported rows:" : "Tile work:" }}
       <span class="font-mono">
-        {{ formatCount(props.buildProgress?.workDone ?? 0) }}/{{ formatCount(props.buildProgress?.workTotal ?? 0) }}
+        {{ formatCount(props.buildProgress?.workDone ?? 0) }}
+        <template v-if="props.buildProgress?.workTotal !== null">
+          /{{ formatCount(props.buildProgress?.workTotal ?? 0) }}
+        </template>
       </span>
     </p>
-    <p v-if="props.buildProgress?.workLeft !== null" class="mt-1 text-xs">
+    <p
+      v-if="!isPreparingReducedOverlay && props.buildProgress?.workLeft !== null"
+      class="mt-1 text-xs"
+    >
       Work left:
       <span class="font-mono">{{ formatCount(props.buildProgress?.workLeft ?? 0) }}</span>
     </p>
     <p class="mt-1 text-xs">
       Build ETA:
-      <span class="font-mono">{{ formatEta(props.buildRateEstimate.etaMs) }}</span>
+      <span class="font-mono">
+        {{ isPreparingReducedOverlay ? "estimating after first export batch" : formatEta(props.buildRateEstimate.etaMs) }}
+      </span>
     </p>
     <p class="mt-1 text-xs text-muted-foreground">
       build rate:
-      <span class="font-mono">
-        {{ formatBuildRate(props.buildRateEstimate.percentPerSecond, props.buildRateEstimate.rateBasis) }}
-      </span>
+      <span class="font-mono">{{ buildRateLabel }}</span>
     </p>
-    <p v-if="props.isBuildLikelyStalled" class="mt-1 text-xs text-amber-700">
+    <p v-if="isPreparingReducedOverlay" class="mt-1 text-xs text-amber-700">
+      Progress becomes measurable after the first reduced overlay rows are emitted.
+    </p>
+    <p v-else-if="props.isBuildLikelyStalled" class="mt-1 text-xs text-amber-700">
       No tile-build movement detected recently; ETA uses average build rate.
     </p>
     <div class="mt-3 h-2 overflow-hidden rounded bg-muted">

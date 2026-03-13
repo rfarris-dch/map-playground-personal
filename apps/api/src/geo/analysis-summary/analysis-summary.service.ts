@@ -15,15 +15,15 @@ import {
   type SpatialAnalysisSummaryResponse,
   type Warning,
 } from "@map-migration/contracts";
-import { runQuery } from "@/db/postgres";
+import { parsePositiveIntFlag } from "@/config/env-parsing.service";
 import {
   queryCountyScores,
   queryCountyScoresStatus,
 } from "@/geo/county-scores/county-scores.service";
-import { mapFacilitiesRowsToFeatures } from "@/geo/facilities/facilities.mapper";
-import type { FacilitiesBboxRow } from "@/geo/facilities/facilities.repo";
+import { getFacilitiesPolygonMaxRows } from "@/geo/facilities/facilities.repo";
 import {
   FACILITIES_SELECTION_MAX_POLYGON_JSON_CHARS,
+  facilitiesSelectionBboxExceedsLimits,
   resolveFacilitiesSelectionGeometry,
 } from "@/geo/facilities/route/facilities-route-policy.service";
 import { queryFacilitiesByPolygon } from "@/geo/facilities/route/facilities-route-query.service";
@@ -45,6 +45,10 @@ import {
   PARCELS_MAX_POLYGON_JSON_CHARS,
   resolvePolygonGeometry,
 } from "@/geo/parcels/route/parcels-route-policy.service";
+import {
+  buildPolygonRepairWarning,
+  normalizePolygonGeometryGeoJson,
+} from "@/http/polygon-normalization.service";
 import { getApiRuntimeConfig } from "@/http/runtime-config";
 import { isDatasetQueryAllowed } from "@/http/spatial-analysis-policy.service";
 import { getMarketBoundarySourceVersion, listIntersectedCountyIds } from "./analysis-summary.repo";
@@ -56,15 +60,19 @@ import type {
 const MARKET_BOUNDARY_RELATION_NAME = "market_current.market_boundaries";
 const COUNTY_BOUNDARY_RELATION_NAME = "serve.boundary_county_geom_lod1";
 const COUNTY_FIPS_PATTERN = /^[0-9]{5}$/;
+const ANALYSIS_SUMMARY_MAX_TOTAL_PARCELS = parsePositiveIntFlag(
+  process.env.ANALYSIS_SUMMARY_MAX_TOTAL_PARCELS,
+  20_000
+);
 
 interface AnalysisSummaryDependencies {
   readonly queryCountyScores: typeof queryCountyScores;
   readonly queryCountyScoresStatus: typeof queryCountyScoresStatus;
-  readonly queryFacilitiesByPolygon: typeof queryFacilitiesByPolygonForSelectionSummary;
+  readonly queryFacilitiesByPolygon: typeof queryFacilitiesByPolygon;
 }
 
 const DEFAULT_ANALYSIS_SUMMARY_DEPENDENCIES: AnalysisSummaryDependencies = {
-  queryFacilitiesByPolygon: queryFacilitiesByPolygonForSelectionSummary,
+  queryFacilitiesByPolygon,
   queryCountyScores,
   queryCountyScoresStatus,
 };
@@ -450,108 +458,34 @@ function isMissingRelationError(error: unknown, relationName: string): boolean {
   );
 }
 
-function lightweightFacilitiesMappingFailure(error: unknown) {
-  return {
-    ok: false as const,
-    value: {
-      reason: "mapping_failed" as const,
-      error,
-    },
-  };
-}
-
-function lightweightFacilitiesQueryFailure(error: unknown) {
-  return {
-    ok: false as const,
-    value: {
-      reason: "query_failed" as const,
-      error,
-    },
-  };
-}
-
-async function queryColocationFacilitiesByPolygonForSelectionSummary(args: {
-  readonly geometryGeoJson: string;
-  readonly limit: number;
-}): Promise<Awaited<ReturnType<typeof queryFacilitiesByPolygon>>> {
-  let rows: readonly FacilitiesBboxRow[];
-
-  try {
-    rows = await runQuery<FacilitiesBboxRow>(
-      `
-WITH aoi AS (
-  SELECT ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON($1), 4326), 3857) AS geom_3857
-)
-SELECT
-  f.facility_id,
-  f.facility_name,
-  f.provider_id,
-  f.provider_id AS provider_name,
-  f.county_fips,
-  f.state_abbrev,
-  f.commissioned_power_mw,
-  f.planned_power_mw,
-  f.under_construction_power_mw,
-  f.available_power_mw,
-  NULL AS square_footage,
-  f.commissioned_semantic,
-  NULL AS lease_or_own,
-  NULL AS status_label,
-  NULL AS address,
-  NULL AS city,
-  NULL AS state,
-  ST_AsGeoJSON(f.geom)::jsonb AS geom_json
-FROM serve.facility_site AS f, aoi
-WHERE f.geom_3857 && aoi.geom_3857
-  AND ST_Intersects(f.geom_3857, aoi.geom_3857)
-  AND f.provider_id IS NOT NULL
-LIMIT $2;
-`,
-      [args.geometryGeoJson, args.limit + 1]
-    );
-  } catch (error) {
-    return lightweightFacilitiesQueryFailure(error);
-  }
-
-  try {
-    const truncated = rows.length > args.limit;
-    const rowsWithinLimit = truncated ? rows.slice(0, args.limit) : rows;
-    return {
-      ok: true,
-      value: {
-        features: mapFacilitiesRowsToFeatures(rowsWithinLimit, "colocation"),
-        truncated,
-        warnings: truncated
-          ? [
-              {
-                code: "POSSIBLY_TRUNCATED",
-                message: `Returned limit=${String(args.limit)} rows. Zoom in if you expected more.`,
-              },
-            ]
-          : [],
-      },
-    };
-  } catch (error) {
-    return lightweightFacilitiesMappingFailure(error);
-  }
-}
-
-function queryFacilitiesByPolygonForSelectionSummary(args: {
-  readonly geometryGeoJson: string;
-  readonly limit: number;
+function resolveFacilitiesLimit(args: {
+  readonly requestedLimit: number;
   readonly perspective: "colocation" | "hyperscale";
-}): Promise<Awaited<ReturnType<typeof queryFacilitiesByPolygon>>> {
-  if (args.perspective === "colocation") {
-    return queryColocationFacilitiesByPolygonForSelectionSummary(args);
+}): { readonly limit: number; readonly warning: Warning | null } {
+  const maxRows = getFacilitiesPolygonMaxRows(args.perspective);
+  const limit = Math.min(args.requestedLimit, maxRows);
+  if (limit === args.requestedLimit) {
+    return {
+      limit,
+      warning: null,
+    };
   }
 
-  return queryFacilitiesByPolygon(args);
+  return {
+    limit,
+    warning: buildWarning(
+      `${args.perspective.toUpperCase()}_LIMIT_CLAMPED`,
+      `${args.perspective} facilities limit reduced to ${String(maxRows)} due to server policy.`
+    ),
+  };
 }
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: parcel pagination preserves existing enrichment, truncation, and ingestion-run safeguards in one helper.
 async function queryParcels(args: {
   readonly expectedIngestionRunId: string | null;
-  readonly request: ParcelEnrichRequest;
+  readonly geometryText: string;
+  readonly includeGeometry: "centroid" | "full" | "none" | "simplified";
+  readonly pageSize: number | undefined;
 }): Promise<
   | {
       readonly ok: true;
@@ -577,46 +511,12 @@ async function queryParcels(args: {
       };
     }
 > {
-  if (args.request.aoi.type !== "polygon") {
-    return {
-      ok: false,
-      value: {
-        error: new Error("analysis summary only supports polygon parcel AOI"),
-        reason: "parcels_policy_rejected",
-      },
-    };
-  }
-
-  const polygonGeometry = resolvePolygonGeometry(args.request.aoi);
-  if (bboxExceedsLimits(polygonGeometry.bbox)) {
-    return {
-      ok: false,
-      value: {
-        error: new Error("polygon AOI exceeds configured bbox limits"),
-        reason: "parcels_policy_rejected",
-      },
-    };
-  }
-
-  if (polygonGeometry.geometryText.length > PARCELS_MAX_POLYGON_JSON_CHARS) {
-    return {
-      ok: false,
-      value: {
-        error: new Error("polygon AOI payload is too large"),
-        reason: "parcels_policy_rejected",
-      },
-    };
-  }
-
-  const pageSizeResolution = resolvePageSize(args.request.pageSize ?? 20_000);
-  const warnings = [
-    ...pageSizeResolution.warnings,
-    ...profileMetadataWarnings(args.request.profile),
-  ];
+  const pageSizeResolution = resolvePageSize(args.pageSize ?? 20_000);
+  const warnings = [...pageSizeResolution.warnings, ...profileMetadataWarnings("analysis_v1")];
   const pageSize = pageSizeResolution.pageSize;
   const parcelsById = new Map<string, ParcelsFeatureCollection["features"][number]>();
   const seenCursors = new Set<string>();
-  let cursor = coerceCursor(args.request.cursor);
+  let cursor = coerceCursor(null);
   let truncated = false;
   let nextCursor: string | null = null;
   let dataVersion = "";
@@ -624,12 +524,25 @@ async function queryParcels(args: {
   let ingestionRunId: string | null = null;
 
   while (true) {
+    const remainingCapacity = ANALYSIS_SUMMARY_MAX_TOTAL_PARCELS - parcelsById.size;
+    if (remainingCapacity <= 0) {
+      truncated = true;
+      warnings.push(
+        buildWarning(
+          "PARCELS_TOTAL_CAP_REACHED",
+          `Parcel analysis summary is capped at ${String(ANALYSIS_SUMMARY_MAX_TOTAL_PARCELS)} parcels; use the parcels API for full pagination.`
+        )
+      );
+      break;
+    }
+
+    const queryPageSize = Math.min(pageSize, remainingCapacity);
     let rows: Awaited<ReturnType<typeof enrichParcelsByPolygon>>;
     try {
-      rows = await enrichParcelsByPolygon(polygonGeometry.geometryText, {
+      rows = await enrichParcelsByPolygon(args.geometryText, {
         cursor,
-        includeGeometry: args.request.includeGeometry,
-        limit: pageSize + 1,
+        includeGeometry: args.includeGeometry,
+        limit: queryPageSize + 1,
       });
     } catch (error) {
       return {
@@ -655,7 +568,7 @@ async function queryParcels(args: {
     }
 
     const pageWarnings = [...warnings];
-    const paginated = paginateEnrichFeatures(mappedFeatures, pageSize, pageWarnings);
+    const paginated = paginateEnrichFeatures(mappedFeatures, queryPageSize, pageWarnings);
     warnings.splice(0, warnings.length, ...pageWarnings);
     const actualIngestionRunId = readIngestionRunId(paginated.features) ?? null;
     if (
@@ -681,6 +594,18 @@ async function queryParcels(args: {
 
     for (const feature of paginated.features) {
       parcelsById.set(feature.properties.parcelId, feature);
+    }
+
+    if (parcelsById.size >= ANALYSIS_SUMMARY_MAX_TOTAL_PARCELS && paginated.hasMore) {
+      truncated = true;
+      nextCursor = paginated.nextCursor;
+      warnings.push(
+        buildWarning(
+          "PARCELS_TOTAL_CAP_REACHED",
+          `Parcel analysis summary is capped at ${String(ANALYSIS_SUMMARY_MAX_TOTAL_PARCELS)} parcels; use the parcels API for full pagination.`
+        )
+      );
+      break;
     }
 
     if (!paginated.hasMore || paginated.nextCursor === null) {
@@ -752,6 +677,16 @@ export async function querySpatialAnalysisSummary(
   const floodQueryAllowed = isDatasetQueryAllowed("environmental_flood", "polygon");
 
   const facilitiesGeometry = resolveFacilitiesSelectionGeometry(args.request.geometry);
+  if (facilitiesSelectionBboxExceedsLimits(facilitiesGeometry.bbox)) {
+    return {
+      ok: false,
+      value: {
+        error: new Error("selection polygon AOI exceeds the facilities analysis extent limit"),
+        reason: "facilities_policy_rejected",
+      },
+    };
+  }
+
   if (facilitiesGeometry.geometryText.length > FACILITIES_SELECTION_MAX_POLYGON_JSON_CHARS) {
     return {
       ok: false,
@@ -762,9 +697,39 @@ export async function querySpatialAnalysisSummary(
     };
   }
 
+  let normalizedGeometryText = facilitiesGeometry.geometryText;
+  const geometryWarnings: Warning[] = [];
+  try {
+    const normalizedGeometry = await normalizePolygonGeometryGeoJson(
+      facilitiesGeometry.geometryText
+    );
+    normalizedGeometryText = normalizedGeometry.geometryText;
+    if (normalizedGeometry.wasRepaired) {
+      geometryWarnings.push(
+        buildPolygonRepairWarning("analysis selection", normalizedGeometry.invalidReason)
+      );
+    }
+  } catch (error) {
+    return {
+      ok: false,
+      value: {
+        error,
+        reason: "facilities_policy_rejected",
+      },
+    };
+  }
+
   const requestedPerspectives = new Set(args.request.perspectives);
   const shouldQueryColocation = requestedPerspectives.has("colocation");
   const shouldQueryHyperscale = requestedPerspectives.has("hyperscale");
+  const colocationFacilitiesLimit = resolveFacilitiesLimit({
+    perspective: "colocation",
+    requestedLimit: args.request.limitPerPerspective,
+  });
+  const hyperscaleFacilitiesLimit = resolveFacilitiesLimit({
+    perspective: "hyperscale",
+    requestedLimit: args.request.limitPerPerspective,
+  });
   const parcelPolicyWarning = resolveParcelPolicyWarning({
     geometry: {
       type: "polygon",
@@ -791,16 +756,9 @@ export async function querySpatialAnalysisSummary(
 
     return queryParcels({
       expectedIngestionRunId: args.expectedParcelIngestionRunId,
-      request: {
-        aoi: {
-          type: "polygon",
-          geometry: args.request.geometry,
-        },
-        format: "json",
-        includeGeometry: "centroid",
-        pageSize: args.request.parcelPageSize,
-        profile: "analysis_v1",
-      },
+      geometryText: normalizedGeometryText,
+      includeGeometry: "centroid",
+      pageSize: args.request.parcelPageSize,
     });
   })();
   const floodResultPromise = (() => {
@@ -829,7 +787,7 @@ export async function querySpatialAnalysisSummary(
     }
 
     return queryFloodAnalysis({
-      geometryGeoJson: JSON.stringify(args.request.geometry),
+      geometryGeoJson: normalizedGeometryText,
     }).then((result) => {
       if (result.ok) {
         return {
@@ -876,8 +834,8 @@ export async function querySpatialAnalysisSummary(
   ] = await Promise.all([
     shouldQueryColocation
       ? resolvedDependencies.queryFacilitiesByPolygon({
-          geometryGeoJson: facilitiesGeometry.geometryText,
-          limit: args.request.limitPerPerspective,
+          geometryGeoJson: normalizedGeometryText,
+          limit: colocationFacilitiesLimit.limit,
           perspective: "colocation",
         })
       : Promise.resolve({
@@ -891,8 +849,8 @@ export async function querySpatialAnalysisSummary(
     floodResultPromise,
     shouldQueryHyperscale
       ? resolvedDependencies.queryFacilitiesByPolygon({
-          geometryGeoJson: facilitiesGeometry.geometryText,
-          limit: args.request.limitPerPerspective,
+          geometryGeoJson: normalizedGeometryText,
+          limit: hyperscaleFacilitiesLimit.limit,
           perspective: "hyperscale",
         })
       : Promise.resolve({
@@ -904,13 +862,13 @@ export async function querySpatialAnalysisSummary(
           },
         }),
     queryMarketsBySelection({
-      geometryGeoJson: JSON.stringify(args.request.geometry),
+      geometryGeoJson: normalizedGeometryText,
       limit: 25,
       minimumSelectionOverlapPercent: args.request.minimumMarketSelectionOverlapPercent,
     }),
     parcelResultPromise,
     resolvedDependencies.queryCountyScoresStatus(),
-    listIntersectedCountyIds(JSON.stringify(args.request.geometry)).then(
+    listIntersectedCountyIds(normalizedGeometryText).then(
       (rows) => ({
         ok: true as const,
         value: rows,
@@ -969,9 +927,13 @@ export async function querySpatialAnalysisSummary(
   }
 
   const warnings: Warning[] = [
+    ...geometryWarnings,
+    ...(colocationFacilitiesLimit.warning === null ? [] : [colocationFacilitiesLimit.warning]),
     ...colocationResult.value.warnings,
     ...floodResult.warnings,
+    ...(hyperscaleFacilitiesLimit.warning === null ? [] : [hyperscaleFacilitiesLimit.warning]),
     ...hyperscaleResult.value.warnings,
+    ...(marketsResult.ok ? marketsResult.value.warnings : []),
     ...parcelResult.value.warnings,
   ];
 
@@ -1250,7 +1212,16 @@ export async function querySpatialAnalysisSummary(
             colocation: colocationResult.value.truncated,
             hyperscale: hyperscaleResult.value.truncated,
           },
-          warnings: [...colocationResult.value.warnings, ...hyperscaleResult.value.warnings],
+          warnings: [
+            ...(colocationFacilitiesLimit.warning === null
+              ? []
+              : [colocationFacilitiesLimit.warning]),
+            ...colocationResult.value.warnings,
+            ...(hyperscaleFacilitiesLimit.warning === null
+              ? []
+              : [hyperscaleFacilitiesLimit.warning]),
+            ...hyperscaleResult.value.warnings,
+          ],
         },
         markets: {
           dataVersion: runtimeConfig.dataVersion,
@@ -1258,7 +1229,7 @@ export async function querySpatialAnalysisSummary(
           sourceVersion: marketSourceVersion,
           unavailableReason: marketSelection.unavailableReason,
           warnings: marketsResult.ok
-            ? []
+            ? [...marketsResult.value.warnings]
             : [
                 buildWarning(
                   marketSelection.unavailableReason === "Market boundary dataset is unavailable."

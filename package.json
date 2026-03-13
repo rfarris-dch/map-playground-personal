@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "dev": "bash ./scripts/stop-api-dev-port.sh api web && turbo run dev --filter=@map-migration/api --filter=@map-migration/web",
-    "dev:all": "MAP_EFFECT_DEVTOOLS=1 bash ./scripts/stop-api-dev-port.sh all && MAP_EFFECT_DEVTOOLS=1 turbo run dev --concurrency=20",
+    "dev:all": "MAP_EFFECT_DEVTOOLS=1 bash ./scripts/stop-api-dev-port.sh all && MAP_EFFECT_DEVTOOLS=1 turbo run dev --concurrency=20 --filter=@map-migration/api... --filter=@map-migration/web... --filter=@map-migration/docs --filter=@map-migration/pipeline-monitor...",
     "dev:api": "bash ./scripts/stop-api-dev-port.sh api && turbo run dev --filter=@map-migration/api",
     "dev:api:sync-worker": "bun run --cwd apps/api dev:sync-worker",
     "dev:docs": "turbo run dev --filter=@map-migration/docs",

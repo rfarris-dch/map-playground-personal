@@ -1,7 +1,30 @@
+import { equalAreaSqKmSql } from "@/db/postgis-analysis-sql.service";
 import { runQuery } from "@/db/postgres";
 import type { MarketSelectionRow, MarketsSelectionQuery } from "./markets-selection.repo.types";
 
 export type { MarketSelectionRow } from "./markets-selection.repo.types";
+
+export async function getSelectionAreaSqKm(geometryGeoJson: string): Promise<number> {
+  const rows = await runQuery<{ readonly selection_area_sq_km: number | string }>(
+    `
+SELECT
+  ${equalAreaSqKmSql("ST_SetSRID(ST_GeomFromGeoJSON($1), 4326)")} AS selection_area_sq_km;
+`,
+    [geometryGeoJson]
+  );
+
+  const selectionAreaSqKm = rows[0]?.selection_area_sq_km;
+  if (typeof selectionAreaSqKm === "number") {
+    return selectionAreaSqKm;
+  }
+
+  if (typeof selectionAreaSqKm === "string" && selectionAreaSqKm.trim().length > 0) {
+    const parsed = Number(selectionAreaSqKm);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  return 0;
+}
 
 export function listMarketsBySelection(
   query: MarketsSelectionQuery
@@ -11,8 +34,8 @@ export function listMarketsBySelection(
 WITH selection AS (
   SELECT
     ST_SetSRID(ST_GeomFromGeoJSON($1), 4326) AS geom_4326,
-    ST_Area(ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON($1), 4326), 3857)) / 1000000.0
-      AS selection_area_sq_km
+    ST_Envelope(ST_SetSRID(ST_GeomFromGeoJSON($1), 4326)) AS bbox_4326,
+    ${equalAreaSqKmSql("ST_SetSRID(ST_GeomFromGeoJSON($1), 4326)")} AS selection_area_sq_km
 ),
 matches AS (
   SELECT
@@ -27,14 +50,14 @@ matches AS (
     COALESCE(ST_X(boundary.center), ST_X(ST_PointOnSurface(boundary.geom))) AS longitude,
     COALESCE(ST_Y(boundary.center), ST_Y(ST_PointOnSurface(boundary.geom))) AS latitude,
     selection.selection_area_sq_km AS selection_area_sq_km,
-    ST_Area(ST_Transform(boundary.geom, 3857)) / 1000000.0 AS market_area_sq_km,
-    ST_Area(ST_Transform(ST_Intersection(boundary.geom, selection.geom_4326), 3857)) / 1000000.0
-      AS intersection_area_sq_km
+    ${equalAreaSqKmSql("boundary.geom")} AS market_area_sq_km,
+    ${equalAreaSqKmSql("ST_Intersection(boundary.geom, selection.geom_4326)")} AS intersection_area_sq_km
   FROM market_current.market_boundaries AS boundary
   LEFT JOIN market_current.markets AS market
     ON market.market_id = boundary.market_id
   CROSS JOIN selection
   WHERE boundary.market_id IS NOT NULL
+    AND boundary.geom && selection.bbox_4326
     AND ST_Intersects(boundary.geom, selection.geom_4326)
 )
 SELECT
@@ -53,6 +76,7 @@ SELECT
   intersection_area_sq_km
 FROM matches
 WHERE selection_area_sq_km > 0
+  AND intersection_area_sq_km > 0
   AND (intersection_area_sq_km / selection_area_sq_km) >= $2
 ORDER BY
   (intersection_area_sq_km / selection_area_sq_km) DESC,

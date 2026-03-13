@@ -15,13 +15,21 @@ function buildMeta(
   requestId: string,
   payload: Omit<SpatialAnalysisSummaryResponse, "meta">
 ): SpatialAnalysisSummaryResponse["meta"] {
+  const marketWarnings = payload.provenance.markets.warnings;
+  const facilitiesTruncated =
+    payload.provenance.facilities.truncatedByPerspective.colocation ||
+    payload.provenance.facilities.truncatedByPerspective.hyperscale;
+
   return {
     dataVersion: "dev",
     generatedAt: new Date().toISOString(),
     recordCount: payload.summary.totalCount,
     requestId,
     sourceMode: "postgis",
-    truncated: payload.summary.parcelSelection.truncated,
+    truncated:
+      payload.summary.parcelSelection.truncated ||
+      facilitiesTruncated ||
+      marketWarnings.some((warning) => warning.code === "POSSIBLY_TRUNCATED"),
     warnings: [...payload.warnings],
   };
 }
@@ -40,7 +48,7 @@ function analysisSummaryErrorHttpStatus(reason: string): number {
 
 function analysisSummaryErrorMessage(reason: string): string {
   if (reason === "facilities_policy_rejected") {
-    return "selection polygon AOI payload is too large";
+    return "facilities analysis policy rejected the request";
   }
 
   if (reason === "parcels_policy_rejected") {

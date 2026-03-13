@@ -8,11 +8,27 @@ const enrichParcelsByPolygonMock =
   mock<(geometryGeoJson: string, options: unknown) => Promise<readonly unknown[]>>();
 const enrichParcelsByCountyMock =
   mock<(geoid: string, options: unknown) => Promise<readonly unknown[]>>();
+const normalizePolygonGeometryGeoJsonMock =
+  mock<
+    (geometryGeoJson: string) => Promise<{
+      readonly geometryText: string;
+      readonly invalidReason: string | null;
+      readonly wasRepaired: boolean;
+    }>
+  >();
 
 mock.module("../../../src/geo/parcels/parcels.repo", () => ({
   enrichParcelsByBbox: enrichParcelsByBboxMock,
   enrichParcelsByPolygon: enrichParcelsByPolygonMock,
   enrichParcelsByCounty: enrichParcelsByCountyMock,
+}));
+
+mock.module("../../../src/http/polygon-normalization.service", () => ({
+  buildPolygonRepairWarning: (scope: string, invalidReason: string | null) => ({
+    code: "POLYGON_GEOMETRY_REPAIRED",
+    message: `${scope}:${invalidReason ?? "none"}`,
+  }),
+  normalizePolygonGeometryGeoJson: normalizePolygonGeometryGeoJsonMock,
 }));
 
 const { queryEnrichRowsByAoi } = await import(
@@ -46,6 +62,12 @@ describe("parcels route AOI query service", () => {
     enrichParcelsByBboxMock.mockReset();
     enrichParcelsByPolygonMock.mockReset();
     enrichParcelsByCountyMock.mockReset();
+    normalizePolygonGeometryGeoJsonMock.mockReset();
+    normalizePolygonGeometryGeoJsonMock.mockImplementation(async (geometryText: string) => ({
+      geometryText,
+      invalidReason: null,
+      wasRepaired: false,
+    }));
   });
 
   it("rejects polygon AOIs whose bbox exceeds configured limits", async () => {

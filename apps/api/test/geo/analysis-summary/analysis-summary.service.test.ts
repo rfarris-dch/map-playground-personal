@@ -16,6 +16,7 @@ const paginateEnrichFeaturesMock = mock();
 const resolvePageSizeMock = mock();
 const readIngestionRunIdMock = mock();
 const resolvePolygonGeometryMock = mock();
+const normalizePolygonGeometryGeoJsonMock = mock();
 
 mock.module("../../../src/geo/markets/markets-selection.service", () => ({
   queryMarketsBySelection: queryMarketsBySelectionMock,
@@ -61,6 +62,14 @@ mock.module("../../../src/geo/analysis-summary/analysis-summary.repo", () => ({
 
 mock.module("../../../src/http/runtime-config", () => ({
   getApiRuntimeConfig: getApiRuntimeConfigMock,
+}));
+
+mock.module("../../../src/http/polygon-normalization.service", () => ({
+  buildPolygonRepairWarning: (scope: string, invalidReason: string | null) => ({
+    code: "POLYGON_GEOMETRY_REPAIRED",
+    message: `${scope}:${invalidReason ?? "none"}`,
+  }),
+  normalizePolygonGeometryGeoJson: normalizePolygonGeometryGeoJsonMock,
 }));
 
 mock.module("../../../src/http/spatial-analysis-policy.service", () => ({
@@ -150,6 +159,26 @@ function createParcelFeature(parcelId: string) {
   };
 }
 
+function createMarketsSelectionResult(args?: {
+  readonly matchedMarkets?: readonly unknown[];
+  readonly selectionAreaSqKm?: number;
+  readonly truncated?: boolean;
+  readonly warnings?: readonly { readonly code: string; readonly message: string }[];
+}) {
+  const matchedMarkets = [...(args?.matchedMarkets ?? [])];
+
+  return {
+    ok: true as const,
+    value: {
+      matchedMarkets,
+      primaryMarket: matchedMarkets[0] ?? null,
+      selectionAreaSqKm: args?.selectionAreaSqKm ?? 123.45,
+      truncated: args?.truncated ?? false,
+      warnings: [...(args?.warnings ?? [])],
+    },
+  };
+}
+
 describe("querySpatialAnalysisSummary", () => {
   beforeEach(() => {
     queryCountyScoresMock.mockReset();
@@ -168,6 +197,7 @@ describe("querySpatialAnalysisSummary", () => {
     resolvePageSizeMock.mockReset();
     readIngestionRunIdMock.mockReset();
     resolvePolygonGeometryMock.mockReset();
+    normalizePolygonGeometryGeoJsonMock.mockReset();
 
     isDatasetQueryAllowedMock.mockReturnValue(true);
     bboxExceedsLimitsMock.mockReturnValue(false);
@@ -191,6 +221,11 @@ describe("querySpatialAnalysisSummary", () => {
         west: -97.8,
       },
       geometryText: JSON.stringify(aoi.geometry),
+    }));
+    normalizePolygonGeometryGeoJsonMock.mockImplementation(async (geometryText: string) => ({
+      geometryText,
+      invalidReason: null,
+      wasRepaired: false,
     }));
     queryFacilitiesByPolygonMock
       .mockResolvedValueOnce({
@@ -323,14 +358,7 @@ describe("querySpatialAnalysisSummary", () => {
   });
 
   it("drops invalid embedded county intelligence payloads without failing the summary", async () => {
-    queryMarketsBySelectionMock.mockResolvedValue({
-      ok: true,
-      value: {
-        matchedMarkets: [],
-        primaryMarket: null,
-        selectionAreaSqKm: 123.45,
-      },
-    });
+    queryMarketsBySelectionMock.mockResolvedValue(createMarketsSelectionResult());
     queryCountyScoresStatusMock.mockResolvedValue({
       ok: true,
       value: {
@@ -416,14 +444,7 @@ describe("querySpatialAnalysisSummary", () => {
   });
 
   it("skips facility queries when no facility perspectives are requested", async () => {
-    queryMarketsBySelectionMock.mockResolvedValue({
-      ok: true,
-      value: {
-        matchedMarkets: [],
-        primaryMarket: null,
-        selectionAreaSqKm: 123.45,
-      },
-    });
+    queryMarketsBySelectionMock.mockResolvedValue(createMarketsSelectionResult());
     queryCountyScoresStatusMock.mockResolvedValue({
       ok: false,
       value: {
@@ -474,9 +495,8 @@ describe("querySpatialAnalysisSummary", () => {
 
   it("keeps facilities and markets when parcel analysis is skipped by policy", async () => {
     bboxExceedsLimitsMock.mockReturnValue(true);
-    queryMarketsBySelectionMock.mockResolvedValue({
-      ok: true,
-      value: {
+    queryMarketsBySelectionMock.mockResolvedValue(
+      createMarketsSelectionResult({
         matchedMarkets: [
           {
             absorption: null,
@@ -497,27 +517,8 @@ describe("querySpatialAnalysisSummary", () => {
             vacancy: null,
           },
         ],
-        primaryMarket: {
-          absorption: null,
-          country: "United States",
-          intersectionAreaSqKm: 40,
-          isPrimary: true,
-          marketCenter: {
-            type: "Point",
-            coordinates: [-97.7431, 30.2672],
-          },
-          marketId: "market-1",
-          marketOverlapPercent: 0.2,
-          name: "Austin",
-          region: "South",
-          selectionOverlapPercent: 0.3,
-          state: "Texas",
-          updatedAt: null,
-          vacancy: null,
-        },
-        selectionAreaSqKm: 123.45,
-      },
-    });
+      })
+    );
     queryCountyScoresStatusMock.mockResolvedValue({
       ok: false,
       value: {
@@ -573,14 +574,7 @@ describe("querySpatialAnalysisSummary", () => {
   });
 
   it("skips flood analysis entirely when includeFlood is false", async () => {
-    queryMarketsBySelectionMock.mockResolvedValue({
-      ok: true,
-      value: {
-        matchedMarkets: [],
-        primaryMarket: null,
-        selectionAreaSqKm: 123.45,
-      },
-    });
+    queryMarketsBySelectionMock.mockResolvedValue(createMarketsSelectionResult());
     queryCountyScoresStatusMock.mockResolvedValue({
       ok: false,
       value: {
@@ -642,14 +636,7 @@ describe("querySpatialAnalysisSummary", () => {
     isDatasetQueryAllowedMock.mockImplementation(
       (dataset: string) => dataset !== "environmental_flood"
     );
-    queryMarketsBySelectionMock.mockResolvedValue({
-      ok: true,
-      value: {
-        matchedMarkets: [],
-        primaryMarket: null,
-        selectionAreaSqKm: 123.45,
-      },
-    });
+    queryMarketsBySelectionMock.mockResolvedValue(createMarketsSelectionResult());
     queryCountyScoresStatusMock.mockResolvedValue({
       ok: false,
       value: {
@@ -700,14 +687,7 @@ describe("querySpatialAnalysisSummary", () => {
   });
 
   it("includes flood provenance when flood analysis succeeds", async () => {
-    queryMarketsBySelectionMock.mockResolvedValue({
-      ok: true,
-      value: {
-        matchedMarkets: [],
-        primaryMarket: null,
-        selectionAreaSqKm: 123.45,
-      },
-    });
+    queryMarketsBySelectionMock.mockResolvedValue(createMarketsSelectionResult());
     queryCountyScoresStatusMock.mockResolvedValue({
       ok: false,
       value: {
@@ -766,14 +746,7 @@ describe("querySpatialAnalysisSummary", () => {
   it("returns the parcel ingestion mismatch independently of flood analysis", async () => {
     const parcelFeature = createParcelFeature("parcel-1");
 
-    queryMarketsBySelectionMock.mockResolvedValue({
-      ok: true,
-      value: {
-        matchedMarkets: [],
-        primaryMarket: null,
-        selectionAreaSqKm: 123.45,
-      },
-    });
+    queryMarketsBySelectionMock.mockResolvedValue(createMarketsSelectionResult());
     queryCountyScoresStatusMock.mockResolvedValue({
       ok: false,
       value: {
@@ -834,14 +807,7 @@ describe("querySpatialAnalysisSummary", () => {
         reason: "source_unavailable",
       },
     });
-    queryMarketsBySelectionMock.mockResolvedValue({
-      ok: true,
-      value: {
-        matchedMarkets: [],
-        primaryMarket: null,
-        selectionAreaSqKm: 123.45,
-      },
-    });
+    queryMarketsBySelectionMock.mockResolvedValue(createMarketsSelectionResult());
     queryCountyScoresStatusMock.mockResolvedValue({
       ok: false,
       value: {
@@ -918,14 +884,7 @@ describe("querySpatialAnalysisSummary", () => {
           warnings: [],
         },
       });
-    queryMarketsBySelectionMock.mockResolvedValue({
-      ok: true,
-      value: {
-        matchedMarkets: [],
-        primaryMarket: null,
-        selectionAreaSqKm: 123.45,
-      },
-    });
+    queryMarketsBySelectionMock.mockResolvedValue(createMarketsSelectionResult());
     queryCountyScoresStatusMock.mockResolvedValue({
       ok: false,
       value: {
@@ -964,5 +923,236 @@ describe("querySpatialAnalysisSummary", () => {
     }
 
     expect(result.value.summary.facilities[0]?.countyFips).toBeNull();
+  });
+
+  it("rejects analysis summary requests when the facilities AOI exceeds the facilities extent limit", async () => {
+    const result = await querySpatialAnalysisSummary(
+      {
+        expectedParcelIngestionRunId: null,
+        request: {
+          ...createRequest(),
+          geometry: {
+            type: "Polygon",
+            coordinates: [
+              [
+                [-101, 30],
+                [-97, 30],
+                [-97, 33],
+                [-101, 33],
+                [-101, 30],
+              ],
+            ],
+          },
+        },
+      },
+      {
+        queryCountyScores: queryCountyScoresMock,
+        queryCountyScoresStatus: queryCountyScoresStatusMock,
+        queryFacilitiesByPolygon: queryFacilitiesByPolygonMock,
+      }
+    );
+
+    expect(result).toEqual({
+      ok: false,
+      value: {
+        error: expect.any(Error),
+        reason: "facilities_policy_rejected",
+      },
+    });
+    expect(queryFacilitiesByPolygonMock).not.toHaveBeenCalled();
+  });
+
+  it("reuses a repaired selection geometry across analysis queries", async () => {
+    const normalizedGeometryText =
+      '{"type":"Polygon","coordinates":[[[-97.8,30.2],[-97.7,30.2],[-97.7,30.3],[-97.8,30.2]]]}';
+
+    normalizePolygonGeometryGeoJsonMock.mockResolvedValue({
+      geometryText: normalizedGeometryText,
+      invalidReason: "Self-intersection",
+      wasRepaired: true,
+    });
+    queryMarketsBySelectionMock.mockResolvedValue(createMarketsSelectionResult());
+    queryCountyScoresStatusMock.mockResolvedValue({
+      ok: false,
+      value: {
+        error: new Error("status unavailable"),
+        reason: "source_unavailable",
+      },
+    });
+    queryCountyScoresMock.mockResolvedValue({
+      ok: true,
+      value: {
+        blockedCountyIds: [],
+        dataVersion: "2026-03-07",
+        deferredCountyIds: [],
+        missingCountyIds: [],
+        requestedCountyIds: ["48453"],
+        rows: [],
+      },
+    });
+    getMarketBoundarySourceVersionMock.mockResolvedValue("derived-market-boundaries-v1");
+
+    const result = await querySpatialAnalysisSummary(
+      {
+        expectedParcelIngestionRunId: null,
+        request: createRequest(),
+      },
+      {
+        queryCountyScores: queryCountyScoresMock,
+        queryCountyScoresStatus: queryCountyScoresStatusMock,
+        queryFacilitiesByPolygon: queryFacilitiesByPolygonMock,
+      }
+    );
+
+    expect(result.ok).toBe(true);
+    expect(queryFacilitiesByPolygonMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        geometryGeoJson: normalizedGeometryText,
+        perspective: "colocation",
+      })
+    );
+    expect(queryFacilitiesByPolygonMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        geometryGeoJson: normalizedGeometryText,
+        perspective: "hyperscale",
+      })
+    );
+    expect(queryMarketsBySelectionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        geometryGeoJson: normalizedGeometryText,
+      })
+    );
+    expect(listIntersectedCountyIdsMock).toHaveBeenCalledWith(normalizedGeometryText);
+    if (!result.ok) {
+      throw new Error("Expected successful summary query with repaired geometry");
+    }
+    expect(result.value.warnings).toContainEqual({
+      code: "POLYGON_GEOMETRY_REPAIRED",
+      message: "analysis selection:Self-intersection",
+    });
+  });
+
+  it("clamps facilities summary queries to the canonical max rows", async () => {
+    queryMarketsBySelectionMock.mockResolvedValue(createMarketsSelectionResult());
+    queryCountyScoresStatusMock.mockResolvedValue({
+      ok: false,
+      value: {
+        error: new Error("status unavailable"),
+        reason: "source_unavailable",
+      },
+    });
+    queryCountyScoresMock.mockResolvedValue({
+      ok: true,
+      value: {
+        blockedCountyIds: [],
+        dataVersion: "2026-03-07",
+        deferredCountyIds: [],
+        missingCountyIds: [],
+        requestedCountyIds: ["48453"],
+        rows: [],
+      },
+    });
+    getMarketBoundarySourceVersionMock.mockResolvedValue("derived-market-boundaries-v1");
+
+    const result = await querySpatialAnalysisSummary(
+      {
+        expectedParcelIngestionRunId: null,
+        request: {
+          ...createRequest(),
+          limitPerPerspective: 100_000,
+        },
+      },
+      {
+        queryCountyScores: queryCountyScoresMock,
+        queryCountyScoresStatus: queryCountyScoresStatusMock,
+        queryFacilitiesByPolygon: queryFacilitiesByPolygonMock,
+      }
+    );
+
+    expect(result.ok).toBe(true);
+    expect(queryFacilitiesByPolygonMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        limit: 5000,
+        perspective: "colocation",
+      })
+    );
+    expect(queryFacilitiesByPolygonMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        limit: 5000,
+        perspective: "hyperscale",
+      })
+    );
+    if (!result.ok) {
+      throw new Error("Expected successful summary query with clamped facilities limits");
+    }
+    expect(result.value.warnings.map((warning) => warning.code)).toEqual(
+      expect.arrayContaining(["COLOCATION_LIMIT_CLAMPED", "HYPERSCALE_LIMIT_CLAMPED"])
+    );
+  });
+
+  it("caps parcel accumulation in analysis summary responses", async () => {
+    const parcelFeatures = Array.from({ length: 20_000 }, (_, index) =>
+      createParcelFeature(`parcel-${String(index).padStart(5, "0")}`)
+    );
+
+    queryMarketsBySelectionMock.mockResolvedValue(createMarketsSelectionResult());
+    queryCountyScoresStatusMock.mockResolvedValue({
+      ok: false,
+      value: {
+        error: new Error("status unavailable"),
+        reason: "source_unavailable",
+      },
+    });
+    queryCountyScoresMock.mockResolvedValue({
+      ok: true,
+      value: {
+        blockedCountyIds: [],
+        dataVersion: "2026-03-07",
+        deferredCountyIds: [],
+        missingCountyIds: [],
+        requestedCountyIds: ["48453"],
+        rows: [],
+      },
+    });
+    getMarketBoundarySourceVersionMock.mockResolvedValue("derived-market-boundaries-v1");
+    enrichParcelsByPolygonMock.mockResolvedValue([{}]);
+    mapParcelRowsToFeaturesMock.mockReturnValue(parcelFeatures);
+    paginateEnrichFeaturesMock.mockReturnValue({
+      features: parcelFeatures,
+      hasMore: true,
+      nextCursor: "parcel-19999",
+    });
+
+    const result = await querySpatialAnalysisSummary(
+      {
+        expectedParcelIngestionRunId: null,
+        request: {
+          ...createRequest(),
+          includeParcels: true,
+        },
+      },
+      {
+        queryCountyScores: queryCountyScoresMock,
+        queryCountyScoresStatus: queryCountyScoresStatusMock,
+        queryFacilitiesByPolygon: queryFacilitiesByPolygonMock,
+      }
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      throw new Error("Expected successful summary query with parcel cap");
+    }
+    expect(result.value.summary.parcelSelection.count).toBe(20_000);
+    expect(result.value.summary.parcelSelection.truncated).toBe(true);
+    expect(result.value.summary.parcelSelection.nextCursor).toBe("parcel-19999");
+    expect(result.value.warnings).toContainEqual({
+      code: "PARCELS_TOTAL_CAP_REACHED",
+      message:
+        "Parcel analysis summary is capped at 20000 parcels; use the parcels API for full pagination.",
+    });
   });
 });

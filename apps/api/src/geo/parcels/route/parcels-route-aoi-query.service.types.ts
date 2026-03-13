@@ -1,3 +1,4 @@
+import type { Warning } from "@map-migration/contracts";
 import type { ParcelRow } from "@/geo/parcels/parcels.repo";
 
 export type EnrichRowsResult = EnrichRowsOk | EnrichRowsError;
@@ -10,4 +11,5 @@ export interface EnrichRowsError {
 export interface EnrichRowsOk {
   readonly ok: true;
   readonly rows: ParcelRow[];
+  readonly warnings: readonly Warning[];
 }

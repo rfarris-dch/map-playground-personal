@@ -15,6 +15,8 @@
     formatTimestamp,
   } from "@/features/pipeline/pipeline.service";
 
+  const BUILD_EXPORT_ELAPSED_PATTERN = /phase=export\s+([0-9]+)s\b/;
+
   const props = defineProps<PipelineDashboardOverviewProps>();
 
   const emit = defineEmits<{
@@ -49,8 +51,29 @@
   });
 
   const isBuilding = computed(() => props.run?.phase === "building");
+  const isFloodBuildPreparingExport = computed(() => {
+    if (!(isBuilding.value && props.dataset === "flood")) {
+      return false;
+    }
+
+    const summary = props.run?.summary ?? "";
+    return (
+      summary.includes("phase=export") &&
+      (props.buildProgress?.workDone ?? 0) === 0 &&
+      (props.buildProgress?.logBytes ?? 0) === 0
+    );
+  });
   const isFloodMaterializing = computed(() => {
     return props.dataset === "flood" && props.dbLoadProgress?.stepKey === "materialize";
+  });
+  const buildExportElapsedLabel = computed(() => {
+    const summary = props.run?.summary ?? "";
+    const match = BUILD_EXPORT_ELAPSED_PATTERN.exec(summary);
+    if (match === null) {
+      return null;
+    }
+
+    return `${match[1]}s elapsed`;
   });
 
   const throughputHeading = computed(() => {
@@ -60,6 +83,10 @@
   const throughputValue = computed(() => {
     if (isFloodMaterializing.value) {
       return props.dbLoadProgress?.stepLabel ?? "Materializing canonical rows";
+    }
+
+    if (isFloodBuildPreparingExport.value) {
+      return "Preparing reduced overlay geometry";
     }
 
     if (isBuilding.value) {
@@ -77,7 +104,19 @@
       return `Current batch: ${props.dbLoadProgress?.currentFile ?? "n/a"}`;
     }
 
+    if (isFloodBuildPreparingExport.value) {
+      return buildExportElapsedLabel.value ?? "waiting for first reduced export batch";
+    }
+
     if (isBuilding.value) {
+      if (
+        props.buildProgress?.workDone !== null &&
+        props.buildProgress?.workTotal === null &&
+        props.run?.summary?.includes("phase=reduced-export")
+      ) {
+        return `exported rows: ${formatCount(props.buildProgress.workDone)}`;
+      }
+
       return `recent: ${formatBuildRate(
         props.buildRateEstimate.recentPercentPerSecond,
         "recent"
@@ -96,6 +135,10 @@
       return props.dbLoadPercentLabel;
     }
 
+    if (isFloodBuildPreparingExport.value) {
+      return "estimating after first reduced batch";
+    }
+
     if (isBuilding.value) {
       return formatEta(props.buildRateEstimate.etaMs);
     }
@@ -108,7 +151,19 @@
       return `active worker: ${props.dbLoadProgress?.activeWorkers[0] ?? "n/a"}`;
     }
 
+    if (isFloodBuildPreparingExport.value) {
+      return "progress becomes measurable after the first reduced overlay rows are emitted";
+    }
+
     if (isBuilding.value) {
+      if (
+        props.buildProgress?.workDone !== null &&
+        props.buildProgress?.workTotal === null &&
+        props.run?.summary?.includes("phase=reduced-export")
+      ) {
+        return "remaining build: estimating after reduced export completes";
+      }
+
       const remainingPercent = props.buildRateEstimate.remainingPercent;
       if (remainingPercent === null) {
         return props.run?.summary ?? "tiles:building";
@@ -190,6 +245,9 @@
         class="mt-1 text-xs text-amber-700"
       >
         No row movement detected recently; ETA is based on average rate.
+      </p>
+      <p v-else-if="isFloodBuildPreparingExport" class="mt-1 text-xs text-amber-700">
+        Reduced-overlay preparation is active; row progress starts after the first export batch.
       </p>
       <p v-else-if="isBuilding && props.isBuildLikelyStalled" class="mt-1 text-xs text-amber-700">
         Build progress has not advanced recently; monitor remains live.

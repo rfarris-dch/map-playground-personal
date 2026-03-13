@@ -2,6 +2,7 @@ import { Cause, Effect, Context as EffectContext, Exit, Option } from "effect";
 import type { Context as HonoContext } from "hono";
 import { runApiEffectExit } from "@/effect/api-effect-runtime";
 import { recordRouteEffectFailure } from "@/effect/effect-failure-trail.service";
+import { runWithApiRequestContextStorage } from "@/http/api-request-context-storage.service";
 import { jsonError, resolveRequestId, toDebugDetails, withRequestId } from "./api-response";
 
 export interface ApiRequestContextService {
@@ -59,7 +60,14 @@ export function fromApiRequest(
 ): Effect.Effect<Response, ApiRouteError, ApiRequestContext> {
   return Effect.flatMap(ApiRequestContext, (requestContext) =>
     Effect.tryPromise({
-      try: async () => handler(requestContext),
+      try: async () =>
+        runWithApiRequestContextStorage(
+          {
+            requestId: requestContext.requestId,
+            signal: requestContext.signal,
+          },
+          () => handler(requestContext)
+        ),
       catch: (error) =>
         error instanceof ApiRouteError
           ? error

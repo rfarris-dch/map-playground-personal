@@ -1,6 +1,5 @@
 import type {
   FacilitiesFeatureCollection,
-  FacilitiesSelectionRequest,
   MarketSelectionMatch,
   MarketsSelectionRequest,
   SpatialAnalysisSummaryRequest,
@@ -15,8 +14,8 @@ import {
 import { Effect, Either } from "effect";
 import { exportMeasureSelectionSummary } from "@/features/app/measure-selection/measure-selection-export.service";
 import { fetchFacilitiesByBboxEffect } from "@/features/facilities/api";
-import { buildMeasureSelectionSummary } from "@/features/measure/measure-analysis.service";
 import type { FacilitiesBboxRequest } from "@/features/facilities/facilities.types";
+import { buildMeasureSelectionSummary } from "@/features/measure/measure-analysis.service";
 import type { MeasureSelectionSummary } from "@/features/measure/measure-analysis.types";
 import {
   buildSelectionRingBbox,
@@ -266,7 +265,9 @@ function queryLargeSelectionToolSummaryEffect(
               )
             )
           );
-    const marketsResult = yield* Effect.either(fetchMarketsBySelectionEffect(marketsRequest, args.signal));
+    const marketsResult = yield* Effect.either(
+      fetchMarketsBySelectionEffect(marketsRequest, args.signal)
+    );
 
     for (const facilitiesResult of facilitiesResults) {
       if (Either.isLeft(facilitiesResult) && facilitiesResult.left instanceof ApiAbortedError) {

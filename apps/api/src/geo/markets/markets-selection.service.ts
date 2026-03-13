@@ -1,6 +1,6 @@
-import type { MarketSelectionMatch } from "@map-migration/contracts";
+import type { MarketSelectionMatch, Warning } from "@map-migration/contracts";
 import type { MarketSelectionRow } from "@/geo/markets/markets-selection.repo";
-import { listMarketsBySelection } from "@/geo/markets/markets-selection.repo";
+import { getSelectionAreaSqKm, listMarketsBySelection } from "@/geo/markets/markets-selection.repo";
 
 export type QueryMarketsSelectionResult =
   | {
@@ -9,6 +9,8 @@ export type QueryMarketsSelectionResult =
         readonly matchedMarkets: readonly MarketSelectionMatch[];
         readonly primaryMarket: MarketSelectionMatch | null;
         readonly selectionAreaSqKm: number;
+        readonly truncated: boolean;
+        readonly warnings: readonly Warning[];
       };
     }
   | {
@@ -153,12 +155,16 @@ export async function queryMarketsBySelection(
   args: QueryMarketsSelectionArgs
 ): Promise<QueryMarketsSelectionResult> {
   let rows: readonly MarketSelectionRow[];
+  let selectionAreaSqKm = 0;
   try {
-    rows = await listMarketsBySelection({
-      geometryGeoJson: args.geometryGeoJson,
-      limit: args.limit,
-      minimumSelectionOverlapPercent: args.minimumSelectionOverlapPercent,
-    });
+    [rows, selectionAreaSqKm] = await Promise.all([
+      listMarketsBySelection({
+        geometryGeoJson: args.geometryGeoJson,
+        limit: args.limit + 1,
+        minimumSelectionOverlapPercent: args.minimumSelectionOverlapPercent,
+      }),
+      getSelectionAreaSqKm(args.geometryGeoJson),
+    ]);
   } catch (error) {
     if (isMissingRelationError(error)) {
       return {
@@ -180,13 +186,9 @@ export async function queryMarketsBySelection(
   }
 
   try {
-    const firstRow = rows[0];
-    const selectionAreaSqKm =
-      typeof firstRow === "undefined"
-        ? 0
-        : parseRequiredNumber(firstRow.selection_area_sq_km, "selection_area_sq_km");
-
-    const matchedMarkets = rows.map((row, index) =>
+    const truncated = rows.length > args.limit;
+    const rowsWithinLimit = truncated ? rows.slice(0, args.limit) : rows;
+    const matchedMarkets = rowsWithinLimit.map((row, index) =>
       toMarketSelectionMatch(row, selectionAreaSqKm, index === 0)
     );
 
@@ -196,6 +198,15 @@ export async function queryMarketsBySelection(
         matchedMarkets,
         primaryMarket: matchedMarkets[0] ?? null,
         selectionAreaSqKm,
+        truncated,
+        warnings: truncated
+          ? [
+              {
+                code: "POSSIBLY_TRUNCATED",
+                message: `Returned limit=${String(args.limit)} markets. Increase the selection threshold or refine the AOI if you expected more.`,
+              },
+            ]
+          : [],
       },
     };
   } catch (error) {

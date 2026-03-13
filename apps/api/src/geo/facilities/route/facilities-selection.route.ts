@@ -16,12 +16,17 @@ import {
 import { buildFacilitiesRouteMeta } from "@/geo/facilities/route/facilities-route-meta.service";
 import {
   FACILITIES_SELECTION_MAX_POLYGON_JSON_CHARS,
+  facilitiesSelectionBboxExceedsLimits,
   resolveFacilitiesSelectionGeometry,
 } from "@/geo/facilities/route/facilities-route-policy.service";
 import { queryFacilitiesByPolygon } from "@/geo/facilities/route/facilities-route-query.service";
 import { jsonOk, toDebugDetails } from "@/http/api-response";
 import { fromApiRequest, routeError, runEffectRoute } from "@/http/effect-route";
 import { readJsonBody } from "@/http/json-request.service";
+import {
+  buildPolygonRepairWarning,
+  normalizePolygonGeometryGeoJson,
+} from "@/http/polygon-normalization.service";
 
 function dedupePerspectives(perspectives: readonly FacilityPerspective[]): FacilityPerspective[] {
   return perspectives.reduce<FacilityPerspective[]>((next, perspective) => {
@@ -58,6 +63,106 @@ async function readFacilitiesSelectionRequest(c: Context, requestId: string) {
   };
 }
 
+function assertFacilitiesSelectionGeometryAllowed(geometry: {
+  readonly bbox: ReturnType<typeof resolveFacilitiesSelectionGeometry>["bbox"];
+  readonly geometryText: string;
+}): void {
+  if (facilitiesSelectionBboxExceedsLimits(geometry.bbox)) {
+    throw routeError({
+      httpStatus: 422,
+      code: "POLICY_REJECTED",
+      message: "selection polygon AOI exceeds the facilities selection extent limit",
+    });
+  }
+
+  if (geometry.geometryText.length > FACILITIES_SELECTION_MAX_POLYGON_JSON_CHARS) {
+    throw routeError({
+      httpStatus: 422,
+      code: "POLICY_REJECTED",
+      message: "selection polygon AOI payload is too large",
+    });
+  }
+}
+
+async function queryFacilitiesSelectionPerspectives(args: {
+  readonly geometryText: string;
+  readonly limitPerPerspective: number;
+  readonly perspectives: readonly FacilityPerspective[];
+}): Promise<{
+  readonly countsByPerspective: Record<FacilityPerspective, number>;
+  readonly features: FacilitiesFeatureCollection["features"];
+  readonly truncatedByPerspective: Record<FacilityPerspective, boolean>;
+  readonly warnings: Warning[];
+}> {
+  const countsByPerspective: Record<FacilityPerspective, number> = {
+    colocation: 0,
+    hyperscale: 0,
+  };
+  const truncatedByPerspective: Record<FacilityPerspective, boolean> = {
+    colocation: false,
+    hyperscale: false,
+  };
+  const features: FacilitiesFeatureCollection["features"] = [];
+  const warnings: Warning[] = [];
+
+  for (const perspective of args.perspectives) {
+    const maxRows = getFacilitiesPolygonMaxRows(perspective);
+    const limit = Math.min(args.limitPerPerspective, maxRows);
+    const queryResult = await queryFacilitiesByPolygon({
+      geometryGeoJson: args.geometryText,
+      limit,
+      perspective,
+    });
+
+    if (!queryResult.ok) {
+      throw queryResult.value.reason === "query_failed"
+        ? buildFacilitiesPostgisQueryRouteError(queryResult.value.error)
+        : buildFacilitiesMappingRouteError(queryResult.value.error);
+    }
+
+    countsByPerspective[perspective] = queryResult.value.features.length;
+    truncatedByPerspective[perspective] = queryResult.value.truncated;
+    features.push(...queryResult.value.features);
+    warnings.push(
+      ...queryResult.value.warnings.map((warning) => ({
+        code: `${perspective.toUpperCase()}_${warning.code}`,
+        message: `[${perspective}] ${warning.message}`,
+      }))
+    );
+  }
+
+  return {
+    countsByPerspective,
+    features,
+    truncatedByPerspective,
+    warnings,
+  };
+}
+
+async function normalizeFacilitiesSelectionGeometry(geometryText: string): Promise<{
+  readonly geometryText: string;
+  readonly warnings: Warning[];
+}> {
+  try {
+    const normalizedGeometry = await normalizePolygonGeometryGeoJson(geometryText);
+    return {
+      geometryText: normalizedGeometry.geometryText,
+      warnings: normalizedGeometry.wasRepaired
+        ? [buildPolygonRepairWarning("selection", normalizedGeometry.invalidReason)]
+        : [],
+    };
+  } catch (error) {
+    throw routeError({
+      httpStatus: 422,
+      code: "POLICY_REJECTED",
+      message:
+        error instanceof Error
+          ? `selection polygon is invalid after repair: ${error.message}`
+          : "selection polygon is invalid after repair",
+    });
+  }
+}
+
 export function registerFacilitiesSelectionRoute<E extends Env>(app: Hono<E>): void {
   app.post(ApiRoutes.facilitiesSelection, (c) =>
     runEffectRoute(
@@ -69,51 +174,18 @@ export function registerFacilitiesSelectionRoute<E extends Env>(app: Hono<E>): v
         }
 
         const geometry = resolveFacilitiesSelectionGeometry(requestResult.value.geometry);
-        if (geometry.geometryText.length > FACILITIES_SELECTION_MAX_POLYGON_JSON_CHARS) {
-          throw routeError({
-            httpStatus: 422,
-            code: "POLICY_REJECTED",
-            message: "selection polygon AOI payload is too large",
-          });
-        }
+        assertFacilitiesSelectionGeometryAllowed(geometry);
+        const normalizedGeometry = await normalizeFacilitiesSelectionGeometry(
+          geometry.geometryText
+        );
 
         const perspectives = dedupePerspectives(requestResult.value.perspectives);
-        const countsByPerspective: Record<FacilityPerspective, number> = {
-          colocation: 0,
-          hyperscale: 0,
-        };
-        const truncatedByPerspective: Record<FacilityPerspective, boolean> = {
-          colocation: false,
-          hyperscale: false,
-        };
-        const features: FacilitiesFeatureCollection["features"] = [];
-        const warnings: Warning[] = [];
-
-        for (const perspective of perspectives) {
-          const maxRows = getFacilitiesPolygonMaxRows(perspective);
-          const limit = Math.min(requestResult.value.limitPerPerspective, maxRows);
-          const queryResult = await queryFacilitiesByPolygon({
-            geometryGeoJson: geometry.geometryText,
-            limit,
-            perspective,
+        const { countsByPerspective, features, truncatedByPerspective, warnings } =
+          await queryFacilitiesSelectionPerspectives({
+            geometryText: normalizedGeometry.geometryText,
+            limitPerPerspective: requestResult.value.limitPerPerspective,
+            perspectives,
           });
-
-          if (!queryResult.ok) {
-            throw queryResult.value.reason === "query_failed"
-              ? buildFacilitiesPostgisQueryRouteError(queryResult.value.error)
-              : buildFacilitiesMappingRouteError(queryResult.value.error);
-          }
-
-          countsByPerspective[perspective] = queryResult.value.features.length;
-          truncatedByPerspective[perspective] = queryResult.value.truncated;
-          features.push(...queryResult.value.features);
-          warnings.push(
-            ...queryResult.value.warnings.map((warning) => ({
-              code: `${perspective.toUpperCase()}_${warning.code}`,
-              message: `[${perspective}] ${warning.message}`,
-            }))
-          );
-        }
 
         const payload: FacilitiesSelectionResponse = {
           type: "FeatureCollection",
@@ -122,7 +194,7 @@ export function registerFacilitiesSelectionRoute<E extends Env>(app: Hono<E>): v
             requestId,
             recordCount: features.length,
             truncated: truncatedByPerspective.colocation || truncatedByPerspective.hyperscale,
-            warnings,
+            warnings: [...normalizedGeometry.warnings, ...warnings],
           }),
           selection: {
             countsByPerspective,

@@ -1,3 +1,4 @@
+import { equalAreaSqKmSql } from "@/db/postgis-analysis-sql.service";
 import { runQuery } from "@/db/postgres";
 import type { FloodAreaSummaryRow, FloodParcelRollupRow } from "./flood.repo.types";
 
@@ -12,8 +13,7 @@ WITH selection AS (
   SELECT
     ST_SetSRID(ST_GeomFromGeoJSON($1), 4326) AS geom_4326,
     ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON($1), 4326), 3857) AS geom_3857,
-    ST_Area(ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON($1), 4326), 3857)) / 1000000.0
-      AS selection_area_sq_km
+    ${equalAreaSqKmSql("ST_SetSRID(ST_GeomFromGeoJSON($1), 4326)")} AS selection_area_sq_km
 ),
 dataset_meta AS (
   SELECT
@@ -41,8 +41,8 @@ flood_500 AS (
 SELECT
   dataset_meta.data_version,
   dataset_meta.dataset_feature_count,
-  COALESCE(ST_Area(flood_100.geom) / 1000000.0, 0) AS flood100_area_sq_km,
-  COALESCE(ST_Area(flood_500.geom) / 1000000.0, 0) AS flood500_area_sq_km,
+  COALESCE(${equalAreaSqKmSql("flood_100.geom")}, 0) AS flood100_area_sq_km,
+  COALESCE(${equalAreaSqKmSql("flood_500.geom")}, 0) AS flood500_area_sq_km,
   dataset_meta.run_id,
   selection.selection_area_sq_km
 FROM selection
