@@ -89,4 +89,3 @@ The current tests are query-contract tests, not database integration tests. They
 - Use [API Geo Slices](/docs/applications/api-geo-slices) for the route and repo layers that consume these builders.
 - Use [API Runtime Foundations](/docs/applications/api-runtime) for the database and HTTP runtime beneath those slices.
 - Use [Contracts](/docs/packages/contracts) when a query argument or geometry mode needs to stay aligned with the transport schemas.
-- Use [Bench](/docs/packages/bench) if the endpoint-class metadata starts feeding shared latency budgets directly.

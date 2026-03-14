@@ -109,10 +109,6 @@
         "vue-tsc": "^2.2.12",
       },
     },
-    "packages/bench": {
-      "name": "@map-migration/bench",
-      "version": "0.1.0",
-    },
     "packages/core-runtime": {
       "name": "@map-migration/core-runtime",
       "version": "0.1.0",
@@ -121,10 +117,6 @@
         "@map-migration/http-contracts": "workspace:*",
         "effect": "^3.19.19",
       },
-    },
-    "packages/fixtures": {
-      "name": "@map-migration/fixtures",
-      "version": "0.1.0",
     },
     "packages/geo-kernel": {
       "name": "@map-migration/geo-kernel",
@@ -335,13 +327,9 @@
 
     "@map-migration/api": ["@map-migration/api@workspace:apps/api"],
 
-    "@map-migration/bench": ["@map-migration/bench@workspace:packages/bench"],
-
     "@map-migration/core-runtime": ["@map-migration/core-runtime@workspace:packages/core-runtime"],
 
     "@map-migration/docs": ["@map-migration/docs@workspace:apps/docs"],
-
-    "@map-migration/fixtures": ["@map-migration/fixtures@workspace:packages/fixtures"],
 
     "@map-migration/geo-kernel": ["@map-migration/geo-kernel@workspace:packages/geo-kernel"],
 

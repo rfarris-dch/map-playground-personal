@@ -93,4 +93,3 @@ That split keeps the tile metadata contract stable while letting scripts and UI 
 - Use [Parcel And Tile Workflows](/docs/operations/parcel-and-tile-workflows) for the end-to-end scripts that call this package.
 - Use [Web Runtime Foundations](/docs/applications/web-runtime) for the parcel frontend runtime that consumes the live manifest.
 - Use [Sync Architecture](/docs/data-and-sync/sync-architecture) for the broader parcel artifact lifecycle around build and publish.
-- Use [Fixtures](/docs/packages/fixtures) if dataset-tier framing starts driving tile stress scenarios more directly.

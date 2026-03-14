@@ -40,8 +40,6 @@ flowchart TD
 | `packages/geo-sql` | SQL query specs for geospatial reads. |
 | `packages/geo-tiles` | Tile manifest parsing, versioning, and publish helpers. |
 | `packages/ops` | Shared operational helpers like request IDs and diagnostics. |
-| `packages/bench` | Endpoint budget definitions. |
-| `packages/fixtures` | Dataset tier definitions for benchmark and scale framing. |
 | `scripts` | Operational shell and TypeScript entrypoints for sync, load, tile publish, and rollback. |
 
 ## Shared root commands

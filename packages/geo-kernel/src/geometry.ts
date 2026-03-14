@@ -54,10 +54,7 @@ export function parseBboxParam(value: string): BBox | null {
     return null;
   }
 
-  const west = parts[0];
-  const south = parts[1];
-  const east = parts[2];
-  const north = parts[3];
+  const [west, south, east, north] = parts;
 
   if (
     typeof west === "undefined" ||

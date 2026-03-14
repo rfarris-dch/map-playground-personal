@@ -13,7 +13,3 @@ underlying extract/load/build steps are split further.
 3. Start Dagster locally:
    `dagster dev -m map_dagster.definitions`
 
-## Cloud notes
-
-- `DAGSTER_CLOUD_USER_TOKEN` and `DAGSTER_CLOUD_AGENT_TOKEN` are read from the environment only.
-- The provided tokens should not be committed into the repo or written into tracked config files.

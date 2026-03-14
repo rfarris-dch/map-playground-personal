@@ -41,7 +41,7 @@ flowchart LR
 | Getting Started | `README.md`, `AGENTS.md`, root `package.json`, root workspace commands, `apps/docs` quality gates. |
 | Repository | `docs/architecture/ddd.qmd`, repo boundary notes, docs route structure, and cross-section organization rules. |
 | Applications | `apps/web/**`, `apps/api/**`, `apps/pipeline-monitor/**`. |
-| Packages | `packages/contracts/**`, `packages/map-engine/**`, `packages/map-layer-catalog/**`, `packages/map-style/**`, `packages/geo-sql/**`, `packages/geo-tiles/**`, `packages/ops/**`, `packages/bench/**`, `packages/fixtures/**`. |
+| Packages | `packages/contracts/**`, `packages/map-engine/**`, `packages/map-layer-catalog/**`, `packages/map-style/**`, `packages/geo-sql/**`, `packages/geo-tiles/**`, `packages/ops/**`. |
 | Data And Sync | `apps/api/src/sync-worker.ts`, parcel sync services, pipeline monitor tracking features, `scripts/refresh-*.sh`, `scripts/load-parcels-canonical.sh`, tile publish and rollback scripts. |
 | Operations | `scripts/**`, API sync status surfaces, and operator-facing recovery procedures. |
 | References | `packages/contracts/**`, `apps/api/src/app.ts`, and docs-to-source linking rules. |
