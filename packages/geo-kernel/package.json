@@ -52,14 +52,6 @@
     "./map-viewport": {
       "types": "./dist/map-viewport.d.ts",
       "default": "./dist/map-viewport.js"
-    },
-    "./layer-visibility-state": {
-      "types": "./dist/layer-visibility-state.d.ts",
-      "default": "./dist/layer-visibility-state.js"
-    },
-    "./entity-focus": {
-      "types": "./dist/entity-focus.d.ts",
-      "default": "./dist/entity-focus.js"
     }
   },
   "files": [

@@ -7,7 +7,8 @@ Monorepo for the mapping stack used in this workspace.
 - `apps/web`: Vue 3 + Vite map application built on MapLibre.
 - `apps/api`: Hono API for facilities, parcels, boundaries, providers, markets, and sync status.
 - `apps/pipeline-monitor`: Vue dashboard for parcel pipeline monitoring.
-- `packages/contracts`: shared Zod schemas, API contracts, and route builders.
+- `packages/http-contracts`: shared Zod schemas, API contracts, and route builders.
+- `packages/geo-kernel`: core geometry, facility, and domain types.
 - `packages/map-engine`: MapLibre adapter and shared map runtime interfaces.
 - `packages/map-layer-catalog`: layer catalog definitions and validation helpers.
 - `packages/geo-sql`: shared SQL query specs for geospatial access patterns.
@@ -32,7 +33,7 @@ bun x ultracite check
 
 ## Project conventions
 
-- TypeScript-first workspace with shared contracts in `packages/contracts`.
+- TypeScript-first workspace with shared contracts in `packages/http-contracts`.
 - Frontend feature modules are organized by feature area under `apps/web/src/features`.
 - API slices follow route + service/repo + mapper boundaries under `apps/api/src/geo`.
 - Formatting and linting are enforced through Biome and Ultracite.

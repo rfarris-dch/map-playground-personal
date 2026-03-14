@@ -61,16 +61,6 @@
           }
         }
       }
-    },
-    {
-      "includes": ["packages/contracts/src/index.ts"],
-      "linter": {
-        "rules": {
-          "performance": {
-            "noBarrelFile": "off"
-          }
-        }
-      }
     }
   ]
 }

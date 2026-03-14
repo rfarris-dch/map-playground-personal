@@ -84,7 +84,6 @@ These commands move data, build artifacts, or change the published tile state:
 - `bun run tiles:build:parcels`
 - `bun run tiles:publish:parcels`
 - `bun run tiles:rollback:parcels`
-- `bun run normalize:legacy-table-casing`
 
 Read [Parcel And Tile Workflows](/docs/operations/parcel-and-tile-workflows) for phase order and artifacts. The list above is just the command map.
 
@@ -95,10 +94,8 @@ Read [Parcel And Tile Workflows](/docs/operations/parcel-and-tile-workflows) for
 | File | Purpose |
 | --- | --- |
 | `scripts/init-parcels-schema.sh` | Applies the parcel schema and base SQL before loads. |
-| `scripts/refresh-parcels.sh` | Top-level parcel workflow wrapper for extract, load, build, and publish. |
 | `scripts/load-parcels-canonical.sh` | Canonical parcel load and table-swap entrypoint. |
 | `scripts/build-parcels-draw-pmtiles.sh` | PMTiles build step for the parcel draw dataset. |
-| `scripts/normalize-legacy-table-casing.sh` | Transactionally renames mixed-case `legacy.*` relations to lowercase names without rewriting data. |
 | `scripts/run-parcels-sync-launchd.sh` | Scheduler-oriented wrapper that prevents duplicate sync starts. |
 
 ### TypeScript operational entrypoints
@@ -114,7 +111,6 @@ Read [Parcel And Tile Workflows](/docs/operations/parcel-and-tile-workflows) for
 | File | Purpose |
 | --- | --- |
 | `scripts/sql/parcels-canonical-schema.sql` | Base schema and object creation for the canonical parcel path. |
-| `scripts/sql/spatial-analysis-overhaul.ddl.sql` | Supporting SQL artifact for the spatial-analysis overhaul work. |
 
 ## How to decide which source is authoritative
 

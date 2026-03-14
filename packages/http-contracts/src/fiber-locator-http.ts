@@ -61,7 +61,11 @@ function stripTileSuffix(value: unknown, format: "pbf" | "png"): unknown {
 
   const trimmed = decoded.trim();
   const suffix = `.${format}`;
-  return trimmed.toLowerCase().endsWith(suffix) ? trimmed.slice(0, -suffix.length) : trimmed;
+  const stripped = trimmed.toLowerCase().endsWith(suffix)
+    ? trimmed.slice(0, -suffix.length)
+    : trimmed;
+  const parsed = Number(stripped);
+  return Number.isFinite(parsed) ? parsed : stripped;
 }
 
 export const FiberLocatorLayerSchema = z.object({

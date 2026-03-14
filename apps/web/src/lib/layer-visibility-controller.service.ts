@@ -34,7 +34,7 @@ export function mountLayerVisibilityController(
   };
 
   options.map.on("load", onLoad);
-  if (options.startWhenStyleReady && (options.map.getStyle().layers?.length ?? 0) > 0) {
+  if (options.startWhenStyleReady && (options.map.getStyle()?.layers?.length ?? 0) > 0) {
     onLoad();
   }
 

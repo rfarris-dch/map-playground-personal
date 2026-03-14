@@ -81,9 +81,9 @@ const releaseVerificationDefinitions: readonly ReleaseVerificationGroupDefinitio
         searchQuery: "core runtime packages",
       },
       {
-        label: "Contracts",
-        slug: "/docs/packages/contracts",
-        searchQuery: "contracts",
+        label: "HTTP Contracts",
+        slug: "/docs/packages/http-contracts",
+        searchQuery: "http contracts",
       },
       {
         label: "Map Engine",

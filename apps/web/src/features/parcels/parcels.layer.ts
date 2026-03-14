@@ -370,7 +370,7 @@ export function mountParcelsLayer(
 
   const logLayerOrderFailures = (): void => {
     const layerOrderFailures = validateLayerOrder(
-      (map.getStyle().layers ?? []).map((layer) => layer.id)
+      (map.getStyle()?.layers ?? []).map((layer) => layer.id)
     );
     if (layerOrderFailures.length === 0) {
       return;

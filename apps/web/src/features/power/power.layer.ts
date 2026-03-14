@@ -247,7 +247,7 @@ export function mountPowerLayers(options: { map: IMap }): PowerLayerMountResult 
   };
 
   map.on("load", onLoad);
-  if ((map.getStyle().layers?.length ?? 0) > 0) {
+  if ((map.getStyle()?.layers?.length ?? 0) > 0) {
     onLoad();
   }
 
