@@ -11,6 +11,11 @@ export function initializeGasPipelineRuntime(options: UseAppShellMapLifecycleOpt
 }
 
 export function destroyGasPipelineRuntime(options: UseAppShellMapLifecycleOptions): void {
-  options.layers.gasPipelineController.value?.destroy();
-  options.layers.gasPipelineController.value = null;
+  const controller = options.layers.gasPipelineController;
+  if (typeof controller === "undefined") {
+    return;
+  }
+
+  controller.value?.destroy();
+  controller.value = null;
 }

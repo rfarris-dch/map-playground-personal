@@ -291,6 +291,10 @@ export class FakeMap implements IMap {
     this.layerVisibilityCalls.push({ layerId, visible });
   }
 
+  setPaintProperty(_layerId: string, _name: string, _value: unknown): void {
+    // no-op in tests
+  }
+
   setProjection(projection: MapProjectionSpecification): void {
     this.projection = projection;
   }

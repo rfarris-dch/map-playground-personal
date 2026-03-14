@@ -61,6 +61,7 @@ function createLifecycleOptions(fakeMap: FakeMap): UseAppShellMapLifecycleOption
         },
       }),
       floodLayersController: shallowRef(null),
+      gasPipelineController: shallowRef(null),
       hydroBasinsController: shallowRef(null),
       parcelsController: shallowRef({
         clearSelection: noop,
@@ -139,6 +140,7 @@ function createLifecycleOptions(fakeMap: FakeMap): UseAppShellMapLifecycleOption
       }),
       hoveredBoundary: shallowRef(null),
       hoveredFacility: shallowRef(null),
+      hoveredFacilityCluster: shallowRef(null),
       hoveredPower: shallowRef(null),
       hyperscaleViewportFeatures: shallowRef([]),
       layerRuntimeSnapshot: shallowRef({

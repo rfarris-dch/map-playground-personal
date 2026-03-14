@@ -191,6 +191,17 @@
     davPercent: mapFilters?.state.value?.parcelDavPercent ?? "",
   }));
 
+  const colorTargets = [
+    { id: "water", label: "Water" },
+    { id: "road", label: "Roads" },
+    { id: "land", label: "Land" },
+  ] as const;
+
+  const layerColors = [
+    "#ffffcc", "#a1dab4", "#41b6c4", "#2c7fb8", "#253494",
+    "#fed976", "#feb24c", "#fd8d3c", "#f03b20", "#bd0026",
+  ] as const;
+
   const fiberRoutesVisible = computed(
     () => props.visibleFiberLayers.longhaul || props.visibleFiberLayers.metro
   );
@@ -715,6 +726,31 @@
               :visible="props.basemapVisibility.landmarks"
               @toggle="toggleBasemapLayer('landmarks')"
             />
+
+            <div class="mt-2 border-t border-border pt-2">
+              <div class="flex h-7 items-center px-2">
+                <span class="text-xs font-normal leading-none text-foreground/70">LAYER COLORS</span>
+              </div>
+
+              <div
+                v-for="target in colorTargets"
+                :key="target.id"
+                class="flex items-center gap-2 px-3 py-1.5"
+              >
+                <span class="w-16 text-xs text-muted-foreground">{{ target.label }}</span>
+                <div class="flex gap-1">
+                  <button
+                    v-for="color in layerColors"
+                    :key="color"
+                    type="button"
+                    class="h-5 w-5 rounded-sm border border-border transition-shadow hover:shadow-md focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
+                    :style="{ backgroundColor: color }"
+                    :aria-label="`Set ${target.label} color to ${color}`"
+                    @click="emit('update:basemap-layer-color', target.id, color)"
+                  />
+                </div>
+              </div>
+            </div>
           </section>
         </div>
 

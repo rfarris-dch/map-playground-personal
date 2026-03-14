@@ -398,6 +398,14 @@ class MapLibreEngine implements IMap {
     this.map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
   }
 
+  setPaintProperty(layerId: string, name: string, value: unknown): void {
+    if (!this.hasLayer(layerId)) {
+      return;
+    }
+
+    this.map.setPaintProperty(layerId, name, value);
+  }
+
   on(event: "load" | "moveend", handler: () => void): void {
     if (event === "load") {
       if (this.map.isStyleLoaded()) {

@@ -1,7 +1,6 @@
 import {
   ApiAbortedError,
   type ApiEffectError,
-  ApiPolicyRejectedError,
   getApiErrorReason,
 } from "@map-migration/core-runtime/api";
 import type { BrowserEffectFiber } from "@map-migration/core-runtime/browser";
@@ -169,7 +168,7 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
         return result.right;
       }
 
-      if (!(result.left instanceof ApiPolicyRejectedError)) {
+      if (result.left._tag !== "ApiHttpError" || result.left.code !== "POLICY_REJECTED") {
         yield* Effect.fail(result.left);
       }
 

@@ -33,5 +33,6 @@ export interface BasemapVisibilityState {
 export interface BasemapLayerVisibilityController {
   destroy(): void;
   getVisible(layerId: BasemapLayerId): boolean;
+  setLayerColor(targetLayer: string, color: string): void;
   setVisible(layerId: BasemapLayerId, visible: boolean): void;
 }

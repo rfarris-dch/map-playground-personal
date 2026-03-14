@@ -29,6 +29,10 @@
     emit("update:basemap-layer-visible", layerId, visible);
   }
 
+  function forwardBasemapLayerColor(targetLayer: string, color: string): void {
+    emit("update:basemap-layer-color", targetLayer, color);
+  }
+
   function forwardBoundaryVisible(boundaryId: BoundaryLayerId, visible: boolean): void {
     emit("update:boundary-visible", boundaryId, visible);
   }
@@ -152,6 +156,7 @@
     @toggle-fiber-source-layer="forwardFiberSourceLayer"
     @set-all-fiber-source-layers="forwardAllFiberSourceLayers"
     @update:power-layer-visible="forwardPowerLayerVisible"
+    @update:basemap-layer-color="forwardBasemapLayerColor"
   />
 
   <MapOverlayActions

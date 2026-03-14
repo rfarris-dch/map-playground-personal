@@ -9,4 +9,6 @@ export interface BasemapLayerGroups {
   readonly boundaryLayerIds: readonly string[];
   readonly labelLayerIds: readonly string[];
   readonly roadLayerIds: readonly string[];
+  readonly waterLayerIds: readonly string[];
+  readonly landLayerIds: readonly string[];
 }

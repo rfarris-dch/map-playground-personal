@@ -133,6 +133,10 @@ export function useAppShellVisibility(options: UseAppShellVisibilityOptions) {
     options.basemapLayerController.value?.setVisible(layerId, visible);
   }
 
+  function setBasemapLayerColor(targetLayer: string, color: string): void {
+    options.basemapLayerController.value?.setLayerColor(targetLayer, color);
+  }
+
   function setFloodLayerVisible(layerId: keyof FloodVisibilityState, visible: boolean): void {
     floodVisibility.value = withFloodVisibility({
       layerId,
@@ -201,6 +205,7 @@ export function useAppShellVisibility(options: UseAppShellVisibilityOptions) {
     setPerspectiveVisibility,
     setParcelsVisible,
     setBasemapLayerVisible,
+    setBasemapLayerColor,
     setFloodLayerVisible,
     setHydroBasinsVisible,
     setPowerLayerVisible,

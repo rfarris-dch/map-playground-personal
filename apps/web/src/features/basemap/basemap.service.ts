@@ -392,6 +392,8 @@ function collectBasemapLayerGroups(map: IMap, profile: BasemapProfile): BasemapL
   const boundaryLayerIds: string[] = [];
   const labelLayerIds: string[] = [];
   const roadLayerIds: string[] = [];
+  const waterLayerIds: string[] = [];
+  const landLayerIds: string[] = [];
 
   for (const styleLayer of styleLayers) {
     const layerId = readLayerId(styleLayer);
@@ -431,12 +433,25 @@ function collectBasemapLayerGroups(map: IMap, profile: BasemapProfile): BasemapL
     if (layerType === "symbol" && hasTextFieldLayout(styleLayer)) {
       labelLayerIds.push(layerId);
     }
+
+    if (sourceLayerId === "water" && layerType === "fill") {
+      waterLayerIds.push(layerId);
+    }
+
+    if (
+      (sourceLayerId === "landcover" || sourceLayerId === "landuse") &&
+      layerType === "fill"
+    ) {
+      landLayerIds.push(layerId);
+    }
   }
 
   return {
     boundaryLayerIds,
     labelLayerIds,
     roadLayerIds,
+    waterLayerIds,
+    landLayerIds,
   };
 }
 
@@ -966,6 +981,33 @@ export function mountBasemapLayerVisibility(
     },
     getVisible(layerId: BasemapLayerId): boolean {
       return isBasemapLayerVisible(visibility, layerId);
+    },
+    setLayerColor(targetLayer: string, color: string): void {
+      if (groups === null) {
+        return;
+      }
+
+      const paintProp =
+        targetLayer === "water"
+          ? "fill-color"
+          : targetLayer === "road"
+            ? "line-color"
+            : "fill-color";
+
+      const layerIds =
+        targetLayer === "water"
+          ? (groups.waterLayerIds ?? [])
+          : targetLayer === "road"
+            ? groups.roadLayerIds
+            : targetLayer === "boundary"
+              ? groups.boundaryLayerIds
+              : targetLayer === "land"
+                ? (groups.landLayerIds ?? [])
+                : [];
+
+      for (const layerId of layerIds) {
+        map.setPaintProperty(layerId, paintProp, color);
+      }
     },
     destroy(): void {
       clearProjectionSyncTimer();

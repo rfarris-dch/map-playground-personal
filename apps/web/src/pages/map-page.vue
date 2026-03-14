@@ -71,6 +71,7 @@
     setBoundaryVisible,
     setBoundarySelectedRegionIds,
     setBasemapLayerVisible,
+    setBasemapLayerColor,
     setFloodLayerVisible,
     setHydroBasinsVisible,
     setParcelsVisible,
@@ -176,6 +177,7 @@
         @toggle-fiber-source-layer="setFiberSourceLayerVisible"
         @set-all-fiber-source-layers="setAllFiberSourceLayers"
         @update:power-layer-visible="setPowerLayerVisible"
+        @update:basemap-layer-color="setBasemapLayerColor"
         @toggle-quick-view="toggleQuickView"
         @toggle-scanner="toggleScanner"
         @set-mode="setSketchMeasureMode"

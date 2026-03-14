@@ -59,4 +59,5 @@ export interface MapLayerControlsPanelEmits {
   "update:perspective-visibility": [perspective: FacilityPerspective, visible: boolean];
   "update:power-layer-visible": [layerId: PowerLayerId, visible: boolean];
   "update:water-visible": [visible: boolean];
+  "update:basemap-layer-color": [targetLayer: string, color: string];
 }

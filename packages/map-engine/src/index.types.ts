@@ -77,6 +77,7 @@ export interface IMap {
   setGeoJSONSourceData(sourceId: string, data: unknown): void;
   setLayerFilter(layerId: string, filter: MapExpression | null): void;
   setLayerVisibility(layerId: string, visible: boolean): void;
+  setPaintProperty(layerId: string, name: string, value: unknown): void;
   setProjection(projection: MapProjectionSpecification): void;
   setStyle(style: StyleInput): void;
   setTerrain(terrain: MapTerrainSpecification | null): void;

@@ -132,6 +132,8 @@ export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
       onCleanup(() => {
         map.off("moveend", onMoveEnd);
       });
+
+      syncRouteToUrlState().catch(() => undefined);
     },
     { immediate: true }
   );
