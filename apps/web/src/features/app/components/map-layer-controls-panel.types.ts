@@ -44,6 +44,7 @@ export interface MapLayerControlsPanelEmits {
   "set-all-fiber-source-layers": [lineId: FiberLocatorLineId, visible: boolean];
   "toggle-fiber-source-layer": [lineId: FiberLocatorLineId, layerName: string, visible: boolean];
   "toggle-panel": [];
+  "update:basemap-layer-color": [targetLayer: string, color: string];
   "update:basemap-layer-visible": [layerId: BasemapLayerId, visible: boolean];
   "update:boundary-selected-region-ids": [
     boundaryId: BoundaryLayerId,
@@ -59,5 +60,4 @@ export interface MapLayerControlsPanelEmits {
   "update:perspective-visibility": [perspective: FacilityPerspective, visible: boolean];
   "update:power-layer-visible": [layerId: PowerLayerId, visible: boolean];
   "update:water-visible": [visible: boolean];
-  "update:basemap-layer-color": [targetLayer: string, color: string];
 }

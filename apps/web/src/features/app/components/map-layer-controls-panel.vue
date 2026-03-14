@@ -198,8 +198,16 @@
   ] as const;
 
   const layerColors = [
-    "#ffffcc", "#a1dab4", "#41b6c4", "#2c7fb8", "#253494",
-    "#fed976", "#feb24c", "#fd8d3c", "#f03b20", "#bd0026",
+    "#ffffcc",
+    "#a1dab4",
+    "#41b6c4",
+    "#2c7fb8",
+    "#253494",
+    "#fed976",
+    "#feb24c",
+    "#fd8d3c",
+    "#f03b20",
+    "#bd0026",
   ] as const;
 
   const fiberRoutesVisible = computed(
@@ -729,7 +737,9 @@
 
             <div class="mt-2 border-t border-border pt-2">
               <div class="flex h-7 items-center px-2">
-                <span class="text-xs font-normal leading-none text-foreground/70">LAYER COLORS</span>
+                <span class="text-xs font-normal leading-none text-foreground/70"
+                  >LAYER COLORS</span
+                >
               </div>
 
               <div

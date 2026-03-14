@@ -78,9 +78,8 @@ describe("map-context-transfer service", () => {
     };
     const route = resolveRoute("map", {
       mapContextToken: "stored-token",
+      map: "9.5/32.7767/-96.797",
       stateIds: "tx",
-      mapCenter: "-96.797,32.7767",
-      mapZoom: "9.5",
     });
 
     const context = readMapContextTransferFromRoute({
@@ -111,6 +110,25 @@ describe("map-context-transfer service", () => {
         center: [-96.797, 32.7767],
         zoom: 9.5,
       },
+    });
+  });
+
+  it("parses legacy split viewport query params for existing shared links", () => {
+    const route = resolveRoute("map", {
+      mapBearing: "18",
+      mapCenter: "-96.797,32.7767",
+      mapPitch: "50",
+      mapZoom: "9.5",
+    });
+
+    const context = readMapContextTransferFromRoute({ route });
+
+    expect(context?.viewport).toEqual({
+      bearing: 18,
+      center: [-96.797, 32.7767],
+      pitch: 50,
+      type: "center",
+      zoom: 9.5,
     });
   });
 
@@ -271,9 +289,7 @@ describe("map-context-transfer service", () => {
     });
 
     const query = buildMapContextTransferQuery(context);
-    expect(query.mapBearing).toBe("18");
-    expect(query.mapPitch).toBe("50");
-    expect(query.mapCenter).toBe("-96.8,32.78");
+    expect(query.map).toBe("9.25/32.78/-96.8/18/50");
     expect(query.visibleLayerIds).toBe("facilities.colocation,fiber-locator.metro,power.plants");
     expect(query.basemapLayerIds).toBe("buildings3d,labels,roads");
     expect(query.fiberMetroSourceLayerNames).toBe("att,zayo");

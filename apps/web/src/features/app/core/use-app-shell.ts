@@ -84,7 +84,6 @@ export function useAppShell() {
     powerVisibility: visibility.powerVisibility,
     selectedFiberSourceLayerNames: fiber.selectedFiberSourceLayerNames,
     setBasemapLayerVisible: visibility.setBasemapLayerVisible,
-    setBasemapLayerColor: visibility.setBasemapLayerColor,
     setBoundarySelectedRegionIds: mapLifecycle.setBoundarySelectedRegionIds,
     setBoundaryVisible: visibility.setBoundaryVisible,
     setFiberLayerVisibility: fiber.setFiberLayerVisibility,

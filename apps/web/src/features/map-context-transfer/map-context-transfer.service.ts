@@ -61,6 +61,7 @@ type MapContextQueryKey =
   | "fiberMetroSourceLayerNames"
   | "highlightTarget"
   | "mapBearing"
+  | "map"
   | "mapBounds"
   | "mapCenter"
   | "mapPitch"
@@ -85,6 +86,7 @@ const mapContextQueryKeys: Record<MapContextQueryKey, string> = {
   fiberLonghaulSourceLayerNames: "fiberLonghaulSourceLayerNames",
   fiberMetroSourceLayerNames: "fiberMetroSourceLayerNames",
   highlightTarget: "highlightTarget",
+  map: "map",
   mapBearing: "mapBearing",
   mapBounds: "mapBounds",
   mapCenter: "mapCenter",
@@ -225,6 +227,13 @@ function formatHighlightTarget(target: MapContextHighlightTarget | undefined): s
 function parseViewport(
   route: RouteLocationNormalizedLoaded
 ): MapContextTransfer["viewport"] | undefined {
+  const compactViewport = parseCompactViewport(
+    readFirstQueryValue(route.query[mapContextQueryKeys.map])
+  );
+  if (typeof compactViewport !== "undefined") {
+    return compactViewport;
+  }
+
   const bearing = parseFiniteNumber(
     readFirstQueryValue(route.query[mapContextQueryKeys.mapBearing])
   );
@@ -274,6 +283,7 @@ function parseViewport(
 }
 
 function formatViewport(context: MapContextTransfer): {
+  readonly map?: string;
   readonly mapBearing?: string;
   readonly mapBounds?: string;
   readonly mapCenter?: string;
@@ -284,28 +294,102 @@ function formatViewport(context: MapContextTransfer): {
     return {};
   }
 
-  const cameraFields = {
-    ...(typeof context.viewport.bearing === "number"
-      ? { mapBearing: context.viewport.bearing.toString() }
-      : {}),
-    ...(typeof context.viewport.pitch === "number"
-      ? { mapPitch: context.viewport.pitch.toString() }
-      : {}),
-  };
-
   if (context.viewport.type === "bounds") {
     const bounds = context.viewport.bounds;
     return {
-      ...cameraFields,
-      mapBounds: `${bounds.west},${bounds.south},${bounds.east},${bounds.north}`,
+      map: [
+        "bounds",
+        `${bounds.west},${bounds.south},${bounds.east},${bounds.north}`,
+        context.viewport.bearing?.toString() ?? "",
+        context.viewport.pitch?.toString() ?? "",
+      ].join("/"),
     };
   }
 
   return {
-    ...cameraFields,
-    mapCenter: `${context.viewport.center[0]},${context.viewport.center[1]}`,
-    mapZoom: context.viewport.zoom.toString(),
+    map: [
+      context.viewport.zoom.toString(),
+      context.viewport.center[1].toString(),
+      context.viewport.center[0].toString(),
+      context.viewport.bearing?.toString() ?? "",
+      context.viewport.pitch?.toString() ?? "",
+    ].join("/"),
   };
+}
+
+function parseCompactViewport(value: string | null): MapContextTransfer["viewport"] | undefined {
+  if (value === null) {
+    return undefined;
+  }
+
+  if (value.startsWith("bounds/")) {
+    return parseCompactBoundsViewport(value);
+  }
+
+  return parseCompactCenterViewport(value);
+}
+
+function parseCompactCenterViewport(
+  value: string
+): Extract<MapContextTransfer["viewport"], { readonly type: "center" }> | undefined {
+  const parts = value.split("/");
+  if (parts.length < 3) {
+    return undefined;
+  }
+
+  const zoom = parseFiniteNumber(parts[0] ?? null);
+  const latitude = parseFiniteNumber(parts[1] ?? null);
+  const longitude = parseFiniteNumber(parts[2] ?? null);
+  const bearing = parseFiniteNumber(parts[3] ?? null);
+  const pitch = parseFiniteNumber(parts[4] ?? null);
+
+  if (zoom === null || latitude === null || longitude === null) {
+    return undefined;
+  }
+
+  const parsedViewport = MapContextViewportSchema.safeParse({
+    ...(bearing === null ? {} : { bearing }),
+    center: [longitude, latitude],
+    ...(pitch === null ? {} : { pitch }),
+    type: "center",
+    zoom,
+  });
+
+  if (!parsedViewport.success || parsedViewport.data.type !== "center") {
+    return undefined;
+  }
+
+  return parsedViewport.data;
+}
+
+function parseCompactBoundsViewport(
+  value: string
+): Extract<MapContextTransfer["viewport"], { readonly type: "bounds" }> | undefined {
+  const parts = value.split("/");
+  const boundsValue = parts[1];
+  if (typeof boundsValue !== "string") {
+    return undefined;
+  }
+
+  const bounds = parseBboxParam(boundsValue);
+  if (bounds === null) {
+    return undefined;
+  }
+
+  const bearing = parseFiniteNumber(parts[2] ?? null);
+  const pitch = parseFiniteNumber(parts[3] ?? null);
+  const parsedViewport = MapContextViewportSchema.safeParse({
+    ...(bearing === null ? {} : { bearing }),
+    bounds,
+    ...(pitch === null ? {} : { pitch }),
+    type: "bounds",
+  });
+
+  if (!parsedViewport.success || parsedViewport.data.type !== "bounds") {
+    return undefined;
+  }
+
+  return parsedViewport.data;
 }
 
 function inferTargetSurface(route: RouteLocationNormalizedLoaded): MapContextSurface | undefined {
@@ -841,6 +925,7 @@ export function buildMapContextTransferQuery(
     [mapContextQueryKeys.selectionGeometryToken]: context.selectionGeometryToken,
     [mapContextQueryKeys.highlightTarget]: formatHighlightTarget(context.highlightTarget),
     [mapContextQueryKeys.contextToken]: contextToken,
+    [mapContextQueryKeys.map]: viewportQuery.map,
     [mapContextQueryKeys.mapBearing]: viewportQuery.mapBearing,
     [mapContextQueryKeys.mapBounds]: viewportQuery.mapBounds,
     [mapContextQueryKeys.mapCenter]: viewportQuery.mapCenter,

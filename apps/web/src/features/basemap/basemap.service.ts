@@ -386,6 +386,65 @@ function hasTextFieldLayout(layer: unknown): boolean {
   return typeof Reflect.get(layout, "text-field") !== "undefined";
 }
 
+function shouldSkipGroupedBasemapLayer(layerId: string, profile: BasemapProfile): boolean {
+  return (
+    layerId === profile.buildingsLayerId ||
+    layerId === SATELLITE_LAYER_ID ||
+    layerId === LANDMARKS_POI_LAYER_ID ||
+    layerId === LANDMARKS_PEAK_LAYER_ID
+  );
+}
+
+function isBoundaryGroupLayer(
+  layerId: string,
+  layerType: string,
+  sourceLayerId: string | null
+): boolean {
+  return (
+    layerType === "line" &&
+    sourceLayerId !== null &&
+    sourceLayerId.includes("boundar") &&
+    layerId !== STATE_BOUNDARY_LAYER_ID
+  );
+}
+
+function isRoadGroupLayer(layerType: string, sourceLayerId: string | null): boolean {
+  return sourceLayerId === "transportation" && (layerType === "fill" || layerType === "line");
+}
+
+function isWaterGroupLayer(layerType: string, sourceLayerId: string | null): boolean {
+  return sourceLayerId === "water" && layerType === "fill";
+}
+
+function isLandGroupLayer(layerId: string, layerType: string, sourceLayerId: string | null): boolean {
+  if (layerType === "background") {
+    return true;
+  }
+
+  if (layerType !== "fill") {
+    return false;
+  }
+
+  if (
+    sourceLayerId === "landcover" ||
+    sourceLayerId === "landuse" ||
+    sourceLayerId === "park"
+  ) {
+    return true;
+  }
+
+  if (
+    layerId === "background" ||
+    layerId.startsWith("landcover") ||
+    layerId.startsWith("landuse") ||
+    layerId.startsWith("park")
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 function collectBasemapLayerGroups(map: IMap, profile: BasemapProfile): BasemapLayerGroups {
   const style = map.getStyle();
   const styleLayers = style.layers ?? [];
@@ -401,12 +460,7 @@ function collectBasemapLayerGroups(map: IMap, profile: BasemapProfile): BasemapL
       continue;
     }
 
-    if (
-      layerId === profile.buildingsLayerId ||
-      layerId === SATELLITE_LAYER_ID ||
-      layerId === LANDMARKS_POI_LAYER_ID ||
-      layerId === LANDMARKS_PEAK_LAYER_ID
-    ) {
+    if (shouldSkipGroupedBasemapLayer(layerId, profile)) {
       continue;
     }
 
@@ -417,16 +471,11 @@ function collectBasemapLayerGroups(map: IMap, profile: BasemapProfile): BasemapL
 
     const sourceLayerId = readSourceLayerId(styleLayer);
 
-    if (
-      layerType === "line" &&
-      sourceLayerId !== null &&
-      sourceLayerId.includes("boundar") &&
-      layerId !== STATE_BOUNDARY_LAYER_ID
-    ) {
+    if (isBoundaryGroupLayer(layerId, layerType, sourceLayerId)) {
       boundaryLayerIds.push(layerId);
     }
 
-    if (sourceLayerId === "transportation" && (layerType === "fill" || layerType === "line")) {
+    if (isRoadGroupLayer(layerType, sourceLayerId)) {
       roadLayerIds.push(layerId);
     }
 
@@ -434,14 +483,11 @@ function collectBasemapLayerGroups(map: IMap, profile: BasemapProfile): BasemapL
       labelLayerIds.push(layerId);
     }
 
-    if (sourceLayerId === "water" && layerType === "fill") {
+    if (isWaterGroupLayer(layerType, sourceLayerId)) {
       waterLayerIds.push(layerId);
     }
 
-    if (
-      (sourceLayerId === "landcover" || sourceLayerId === "landuse") &&
-      layerType === "fill"
-    ) {
+    if (isLandGroupLayer(layerId, layerType, sourceLayerId)) {
       landLayerIds.push(layerId);
     }
   }
@@ -449,10 +495,36 @@ function collectBasemapLayerGroups(map: IMap, profile: BasemapProfile): BasemapL
   return {
     boundaryLayerIds,
     labelLayerIds,
+    landLayerIds,
     roadLayerIds,
     waterLayerIds,
-    landLayerIds,
   };
+}
+
+function resolveLayerColorPaintProperty(targetLayer: string): string {
+  switch (targetLayer) {
+    case "road":
+      return "line-color";
+    case "water":
+      return "fill-color";
+    default:
+      return "fill-color";
+  }
+}
+
+function resolveLayerGroupIds(groups: BasemapLayerGroups, targetLayer: string): readonly string[] {
+  switch (targetLayer) {
+    case "water":
+      return groups.waterLayerIds;
+    case "road":
+      return groups.roadLayerIds;
+    case "boundary":
+      return groups.boundaryLayerIds;
+    case "land":
+      return groups.landLayerIds;
+    default:
+      return [];
+  }
 }
 
 function ensureSatelliteLayer(map: IMap): void {
@@ -987,26 +1059,27 @@ export function mountBasemapLayerVisibility(
         return;
       }
 
-      const paintProp =
-        targetLayer === "water"
-          ? "fill-color"
-          : targetLayer === "road"
-            ? "line-color"
-            : "fill-color";
+      const layerIds = resolveLayerGroupIds(groups, targetLayer);
+      const style = map.getStyle();
+      const styleLayers = style.layers ?? [];
+      const layerTypeMap = new Map<string, string>();
+      for (const sl of styleLayers) {
+        const id = readLayerId(sl);
+        const type = readLayerType(sl);
+        if (id !== null && type !== null) {
+          layerTypeMap.set(id, type);
+        }
+      }
 
-      const layerIds =
-        targetLayer === "water"
-          ? (groups.waterLayerIds ?? [])
-          : targetLayer === "road"
-            ? groups.roadLayerIds
-            : targetLayer === "boundary"
-              ? groups.boundaryLayerIds
-              : targetLayer === "land"
-                ? (groups.landLayerIds ?? [])
-                : [];
-
-      for (const layerId of layerIds) {
-        map.setPaintProperty(layerId, paintProp, color);
+      for (const lid of layerIds) {
+        const type = layerTypeMap.get(lid);
+        if (type === "background") {
+          map.setPaintProperty(lid, "background-color", color);
+        } else if (type === "line") {
+          map.setPaintProperty(lid, "line-color", color);
+        } else {
+          map.setPaintProperty(lid, "fill-color", color);
+        }
       }
     },
     destroy(): void {
