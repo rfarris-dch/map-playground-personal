@@ -125,6 +125,15 @@
     return entry ? new Set([entry.id]) : new Set();
   });
 
+  function onToggleVoltage(id: string): void {
+    const currentVoltages = activeVoltages.value;
+    if (currentVoltages.has(id)) {
+      mapFilters?.setTransmissionVoltage(null);
+    } else {
+      mapFilters?.setTransmissionVoltage(id as any);
+    }
+  }
+
   const parcelDropdowns = computed(() => ({
     dataset: mapFilters?.state.value?.parcelDataset ?? "",
     styleAcres: mapFilters?.state.value?.parcelStyleAcres ?? "",
@@ -687,7 +696,7 @@
             @toggle:provider="mapFilters?.toggleFacilityProvider($event)"
             @toggle:user="mapFilters?.toggleUser($event)"
             @update:interconnectivity-hub="mapFilters?.setInterconnectivityHub($event)"
-            @toggle:voltage="mapFilters?.setTransmissionVoltage($event as any)"
+            @toggle:voltage="onToggleVoltage($event)"
             @toggle:gas-capacity="mapFilters?.toggleGasCapacity($event)"
             @toggle:gas-status="mapFilters?.toggleGasStatus($event)"
             @update:parcel-dataset="mapFilters?.setParcelDataset($event)"
