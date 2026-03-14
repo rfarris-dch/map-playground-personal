@@ -1,4 +1,4 @@
-import type { MarketTableRow } from "@map-migration/contracts";
+import type { MarketTableRow } from "@map-migration/http-contracts";
 import { mapMarketRowsToTableRows } from "@/geo/markets/markets.mapper";
 import { countMarkets, listMarketsPage, type MarketListRow } from "@/geo/markets/markets.repo";
 import type { QueryMarketsTableArgs, QueryMarketsTableResult } from "./markets-query.service.types";

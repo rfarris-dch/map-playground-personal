@@ -1,4 +1,5 @@
-import { ApiErrorResponseSchema, ApiHeaders, type SafeParseSchema } from "@map-migration/contracts";
+import type { SafeParseSchema } from "@map-migration/geo-kernel";
+import { ApiErrorResponseSchema, ApiHeaders } from "@map-migration/http-contracts";
 import { TaggedError } from "effect/Data";
 import { catchAll, die, type Effect, either, fail, map } from "effect/Effect";
 import { type Either, isRight } from "effect/Either";

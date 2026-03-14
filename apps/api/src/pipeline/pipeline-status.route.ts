@@ -1,4 +1,4 @@
-import { isPipelineDataset, PipelineStatusResponseSchema } from "@map-migration/contracts";
+import { isPipelineDataset, PipelineStatusResponseSchema } from "@map-migration/http-contracts";
 import type { Env, Hono } from "hono";
 import { jsonOk, toDebugDetails } from "@/http/api-response";
 import { fromApiRequest, routeError, runEffectRoute } from "@/http/effect-route";

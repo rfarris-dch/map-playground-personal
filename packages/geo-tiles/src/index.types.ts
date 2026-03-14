@@ -37,6 +37,7 @@ export type TileDataset =
   | "parcels-analysis-v1"
   | "environmental-flood"
   | "environmental-hydro-basins"
+  | "gas-pipelines-v1"
   | "infrastructure"
   | "power"
   | "telecom";

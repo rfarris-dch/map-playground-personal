@@ -5,7 +5,7 @@ import {
   type QueryGranularity,
   type SpatialAnalysisPolicy,
   SpatialAnalysisPolicySchema,
-} from "@map-migration/contracts";
+} from "@map-migration/http-contracts";
 
 const spatialAnalysisPolicyConfig: SpatialAnalysisPolicy = SpatialAnalysisPolicySchema.parse({
   marketMetrics: {

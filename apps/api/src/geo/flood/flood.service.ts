@@ -1,4 +1,4 @@
-import type { SpatialAnalysisFloodSummary } from "@map-migration/contracts";
+import type { SpatialAnalysisFloodSummary } from "@map-migration/http-contracts";
 import type { FloodAreaSummaryRow, FloodParcelRollupRow } from "./flood.repo";
 import { queryFloodAreaSummary, queryFloodParcelRollup } from "./flood.repo";
 import type { QueryFloodAnalysisArgs, QueryFloodAnalysisResult } from "./flood.service.types";

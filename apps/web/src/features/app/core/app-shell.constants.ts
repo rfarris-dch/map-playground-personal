@@ -1,4 +1,4 @@
-import type { FacilityPerspective } from "@map-migration/contracts";
+import type { FacilityPerspective } from "@map-migration/geo-kernel";
 import type { LayerId } from "@map-migration/map-layer-catalog";
 import type { FiberLocatorLineId } from "@/features/fiber-locator/fiber-locator.types";
 import type { PowerLayerId } from "@/features/power/power.types";

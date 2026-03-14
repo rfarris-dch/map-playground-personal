@@ -1,4 +1,4 @@
-import type { SourceMode } from "@map-migration/contracts";
+import type { SourceMode } from "@map-migration/http-contracts";
 
 export interface ApiRuntimeConfig {
   readonly boundariesSourceMode: SourceMode;

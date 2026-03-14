@@ -1,4 +1,4 @@
-import type { ParcelsFeatureCollection } from "@map-migration/contracts";
+import type { ParcelsFeatureCollection } from "@map-migration/http-contracts";
 import type { ComputedRef, ShallowRef } from "vue";
 import type { UseMapOverlaysArgs } from "@/features/app/overlays/map-overlays.types";
 import type { ScannerSummary } from "@/features/scanner/scanner.types";

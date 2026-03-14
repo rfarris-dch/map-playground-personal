@@ -78,9 +78,9 @@ acquire_build_lock() {
 
 acquire_build_lock
 
-TIPPECANOE_FIELDS=(pid)
-FIELDS_JSON='["pid"]'
-PROPERTIES_SQL="jsonb_build_object('pid', parcel_id::text)"
+TIPPECANOE_FIELDS=(pid ll_gisacre zoning_type fema_flood_zone landval parval taxamt struct ll_bldg_count ll_bldg_footprint_sqft transmission_line_distance population_density zoning_subtype fema_flood_zone_subtype)
+FIELDS_JSON='["pid","ll_gisacre","zoning_type","fema_flood_zone","landval","parval","taxamt","struct","ll_bldg_count","ll_bldg_footprint_sqft","transmission_line_distance","population_density","zoning_subtype","fema_flood_zone_subtype"]'
+PROPERTIES_SQL="jsonb_build_object('pid', parcel_id::text) || jsonb_build_object('ll_gisacre', (attrs->>'ll_gisacre')::numeric, 'zoning_type', attrs->>'zoning_type', 'fema_flood_zone', attrs->>'fema_flood_zone', 'landval', (attrs->>'landval')::numeric, 'parval', (attrs->>'parval')::numeric, 'taxamt', (attrs->>'taxamt')::numeric, 'struct', attrs->>'struct', 'll_bldg_count', (attrs->>'ll_bldg_count')::int, 'll_bldg_footprint_sqft', (attrs->>'ll_bldg_footprint_sqft')::numeric, 'transmission_line_distance', (attrs->>'transmission_line_distance')::numeric, 'population_density', (attrs->>'population_density')::numeric, 'zoning_subtype', attrs->>'zoning_subtype', 'fema_flood_zone_subtype', attrs->>'fema_flood_zone_subtype')"
 
 if [[ "${PROFILE}" == "full_170" ]]; then
   if [[ ! -f "${SCHEMA_FILE}" ]]; then
@@ -127,12 +127,14 @@ jq -n \
 echo "[tiles] schema snapshot: ${SCHEMA_OUTPUT_PATH}" >&2
 
 SQL=$(cat <<EOF
-SELECT jsonb_build_object(
-  'type', 'Feature',
-  'geometry', ST_AsGeoJSON(geom, ${GEOJSON_MAX_DIGITS})::jsonb,
-  'properties', ${PROPERTIES_SQL}
-)::text
-FROM parcel_tiles.parcels_draw_source;
+COPY (
+  SELECT jsonb_build_object(
+    'type', 'Feature',
+    'geometry', ST_AsGeoJSON(geom, ${GEOJSON_MAX_DIGITS})::jsonb,
+    'properties', ${PROPERTIES_SQL}
+  )::text
+  FROM parcel_tiles.parcels_draw_source
+) TO STDOUT;
 EOF
 )
 
@@ -159,7 +161,7 @@ prepare_geojsonl_if_needed() {
 
   echo "[tiles] exporting GeoJSONL to ${GEOJSONL_PATH}" >&2
   rm -f "${GEOJSONL_TMP_PATH}"
-  psql "${DB_URL}" -v ON_ERROR_STOP=1 -X -q -A -t -c "${SQL}" > "${GEOJSONL_TMP_PATH}"
+  psql "${DB_URL}" -v ON_ERROR_STOP=1 -X -q -c "${SQL}" > "${GEOJSONL_TMP_PATH}"
   mv -f "${GEOJSONL_TMP_PATH}" "${GEOJSONL_PATH}"
 }
 

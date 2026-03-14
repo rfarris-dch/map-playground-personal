@@ -7,7 +7,7 @@ import {
   type ParcelEnrichRequest,
   type ParcelsFeatureCollection,
   ParcelsFeatureCollectionSchema,
-} from "@map-migration/contracts";
+} from "@map-migration/http-contracts";
 import {
   type ApiEffectError,
   type ApiEffectSuccess,

@@ -1,4 +1,5 @@
-import type { FacilityPerspective } from "@map-migration/contracts";
+import type { CommissionedSemantic, FacilityPerspective } from "@map-migration/geo-kernel";
+import { toLifecycleDisplayLabel } from "@map-migration/geo-kernel";
 import type { SpatialAnalysisFacilityComparable } from "@/features/spatial-analysis/spatial-analysis-facilities.service.types";
 
 function perspectiveSortRank(perspective: FacilityPerspective): number {
@@ -18,15 +19,11 @@ export function toSpatialAnalysisPerspectiveLabel(perspective: FacilityPerspecti
 }
 
 export function toSpatialAnalysisSemanticLabel(value: string): string {
-  if (value === "under_construction") {
-    return "Under Construction";
-  }
-
-  if (value.length === 0) {
-    return "Unknown";
-  }
-
-  return `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
+  return toLifecycleDisplayLabel({
+    commissionedSemantic: value as CommissionedSemantic,
+    leaseOrOwn: null,
+    statusLabel: null,
+  });
 }
 
 export function toSpatialAnalysisCoordinateText(value: number): string {

@@ -1,4 +1,4 @@
-import type { ProviderSortBy } from "@map-migration/contracts";
+import type { ProviderSortBy } from "@map-migration/http-contracts";
 import { runQuery } from "@/db/postgres";
 import type { ProviderCountRow, ProviderListRow, ProvidersPageQuery } from "./providers.repo.types";
 
@@ -122,8 +122,7 @@ active_providers AS (
     COALESCE(provider.state, metrics.state_abbrev) AS state,
     (metrics.colocation_listing_count + metrics.hyperscale_listing_count)::bigint AS listing_count,
     (metrics.hyperscale_listing_count > 0) AS supports_hyperscale,
-    (metrics.colocation_listing_count > 0) AS supports_retail,
-    false AS supports_wholesale,
+    (metrics.colocation_listing_count > 0) AS supports_colocation,
     COALESCE(provider.updated_at, metrics.latest_facility_updated_at) AS updated_at
   FROM provider_metrics AS metrics
   LEFT JOIN facility_current.providers AS provider
@@ -137,8 +136,7 @@ SELECT
   state,
   listing_count,
   supports_hyperscale,
-  supports_retail,
-  supports_wholesale,
+  supports_colocation,
   updated_at
 FROM active_providers
 ORDER BY ${sortColumn} ${sortDirection} NULLS LAST, name ASC, provider_id ASC

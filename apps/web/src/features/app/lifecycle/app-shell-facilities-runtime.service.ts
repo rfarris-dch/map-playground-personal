@@ -1,4 +1,5 @@
-import type { FacilitiesFeatureCollection, FacilityPerspective } from "@map-migration/contracts";
+import type { FacilityPerspective } from "@map-migration/geo-kernel";
+import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts";
 import { facilitiesLayerId } from "@/features/app/core/app-shell.constants";
 import { isSamePerspective } from "@/features/app/core/app-shell.defaults";
 import type {

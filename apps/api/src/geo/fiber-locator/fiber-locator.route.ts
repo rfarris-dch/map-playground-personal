@@ -1,11 +1,11 @@
+import { parseBboxParam } from "@map-migration/geo-kernel";
 import {
   ApiRoutes,
   type FiberLocatorCatalogResponse,
   FiberLocatorCatalogResponseSchema,
   type FiberLocatorLayersInViewResponse,
   FiberLocatorLayersInViewResponseSchema,
-  parseBboxParam,
-} from "@map-migration/contracts";
+} from "@map-migration/http-contracts";
 import type { Env, Hono } from "hono";
 import {
   fetchFiberLocatorCatalog,

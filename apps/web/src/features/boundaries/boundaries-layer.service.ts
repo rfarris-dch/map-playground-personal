@@ -1,4 +1,4 @@
-import type { BoundaryPowerFeature } from "@map-migration/contracts";
+import type { BoundaryPowerFeature } from "@map-migration/http-contracts";
 import type {
   BoundaryFacetOption,
   BoundaryHoverState,

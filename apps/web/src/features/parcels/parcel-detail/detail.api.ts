@@ -1,4 +1,4 @@
-import { buildParcelDetailRoute, ParcelDetailResponseSchema } from "@map-migration/contracts";
+import { buildParcelDetailRoute, ParcelDetailResponseSchema } from "@map-migration/http-contracts";
 import { apiGetJson } from "@map-migration/core-runtime/api";
 import type {
   ParcelDetailRequest,

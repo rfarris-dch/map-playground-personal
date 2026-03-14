@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import type { CountyScoresResponse, CountyScoresStatusResponse } from "@map-migration/contracts";
+  import type { CountyScoresResponse, CountyScoresStatusResponse } from "@map-migration/http-contracts";
   import { computed } from "vue";
-  import CountyScoresDatasetStatus from "@/features/county-scores/components/county-scores-dataset-status.vue";
+  import CountyScoresDatasetStatus from "@/features/county-intelligence/components/county-intelligence-dataset-status.vue";
   import {
     confidenceToneClass,
     countyLabel,
@@ -13,7 +13,7 @@
     formatShare,
     formatTier,
     rankToneClass,
-  } from "@/features/county-scores/county-scores-display.service";
+  } from "@/features/county-intelligence/county-intelligence-display.service";
 
   interface SpatialAnalysisCountyScoresSectionProps {
     readonly countyScores: CountyScoresResponse | null;

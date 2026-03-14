@@ -1,4 +1,4 @@
-import type { BBox } from "@map-migration/contracts";
+import type { BBox } from "@map-migration/geo-kernel";
 
 type PolygonCoordinate = readonly [number, number];
 type PolygonRing = readonly PolygonCoordinate[];

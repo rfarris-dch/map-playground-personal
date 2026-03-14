@@ -1,4 +1,4 @@
-import { type BBox, formatBboxParam } from "@map-migration/contracts";
+import { type BBox, formatBboxParam } from "@map-migration/geo-kernel";
 import {
   fetchJsonEffect,
   runEffectPromise,

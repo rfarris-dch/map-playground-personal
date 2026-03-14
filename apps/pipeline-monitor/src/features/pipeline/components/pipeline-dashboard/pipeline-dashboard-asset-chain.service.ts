@@ -1,4 +1,4 @@
-import type { PipelineStatusResponse } from "@map-migration/contracts";
+import type { PipelineStatusResponse } from "@map-migration/http-contracts";
 
 type PipelineDashboardRun = PipelineStatusResponse["run"];
 type PipelineDashboardState = PipelineDashboardRun["states"][number];

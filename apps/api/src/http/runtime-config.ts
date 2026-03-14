@@ -3,7 +3,7 @@ import {
   resolveDataVersion,
   type SourceMode,
   SourceModeSchema,
-} from "@map-migration/contracts";
+} from "@map-migration/http-contracts";
 import type { ApiRuntimeConfig } from "./runtime-config.types";
 
 function assertPostgisServingMode(envKey: string, mode: SourceMode): void {

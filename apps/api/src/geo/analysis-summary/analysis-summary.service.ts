@@ -1,10 +1,10 @@
+import type { Warning } from "@map-migration/geo-kernel";
 import {
   type CountyScoresResponse,
   CountyScoresResponseSchema,
   type CountyScoresStatusResponse,
   CountyScoresStatusResponseSchema,
   type FacilitiesFeatureCollection,
-  type ParcelEnrichRequest,
   type ParcelsFeatureCollection,
   type SpatialAnalysisFloodSummary,
   type SpatialAnalysisParcelRecord,
@@ -13,38 +13,7 @@ import {
   type SpatialAnalysisSelectionSummary,
   type SpatialAnalysisSummaryFacilityRecord,
   type SpatialAnalysisSummaryResponse,
-  type Warning,
-} from "@map-migration/contracts";
-import { parsePositiveIntFlag } from "@/config/env-parsing.service";
-import {
-  queryCountyScores,
-  queryCountyScoresStatus,
-} from "@/geo/county-scores/county-scores.service";
-import { getFacilitiesPolygonMaxRows } from "@/geo/facilities/facilities.repo";
-import {
-  FACILITIES_SELECTION_MAX_POLYGON_JSON_CHARS,
-  facilitiesSelectionBboxExceedsLimits,
-  resolveFacilitiesSelectionGeometry,
-} from "@/geo/facilities/route/facilities-route-policy.service";
-import { queryFacilitiesByPolygon } from "@/geo/facilities/route/facilities-route-query.service";
-import { queryFloodAnalysis } from "@/geo/flood/flood.service";
-import { queryMarketsBySelection } from "@/geo/markets/markets-selection.service";
-import { mapParcelRowsToFeatures } from "@/geo/parcels/parcels.mapper";
-import { enrichParcelsByPolygon } from "@/geo/parcels/parcels.repo";
-import {
-  coerceCursor,
-  paginateEnrichFeatures,
-  resolvePageSize,
-} from "@/geo/parcels/route/parcels-route-enrich.service";
-import {
-  profileMetadataWarnings,
-  readIngestionRunId,
-} from "@/geo/parcels/route/parcels-route-meta.service";
-import {
-  bboxExceedsLimits,
-  PARCELS_MAX_POLYGON_JSON_CHARS,
-  resolvePolygonGeometry,
-} from "@/geo/parcels/route/parcels-route-policy.service";
+} from "@map-migration/http-contracts";
 import {
   buildPolygonRepairWarning,
   normalizePolygonGeometryGeoJson,
@@ -56,26 +25,11 @@ import type {
   QuerySpatialAnalysisSummaryArgs,
   QuerySpatialAnalysisSummaryResult,
 } from "./analysis-summary.service.types";
+import type { AnalysisSummaryPorts } from "./ports/analysis-summary-ports";
 
 const MARKET_BOUNDARY_RELATION_NAME = "market_current.market_boundaries";
 const COUNTY_BOUNDARY_RELATION_NAME = "serve.boundary_county_geom_lod1";
 const COUNTY_FIPS_PATTERN = /^[0-9]{5}$/;
-const ANALYSIS_SUMMARY_MAX_TOTAL_PARCELS = parsePositiveIntFlag(
-  process.env.ANALYSIS_SUMMARY_MAX_TOTAL_PARCELS,
-  20_000
-);
-
-interface AnalysisSummaryDependencies {
-  readonly queryCountyScores: typeof queryCountyScores;
-  readonly queryCountyScoresStatus: typeof queryCountyScoresStatus;
-  readonly queryFacilitiesByPolygon: typeof queryFacilitiesByPolygon;
-}
-
-const DEFAULT_ANALYSIS_SUMMARY_DEPENDENCIES: AnalysisSummaryDependencies = {
-  queryFacilitiesByPolygon,
-  queryCountyScores,
-  queryCountyScoresStatus,
-};
 
 function isFiniteCoordinate(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
@@ -417,39 +371,6 @@ function emptyParcelQueryValue(args: { readonly warnings?: readonly Warning[] })
   };
 }
 
-function resolveParcelPolicyWarning(args: {
-  readonly includeParcels: boolean;
-  readonly geometry: ParcelEnrichRequest["aoi"];
-}): Warning | null {
-  if (!args.includeParcels) {
-    return null;
-  }
-
-  if (args.geometry.type !== "polygon") {
-    return buildWarning(
-      "PARCELS_POLICY_REJECTED",
-      "Parcel analysis skipped because only polygon AOIs are supported."
-    );
-  }
-
-  const polygonGeometry = resolvePolygonGeometry(args.geometry);
-  if (bboxExceedsLimits(polygonGeometry.bbox)) {
-    return buildWarning(
-      "PARCELS_POLICY_REJECTED",
-      "Parcel analysis skipped because the selection exceeds the parcel AOI limit."
-    );
-  }
-
-  if (polygonGeometry.geometryText.length > PARCELS_MAX_POLYGON_JSON_CHARS) {
-    return buildWarning(
-      "PARCELS_POLICY_REJECTED",
-      "Parcel analysis skipped because the selection payload is too large."
-    );
-  }
-
-  return null;
-}
-
 function isMissingRelationError(error: unknown, relationName: string): boolean {
   return (
     error instanceof Error &&
@@ -458,201 +379,11 @@ function isMissingRelationError(error: unknown, relationName: string): boolean {
   );
 }
 
-function resolveFacilitiesLimit(args: {
-  readonly requestedLimit: number;
-  readonly perspective: "colocation" | "hyperscale";
-}): { readonly limit: number; readonly warning: Warning | null } {
-  const maxRows = getFacilitiesPolygonMaxRows(args.perspective);
-  const limit = Math.min(args.requestedLimit, maxRows);
-  if (limit === args.requestedLimit) {
-    return {
-      limit,
-      warning: null,
-    };
-  }
-
-  return {
-    limit,
-    warning: buildWarning(
-      `${args.perspective.toUpperCase()}_LIMIT_CLAMPED`,
-      `${args.perspective} facilities limit reduced to ${String(maxRows)} due to server policy.`
-    ),
-  };
-}
-
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: parcel pagination preserves existing enrichment, truncation, and ingestion-run safeguards in one helper.
-async function queryParcels(args: {
-  readonly expectedIngestionRunId: string | null;
-  readonly geometryText: string;
-  readonly includeGeometry: "centroid" | "full" | "none" | "simplified";
-  readonly pageSize: number | undefined;
-}): Promise<
-  | {
-      readonly ok: true;
-      readonly value: {
-        readonly dataVersion: string;
-        readonly features: ParcelsFeatureCollection["features"];
-        readonly ingestionRunId: string | null;
-        readonly nextCursor: string | null;
-        readonly sourceMode: SpatialAnalysisSummaryResponse["meta"]["sourceMode"];
-        readonly truncated: boolean;
-        readonly warnings: readonly Warning[];
-      };
-    }
-  | {
-      readonly ok: false;
-      readonly value: {
-        readonly error: unknown;
-        readonly reason:
-          | "parcel_ingestion_run_mismatch"
-          | "parcels_mapping_failed"
-          | "parcels_policy_rejected"
-          | "parcels_query_failed";
-      };
-    }
-> {
-  const pageSizeResolution = resolvePageSize(args.pageSize ?? 20_000);
-  const warnings = [...pageSizeResolution.warnings, ...profileMetadataWarnings("analysis_v1")];
-  const pageSize = pageSizeResolution.pageSize;
-  const parcelsById = new Map<string, ParcelsFeatureCollection["features"][number]>();
-  const seenCursors = new Set<string>();
-  let cursor = coerceCursor(null);
-  let truncated = false;
-  let nextCursor: string | null = null;
-  let dataVersion = "";
-  let sourceMode = getApiRuntimeConfig().parcelsSourceMode;
-  let ingestionRunId: string | null = null;
-
-  while (true) {
-    const remainingCapacity = ANALYSIS_SUMMARY_MAX_TOTAL_PARCELS - parcelsById.size;
-    if (remainingCapacity <= 0) {
-      truncated = true;
-      warnings.push(
-        buildWarning(
-          "PARCELS_TOTAL_CAP_REACHED",
-          `Parcel analysis summary is capped at ${String(ANALYSIS_SUMMARY_MAX_TOTAL_PARCELS)} parcels; use the parcels API for full pagination.`
-        )
-      );
-      break;
-    }
-
-    const queryPageSize = Math.min(pageSize, remainingCapacity);
-    let rows: Awaited<ReturnType<typeof enrichParcelsByPolygon>>;
-    try {
-      rows = await enrichParcelsByPolygon(args.geometryText, {
-        cursor,
-        includeGeometry: args.includeGeometry,
-        limit: queryPageSize + 1,
-      });
-    } catch (error) {
-      return {
-        ok: false,
-        value: {
-          error,
-          reason: "parcels_query_failed",
-        },
-      };
-    }
-
-    let mappedFeatures: ParcelsFeatureCollection["features"];
-    try {
-      mappedFeatures = mapParcelRowsToFeatures(rows);
-    } catch (error) {
-      return {
-        ok: false,
-        value: {
-          error,
-          reason: "parcels_mapping_failed",
-        },
-      };
-    }
-
-    const pageWarnings = [...warnings];
-    const paginated = paginateEnrichFeatures(mappedFeatures, queryPageSize, pageWarnings);
-    warnings.splice(0, warnings.length, ...pageWarnings);
-    const actualIngestionRunId = readIngestionRunId(paginated.features) ?? null;
-    if (
-      args.expectedIngestionRunId !== null &&
-      paginated.features.length > 0 &&
-      actualIngestionRunId !== args.expectedIngestionRunId
-    ) {
-      return {
-        ok: false,
-        value: {
-          error: new Error("parcel ingestion run mismatch"),
-          reason: "parcel_ingestion_run_mismatch",
-        },
-      };
-    }
-
-    if (ingestionRunId === null) {
-      ingestionRunId = actualIngestionRunId;
-    }
-
-    dataVersion = getApiRuntimeConfig().dataVersion;
-    sourceMode = getApiRuntimeConfig().parcelsSourceMode;
-
-    for (const feature of paginated.features) {
-      parcelsById.set(feature.properties.parcelId, feature);
-    }
-
-    if (parcelsById.size >= ANALYSIS_SUMMARY_MAX_TOTAL_PARCELS && paginated.hasMore) {
-      truncated = true;
-      nextCursor = paginated.nextCursor;
-      warnings.push(
-        buildWarning(
-          "PARCELS_TOTAL_CAP_REACHED",
-          `Parcel analysis summary is capped at ${String(ANALYSIS_SUMMARY_MAX_TOTAL_PARCELS)} parcels; use the parcels API for full pagination.`
-        )
-      );
-      break;
-    }
-
-    if (!paginated.hasMore || paginated.nextCursor === null) {
-      truncated = false;
-      nextCursor = null;
-      break;
-    }
-
-    if (seenCursors.has(paginated.nextCursor)) {
-      truncated = true;
-      nextCursor = paginated.nextCursor;
-      warnings.push(
-        buildWarning(
-          "POSSIBLY_TRUNCATED",
-          "parcel cursor repeated while paginating; returning the collected parcel subset"
-        )
-      );
-      break;
-    }
-
-    seenCursors.add(paginated.nextCursor);
-    cursor = paginated.nextCursor;
-  }
-
-  return {
-    ok: true,
-    value: {
-      dataVersion,
-      features: [...parcelsById.values()],
-      ingestionRunId,
-      nextCursor,
-      sourceMode,
-      truncated,
-      warnings,
-    },
-  };
-}
-
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: orchestration composes multiple existing slices and degraded-state rules into one canonical response.
 export async function querySpatialAnalysisSummary(
   args: QuerySpatialAnalysisSummaryArgs,
-  dependencies: Partial<AnalysisSummaryDependencies> = {}
+  ports: AnalysisSummaryPorts
 ): Promise<QuerySpatialAnalysisSummaryResult> {
-  const resolvedDependencies: AnalysisSummaryDependencies = {
-    ...DEFAULT_ANALYSIS_SUMMARY_DEPENDENCIES,
-    ...dependencies,
-  };
   const facilitiesQueryAllowed = isDatasetQueryAllowed("facilities", "polygon");
   if (!facilitiesQueryAllowed) {
     return {
@@ -676,8 +407,8 @@ export async function querySpatialAnalysisSummary(
   }
   const floodQueryAllowed = isDatasetQueryAllowed("environmental_flood", "polygon");
 
-  const facilitiesGeometry = resolveFacilitiesSelectionGeometry(args.request.geometry);
-  if (facilitiesSelectionBboxExceedsLimits(facilitiesGeometry.bbox)) {
+  const facilitiesGeometry = ports.resolveFacilitiesGeometry(args.request.geometry);
+  if (ports.facilitiesBboxExceedsLimits(facilitiesGeometry.bbox)) {
     return {
       ok: false,
       value: {
@@ -687,7 +418,7 @@ export async function querySpatialAnalysisSummary(
     };
   }
 
-  if (facilitiesGeometry.geometryText.length > FACILITIES_SELECTION_MAX_POLYGON_JSON_CHARS) {
+  if (facilitiesGeometry.geometryText.length > ports.facilitiesMaxPolygonJsonChars) {
     return {
       ok: false,
       value: {
@@ -722,15 +453,15 @@ export async function querySpatialAnalysisSummary(
   const requestedPerspectives = new Set(args.request.perspectives);
   const shouldQueryColocation = requestedPerspectives.has("colocation");
   const shouldQueryHyperscale = requestedPerspectives.has("hyperscale");
-  const colocationFacilitiesLimit = resolveFacilitiesLimit({
+  const colocationFacilitiesLimit = ports.resolveFacilitiesLimit({
     perspective: "colocation",
     requestedLimit: args.request.limitPerPerspective,
   });
-  const hyperscaleFacilitiesLimit = resolveFacilitiesLimit({
+  const hyperscaleFacilitiesLimit = ports.resolveFacilitiesLimit({
     perspective: "hyperscale",
     requestedLimit: args.request.limitPerPerspective,
   });
-  const parcelPolicyWarning = resolveParcelPolicyWarning({
+  const parcelPolicyWarning = ports.resolveParcelPolicyWarning({
     geometry: {
       type: "polygon",
       geometry: args.request.geometry,
@@ -754,7 +485,7 @@ export async function querySpatialAnalysisSummary(
       });
     }
 
-    return queryParcels({
+    return ports.queryParcels({
       expectedIngestionRunId: args.expectedParcelIngestionRunId,
       geometryText: normalizedGeometryText,
       includeGeometry: "centroid",
@@ -786,40 +517,42 @@ export async function querySpatialAnalysisSummary(
       });
     }
 
-    return queryFloodAnalysis({
-      geometryGeoJson: normalizedGeometryText,
-    }).then((result) => {
-      if (result.ok) {
-        return {
-          dataVersion: result.value.dataVersion,
-          datasetAvailable: true,
-          runId: result.value.runId,
-          sourceMode: "postgis" as const,
-          summary: result.value.summary,
-          warnings: [] as readonly Warning[],
-        };
-      }
+    return ports
+      .queryFloodAnalysis({
+        geometryGeoJson: normalizedGeometryText,
+      })
+      .then((result) => {
+        if (result.ok) {
+          return {
+            dataVersion: result.value.dataVersion,
+            datasetAvailable: true,
+            runId: result.value.runId,
+            sourceMode: "postgis" as const,
+            summary: result.value.summary,
+            warnings: [] as readonly Warning[],
+          };
+        }
 
-      const unavailableReason =
-        result.value.reason === "source_unavailable"
-          ? "Environmental flood dataset is unavailable."
-          : "Environmental flood analysis is unavailable.";
-      return {
-        dataVersion: null,
-        datasetAvailable: false,
-        runId: null,
-        sourceMode: null as SpatialAnalysisSummaryResponse["meta"]["sourceMode"] | null,
-        summary: emptyFloodSummary(unavailableReason),
-        warnings: [
-          buildWarning(
-            result.value.reason === "source_unavailable"
-              ? "FLOOD_SOURCE_UNAVAILABLE"
-              : "FLOOD_ANALYSIS_FAILED",
-            unavailableReason
-          ),
-        ],
-      };
-    });
+        const unavailableReason =
+          result.value.reason === "source_unavailable"
+            ? "Environmental flood dataset is unavailable."
+            : "Environmental flood analysis is unavailable.";
+        return {
+          dataVersion: null,
+          datasetAvailable: false,
+          runId: null,
+          sourceMode: null as SpatialAnalysisSummaryResponse["meta"]["sourceMode"] | null,
+          summary: emptyFloodSummary(unavailableReason),
+          warnings: [
+            buildWarning(
+              result.value.reason === "source_unavailable"
+                ? "FLOOD_SOURCE_UNAVAILABLE"
+                : "FLOOD_ANALYSIS_FAILED",
+              unavailableReason
+            ),
+          ],
+        };
+      });
   })();
 
   const [
@@ -833,7 +566,7 @@ export async function querySpatialAnalysisSummary(
     marketBoundarySourceVersionResult,
   ] = await Promise.all([
     shouldQueryColocation
-      ? resolvedDependencies.queryFacilitiesByPolygon({
+      ? ports.queryFacilitiesByPolygon({
           geometryGeoJson: normalizedGeometryText,
           limit: colocationFacilitiesLimit.limit,
           perspective: "colocation",
@@ -841,14 +574,14 @@ export async function querySpatialAnalysisSummary(
       : Promise.resolve({
           ok: true as const,
           value: {
-            features: [],
+            features: [] as FacilitiesFeatureCollection["features"],
             truncated: false,
-            warnings: [],
+            warnings: [] as Warning[],
           },
         }),
     floodResultPromise,
     shouldQueryHyperscale
-      ? resolvedDependencies.queryFacilitiesByPolygon({
+      ? ports.queryFacilitiesByPolygon({
           geometryGeoJson: normalizedGeometryText,
           limit: hyperscaleFacilitiesLimit.limit,
           perspective: "hyperscale",
@@ -856,18 +589,18 @@ export async function querySpatialAnalysisSummary(
       : Promise.resolve({
           ok: true as const,
           value: {
-            features: [],
+            features: [] as FacilitiesFeatureCollection["features"],
             truncated: false,
-            warnings: [],
+            warnings: [] as Warning[],
           },
         }),
-    queryMarketsBySelection({
+    ports.queryMarketsBySelection({
       geometryGeoJson: normalizedGeometryText,
       limit: 25,
       minimumSelectionOverlapPercent: args.request.minimumMarketSelectionOverlapPercent,
     }),
     parcelResultPromise,
-    resolvedDependencies.queryCountyScoresStatus(),
+    ports.queryCountyScoresStatus(),
     listIntersectedCountyIds(normalizedGeometryText).then(
       (rows) => ({
         ok: true as const,
@@ -1066,7 +799,7 @@ export async function querySpatialAnalysisSummary(
     countyUnavailableReason = 'query granularity "county" is not allowed for county_scores';
     warnings.push(buildWarning("COUNTY_INTELLIGENCE_POLICY_REJECTED", countyUnavailableReason));
   } else if (countyIds.length > 0) {
-    const countyScoresResult = await resolvedDependencies.queryCountyScores({
+    const countyScoresResult = await ports.queryCountyScores({
       countyIds,
     });
 

@@ -1,5 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
-import type { ParcelAoi, ParcelGeometryMode } from "@map-migration/contracts";
+import type { ParcelAoi } from "@map-migration/geo-kernel";
+import type { ParcelGeometryMode } from "@map-migration/http-contracts";
 import { Hono } from "hono";
 
 const enrichParcelsByBboxMock =

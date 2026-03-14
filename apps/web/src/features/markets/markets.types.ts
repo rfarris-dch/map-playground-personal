@@ -1,4 +1,4 @@
-import type { MarketSortBy, MarketsTableResponse, SortDirection } from "@map-migration/contracts";
+import type { MarketSortBy, MarketsTableResponse, SortDirection } from "@map-migration/http-contracts";
 import type { ApiResult } from "@map-migration/core-runtime/api";
 
 export interface MarketsTableRequest {

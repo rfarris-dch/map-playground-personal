@@ -1,4 +1,4 @@
-import type { MapContextSurface } from "@map-migration/contracts";
+import type { MapContextSurface } from "@map-migration/http-contracts";
 import type { ComputedRef, ShallowRef } from "vue";
 import type {
   BoundaryFacetSelectionState,
@@ -44,7 +44,7 @@ export interface UseAppShellUrlStateOptions {
   readonly setHydroBasinsVisible: (visible: boolean) => void;
   readonly setParcelsVisible: (visible: boolean) => void;
   readonly setPerspectiveVisibility: (
-    perspective: import("@map-migration/contracts").FacilityPerspective,
+    perspective: import("@map-migration/geo-kernel").FacilityPerspective,
     visible: boolean
   ) => void;
   readonly setPowerLayerVisible: (layerId: PowerLayerId, visible: boolean) => void;

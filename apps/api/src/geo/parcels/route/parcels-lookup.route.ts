@@ -3,7 +3,7 @@ import {
   ParcelLookupRequestSchema,
   type ParcelsFeatureCollection,
   ParcelsFeatureCollectionSchema,
-} from "@map-migration/contracts";
+} from "@map-migration/http-contracts";
 import type { Env, Hono } from "hono";
 import { mapParcelRowsToFeatures } from "@/geo/parcels/parcels.mapper";
 import { lookupParcelsByIds, type ParcelRow } from "@/geo/parcels/parcels.repo";

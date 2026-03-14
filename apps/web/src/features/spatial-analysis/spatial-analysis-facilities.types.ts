@@ -1,8 +1,4 @@
-import type {
-  CommissionedSemantic,
-  FacilityPerspective,
-  LeaseOrOwn,
-} from "@map-migration/contracts";
+import type { CommissionedSemantic, FacilityPerspective, LeaseOrOwn } from "@map-migration/geo-kernel";
 import type { LngLat } from "@map-migration/map-engine";
 
 export interface SpatialAnalysisFacilityRecord {

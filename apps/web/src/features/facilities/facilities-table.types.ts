@@ -1,9 +1,5 @@
-import type {
-  FacilitiesTableResponse,
-  FacilityPerspective,
-  FacilitySortBy,
-  SortDirection,
-} from "@map-migration/contracts";
+import type { FacilityPerspective } from "@map-migration/geo-kernel";
+import type { FacilitiesTableResponse, FacilitySortBy, SortDirection } from "@map-migration/http-contracts";
 import type { ApiResult } from "@map-migration/core-runtime/api";
 
 export interface FacilitiesTableRequest {

@@ -1,12 +1,9 @@
-import {
-  type FacilitiesFeatureCollection,
-  buildMarketsRoute,
-  MarketsTableResponseSchema,
-} from "@map-migration/contracts";
+import { type FacilitiesFeatureCollection, buildMarketsRoute, MarketsTableResponseSchema } from "@map-migration/http-contracts";
 import type { MapExpression } from "@map-migration/map-engine";
 import { apiGetJson } from "@map-migration/core-runtime/api";
 import { computed, type Ref, shallowRef, watch } from "vue";
 import { buildApiRequestInit } from "@/lib/api/api-request-init.service";
+import type { ParcelsViewportFacets } from "@/features/parcels/parcels.types";
 import {
   buildFacilitiesFilterPredicate,
   buildParcelFilter,
@@ -47,6 +44,8 @@ export interface UseMapFiltersResult {
 
   toggleFacilityStatus(id: FacilityStatusFilterId): void;
   readonly parcelFilter: Readonly<ReturnType<typeof shallowRef<MapExpression | null>>>;
+  readonly parcelViewportFacets: Readonly<ReturnType<typeof shallowRef<ParcelsViewportFacets | null>>>;
+  setParcelViewportFacets(facets: ParcelsViewportFacets): void;
   readonly transmissionFilter: Readonly<ReturnType<typeof shallowRef<MapExpression | null>>>;
 
   togglePowerType(id: string): void;
@@ -85,6 +84,7 @@ export function useMapFilters(): UseMapFiltersResult {
   const state = shallowRef<MapFiltersState>(createInitialState());
   const facilitiesPredicate = shallowRef<FacilitiesFilterPredicate | null>(null);
   const parcelFilter = shallowRef<MapExpression | null>(null);
+  const parcelViewportFacets = shallowRef<ParcelsViewportFacets | null>(null);
   const transmissionFilter = shallowRef<MapExpression | null>(null);
 
   // Accumulate unique values from features — never shrink, only grow
@@ -211,6 +211,10 @@ export function useMapFilters(): UseMapFiltersResult {
     updateState((prev) => ({ ...prev, parcelDavPercent: value }));
   }
 
+  function setParcelViewportFacets(facets: ParcelsViewportFacets): void {
+    parcelViewportFacets.value = facets;
+  }
+
   function toggleZoningType(id: string): void {
     toggleSetField("zoningTypes", id);
   }
@@ -265,6 +269,8 @@ export function useMapFilters(): UseMapFiltersResult {
     clearAll,
     facilitiesPredicate,
     parcelFilter,
+    parcelViewportFacets,
+    setParcelViewportFacets,
     transmissionFilter,
     availableProviders,
     availableMarkets,

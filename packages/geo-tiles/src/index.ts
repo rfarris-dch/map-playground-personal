@@ -40,6 +40,7 @@ export function decodeTileDataset(value: string): TileDataset | null {
     case "parcels-analysis-v1":
     case "environmental-flood":
     case "environmental-hydro-basins":
+    case "gas-pipelines-v1":
     case "infrastructure":
     case "power":
     case "telecom":

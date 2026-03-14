@@ -3,12 +3,13 @@ import {
   SpatialAnalysisSummaryRequestSchema,
   type SpatialAnalysisSummaryResponse,
   SpatialAnalysisSummaryResponseSchema,
-} from "@map-migration/contracts";
+} from "@map-migration/http-contracts";
 import type { Context, Env, Hono } from "hono";
 import { readExpectedIngestionRunId } from "@/geo/parcels/route/parcels-route-meta.service";
 import { jsonError, jsonOk, toDebugDetails } from "@/http/api-response";
 import { fromApiRequest, routeError, runEffectRoute } from "@/http/effect-route";
 import { readJsonBody } from "@/http/json-request.service";
+import { createAnalysisSummaryPorts } from "./adapters/analysis-summary-adapters";
 import { querySpatialAnalysisSummary } from "./analysis-summary.service";
 
 function buildMeta(
@@ -114,10 +115,14 @@ export function registerAnalysisSummaryRoute<E extends Env>(app: Hono<E>): void 
           return requestResult.response;
         }
 
-        const result = await querySpatialAnalysisSummary({
-          expectedParcelIngestionRunId: readExpectedIngestionRunId(honoContext),
-          request: requestResult.value,
-        });
+        const ports = createAnalysisSummaryPorts();
+        const result = await querySpatialAnalysisSummary(
+          {
+            expectedParcelIngestionRunId: readExpectedIngestionRunId(honoContext),
+            request: requestResult.value,
+          },
+          ports
+        );
 
         if (!result.ok) {
           throw routeError({

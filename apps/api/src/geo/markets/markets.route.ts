@@ -1,3 +1,4 @@
+import type { Warning } from "@map-migration/geo-kernel";
 import {
   ApiRoutes,
   type MarketSelectionResponse,
@@ -10,8 +11,7 @@ import {
   MarketsTableResponseSchema,
   type SortDirection,
   SortDirectionSchema,
-  type Warning,
-} from "@map-migration/contracts";
+} from "@map-migration/http-contracts";
 import type { Context, Env, Hono } from "hono";
 import { queryMarketsTable } from "@/geo/markets/markets-query.service";
 import {

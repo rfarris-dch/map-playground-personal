@@ -1,4 +1,4 @@
-import type { ProviderSortBy, ProviderTableRow, SortDirection } from "@map-migration/contracts";
+import type { ProviderSortBy, ProviderTableRow, SortDirection } from "@map-migration/http-contracts";
 import type { ProviderListRow } from "@/geo/providers/providers.repo";
 
 export type QueryProviderRowsResult =

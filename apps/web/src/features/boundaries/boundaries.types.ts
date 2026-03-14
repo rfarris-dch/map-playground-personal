@@ -1,4 +1,4 @@
-import type { BoundaryPowerFeature, BoundaryPowerLevel } from "@map-migration/contracts";
+import type { BoundaryPowerFeature, BoundaryPowerLevel } from "@map-migration/http-contracts";
 import type { LayerVisibilityController } from "@/features/layers/layer-runtime.types";
 
 export type BoundaryLayerId = BoundaryPowerLevel;

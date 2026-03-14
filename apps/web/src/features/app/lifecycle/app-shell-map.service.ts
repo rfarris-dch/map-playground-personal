@@ -1,4 +1,4 @@
-import type { MapContextTransfer } from "@map-migration/contracts";
+import type { MapContextTransfer } from "@map-migration/http-contracts";
 import {
   createFullscreenControl,
   createMapLibreAdapter,

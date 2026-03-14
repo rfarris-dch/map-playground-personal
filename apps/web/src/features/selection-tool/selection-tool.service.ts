@@ -4,7 +4,7 @@ import type {
   MarketsSelectionRequest,
   SpatialAnalysisSummaryRequest,
   SpatialAnalysisSummaryResponse,
-} from "@map-migration/contracts";
+} from "@map-migration/http-contracts";
 import {
   ApiAbortedError,
   type ApiEffectError,

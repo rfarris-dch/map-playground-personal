@@ -1,4 +1,5 @@
-import type { FacilitiesDetailResponse, FacilityPerspective } from "@map-migration/contracts";
+import type { FacilityPerspective } from "@map-migration/geo-kernel";
+import type { FacilitiesDetailResponse } from "@map-migration/http-contracts";
 import type { ApiResult } from "@map-migration/core-runtime/api";
 import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";
 

@@ -1,4 +1,4 @@
-import type { FacilityPerspective } from "@map-migration/contracts";
+import type { FacilityPerspective } from "@map-migration/geo-kernel";
 import { shallowRef } from "vue";
 import {
   FLOOD_100_LAYER_ID,
@@ -56,6 +56,7 @@ export function useAppShellVisibility(options: UseAppShellVisibilityOptions) {
   const visiblePerspectives = shallowRef<PerspectiveVisibilityState>(
     buildInitialPerspectiveVisibilityState()
   );
+  const gasPipelineVisible = shallowRef<boolean>(false);
   const hydroBasinsVisible = shallowRef<boolean>(buildInitialHydroBasinsVisible());
   const parcelsVisible = shallowRef<boolean>(buildInitialParcelsVisible());
   const powerVisibility = shallowRef<PowerVisibilityState>(buildInitialPowerVisibilityState());
@@ -148,6 +149,11 @@ export function useAppShellVisibility(options: UseAppShellVisibilityOptions) {
     options.layerRuntime.value?.setUserVisible(HYDRO_BASINS_LAYER_ID, visible);
   }
 
+  function setGasPipelineVisible(visible: boolean): void {
+    gasPipelineVisible.value = visible;
+    options.gasPipelineController?.value?.setVisible(visible);
+  }
+
   function setWaterVisible(visible: boolean): void {
     waterVisible.value = visible;
     options.layerRuntime.value?.setUserVisible(WATER_FEATURES_LAYER_ID, visible);
@@ -198,6 +204,8 @@ export function useAppShellVisibility(options: UseAppShellVisibilityOptions) {
     setFloodLayerVisible,
     setHydroBasinsVisible,
     setPowerLayerVisible,
+    gasPipelineVisible,
+    setGasPipelineVisible,
     setWaterVisible,
     setBoundaryVisible,
   };

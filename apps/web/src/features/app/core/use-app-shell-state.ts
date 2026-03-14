@@ -1,4 +1,5 @@
-import type { FacilitiesFeatureCollection, FacilityPerspective } from "@map-migration/contracts";
+import type { FacilityPerspective } from "@map-migration/geo-kernel";
+import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts";
 import type { IMap } from "@map-migration/map-engine";
 import { computed, shallowRef, useTemplateRef } from "vue";
 import {
@@ -33,6 +34,7 @@ import type {
   FacilityHoverState,
 } from "@/features/facilities/hover.types";
 import type { FloodLayerMountResult } from "@/features/flood/flood-layer.types";
+import type { GasPipelineLayerController } from "@/features/gas-pipelines/gas-pipelines.types";
 import type { HydroBasinsVisibilityController } from "@/features/hydro-basins/hydro-basins.types";
 import type {
   LayerRuntimeController,
@@ -65,6 +67,7 @@ export function useAppShellState(): UseAppShellStateResult {
   const boundaryControllers = shallowRef<BoundaryControllerState>(initialBoundaryControllerState());
   const facilitiesControllers = shallowRef<readonly FacilitiesLayerController[]>([]);
   const floodLayersController = shallowRef<FloodLayerMountResult | null>(null);
+  const gasPipelineController = shallowRef<GasPipelineLayerController | null>(null);
   const hydroBasinsController = shallowRef<HydroBasinsVisibilityController | null>(null);
   const powerControllers = shallowRef<readonly PowerLayerVisibilityController[]>([]);
   const parcelsController = shallowRef<ParcelsLayerController | null>(null);
@@ -192,6 +195,7 @@ export function useAppShellState(): UseAppShellStateResult {
     boundaryControllers,
     facilitiesControllers,
     floodLayersController,
+    gasPipelineController,
     hydroBasinsController,
     powerControllers,
     parcelsController,

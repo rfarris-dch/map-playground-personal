@@ -1,8 +1,5 @@
-import type {
-  BBox,
-  FacilitiesFeatureCollection,
-  FacilityPerspective,
-} from "@map-migration/contracts";
+import type { BBox, FacilityPerspective } from "@map-migration/geo-kernel";
+import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts";
 
 export interface FacilitiesBboxRequest {
   readonly bbox: BBox;

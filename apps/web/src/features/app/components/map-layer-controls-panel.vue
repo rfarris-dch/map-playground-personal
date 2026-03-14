@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { FacilityPerspective } from "@map-migration/contracts";
+  import type { FacilityPerspective } from "@map-migration/geo-kernel";
   import { computed, inject, ref } from "vue";
   import MapNavIcon from "@/components/icons/map-nav-icon.vue";
   import AppFilterPanel from "@/features/app/components/app-filter-panel.vue";
@@ -84,7 +84,7 @@
     { id: "", label: "Any %" },
   ];
 
-  const zoningTypeOptions: readonly FilterOption[] = [
+  const ALL_ZONING_TYPES: readonly FilterOption[] = [
     { id: "residential", label: "Residential" },
     { id: "commercial", label: "Commercial" },
     { id: "industrial", label: "Industrial" },
@@ -93,13 +93,48 @@
     { id: "farmland", label: "Farmland" },
     { id: "mixed", label: "Mixed" },
     { id: "unzoned", label: "Unzoned" },
+    { id: "special", label: "Special" },
   ];
 
-  const floodZoneOptions: readonly FilterOption[] = [
+  const FLOOD_ZONE_TO_FILTER: Record<string, string> = {
+    X: "low-risk",
+    C: "low-risk",
+    A: "high-risk",
+    AE: "high-risk",
+    AH: "high-risk",
+    AO: "high-risk",
+    A99: "high-risk",
+    V: "coastal-high-risk",
+    VE: "coastal-high-risk",
+  };
+
+  const ALL_FLOOD_ZONES: readonly FilterOption[] = [
     { id: "low-risk", label: "Low Risk" },
     { id: "high-risk", label: "High Risk" },
     { id: "coastal-high-risk", label: "Coastal High Risk" },
   ];
+
+  const zoningTypeOptions = computed<readonly FilterOption[]>(() => {
+    const facets = mapFilters?.parcelViewportFacets.value;
+    if (!facets || facets.zoningTypes.size === 0) {
+      return ALL_ZONING_TYPES;
+    }
+    const viewportLower = new Set([...facets.zoningTypes].map((z) => z.toLowerCase()));
+    return ALL_ZONING_TYPES.filter((opt) => viewportLower.has(opt.id));
+  });
+
+  const floodZoneOptions = computed<readonly FilterOption[]>(() => {
+    const facets = mapFilters?.parcelViewportFacets.value;
+    if (!facets || facets.floodZones.size === 0) {
+      return ALL_FLOOD_ZONES;
+    }
+    const viewportFilterIds = new Set(
+      [...facets.floodZones]
+        .map((zone) => FLOOD_ZONE_TO_FILTER[zone])
+        .filter((id): id is string => id !== undefined)
+    );
+    return ALL_FLOOD_ZONES.filter((opt) => viewportFilterIds.has(opt.id));
+  });
 
   const marketOptions = computed<readonly FilterOption[]>(() =>
     mapFilters?.availableMarkets.value?.map((m) => ({ id: m, label: m })) ?? []
@@ -571,7 +606,11 @@
               :visible="props.powerVisibility.transmission"
               @toggle="togglePowerLayer('transmission')"
             />
-            <MapNavLayerRow label="Natural Gas Pipelines" :actionable="false" :visible="true" />
+            <MapNavLayerRow
+              label="Natural Gas Pipelines"
+              :visible="props.gasPipelineVisible"
+              @toggle="emit('update:gas-pipeline-visible', !props.gasPipelineVisible)"
+            />
             <MapNavLayerRow
               label="US Parcels"
               :visible="props.parcelsVisible"

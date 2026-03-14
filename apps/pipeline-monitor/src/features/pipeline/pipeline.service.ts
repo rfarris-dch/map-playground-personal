@@ -1,8 +1,4 @@
-import {
-  buildPipelineStatusRoute,
-  type ParcelSyncPhase,
-  PipelineStatusResponseSchema,
-} from "@map-migration/contracts";
+import { buildPipelineStatusRoute, type ParcelSyncPhase, PipelineStatusResponseSchema } from "@map-migration/http-contracts";
 import {
   type ApiEffectError,
   type ApiEffectSuccess,

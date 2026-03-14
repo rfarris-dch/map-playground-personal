@@ -1,6 +1,5 @@
+import { type FacilityPerspective, FacilityPerspectiveSchema, parseBboxParam } from "@map-migration/geo-kernel";
 import {
-  type FacilityPerspective,
-  FacilityPerspectiveSchema,
   MAP_CONTEXT_TRANSFER_SCHEMA_VERSION,
   type MapContextHighlightTarget,
   type MapContextSurface,
@@ -8,8 +7,7 @@ import {
   type MapContextTransfer,
   MapContextTransferSchema,
   MapContextViewportSchema,
-  parseBboxParam,
-} from "@map-migration/contracts";
+} from "@map-migration/http-contracts";
 import { LAYER_IDS } from "@map-migration/map-layer-catalog";
 import type {
   LocationQueryRaw,

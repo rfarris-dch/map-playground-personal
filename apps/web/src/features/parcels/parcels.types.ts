@@ -1,11 +1,22 @@
-import type { BBox } from "@map-migration/contracts";
+import type { BBox, ParcelSnapshotId } from "@map-migration/geo-kernel";
 import type { TileDataset, TilePublishManifest } from "@map-migration/geo-tiles";
+import type { MapExpression } from "@map-migration/map-engine";
 
 export type { TileDataset, TileManifestEntry, TilePublishManifest } from "@map-migration/geo-tiles";
 
 export interface SelectedParcelRef {
   readonly expectedIngestionRunId?: string;
   readonly parcelId: string;
+}
+
+/**
+ * Narrows a {@link SelectedParcelRef} to a {@link ParcelSnapshotId} when the
+ * ingestion-run id is present.  Returns `null` when the run id is missing.
+ */
+export function toParcelSnapshotId(ref: SelectedParcelRef): ParcelSnapshotId | null {
+  return typeof ref.expectedIngestionRunId === "string" && ref.expectedIngestionRunId.length > 0
+    ? { parcelId: ref.parcelId, ingestionRunId: ref.expectedIngestionRunId }
+    : null;
 }
 
 export type ParcelsGuardrailReason = "stress" | "tile-cap" | "viewport-span";
@@ -40,6 +51,11 @@ export type ParcelsStatus =
       readonly reason: string;
     };
 
+export interface ParcelsViewportFacets {
+  readonly floodZones: ReadonlySet<string>;
+  readonly zoningTypes: ReadonlySet<string>;
+}
+
 export interface ParcelsLayerOptions {
   readonly disableGuardrails?: boolean;
   readonly isInteractionEnabled?: () => boolean;
@@ -49,13 +65,14 @@ export interface ParcelsLayerOptions {
   readonly maxViewportWidthKm?: number;
   readonly onSelectParcel?: (parcel: SelectedParcelRef | null) => void;
   readonly onStatus?: (status: ParcelsStatus) => void;
+  readonly onViewportFacets?: (facets: ParcelsViewportFacets) => void;
   readonly sourceLayer?: string;
 }
 
 export interface ParcelsLayerController {
   clearSelection(): void;
   destroy(): void;
-  setFilter(filter: import("@map-migration/map-engine").MapExpression | null): void;
+  setFilter(filter: MapExpression | null): void;
   setVisible(visible: boolean): void;
 }
 

@@ -1,8 +1,5 @@
-import type {
-  ParcelEnrichRequest,
-  ParcelsFeatureCollection,
-  Warning,
-} from "@map-migration/contracts";
+import type { Warning } from "@map-migration/geo-kernel";
+import type { ParcelEnrichRequest, ParcelsFeatureCollection } from "@map-migration/http-contracts";
 import type { ParcelsSelectionResult } from "@/features/measure/measure-analysis.api";
 
 export interface FetchSpatialAnalysisParcelsPagesArgs {

@@ -1,4 +1,4 @@
-import type { FacilityPerspective } from "@map-migration/contracts";
+import type { FacilityPerspective } from "@map-migration/geo-kernel";
 import type { MapRenderedFeature } from "@map-migration/map-engine";
 import { buildDonutChartArcSegments } from "@/lib/donut-chart.service";
 import type {

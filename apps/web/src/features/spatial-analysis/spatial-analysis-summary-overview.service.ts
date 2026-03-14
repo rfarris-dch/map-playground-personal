@@ -1,3 +1,4 @@
+import { toLifecycleDisplayLabel } from "@map-migration/geo-kernel";
 import type { SpatialAnalysisFacilityRecord } from "@/features/spatial-analysis/spatial-analysis-facilities.types";
 import type { SpatialAnalysisParcelRecord } from "@/features/spatial-analysis/spatial-analysis-parcels.types";
 import type {
@@ -39,28 +40,7 @@ function toStatusTone(label: string): SpatialAnalysisOverviewStatusItem["tone"] 
 }
 
 function toFacilityStatusLabel(facility: SpatialAnalysisFacilityRecord): string {
-  const statusLabel = facility.statusLabel?.trim();
-  if (typeof statusLabel === "string" && statusLabel.length > 0) {
-    return statusLabel;
-  }
-
-  if (facility.commissionedSemantic === "under_construction") {
-    return "Under Construction";
-  }
-
-  if (facility.commissionedSemantic === "planned") {
-    return "Planned";
-  }
-
-  if (facility.commissionedSemantic === "leased") {
-    return "Leased";
-  }
-
-  if (facility.commissionedSemantic === "operational") {
-    return "Operational";
-  }
-
-  return "Unknown";
+  return toLifecycleDisplayLabel(facility);
 }
 
 function buildFacilityStatusCounts(

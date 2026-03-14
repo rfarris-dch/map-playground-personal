@@ -1,8 +1,5 @@
-import type {
-  BBox,
-  FacilitiesFeatureCollection,
-  FacilityPerspective,
-} from "@map-migration/contracts";
+import type { BBox, FacilityPerspective } from "@map-migration/geo-kernel";
+import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts";
 import { getApiErrorMessage, getApiErrorReason } from "@map-migration/core-runtime/api";
 import { runEffectPromise } from "@map-migration/core-runtime/effect";
 import type {

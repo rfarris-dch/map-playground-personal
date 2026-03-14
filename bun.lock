@@ -23,9 +23,10 @@
         "@effect/platform": "^0.94.5",
         "@effect/platform-bun": "^0.87.1",
         "@hono/node-server": "^1.13.8",
-        "@map-migration/contracts": "workspace:*",
         "@map-migration/core-runtime": "workspace:*",
+        "@map-migration/geo-kernel": "workspace:*",
         "@map-migration/geo-sql": "workspace:*",
+        "@map-migration/http-contracts": "workspace:*",
         "@map-migration/ops": "workspace:*",
         "effect": "^3.19.19",
         "hono": "^4.6.10",
@@ -63,8 +64,9 @@
       "name": "@map-migration/pipeline-monitor",
       "version": "0.1.0",
       "dependencies": {
-        "@map-migration/contracts": "workspace:*",
         "@map-migration/core-runtime": "workspace:*",
+        "@map-migration/geo-kernel": "workspace:*",
+        "@map-migration/http-contracts": "workspace:*",
         "effect": "^3.19.19",
         "vue": "^3.5.22",
       },
@@ -80,9 +82,10 @@
       "name": "@map-migration/web",
       "version": "0.1.0",
       "dependencies": {
-        "@map-migration/contracts": "workspace:*",
         "@map-migration/core-runtime": "workspace:*",
+        "@map-migration/geo-kernel": "workspace:*",
         "@map-migration/geo-tiles": "workspace:*",
+        "@map-migration/http-contracts": "workspace:*",
         "@map-migration/map-engine": "workspace:*",
         "@map-migration/map-layer-catalog": "workspace:*",
         "@map-migration/map-style": "workspace:*",
@@ -110,18 +113,12 @@
       "name": "@map-migration/bench",
       "version": "0.1.0",
     },
-    "packages/contracts": {
-      "name": "@map-migration/contracts",
-      "version": "0.1.0",
-      "dependencies": {
-        "zod": "^3.24.2",
-      },
-    },
     "packages/core-runtime": {
       "name": "@map-migration/core-runtime",
       "version": "0.1.0",
       "dependencies": {
-        "@map-migration/contracts": "workspace:*",
+        "@map-migration/geo-kernel": "workspace:*",
+        "@map-migration/http-contracts": "workspace:*",
         "effect": "^3.19.19",
       },
     },
@@ -129,11 +126,19 @@
       "name": "@map-migration/fixtures",
       "version": "0.1.0",
     },
+    "packages/geo-kernel": {
+      "name": "@map-migration/geo-kernel",
+      "version": "0.1.0",
+      "dependencies": {
+        "zod": "^3.24.2",
+      },
+    },
     "packages/geo-sql": {
       "name": "@map-migration/geo-sql",
       "version": "0.1.0",
       "dependencies": {
-        "@map-migration/contracts": "workspace:*",
+        "@map-migration/geo-kernel": "workspace:*",
+        "@map-migration/http-contracts": "workspace:*",
       },
     },
     "packages/geo-tiles": {
@@ -142,6 +147,14 @@
       "dependencies": {
         "@map-migration/core-runtime": "workspace:*",
         "effect": "^3.19.19",
+      },
+    },
+    "packages/http-contracts": {
+      "name": "@map-migration/http-contracts",
+      "version": "0.1.0",
+      "dependencies": {
+        "@map-migration/geo-kernel": "workspace:*",
+        "zod": "^3.24.2",
       },
     },
     "packages/map-engine": {
@@ -324,17 +337,19 @@
 
     "@map-migration/bench": ["@map-migration/bench@workspace:packages/bench"],
 
-    "@map-migration/contracts": ["@map-migration/contracts@workspace:packages/contracts"],
-
     "@map-migration/core-runtime": ["@map-migration/core-runtime@workspace:packages/core-runtime"],
 
     "@map-migration/docs": ["@map-migration/docs@workspace:apps/docs"],
 
     "@map-migration/fixtures": ["@map-migration/fixtures@workspace:packages/fixtures"],
 
+    "@map-migration/geo-kernel": ["@map-migration/geo-kernel@workspace:packages/geo-kernel"],
+
     "@map-migration/geo-sql": ["@map-migration/geo-sql@workspace:packages/geo-sql"],
 
     "@map-migration/geo-tiles": ["@map-migration/geo-tiles@workspace:packages/geo-tiles"],
+
+    "@map-migration/http-contracts": ["@map-migration/http-contracts@workspace:packages/http-contracts"],
 
     "@map-migration/map-engine": ["@map-migration/map-engine@workspace:packages/map-engine"],
 

@@ -1,4 +1,5 @@
 import { runEffectPromise } from "@map-migration/core-runtime/effect";
+import { makeParcelSnapshotId } from "@map-migration/geo-kernel";
 import {
   assertTileManifestMatchesDataset,
   createPmtilesSourceUrl,
@@ -146,18 +147,16 @@ export function mountParcelsLayer(
       return;
     }
 
-    const nextSelection: {
-      parcelId: string;
-      expectedIngestionRunId?: string;
-    } = {
-      parcelId,
-    };
     const ingestionRunId = state.manifest?.current.ingestionRunId;
     if (typeof ingestionRunId === "string") {
-      nextSelection.expectedIngestionRunId = ingestionRunId;
+      const snapshot = makeParcelSnapshotId(parcelId, ingestionRunId);
+      options.onSelectParcel?.({
+        parcelId: snapshot.parcelId,
+        expectedIngestionRunId: snapshot.ingestionRunId,
+      });
+    } else {
+      options.onSelectParcel?.({ parcelId });
     }
-
-    options.onSelectParcel?.(nextSelection);
   };
 
   const setFeatureHoverState = (featureId: number | string, hover: boolean): void => {
@@ -520,8 +519,43 @@ export function mountParcelsLayer(
     });
   };
 
+  const collectViewportFacets = (): void => {
+    if (!state.visible || !state.sourceInitialized || !options.onViewportFacets) {
+      return;
+    }
+    if (!map.hasLayer(fillLayerId)) {
+      return;
+    }
+
+    const canvasSize = map.getCanvasSize();
+    const features = map.queryRenderedFeatures(
+      [[0, 0], [canvasSize.width, canvasSize.height]],
+      { layers: [fillLayerId] }
+    );
+    const zoningTypes = new Set<string>();
+    const floodZones = new Set<string>();
+
+    for (const feature of features) {
+      const props = feature.properties;
+      if (typeof props !== "object" || props === null) {
+        continue;
+      }
+      const zt = Reflect.get(props, "zoning_type");
+      if (typeof zt === "string" && zt.length > 0) {
+        zoningTypes.add(zt.toLowerCase());
+      }
+      const fz = Reflect.get(props, "fema_flood_zone");
+      if (typeof fz === "string" && fz.length > 0) {
+        floodZones.add(fz);
+      }
+    }
+
+    options.onViewportFacets({ zoningTypes, floodZones });
+  };
+
   const onMoveEnd = (): void => {
     applyVisibility();
+    collectViewportFacets();
   };
 
   const onPointerLeave = (): void => {

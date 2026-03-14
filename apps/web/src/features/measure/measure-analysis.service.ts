@@ -1,7 +1,4 @@
-import type {
-  FacilitiesFeatureCollection,
-  ParcelsFeatureCollection,
-} from "@map-migration/contracts";
+import type { FacilitiesFeatureCollection, ParcelsFeatureCollection } from "@map-migration/http-contracts";
 import type { LngLat } from "@map-migration/map-engine";
 import type { MeasureSelectionSummaryArgs } from "@/features/measure/measure-analysis.service.types";
 import type {

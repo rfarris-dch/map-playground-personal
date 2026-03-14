@@ -1,4 +1,4 @@
-import type { BoundaryPowerFeatureCollection } from "@map-migration/contracts";
+import type { BoundaryPowerFeatureCollection } from "@map-migration/http-contracts";
 import type { BoundaryPowerRow } from "@/geo/boundaries/boundaries.repo";
 
 export type MapFeaturesResult =

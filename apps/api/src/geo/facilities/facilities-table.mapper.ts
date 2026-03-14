@@ -1,11 +1,11 @@
 import {
   type CommissionedSemantic,
   type FacilityPerspective,
-  type FacilityTableRow as FacilityTableRowContract,
   type LeaseOrOwn,
   parseCommissionedSemantic,
   parseLeaseOrOwn,
-} from "@map-migration/contracts";
+} from "@map-migration/geo-kernel";
+import type { FacilityTableRow as FacilityTableRowContract } from "@map-migration/http-contracts";
 import type { FacilityTableRow as FacilityTableRowRepo } from "@/geo/facilities/facilities.repo";
 
 function readNullableNumber(value: number | string | null | undefined): number | null {

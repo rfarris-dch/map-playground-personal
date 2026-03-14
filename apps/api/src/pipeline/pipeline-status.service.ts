@@ -3,7 +3,7 @@ import {
   PIPELINE_PLATFORM,
   type PipelineDataset,
   type PipelineStatusResponse,
-} from "@map-migration/contracts";
+} from "@map-migration/http-contracts";
 import { getDagsterPipelineStatusSnapshot } from "./dagster-pipeline-status.service";
 
 export function getPipelineStatusPayload(dataset: PipelineDataset) {

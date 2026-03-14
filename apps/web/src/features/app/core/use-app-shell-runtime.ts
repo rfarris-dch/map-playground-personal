@@ -1,4 +1,4 @@
-import type { MapContextTransfer } from "@map-migration/contracts";
+import type { MapContextTransfer } from "@map-migration/http-contracts";
 import { computed } from "vue";
 import { useAppShellFiber } from "@/features/app/fiber/use-app-shell-fiber";
 import { useMapFilters } from "@/features/app/filters/use-map-filters";
@@ -43,6 +43,7 @@ export function useAppShellRuntime(
       state.hoveredPower.value = null;
     },
     clearSelectedParcel: selection.clearSelectedParcel,
+    gasPipelineController: state.gasPipelineController,
     layerRuntime: state.layerRuntime,
     setViewportFacilities: state.setViewportFacilities,
   });
@@ -93,7 +94,9 @@ export function useAppShellRuntime(
     filters: {
       facilitiesPredicate: mapFilters.facilitiesPredicate,
       onCachedFeaturesUpdate: mapFilters.setAvailableFeatures,
+      onParcelViewportFacets: mapFilters.setParcelViewportFacets,
       parcelFilter: mapFilters.parcelFilter,
+      parcelViewportFacets: mapFilters.parcelViewportFacets,
       transmissionFilter: mapFilters.transmissionFilter,
     },
     initialViewport: options.initialViewport,
@@ -103,6 +106,7 @@ export function useAppShellRuntime(
       facilitiesControllers: state.facilitiesControllers,
       facilitiesHoverController: state.facilitiesHoverController,
       floodLayersController: state.floodLayersController,
+      gasPipelineController: state.gasPipelineController,
       hydroBasinsController: state.hydroBasinsController,
       parcelsController: state.parcelsController,
       powerControllers: state.powerControllers,

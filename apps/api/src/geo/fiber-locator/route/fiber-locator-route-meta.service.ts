@@ -1,4 +1,4 @@
-import { ApiHeaders, type ResponseMeta } from "@map-migration/contracts";
+import { ApiHeaders, type ResponseMeta } from "@map-migration/http-contracts";
 import { getApiRuntimeConfig } from "@/http/runtime-config";
 
 const PASSTHROUGH_HEADER_NAMES: readonly string[] = [

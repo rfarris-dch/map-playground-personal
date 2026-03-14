@@ -1,4 +1,4 @@
-import { buildMarketsRoute, MarketsTableResponseSchema } from "@map-migration/contracts";
+import { buildMarketsRoute, MarketsTableResponseSchema } from "@map-migration/http-contracts";
 import { apiGetJson } from "@map-migration/core-runtime/api";
 import type { MarketsTableRequest, MarketsTableResult } from "@/features/markets/markets.types";
 import { buildApiRequestInit } from "@/lib/api/api-request-init.service";

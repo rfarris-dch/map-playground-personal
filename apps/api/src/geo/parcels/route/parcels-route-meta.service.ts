@@ -1,14 +1,13 @@
+import type { ParcelAoi, Warning } from "@map-migration/geo-kernel";
 import {
   ApiHeaders,
-  type ParcelAoi,
   type ParcelGeometryMode,
   ParcelGeometryModeSchema,
   type ParcelProfile,
   ParcelProfileSchema,
   type ParcelResponseMeta,
   type ParcelsFeatureCollection,
-  type Warning,
-} from "@map-migration/contracts";
+} from "@map-migration/http-contracts";
 import type { Context } from "hono";
 import { parseBooleanFlag } from "@/config/env-parsing.service";
 import { rejectWithConflict } from "@/geo/parcels/route/parcels-route-errors.service";

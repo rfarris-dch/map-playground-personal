@@ -1,8 +1,5 @@
-import type {
-  BBox,
-  FacilitiesSelectionRequest,
-  ParcelEnrichRequest,
-} from "@map-migration/contracts";
+import type { AreaOfInterest, BBox, PolygonGeometry } from "@map-migration/geo-kernel";
+import { aoiBboxExceedsLimits } from "@map-migration/geo-kernel";
 
 type SelectionRing = readonly [number, number][];
 
@@ -43,26 +40,18 @@ export function closeSelectionRing(selectionRing: SelectionRing): [number, numbe
 
 export function selectionGeometryFromRing(
   selectionRing: SelectionRing
-): FacilitiesSelectionRequest["geometry"] {
+): PolygonGeometry {
   return {
     type: "Polygon",
     coordinates: [closeSelectionRing(selectionRing)],
   };
 }
 
-export function selectionAoiFromRing(selectionRing: SelectionRing): ParcelEnrichRequest["aoi"] {
+export function selectionAoiFromRing(selectionRing: SelectionRing): AreaOfInterest {
   return {
     type: "polygon",
     geometry: selectionGeometryFromRing(selectionRing),
   };
-}
-
-function normalizeEastLongitude(west: number, east: number): number {
-  if (east >= west) {
-    return east;
-  }
-
-  return east + 360;
 }
 
 export function buildSelectionRingBbox(selectionRing: SelectionRing): BBox | null {
@@ -97,13 +86,10 @@ export function selectionRingExceedsFastAnalysisLimits(selectionRing: SelectionR
     return false;
   }
 
-  const width = normalizeEastLongitude(bbox.west, bbox.east) - bbox.west;
-  const height = bbox.north - bbox.south;
-
-  return (
-    width > SELECTION_ANALYSIS_MAX_BBOX_WIDTH_DEGREES ||
-    height > SELECTION_ANALYSIS_MAX_BBOX_HEIGHT_DEGREES
-  );
+  return aoiBboxExceedsLimits(bbox, {
+    maxWidthDegrees: SELECTION_ANALYSIS_MAX_BBOX_WIDTH_DEGREES,
+    maxHeightDegrees: SELECTION_ANALYSIS_MAX_BBOX_HEIGHT_DEGREES,
+  });
 }
 
 function describeSelectionApiFailure(result: SelectionApiFailure): string {

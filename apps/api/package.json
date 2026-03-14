@@ -17,9 +17,10 @@
     "@effect/platform": "^0.94.5",
     "@effect/platform-bun": "^0.87.1",
     "@hono/node-server": "^1.13.8",
-    "@map-migration/contracts": "workspace:*",
     "@map-migration/core-runtime": "workspace:*",
+    "@map-migration/geo-kernel": "workspace:*",
     "@map-migration/geo-sql": "workspace:*",
+    "@map-migration/http-contracts": "workspace:*",
     "@map-migration/ops": "workspace:*",
     "effect": "^3.19.19",
     "hono": "^4.6.10"

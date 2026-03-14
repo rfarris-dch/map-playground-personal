@@ -1,8 +1,4 @@
-import type {
-  FacilitiesFeatureCollection,
-  ParcelEnrichRequest,
-  ParcelsFeatureCollection,
-} from "@map-migration/contracts";
+import type { FacilitiesFeatureCollection, ParcelEnrichRequest, ParcelsFeatureCollection } from "@map-migration/http-contracts";
 import type { MapBounds } from "./map-overlays.types";
 import type {
   ScannerAnchorSelectionAccumulator,

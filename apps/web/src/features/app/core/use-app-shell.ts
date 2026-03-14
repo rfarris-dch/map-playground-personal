@@ -1,4 +1,4 @@
-import type { FacilityPerspective } from "@map-migration/contracts";
+import type { FacilityPerspective } from "@map-migration/geo-kernel";
 import { computed, shallowRef } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
@@ -8,7 +8,7 @@ import {
 } from "@/features/app/core/app-shell.constants";
 import { exportMapView } from "@/features/app/map-export/map-export.service";
 import type { MapViewExportFormat } from "@/features/app/map-export/map-export.types";
-import { useCountyScores } from "@/features/county-scores/use-county-scores";
+import { useCountyScores } from "@/features/county-intelligence/use-county-intelligence";
 import type { FacilitiesViewMode } from "@/features/facilities/facilities.types";
 import type { LayerRuntimeSnapshot } from "@/features/layers/layer-runtime.types";
 import {
@@ -16,7 +16,7 @@ import {
   inferMapContextSurfaceFromRoute,
   readMapContextTransferFromRoute,
 } from "@/features/map-context-transfer/map-context-transfer.service";
-import { saveSpatialAnalysisDashboardState } from "@/features/spatial-analysis/spatial-analysis-dashboard.service";
+import { executeOpenDashboard } from "@/features/spatial-analysis/commands/open-dashboard.command";
 import { buildScannerSpatialAnalysisSummary } from "@/features/spatial-analysis/spatial-analysis-summary.service";
 import type { BoundaryFacetSelectionState } from "./app-shell.types";
 import { useAppShellRuntime } from "./use-app-shell-runtime";
@@ -132,92 +132,60 @@ export function useAppShell() {
     })
   );
 
+  function buildDashboardMapContext(countyIds: readonly string[]) {
+    return buildMapContextTransferFromAppShell({
+      boundaryFacetSelection: resolveDashboardBoundaryFacetSelection({
+        boundaryFacetSelection: state.boundaryFacetSelection.value,
+        countyIds,
+      }),
+      basemapVisibility: visibility.basemapVisibility.value,
+      layerRuntimeSnapshot: state.layerRuntimeSnapshot.value,
+      map: state.map.value,
+      boundaryVisibility: visibility.boundaryVisibility.value,
+      fiberVisibility: fiber.visibleFiberLayers.value,
+      floodVisibility: visibility.floodVisibility.value,
+      hydroBasinsVisible: visibility.hydroBasinsVisible.value,
+      parcelsVisible: visibility.parcelsVisible.value,
+      powerVisibility: visibility.powerVisibility.value,
+      selectedFiberSourceLayerNames: fiber.selectedFiberSourceLayerNames.value,
+      sourceSurface: currentSurface.value,
+      targetSurface: "global-map",
+      visiblePerspectives: visibility.visiblePerspectives.value,
+      waterVisible: visibility.waterVisible.value,
+    });
+  }
+
   async function openSelectionDashboard(): Promise<void> {
     const summary = selectionAnalysis.selectionSummary.value;
     if (summary === null) {
       return;
     }
 
-    const hasResults =
-      summary.summary.totalCount > 0 ||
-      summary.summary.parcelSelection.count > 0 ||
-      (summary.summary.marketSelection?.matchCount ?? 0) > 0 ||
-      summary.area.countyIds.length > 0;
-    if (!hasResults) {
-      return;
-    }
-
-    saveSpatialAnalysisDashboardState({
-      createdAt: new Date().toISOString(),
-      isFiltered: false,
-      mapContext: buildMapContextTransferFromAppShell({
-        boundaryFacetSelection: resolveDashboardBoundaryFacetSelection({
-          boundaryFacetSelection: state.boundaryFacetSelection.value,
-          countyIds: summary.area.countyIds,
-        }),
-        basemapVisibility: visibility.basemapVisibility.value,
-        layerRuntimeSnapshot: state.layerRuntimeSnapshot.value,
-        map: state.map.value,
-        boundaryVisibility: visibility.boundaryVisibility.value,
-        fiberVisibility: fiber.visibleFiberLayers.value,
-        floodVisibility: visibility.floodVisibility.value,
-        hydroBasinsVisible: visibility.hydroBasinsVisible.value,
-        parcelsVisible: visibility.parcelsVisible.value,
-        powerVisibility: visibility.powerVisibility.value,
-        selectedFiberSourceLayerNames: fiber.selectedFiberSourceLayerNames.value,
-        sourceSurface: currentSurface.value,
-        targetSurface: "global-map",
-        visiblePerspectives: visibility.visiblePerspectives.value,
-        waterVisible: visibility.waterVisible.value,
-      }),
-      source: "selection",
-      summary,
-      title: "Selection Dashboard",
-    });
-
-    await router.push({ name: "spatial-analysis-dashboard" });
+    await executeOpenDashboard(
+      {
+        source: "selection",
+        title: "Selection Dashboard",
+        isFiltered: false,
+        summary,
+        mapContext: buildDashboardMapContext(summary.area.countyIds),
+      },
+      router
+    );
   }
 
   async function openScannerDashboard(): Promise<void> {
     const summary = scannerAnalysisSummary.value;
-    const hasResults =
-      summary.summary.totalCount > 0 ||
-      summary.summary.parcelSelection.count > 0 ||
-      (summary.summary.marketSelection?.matchCount ?? 0) > 0 ||
-      summary.area.countyIds.length > 0;
-    if (!hasResults) {
-      return;
-    }
 
-    saveSpatialAnalysisDashboardState({
-      createdAt: new Date().toISOString(),
-      isFiltered: mapOverlays.scannerIsFiltered.value,
-      mapContext: buildMapContextTransferFromAppShell({
-        boundaryFacetSelection: resolveDashboardBoundaryFacetSelection({
-          boundaryFacetSelection: state.boundaryFacetSelection.value,
-          countyIds: summary.area.countyIds,
-        }),
-        basemapVisibility: visibility.basemapVisibility.value,
-        layerRuntimeSnapshot: state.layerRuntimeSnapshot.value,
-        map: state.map.value,
-        boundaryVisibility: visibility.boundaryVisibility.value,
-        fiberVisibility: fiber.visibleFiberLayers.value,
-        floodVisibility: visibility.floodVisibility.value,
-        hydroBasinsVisible: visibility.hydroBasinsVisible.value,
-        parcelsVisible: visibility.parcelsVisible.value,
-        powerVisibility: visibility.powerVisibility.value,
-        selectedFiberSourceLayerNames: fiber.selectedFiberSourceLayerNames.value,
-        sourceSurface: currentSurface.value,
-        targetSurface: "global-map",
-        visiblePerspectives: visibility.visiblePerspectives.value,
-        waterVisible: visibility.waterVisible.value,
-      }),
-      source: "scanner",
-      summary,
-      title: "Scanner Dashboard",
-    });
-
-    await router.push({ name: "spatial-analysis-dashboard" });
+    await executeOpenDashboard(
+      {
+        source: "scanner",
+        title: "Scanner Dashboard",
+        isFiltered: mapOverlays.scannerIsFiltered.value,
+        summary,
+        mapContext: buildDashboardMapContext(summary.area.countyIds),
+      },
+      router
+    );
   }
 
   async function exportCurrentMapView(format: MapViewExportFormat): Promise<void> {
@@ -287,6 +255,7 @@ export function useAppShell() {
     showFlood500ZoomHint,
     hydroBasinsVisible: visibility.hydroBasinsVisible,
     showHydroBasinsZoomHint,
+    gasPipelineVisible: visibility.gasPipelineVisible,
     parcelsVisible: visibility.parcelsVisible,
     parcelsStatusText: status.parcelsStatusText,
     powerVisibility: visibility.powerVisibility,
@@ -335,6 +304,7 @@ export function useAppShell() {
     setFloodLayerVisible: visibility.setFloodLayerVisible,
     setHydroBasinsVisible: visibility.setHydroBasinsVisible,
     setParcelsVisible: visibility.setParcelsVisible,
+    setGasPipelineVisible: visibility.setGasPipelineVisible,
     setPowerLayerVisible: visibility.setPowerLayerVisible,
     setWaterVisible: visibility.setWaterVisible,
     setFiberLayerVisibility: fiber.setFiberLayerVisibility,

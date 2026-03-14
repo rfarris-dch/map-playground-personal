@@ -1,25 +1,9 @@
-import type { BoundaryPowerLevel } from "@map-migration/contracts";
+import type { BoundaryPowerLevel } from "@map-migration/http-contracts";
 import { runQuery } from "@/db/postgres";
+import { FACILITY_POWER_CTE } from "@/geo/facilities/facilities-capacity.repo";
 import type { BoundaryPowerRow } from "./boundaries.repo.types";
 
 export type { BoundaryPowerRow } from "./boundaries.repo.types";
-
-const FACILITY_POWER_CTE = `
-WITH facility_power AS (
-  SELECT
-    county_fips,
-    SUM(COALESCE(commissioned_power_mw, 0))::double precision AS commissioned_power_mw
-  FROM (
-    SELECT county_fips, commissioned_power_mw
-    FROM serve.facility_site
-    WHERE county_fips ~ '^[0-9]{5}$'
-    UNION ALL
-    SELECT county_fips, commissioned_power_mw
-    FROM serve.hyperscale_site
-    WHERE county_fips ~ '^[0-9]{5}$'
-  ) AS all_facilities
-  GROUP BY county_fips
-)`;
 
 const COUNTY_POWER_SQL = `
 ${FACILITY_POWER_CTE}

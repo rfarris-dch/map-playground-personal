@@ -1,10 +1,11 @@
-import type { FacilitiesFeatureCollection, MapContextTransfer } from "@map-migration/contracts";
+import type { FacilitiesFeatureCollection, MapContextTransfer } from "@map-migration/http-contracts";
 import type { IMap, MapExpression } from "@map-migration/map-engine";
 import type { ComputedRef, ShallowRef } from "vue";
 import type {
   BoundaryControllerState,
   BoundaryHoverByLayerState,
 } from "@/features/app/boundary/app-shell-boundary.types";
+import type { GasPipelineLayerController } from "@/features/gas-pipelines/gas-pipelines.types";
 import type {
   BoundaryFacetOptionsState,
   BoundaryFacetSelectionState,
@@ -70,6 +71,7 @@ export interface AppShellMapLifecycleLayerRefs {
   readonly facilitiesControllers: ShallowRef<readonly FacilitiesLayerController[]>;
   readonly facilitiesHoverController: ShallowRef<FacilitiesHoverController | null>;
   readonly floodLayersController: ShallowRef<FloodLayerMountResult | null>;
+  readonly gasPipelineController: ShallowRef<GasPipelineLayerController | null>;
   readonly hydroBasinsController: ShallowRef<HydroBasinsVisibilityController | null>;
   readonly parcelsController: ShallowRef<ParcelsLayerController | null>;
   readonly powerControllers: ShallowRef<readonly PowerLayerVisibilityController[]>;
@@ -106,7 +108,9 @@ export interface AppShellMapLifecycleSelectionActions {
 export interface AppShellMapFiltersRefs {
   readonly facilitiesPredicate: Readonly<ShallowRef<FacilitiesFilterPredicate | null | undefined>>;
   readonly onCachedFeaturesUpdate: (features: FacilitiesFeatureCollection["features"]) => void;
+  readonly onParcelViewportFacets: (facets: import("@/features/parcels/parcels.types").ParcelsViewportFacets) => void;
   readonly parcelFilter: Readonly<ShallowRef<MapExpression | null | undefined>>;
+  readonly parcelViewportFacets: Readonly<ShallowRef<import("@/features/parcels/parcels.types").ParcelsViewportFacets | null | undefined>>;
   readonly transmissionFilter: Readonly<ShallowRef<MapExpression | null | undefined>>;
 }
 

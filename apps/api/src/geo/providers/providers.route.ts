@@ -6,7 +6,7 @@ import {
   ProvidersTableResponseSchema,
   type SortDirection,
   SortDirectionSchema,
-} from "@map-migration/contracts";
+} from "@map-migration/http-contracts";
 import type { Env, Hono } from "hono";
 import { queryProvidersTable } from "@/geo/providers/providers-query.service";
 import { jsonOk, toDebugDetails } from "@/http/api-response";

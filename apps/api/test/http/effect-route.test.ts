@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { ApiHeaders } from "@map-migration/contracts";
+import { ApiHeaders } from "@map-migration/http-contracts";
 import { Effect } from "effect";
 import { Hono } from "hono";
 import { ApiRequestContext, ApiRouteError, runEffectRoute } from "@/http/effect-route";

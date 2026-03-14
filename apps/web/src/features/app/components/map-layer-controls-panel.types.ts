@@ -1,4 +1,4 @@
-import type { FacilityPerspective } from "@map-migration/contracts";
+import type { FacilityPerspective } from "@map-migration/geo-kernel";
 import type {
   BoundaryFacetOptionsState,
   BoundaryFacetSelectionState,
@@ -24,6 +24,7 @@ export interface MapLayerControlsPanelProps {
   readonly fiberSourceLayerOptions: FiberSourceLayerOptionsState;
   readonly fiberStatusText: string;
   readonly floodVisibility: FloodVisibilityState;
+  readonly gasPipelineVisible: boolean;
   readonly hydroBasinsVisible: boolean;
   readonly hyperscaleStatusText: string;
   readonly isOpen: boolean;
@@ -51,6 +52,7 @@ export interface MapLayerControlsPanelEmits {
   "update:boundary-visible": [boundaryId: BoundaryLayerId, visible: boolean];
   "update:fiber-layer-visibility": [lineId: FiberLocatorLineId, visible: boolean];
   "update:flood-layer-visible": [layerId: keyof FloodVisibilityState, visible: boolean];
+  "update:gas-pipeline-visible": [visible: boolean];
   "update:hydro-basins-visible": [visible: boolean];
   "update:parcels-visible": [visible: boolean];
   "update:perspective-view-mode": [perspective: FacilityPerspective, mode: FacilitiesViewMode];

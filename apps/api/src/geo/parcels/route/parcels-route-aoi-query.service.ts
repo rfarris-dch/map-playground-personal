@@ -1,4 +1,5 @@
-import type { ParcelAoi, ParcelGeometryMode, Warning } from "@map-migration/contracts";
+import type { ParcelAoi, Warning } from "@map-migration/geo-kernel";
+import type { ParcelGeometryMode } from "@map-migration/http-contracts";
 import type { Context } from "hono";
 import {
   enrichParcelsByBbox,

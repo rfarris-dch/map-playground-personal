@@ -1,7 +1,4 @@
-import type {
-  FacilitiesFeatureCollection,
-  ParcelsFeatureCollection,
-} from "@map-migration/contracts";
+import type { FacilitiesFeatureCollection, ParcelsFeatureCollection } from "@map-migration/http-contracts";
 import type {
   ScannerFacility,
   ScannerInput,

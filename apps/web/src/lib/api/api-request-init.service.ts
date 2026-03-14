@@ -1,4 +1,4 @@
-import { ApiHeaders } from "@map-migration/contracts";
+import { ApiHeaders } from "@map-migration/http-contracts";
 
 interface BuildApiRequestInitOptions {
   readonly body?: BodyInit | null | undefined;

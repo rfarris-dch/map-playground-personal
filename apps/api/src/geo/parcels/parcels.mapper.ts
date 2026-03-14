@@ -1,4 +1,4 @@
-import type { ParcelFeature } from "@map-migration/contracts";
+import type { ParcelFeature } from "@map-migration/http-contracts";
 import type { ParcelRow } from "@/geo/parcels/parcels.repo";
 import type { GeometryLike } from "./parcels.mapper.types";
 

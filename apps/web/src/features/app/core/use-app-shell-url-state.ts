@@ -14,7 +14,7 @@ import {
 import type { UseAppShellUrlStateOptions } from "./app-shell-url-state.types";
 
 function normalizeViewportForMap(
-  viewport: NonNullable<import("@map-migration/contracts").MapContextTransfer["viewport"]>
+  viewport: NonNullable<import("@map-migration/http-contracts").MapContextTransfer["viewport"]>
 ): import("@map-migration/map-engine").MapViewport {
   if (viewport.type === "bounds") {
     return {

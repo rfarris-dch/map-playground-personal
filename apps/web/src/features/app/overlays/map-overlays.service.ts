@@ -1,4 +1,4 @@
-import type { ParcelEnrichRequest } from "@map-migration/contracts";
+import type { ParcelEnrichRequest } from "@map-migration/http-contracts";
 import type {
   PerspectiveStatusState,
   PerspectiveVisibilityState,

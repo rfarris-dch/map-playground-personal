@@ -1,4 +1,4 @@
-import type { FacilityPerspective } from "@map-migration/contracts";
+import type { FacilityPerspective } from "@map-migration/geo-kernel";
 
 export interface FacilityClusterSummary {
   readonly availablePowerMw: number;

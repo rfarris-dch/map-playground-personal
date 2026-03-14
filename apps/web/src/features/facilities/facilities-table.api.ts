@@ -1,4 +1,4 @@
-import { buildFacilitiesTableRoute, FacilitiesTableResponseSchema } from "@map-migration/contracts";
+import { buildFacilitiesTableRoute, FacilitiesTableResponseSchema } from "@map-migration/http-contracts";
 import { apiGetJson } from "@map-migration/core-runtime/api";
 import type {
   FacilitiesTableRequest,

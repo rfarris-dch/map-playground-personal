@@ -1,8 +1,4 @@
-import type {
-  CommissionedSemantic,
-  FacilityPerspective,
-  LeaseOrOwn,
-} from "@map-migration/contracts";
+import type { CommissionedSemantic, FacilityPerspective, LeaseOrOwn } from "@map-migration/geo-kernel";
 import type { FacilityClusterSummary } from "@/features/facilities/facilities-cluster.types";
 
 export interface FacilityHoverState {

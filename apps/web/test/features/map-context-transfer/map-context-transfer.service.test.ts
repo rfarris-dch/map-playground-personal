@@ -1,8 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import {
-  MAP_CONTEXT_TRANSFER_SCHEMA_VERSION,
-  type MapContextTransfer,
-} from "@map-migration/contracts";
+import { MAP_CONTEXT_TRANSFER_SCHEMA_VERSION, type MapContextTransfer } from "@map-migration/http-contracts";
 import { createMemoryHistory, createRouter, type LocationQueryRaw } from "vue-router";
 import {
   applyMapContextTransferToAppShell,

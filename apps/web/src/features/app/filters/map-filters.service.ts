@@ -91,8 +91,8 @@ export function buildParcelFilter(state: MapFiltersState): MapExpression | null 
   const conditions: MapExpression[] = [];
 
   if (state.zoningTypes.size > 0) {
-    const allowed = [...state.zoningTypes];
-    conditions.push(["in", ["coalesce", ["get", "zoning_type"], ""], ["literal", allowed]]);
+    const allowed = [...state.zoningTypes].map((z) => z.toLowerCase());
+    conditions.push(["in", ["downcase", ["coalesce", ["get", "zoning_type"], ""]], ["literal", allowed]]);
   }
 
   if (state.floodZones.size > 0) {

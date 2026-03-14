@@ -1,4 +1,4 @@
-import type { Warning } from "@map-migration/contracts";
+import type { Warning } from "@map-migration/geo-kernel";
 import { runQuery } from "@/db/postgres";
 
 interface PolygonNormalizationRow {

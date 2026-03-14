@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { ApiHeaders, ApiRoutes, buildParcelLookupRoute } from "@map-migration/contracts";
+import { ApiHeaders, ApiRoutes, buildParcelLookupRoute } from "@map-migration/http-contracts";
 import { createApiApp } from "@/app";
 
 describe("api hardening middleware", () => {

@@ -1,4 +1,5 @@
-import type { FacilitiesFeatureCollection, FacilityPerspective } from "@map-migration/contracts";
+import type { FacilityPerspective } from "@map-migration/geo-kernel";
+import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts";
 import type { IMap } from "@map-migration/map-engine";
 import type { ComputedRef, ShallowRef } from "vue";
 import type {
@@ -21,6 +22,7 @@ import type {
   FacilityHoverState,
 } from "@/features/facilities/hover.types";
 import type { FloodLayerMountResult } from "@/features/flood/flood-layer.types";
+import type { GasPipelineLayerController } from "@/features/gas-pipelines/gas-pipelines.types";
 import type { HydroBasinsVisibilityController } from "@/features/hydro-basins/hydro-basins.types";
 import type {
   LayerRuntimeController,
@@ -55,6 +57,7 @@ export interface UseAppShellStateResult {
   readonly facilitiesStatus: ShallowRef<PerspectiveStatusState>;
   readonly finishSketchMeasureArea: () => void;
   readonly floodLayersController: ShallowRef<FloodLayerMountResult | null>;
+  readonly gasPipelineController: ShallowRef<GasPipelineLayerController | null>;
   readonly hoveredBoundary: ShallowRef<BoundaryHoverState | null>;
   readonly hoveredFacility: ShallowRef<FacilityHoverState | null>;
   readonly hoveredFacilityCluster: ShallowRef<FacilityClusterHoverState | null>;

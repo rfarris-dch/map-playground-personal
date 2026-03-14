@@ -1,10 +1,10 @@
 <script setup lang="ts">
   import type {
-    ProviderSortBy,
-    ProvidersTableResponse,
-    ProviderTableRow,
-    SortDirection,
-  } from "@map-migration/contracts";
+  ProviderSortBy,
+  ProvidersTableResponse,
+  ProviderTableRow,
+  SortDirection,
+} from "@map-migration/http-contracts";
   import { useInfiniteQuery } from "@tanstack/vue-query";
   import { createColumnHelper, type SortingState } from "@tanstack/vue-table";
   import { computed, shallowRef, useTemplateRef } from "vue";
@@ -180,8 +180,7 @@
   function formatCapabilities(row: ProviderTableRow): string {
     const capabilities = [
       row.supportsHyperscale ? "Hyperscale" : null,
-      row.supportsRetail ? "Retail" : null,
-      row.supportsWholesale ? "Wholesale" : null,
+      row.supportsColocation ? "Colocation" : null,
     ].filter((value) => value !== null);
 
     if (capabilities.length === 0) {

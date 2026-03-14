@@ -23,6 +23,9 @@ export function initializeParcelsRuntime(options: UseAppShellMapLifecycleOptions
     onStatus: (status) => {
       options.state.parcelsStatus.value = status;
     },
+    onViewportFacets: (facets) => {
+      options.filters.onParcelViewportFacets(facets);
+    },
   });
 
   if (options.layers.parcelsController.value !== null) {

@@ -3,7 +3,7 @@ import {
   type SpatialAnalysisSummaryRequest,
   type SpatialAnalysisSummaryResponse,
   SpatialAnalysisSummaryResponseSchema,
-} from "@map-migration/contracts";
+} from "@map-migration/http-contracts";
 import type { ApiEffectError, ApiEffectSuccess } from "@map-migration/core-runtime/api";
 import { type ApiResult, apiGetJson, apiGetJsonEffect } from "@map-migration/core-runtime/api";
 import type { Effect } from "effect";

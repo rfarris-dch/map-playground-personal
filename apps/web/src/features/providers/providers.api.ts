@@ -1,4 +1,4 @@
-import { buildProvidersRoute, ProvidersTableResponseSchema } from "@map-migration/contracts";
+import { buildProvidersRoute, ProvidersTableResponseSchema } from "@map-migration/http-contracts";
 import { apiGetJson } from "@map-migration/core-runtime/api";
 import type {
   ProvidersTableRequest,

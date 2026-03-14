@@ -1,12 +1,11 @@
 import {
   type CommissionedSemantic,
-  type FacilitiesDetailFeature,
-  type FacilitiesFeature,
   type FacilityPerspective,
   type LeaseOrOwn,
   parseCommissionedSemantic,
   parseLeaseOrOwn,
-} from "@map-migration/contracts";
+} from "@map-migration/geo-kernel";
+import type { FacilitiesDetailFeature, FacilitiesFeature } from "@map-migration/http-contracts";
 import type { FacilitiesBboxRow, FacilityDetailRow } from "@/geo/facilities/facilities.repo";
 import type { PointGeometry } from "./facilities.mapper.types";
 

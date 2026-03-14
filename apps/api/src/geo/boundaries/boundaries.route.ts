@@ -1,3 +1,4 @@
+import type { Warning } from "@map-migration/geo-kernel";
 import {
   ApiRoutes,
   type BoundaryPowerFeatureCollection,
@@ -5,8 +6,7 @@ import {
   type BoundaryPowerLevel,
   parseBoundaryPowerLevelParam,
   type ResponseMeta,
-  type Warning,
-} from "@map-migration/contracts";
+} from "@map-migration/http-contracts";
 import type { Env, Hono } from "hono";
 import { mapBoundaryPowerRowsToFeatures } from "@/geo/boundaries/boundaries.mapper";
 import { type BoundaryPowerRow, listBoundaryPower } from "@/geo/boundaries/boundaries.repo";

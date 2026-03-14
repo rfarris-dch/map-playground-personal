@@ -1,4 +1,5 @@
-import type { FacilityPerspective, FacilitySortBy, SortDirection } from "@map-migration/contracts";
+import type { FacilityPerspective } from "@map-migration/geo-kernel";
+import type { FacilitySortBy, SortDirection } from "@map-migration/http-contracts";
 
 export interface FacilityTableRow {
   readonly available_power_mw: number | string | null | undefined;

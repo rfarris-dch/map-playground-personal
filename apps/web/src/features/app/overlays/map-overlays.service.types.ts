@@ -1,4 +1,4 @@
-import type { FacilitiesFeatureCollection } from "@map-migration/contracts";
+import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts";
 
 export interface BuildFacilityAnchorParcelRequestsArgs {
   readonly colocationFeatures: FacilitiesFeatureCollection["features"];

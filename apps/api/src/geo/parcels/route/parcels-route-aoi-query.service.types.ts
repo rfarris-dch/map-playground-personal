@@ -1,4 +1,4 @@
-import type { Warning } from "@map-migration/contracts";
+import type { Warning } from "@map-migration/geo-kernel";
 import type { ParcelRow } from "@/geo/parcels/parcels.repo";
 
 export type EnrichRowsResult = EnrichRowsOk | EnrichRowsError;

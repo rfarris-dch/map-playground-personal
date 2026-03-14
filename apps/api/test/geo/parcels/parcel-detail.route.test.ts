@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
-import { ApiRoutes } from "@map-migration/contracts";
+import { ApiRoutes } from "@map-migration/http-contracts";
 import { Hono } from "hono";
 
 const getParcelByIdMock = mock();

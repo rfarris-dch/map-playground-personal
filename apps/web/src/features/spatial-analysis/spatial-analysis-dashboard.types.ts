@@ -1,10 +1,10 @@
-import type { MapContextTransfer } from "@map-migration/contracts";
+import type { MapContextTransfer } from "@map-migration/http-contracts";
 import type { SpatialAnalysisSummaryModel } from "@/features/spatial-analysis/spatial-analysis-summary.types";
 
 export interface SpatialAnalysisDashboardBase {
   readonly createdAt: string;
   readonly isFiltered: boolean;
-  readonly mapContext?: MapContextTransfer;
+  readonly mapContext?: MapContextTransfer | undefined;
   readonly title: string;
 }
 

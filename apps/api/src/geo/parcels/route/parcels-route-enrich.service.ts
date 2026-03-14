@@ -1,4 +1,5 @@
-import type { ParcelsFeatureCollection, Warning } from "@map-migration/contracts";
+import type { Warning } from "@map-migration/geo-kernel";
+import type { ParcelsFeatureCollection } from "@map-migration/http-contracts";
 import { parsePositiveIntFlag } from "@/config/env-parsing.service";
 import type {
   PageSizeResolution,

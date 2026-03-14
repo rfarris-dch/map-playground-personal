@@ -1,4 +1,5 @@
-import type { BBox, FacilitiesFeatureCollection } from "@map-migration/contracts";
+import type { BBox } from "@map-migration/geo-kernel";
+import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts";
 import type { IMap } from "@map-migration/map-engine";
 import type { ShallowRef } from "vue";
 import type {

@@ -1,10 +1,10 @@
+import { parseBboxParam } from "@map-migration/geo-kernel";
 import {
   ApiQueryDefaults,
   ApiRoutes,
   type FacilitiesFeatureCollection,
   FacilitiesFeatureCollectionSchema,
-  parseBboxParam,
-} from "@map-migration/contracts";
+} from "@map-migration/http-contracts";
 import type { Env, Hono } from "hono";
 import { getFacilitiesBboxMaxRows } from "@/geo/facilities/facilities.repo";
 import {

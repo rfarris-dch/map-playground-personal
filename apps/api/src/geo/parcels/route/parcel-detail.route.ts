@@ -3,7 +3,7 @@ import {
   ApiRoutes,
   type ParcelDetailResponse,
   ParcelDetailResponseSchema,
-} from "@map-migration/contracts";
+} from "@map-migration/http-contracts";
 import type { Context, Env, Hono } from "hono";
 import { mapParcelRowToFeature } from "@/geo/parcels/parcels.mapper";
 import { getParcelById, type ParcelRow } from "@/geo/parcels/parcels.repo";

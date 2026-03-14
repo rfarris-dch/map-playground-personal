@@ -1,12 +1,11 @@
+import type { FacilityPerspective, Warning } from "@map-migration/geo-kernel";
 import {
   ApiRoutes,
   type FacilitiesFeatureCollection,
   FacilitiesSelectionRequestSchema,
   type FacilitiesSelectionResponse,
   FacilitiesSelectionResponseSchema,
-  type FacilityPerspective,
-  type Warning,
-} from "@map-migration/contracts";
+} from "@map-migration/http-contracts";
 import type { Context, Env, Hono } from "hono";
 import { getFacilitiesPolygonMaxRows } from "@/geo/facilities/facilities.repo";
 import {

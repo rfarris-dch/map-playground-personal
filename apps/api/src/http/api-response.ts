@@ -1,9 +1,5 @@
-import {
-  type ApiErrorResponse,
-  ApiErrorResponseSchema,
-  ApiHeaders,
-  type SafeParseSchema,
-} from "@map-migration/contracts";
+import type { SafeParseSchema } from "@map-migration/geo-kernel";
+import { type ApiErrorResponse, ApiErrorResponseSchema, ApiHeaders } from "@map-migration/http-contracts";
 import {
   createRequestId,
   normalizeRequestIdHeader as normalizeRequestIdHeaderValue,

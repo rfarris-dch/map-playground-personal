@@ -1,4 +1,4 @@
-import type { FacilityPerspective } from "@map-migration/contracts";
+import type { FacilityPerspective } from "@map-migration/geo-kernel";
 import type { IMap } from "@map-migration/map-engine";
 import type { BoundaryHoverState } from "@/features/boundaries/boundaries.types";
 import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";

@@ -1,4 +1,6 @@
-import type { BBox, FacilitiesSelectionRequest } from "@map-migration/contracts";
+import type { BBox } from "@map-migration/geo-kernel";
+import { aoiBboxExceedsLimits } from "@map-migration/geo-kernel";
+import type { FacilitiesSelectionRequest } from "@map-migration/http-contracts";
 import { parsePositiveFloatFlag, parsePositiveIntFlag } from "@/config/env-parsing.service";
 import { resolvePolygonBbox } from "@/http/polygon-bbox.service";
 
@@ -17,13 +19,10 @@ export const FACILITIES_SELECTION_MAX_POLYGON_JSON_CHARS = parsePositiveIntFlag(
 );
 
 export function facilitiesSelectionBboxExceedsLimits(bbox: BBox): boolean {
-  const width = bbox.east - bbox.west;
-  const height = bbox.north - bbox.south;
-
-  return (
-    width > FACILITIES_SELECTION_MAX_BBOX_WIDTH_DEGREES ||
-    height > FACILITIES_SELECTION_MAX_BBOX_HEIGHT_DEGREES
-  );
+  return aoiBboxExceedsLimits(bbox, {
+    maxWidthDegrees: FACILITIES_SELECTION_MAX_BBOX_WIDTH_DEGREES,
+    maxHeightDegrees: FACILITIES_SELECTION_MAX_BBOX_HEIGHT_DEGREES,
+  });
 }
 
 export function resolveFacilitiesSelectionGeometry(

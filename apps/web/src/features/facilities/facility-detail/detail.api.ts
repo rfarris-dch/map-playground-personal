@@ -1,4 +1,4 @@
-import { buildFacilityDetailRoute, FacilitiesDetailResponseSchema } from "@map-migration/contracts";
+import { buildFacilityDetailRoute, FacilitiesDetailResponseSchema } from "@map-migration/http-contracts";
 import { apiGetJson } from "@map-migration/core-runtime/api";
 import type {
   FacilityDetailRequest,

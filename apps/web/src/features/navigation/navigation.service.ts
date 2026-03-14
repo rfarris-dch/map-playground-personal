@@ -1,4 +1,4 @@
-import type { MapContextTransfer } from "@map-migration/contracts";
+import type { MapContextTransfer } from "@map-migration/http-contracts";
 import type { RouteLocationRaw } from "vue-router";
 import { buildMapContextTransferQuery } from "@/features/map-context-transfer/map-context-transfer.service";
 import type {

@@ -1,4 +1,4 @@
-import { MapContextTransferSchema } from "@map-migration/contracts";
+import { MapContextTransferSchema } from "@map-migration/http-contracts";
 import type { SpatialAnalysisDashboardState } from "@/features/spatial-analysis/spatial-analysis-dashboard.types";
 import type { SpatialAnalysisSummaryModel } from "@/features/spatial-analysis/spatial-analysis-summary.types";
 

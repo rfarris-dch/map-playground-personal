@@ -323,6 +323,56 @@ DATASETS: tuple[DatasetConfig, ...] = (
 )
 
 
+_GAS_PIPELINES_DATASET = DatasetConfig(
+    dataset="gas-pipelines",
+    display_name="Gas Pipelines",
+    job_name="gas_pipelines_pipeline",
+    steps=(
+        AssetStepConfig(
+            asset_key="download_and_build",
+            commands=(
+                shell(
+                    "bash",
+                    str(PROJECT_ROOT / "scripts/refresh-gas-pipelines.sh"),
+                    "{run_id}",
+                ),
+            ),
+        ),
+        AssetStepConfig(
+            asset_key="gas_manifest_publish",
+            deps=("download_and_build",),
+            commands=(
+                shell(
+                    "bun",
+                    "run",
+                    str(PROJECT_ROOT / "scripts/publish-parcels-manifest.ts"),
+                    "--dataset=gas-pipelines-v1",
+                    f"--output-root={PUBLISH_ROOT}",
+                    f"--tiles-out-dir={CACHE_ROOT / 'tiles' / 'gas-pipelines-v1'}",
+                    "--ingestion-run-id={run_id}",
+                    "--run-id={run_id}",
+                ),
+            ),
+        ),
+        AssetStepConfig(
+            asset_key="validate",
+            deps=("gas_manifest_publish",),
+            commands=(
+                shell(
+                    "bun",
+                    "run",
+                    str(PROJECT_ROOT / "scripts/validate-published-tiles.ts"),
+                    "--dataset=gas-pipelines-v1",
+                    f"--output-root={PUBLISH_ROOT}",
+                ),
+            ),
+        ),
+    ),
+)
+
+DATASETS = (*DATASETS, _GAS_PIPELINES_DATASET)
+
+
 def get_dataset_config(dataset: str) -> DatasetConfig:
     for candidate in DATASETS:
         if candidate.dataset == dataset:

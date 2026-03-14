@@ -1,8 +1,4 @@
-import type {
-  FacilitiesFeatureCollection,
-  ParcelEnrichRequest,
-  ParcelsFeatureCollection,
-} from "@map-migration/contracts";
+import type { FacilitiesFeatureCollection, ParcelEnrichRequest, ParcelsFeatureCollection } from "@map-migration/http-contracts";
 import type { IMap } from "@map-migration/map-engine";
 import type { Ref, ShallowRef } from "vue";
 import type { MapBounds } from "@/features/app/overlays/map-overlays.types";

@@ -4,7 +4,7 @@ import {
   buildPipelineStatusRoute,
   getPipelineDatasetDescriptor,
   PIPELINE_PLATFORM,
-} from "@map-migration/contracts";
+} from "@map-migration/http-contracts";
 import { Effect } from "effect";
 import {
   createFetchPipelineStatusEffect,

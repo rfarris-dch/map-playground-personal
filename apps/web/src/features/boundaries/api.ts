@@ -1,8 +1,4 @@
-import {
-  BoundaryPowerFeatureCollectionSchema,
-  type BoundaryPowerLevel,
-  buildBoundaryPowerRoute,
-} from "@map-migration/contracts";
+import { BoundaryPowerFeatureCollectionSchema, type BoundaryPowerLevel, buildBoundaryPowerRoute } from "@map-migration/http-contracts";
 import { apiGetJsonEffect } from "@map-migration/core-runtime/api";
 
 export function fetchBoundaryPowerEffect(level: BoundaryPowerLevel, init: RequestInit = {}) {

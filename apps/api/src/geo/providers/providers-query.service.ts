@@ -1,4 +1,4 @@
-import type { ProviderTableRow } from "@map-migration/contracts";
+import type { ProviderTableRow } from "@map-migration/http-contracts";
 import { mapProviderRowsToTableRows } from "@/geo/providers/providers.mapper";
 import {
   countProviders,

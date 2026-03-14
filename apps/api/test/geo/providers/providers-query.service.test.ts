@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
-import type { ProviderTableRow } from "@map-migration/contracts";
+import type { ProviderTableRow } from "@map-migration/http-contracts";
 
 const countProvidersMock = mock<() => Promise<number>>();
 const listProvidersPageMock =
@@ -47,8 +47,7 @@ describe("queryProvidersTable", () => {
         state: "TX",
         listing_count: 10,
         supports_hyperscale: 1,
-        supports_retail: 1,
-        supports_wholesale: 0,
+        supports_colocation: 1,
         updated_at: "2026-03-05T00:00:00.000Z",
       },
     ]);
@@ -61,8 +60,7 @@ describe("queryProvidersTable", () => {
         state: "TX",
         listingCount: 10,
         supportsHyperscale: true,
-        supportsRetail: true,
-        supportsWholesale: false,
+        supportsColocation: true,
         updatedAt: "2026-03-05T00:00:00.000Z",
       },
     ]);

@@ -13,8 +13,9 @@
   },
   "dependencies": {
     "@map-migration/core-runtime": "workspace:*",
-    "@map-migration/contracts": "workspace:*",
+    "@map-migration/geo-kernel": "workspace:*",
     "@map-migration/geo-tiles": "workspace:*",
+    "@map-migration/http-contracts": "workspace:*",
     "@map-migration/map-engine": "workspace:*",
     "@map-migration/map-layer-catalog": "workspace:*",
     "@map-migration/map-style": "workspace:*",

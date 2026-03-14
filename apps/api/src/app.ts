@@ -1,4 +1,9 @@
-import { ApiHeaders, ApiRoutes, type HealthResponse, HealthSchema } from "@map-migration/contracts";
+import {
+  ApiHeaders,
+  ApiRoutes,
+  type HealthResponse,
+  HealthSchema,
+} from "@map-migration/http-contracts";
 import { createRequestId, REQUEST_ID_MAX_LENGTH } from "@map-migration/core-runtime";
 import { Effect } from "effect";
 import type { Context } from "hono";
@@ -12,7 +17,7 @@ import { assertPostgresReady } from "@/db/postgres";
 import { registerEffectMetricsRoute } from "@/effect/effect-metrics.route";
 import { registerAnalysisSummaryRoute } from "@/geo/analysis-summary/analysis-summary.route";
 import { registerBoundariesRoute } from "@/geo/boundaries/boundaries.route";
-import { registerCountyScoresRoute } from "@/geo/county-scores/county-scores.route";
+import { registerCountyIntelligenceRoute } from "@/geo/county-intelligence/county-intelligence.route";
 import { registerFacilitiesRoute } from "@/geo/facilities/facilities.route";
 import { registerFiberLocatorRoute } from "@/geo/fiber-locator/fiber-locator.route";
 import { registerMarketsRoute } from "@/geo/markets/markets.route";
@@ -217,7 +222,7 @@ export function createApiApp(options: CreateApiAppOptions = {}): Hono {
   registerFiberLocatorRoute(app);
   registerParcelsRoute(app);
   registerBoundariesRoute(app);
-  registerCountyScoresRoute(app);
+  registerCountyIntelligenceRoute(app);
   registerMarketsRoute(app);
   registerProvidersRoute(app);
   registerTilesRoute(app);

@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
-import { getPipelineDatasetDescriptor, PIPELINE_PLATFORM } from "@map-migration/contracts";
+import { getPipelineDatasetDescriptor, PIPELINE_PLATFORM } from "@map-migration/http-contracts";
 
 const getPipelineStatusResponseMock =
   mock<

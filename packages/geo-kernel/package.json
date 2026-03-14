@@ -1,0 +1,28 @@
+{
+  "name": "@map-migration/geo-kernel",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json --resolve-full-paths --resolve-full-extension .js",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "echo 'no tests yet'",
+    "ci:check": "bun run typecheck && bun run test",
+    "lint": "biome check .",
+    "dev": "tsc -w -p tsconfig.json & tsc-alias -w -p tsconfig.json --resolve-full-paths --resolve-full-extension .js"
+  },
+  "dependencies": {
+    "zod": "^3.24.2"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ]
+}

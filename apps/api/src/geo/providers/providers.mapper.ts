@@ -1,4 +1,4 @@
-import type { ProviderTableRow } from "@map-migration/contracts";
+import type { ProviderTableRow } from "@map-migration/http-contracts";
 import type { ProviderListRow } from "@/geo/providers/providers.repo";
 
 function readNullableText(value: string | null | undefined): string | null {
@@ -72,8 +72,7 @@ export function mapProviderRowsToTableRows(rows: readonly ProviderListRow[]): Pr
     state: readNullableText(row.state),
     listingCount: readNullableInteger(row.listing_count),
     supportsHyperscale: readBooleanFlag(row.supports_hyperscale),
-    supportsRetail: readBooleanFlag(row.supports_retail),
-    supportsWholesale: readBooleanFlag(row.supports_wholesale),
+    supportsColocation: readBooleanFlag(row.supports_colocation),
     updatedAt: readNullableTimestamp(row.updated_at),
   }));
 }

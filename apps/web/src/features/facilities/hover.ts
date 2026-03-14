@@ -3,7 +3,7 @@ import {
   parseCommissionedSemantic,
   parseFacilityPerspective,
   parseLeaseOrOwn,
-} from "@map-migration/contracts";
+} from "@map-migration/geo-kernel";
 import type { IMap, MapPointerEvent, MapRenderedFeature } from "@map-migration/map-engine";
 import { isFeatureId } from "@/features/facilities/facilities.service";
 import { createFacilityClusterSummary } from "@/features/facilities/facilities-cluster.service";

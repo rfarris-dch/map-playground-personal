@@ -31,6 +31,7 @@
     parcelsVisible,
     parcelsStatusText,
     powerVisibility,
+    gasPipelineVisible,
     waterVisible,
     visibleFiberLayers,
     fiberStatusText,
@@ -74,6 +75,7 @@
     setHydroBasinsVisible,
     setParcelsVisible,
     setPowerLayerVisible,
+    setGasPipelineVisible,
     setWaterVisible,
     setFiberLayerVisibility,
     setFiberSourceLayerVisible,
@@ -138,6 +140,7 @@
         :parcels-visible="parcelsVisible"
         :parcels-status-text="parcelsStatusText"
         :power-visibility="powerVisibility"
+        :gas-pipeline-visible="gasPipelineVisible"
         :water-visible="waterVisible"
         :visible-fiber-layers="visibleFiberLayers"
         :fiber-status-text="fiberStatusText"
@@ -167,6 +170,7 @@
         @update:flood-layer-visible="setFloodLayerVisible"
         @update:hydro-basins-visible="setHydroBasinsVisible"
         @update:parcels-visible="setParcelsVisible"
+        @update:gas-pipeline-visible="setGasPipelineVisible"
         @update:water-visible="setWaterVisible"
         @update:fiber-layer-visibility="setFiberLayerVisibility"
         @toggle-fiber-source-layer="setFiberSourceLayerVisible"

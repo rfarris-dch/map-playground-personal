@@ -1,10 +1,10 @@
+import type { BBox } from "@map-migration/geo-kernel";
 import {
   ApiRoutes,
-  type BBox,
   buildFiberLocatorLayersInViewRoute,
   FiberLocatorCatalogResponseSchema,
   FiberLocatorLayersInViewResponseSchema,
-} from "@map-migration/contracts";
+} from "@map-migration/http-contracts";
 import { apiGetJson } from "@map-migration/core-runtime/api";
 import type {
   FiberLocatorCatalogFetchResult,

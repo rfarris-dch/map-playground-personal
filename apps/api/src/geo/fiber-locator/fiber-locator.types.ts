@@ -1,4 +1,4 @@
-import type { FiberLocatorLayer } from "@map-migration/contracts";
+import type { FiberLocatorLayer } from "@map-migration/http-contracts";
 
 export type FiberLocatorTileFormat = "png" | "pbf";
 

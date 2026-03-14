@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { FacilityPerspective } from "@map-migration/contracts";
+  import type { FacilityPerspective } from "@map-migration/geo-kernel";
   import MapLayerControlsPanel from "@/features/app/components/map-layer-controls-panel.vue";
   import MapOverlayActions from "@/features/app/components/map-overlay-actions.vue";
   import type {
@@ -53,6 +53,10 @@
 
   function forwardParcelsVisible(visible: boolean): void {
     emit("update:parcels-visible", visible);
+  }
+
+  function forwardGasPipelineVisible(visible: boolean): void {
+    emit("update:gas-pipeline-visible", visible);
   }
 
   function forwardWaterVisible(visible: boolean): void {
@@ -127,6 +131,7 @@
     :show-flood500-zoom-hint="props.showFlood500ZoomHint"
     :hydro-basins-visible="props.hydroBasinsVisible"
     :show-hydro-basins-zoom-hint="props.showHydroBasinsZoomHint"
+    :gas-pipeline-visible="props.gasPipelineVisible"
     :water-visible="props.waterVisible"
     :visible-fiber-layers="props.visibleFiberLayers"
     :fiber-status-text="props.fiberStatusText"
@@ -139,6 +144,7 @@
     @update:perspective-view-mode="forwardPerspectiveViewMode"
     @update:perspective-visibility="forwardPerspectiveVisibility"
     @update:parcels-visible="forwardParcelsVisible"
+    @update:gas-pipeline-visible="forwardGasPipelineVisible"
     @update:water-visible="forwardWaterVisible"
     @update:flood-layer-visible="forwardFloodLayerVisible"
     @update:hydro-basins-visible="forwardHydroBasinsVisible"

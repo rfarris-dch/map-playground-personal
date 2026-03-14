@@ -1,10 +1,10 @@
 <script setup lang="ts">
   import type {
-    MarketSortBy,
-    MarketsTableResponse,
-    MarketTableRow,
-    SortDirection,
-  } from "@map-migration/contracts";
+  MarketSortBy,
+  MarketsTableResponse,
+  MarketTableRow,
+  SortDirection,
+} from "@map-migration/http-contracts";
   import { useInfiniteQuery } from "@tanstack/vue-query";
   import { createColumnHelper, type SortingState } from "@tanstack/vue-table";
   import { computed, shallowRef, useTemplateRef } from "vue";
