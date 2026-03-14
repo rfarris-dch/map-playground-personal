@@ -1,4 +1,4 @@
-import type { IMap, MapPointerEvent } from "@map-migration/map-engine";
+import type { FeatureStateTarget, IMap, MapPointerEvent } from "@map-migration/map-engine";
 import { powerLayerMetadata } from "@/features/power/power.service";
 import type {
   PowerHoverController,
@@ -6,7 +6,15 @@ import type {
   PowerHoverOptions,
   PowerHoverState,
 } from "@/features/power/power-hover.types";
-import type { HoverCandidate, HoverTarget } from "./power-hover.types";
+import { createFeatureHoverController } from "@/lib/map-feature-hover.service";
+import {
+  isFeatureId,
+  readFeatureSource,
+  readFeatureSourceLayerName,
+  readFeatureStyleLayerId,
+  readFirstAvailableString,
+  readProperty,
+} from "@/lib/map-feature-readers";
 
 const POWER_HOVER_QUERY_LAYER_IDS: readonly string[] = [
   "power.substations",
@@ -15,43 +23,6 @@ const POWER_HOVER_QUERY_LAYER_IDS: readonly string[] = [
   "power.plants-area",
 ];
 const POWER_NUMBER_PATTERN = /-?\d+(?:\.\d+)?/u;
-
-function isFeatureId(value: unknown): value is number | string {
-  return typeof value === "number" || typeof value === "string";
-}
-
-function readProperty(properties: unknown, key: string): unknown {
-  if (typeof properties !== "object" || properties === null) {
-    return null;
-  }
-
-  return Reflect.get(properties, key);
-}
-
-function readStringProperty(properties: unknown, key: string): string | null {
-  const value = readProperty(properties, key);
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const normalized = value.trim();
-  if (normalized.length === 0) {
-    return null;
-  }
-
-  return normalized;
-}
-
-function readFirstAvailableString(properties: unknown, keys: readonly string[]): string | null {
-  for (const key of keys) {
-    const value = readStringProperty(properties, key);
-    if (value !== null) {
-      return value;
-    }
-  }
-
-  return null;
-}
 
 function parseNumberFromString(value: string): number | null {
   const match = value.match(POWER_NUMBER_PATTERN);
@@ -135,56 +106,6 @@ function readFirstAvailableNumber(
     if (candidate !== null) {
       return candidate;
     }
-  }
-
-  return null;
-}
-
-function readFeatureSource(feature: { source?: unknown }): string | null {
-  if (typeof feature.source !== "string") {
-    return null;
-  }
-
-  const normalized = feature.source.trim();
-  if (normalized.length === 0) {
-    return null;
-  }
-
-  return normalized;
-}
-
-function readFeatureStyleLayerId(feature: { layer?: unknown }): string | null {
-  if (typeof feature.layer !== "object" || feature.layer === null) {
-    return null;
-  }
-
-  const layerId = Reflect.get(feature.layer, "id");
-  if (typeof layerId !== "string") {
-    return null;
-  }
-
-  const normalized = layerId.trim();
-  if (normalized.length === 0) {
-    return null;
-  }
-
-  return normalized;
-}
-
-function readFeatureSourceLayerName(feature: {
-  properties?: unknown;
-  sourceLayer?: unknown;
-}): string | null {
-  if (typeof feature.sourceLayer === "string") {
-    const normalized = feature.sourceLayer.trim();
-    if (normalized.length > 0) {
-      return normalized;
-    }
-  }
-
-  const layerNameFromProperties = readStringProperty(feature.properties, "layer_name");
-  if (layerNameFromProperties !== null) {
-    return layerNameFromProperties;
   }
 
   return null;
@@ -283,7 +204,7 @@ function toHoverTarget(feature: {
   source?: unknown;
   sourceLayer?: unknown;
   properties?: unknown;
-}): HoverTarget | null {
+}): FeatureStateTarget | null {
   if (!isFeatureId(feature.id)) {
     return null;
   }
@@ -299,22 +220,10 @@ function toHoverTarget(feature: {
   }
 
   return {
-    sourceId,
-    sourceLayerName,
-    featureId: feature.id,
+    source: sourceId,
+    sourceLayer: sourceLayerName,
+    id: feature.id,
   };
-}
-
-function isSameHoverTarget(left: HoverTarget | null, right: HoverTarget): boolean {
-  if (left === null) {
-    return false;
-  }
-
-  return (
-    left.sourceId === right.sourceId &&
-    left.sourceLayerName === right.sourceLayerName &&
-    left.featureId === right.featureId
-  );
 }
 
 function queryLayerIds(map: IMap): string[] {
@@ -328,7 +237,13 @@ function queryLayerIds(map: IMap): string[] {
   return layers;
 }
 
-function resolveHoverCandidate(map: IMap, event: MapPointerEvent): HoverCandidate | null {
+function resolveHoverCandidate(
+  map: IMap,
+  event: MapPointerEvent
+): {
+  readonly nextHover: PowerHoverState;
+  readonly nextTarget: FeatureStateTarget | null;
+} | null {
   const layers = queryLayerIds(map);
   if (layers.length === 0) {
     return null;
@@ -352,85 +267,12 @@ function resolveHoverCandidate(map: IMap, event: MapPointerEvent): HoverCandidat
   return null;
 }
 
-function toFeatureStateTarget(target: HoverTarget): {
-  id: number | string;
-  source: string;
-  sourceLayer: string;
-} {
-  return {
-    source: target.sourceId,
-    sourceLayer: target.sourceLayerName,
-    id: target.featureId,
-  };
-}
-
 export function mountPowerHover(map: IMap, options: PowerHoverOptions): PowerHoverController {
-  let hoverTarget: HoverTarget | null = null;
-
-  const clearFeatureState = (): void => {
-    if (hoverTarget === null) {
-      return;
-    }
-
-    map.setFeatureState(toFeatureStateTarget(hoverTarget), { hover: false });
-    hoverTarget = null;
-  };
-
-  const clear = (): void => {
-    clearFeatureState();
-    options.onHoverChange?.(null);
-  };
-
-  const onPointerLeave = (): void => {
-    clear();
-  };
-
-  const onPointerMove = (event: MapPointerEvent): void => {
-    if (!(options.isInteractionEnabled?.() ?? true)) {
-      clear();
-      return;
-    }
-
-    if (event.buttons > 0) {
-      clear();
-      return;
-    }
-
-    const candidate = resolveHoverCandidate(map, event);
-    if (candidate === null) {
-      clear();
-      return;
-    }
-
-    if (candidate.nextTarget !== null && isSameHoverTarget(hoverTarget, candidate.nextTarget)) {
-      options.onHoverChange?.(candidate.nextHover);
-      return;
-    }
-
-    if (candidate.nextTarget === null && hoverTarget === null) {
-      options.onHoverChange?.(candidate.nextHover);
-      return;
-    }
-
-    clearFeatureState();
-
-    if (candidate.nextTarget !== null) {
-      map.setFeatureState(toFeatureStateTarget(candidate.nextTarget), { hover: true });
-      hoverTarget = candidate.nextTarget;
-    }
-
-    options.onHoverChange?.(candidate.nextHover);
-  };
-
-  map.onPointerMove(onPointerMove);
-  map.onPointerLeave(onPointerLeave);
-
-  return {
-    clear,
-    destroy(): void {
-      clear();
-      map.offPointerMove(onPointerMove);
-      map.offPointerLeave(onPointerLeave);
+  return createFeatureHoverController(map, {
+    isInteractionEnabled: options.isInteractionEnabled,
+    onHoverChange: options.onHoverChange,
+    resolveHoverCandidate(event) {
+      return resolveHoverCandidate(map, event);
     },
-  };
+  });
 }

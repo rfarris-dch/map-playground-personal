@@ -33,11 +33,7 @@ export function useAppShellMapLifecycle(options: UseAppShellMapLifecycleOptions)
   });
 
   watch(options.filters.transmissionFilter, (filter) => {
-    for (const controller of options.layers.powerControllers.value) {
-      if (controller.layerId === "transmission") {
-        controller.setFilter(filter ?? null);
-      }
-    }
+    options.layers.powerLayersController.value?.controllers.transmission.setFilter(filter ?? null);
   });
 
   watch(options.filters.parcelFilter, (filter) => {

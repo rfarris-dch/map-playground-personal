@@ -1,7 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 import type { ProviderTableRow } from "@map-migration/http-contracts/table-contracts";
 
-const countProvidersMock = mock<() => Promise<number>>();
 const listProvidersPageMock =
   mock<
     (args: {
@@ -15,7 +14,6 @@ const mapProviderRowsToTableRowsMock =
   mock<(rows: readonly unknown[]) => readonly ProviderTableRow[]>();
 
 mock.module("../../../src/geo/providers/providers.repo", () => ({
-  countProviders: countProvidersMock,
   listProvidersPage: listProvidersPageMock,
 }));
 
@@ -31,13 +29,11 @@ afterAll(() => {
 
 describe("queryProvidersTable", () => {
   beforeEach(() => {
-    countProvidersMock.mockReset();
     listProvidersPageMock.mockReset();
     mapProviderRowsToTableRowsMock.mockReset();
   });
 
-  it("returns mapped rows and total count on success", async () => {
-    countProvidersMock.mockResolvedValue(1);
+  it("returns mapped rows and total count from window function", async () => {
     listProvidersPageMock.mockResolvedValue([
       {
         provider_id: "p-1",
@@ -49,6 +45,7 @@ describe("queryProvidersTable", () => {
         supports_hyperscale: 1,
         supports_colocation: 1,
         updated_at: "2026-03-05T00:00:00.000Z",
+        total_count: 1,
       },
     ]);
     mapProviderRowsToTableRowsMock.mockReturnValue([
@@ -65,12 +62,17 @@ describe("queryProvidersTable", () => {
       },
     ]);
 
-    const result = await queryProvidersTable({
-      limit: 25,
-      offset: 0,
-      sortBy: "name",
-      sortOrder: "asc",
-    });
+    const result = await queryProvidersTable(
+      {
+        limit: 25,
+        offset: 0,
+        sortBy: "name",
+        sortOrder: "asc",
+      },
+      {
+        listProvidersPage: listProvidersPageMock,
+      }
+    );
 
     expect(result.ok).toBe(true);
     if (!result.ok) {
@@ -80,17 +82,45 @@ describe("queryProvidersTable", () => {
     expect(result.value.rows).toHaveLength(1);
   });
 
+  it("returns totalCount 0 when no rows returned", async () => {
+    listProvidersPageMock.mockResolvedValue([]);
+    mapProviderRowsToTableRowsMock.mockReturnValue([]);
+
+    const result = await queryProvidersTable(
+      {
+        limit: 25,
+        offset: 0,
+        sortBy: "name",
+        sortOrder: "asc",
+      },
+      {
+        listProvidersPage: listProvidersPageMock,
+      }
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      throw new Error("Expected successful provider query");
+    }
+    expect(result.value.totalCount).toBe(0);
+    expect(result.value.rows).toHaveLength(0);
+  });
+
   it("returns query_failed when repository call fails", async () => {
-    countProvidersMock.mockResolvedValue(1);
     listProvidersPageMock.mockRejectedValue(new Error("db down"));
     mapProviderRowsToTableRowsMock.mockReturnValue([]);
 
-    const result = await queryProvidersTable({
-      limit: 25,
-      offset: 0,
-      sortBy: "name",
-      sortOrder: "asc",
-    });
+    const result = await queryProvidersTable(
+      {
+        limit: 25,
+        offset: 0,
+        sortBy: "name",
+        sortOrder: "asc",
+      },
+      {
+        listProvidersPage: listProvidersPageMock,
+      }
+    );
 
     expect(result.ok).toBe(false);
     if (result.ok) {
@@ -100,23 +130,49 @@ describe("queryProvidersTable", () => {
   });
 
   it("returns mapping_failed when mapping throws", async () => {
-    countProvidersMock.mockResolvedValue(1);
-    listProvidersPageMock.mockResolvedValue([]);
+    listProvidersPageMock.mockResolvedValue([{ total_count: 0 }]);
     mapProviderRowsToTableRowsMock.mockImplementation(() => {
       throw new Error("map failed");
     });
 
-    const result = await queryProvidersTable({
-      limit: 25,
-      offset: 0,
-      sortBy: "name",
-      sortOrder: "asc",
-    });
+    const result = await queryProvidersTable(
+      {
+        limit: 25,
+        offset: 0,
+        sortBy: "name",
+        sortOrder: "asc",
+      },
+      {
+        listProvidersPage: listProvidersPageMock,
+      }
+    );
 
     expect(result.ok).toBe(false);
     if (result.ok) {
       throw new Error("Expected failed provider mapping");
     }
     expect(result.value.reason).toBe("mapping_failed");
+  });
+
+  it("accepts an injected repository port", async () => {
+    mapProviderRowsToTableRowsMock.mockReturnValue([]);
+
+    const result = await queryProvidersTable(
+      {
+        limit: 25,
+        offset: 0,
+        sortBy: "name",
+        sortOrder: "asc",
+      },
+      {
+        listProvidersPage: async () => [{ total_count: 3 } as any],
+      }
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      throw new Error("Expected successful provider query");
+    }
+    expect(result.value.totalCount).toBe(3);
   });
 });

@@ -5,8 +5,8 @@ import {
   ParcelsFeatureCollectionSchema,
 } from "@map-migration/http-contracts/parcels-http";
 import type { Env, Hono } from "hono";
-import { mapParcelRowsToFeatures } from "@/geo/parcels/parcels.mapper";
-import { lookupParcelsByIds, type ParcelRow } from "@/geo/parcels/parcels.repo";
+import { lookupParcelFeatures } from "@/geo/parcels/parcels-query.service";
+import { buildParcelMeta, readIngestionRunId } from "@/geo/parcels/parcels-response-meta.service";
 import {
   parcelMappingFailed,
   postgisQueryFailed,
@@ -14,18 +14,18 @@ import {
   rejectWithPolicyError,
 } from "@/geo/parcels/route/parcels-route-errors.service";
 import {
-  buildParcelMeta,
-  conflictResponseIfNeeded,
-  profileMetadataWarnings,
   readExpectedIngestionRunId,
-  readIngestionRunId,
+  throwIfIngestionRunConflict,
 } from "@/geo/parcels/route/parcels-route-meta.service";
 import { jsonOk } from "@/http/api-response";
 import { fromApiRequest, runEffectRoute } from "@/http/effect-route";
 import { readJsonBody } from "@/http/json-request.service";
+import { registerRouteTimeoutProfile } from "@/http/route-timeout-profile.service";
 import { isDatasetQueryAllowed } from "@/http/spatial-analysis-policy.service";
 
 export function registerParcelsLookupRoute<E extends Env>(app: Hono<E>): void {
+  registerRouteTimeoutProfile(`${ApiRoutes.parcels}/lookup`, "parcels");
+
   app.post(`${ApiRoutes.parcels}/lookup`, (c) =>
     runEffectRoute(
       c,
@@ -41,47 +41,32 @@ export function registerParcelsLookupRoute<E extends Env>(app: Hono<E>): void {
 
         const parsed = ParcelLookupRequestSchema.safeParse(bodyResult.value);
         if (!parsed.success) {
-          return rejectWithBadRequest(
-            honoContext,
-            requestId,
-            "invalid parcel lookup request payload"
-          );
+          throw rejectWithBadRequest("invalid parcel lookup request payload");
         }
 
         if (!isDatasetQueryAllowed("parcels", "parcel")) {
-          return rejectWithPolicyError(
-            honoContext,
-            requestId,
-            'query granularity "parcel" is not allowed'
+          throw rejectWithPolicyError('query granularity "parcel" is not allowed');
+        }
+
+        if (parsed.data.includeGeometry === "full" && parsed.data.parcelIds.length > 100) {
+          throw rejectWithPolicyError(
+            'includeGeometry "full" is not allowed when requesting more than 100 parcels'
           );
         }
 
-        let rows: ParcelRow[] = [];
-        try {
-          rows = await lookupParcelsByIds(parsed.data.parcelIds, parsed.data.includeGeometry);
-        } catch (error) {
-          return postgisQueryFailed(honoContext, requestId, error);
+        const queryResult = await lookupParcelFeatures({
+          includeGeometry: parsed.data.includeGeometry,
+          parcelIds: parsed.data.parcelIds,
+        });
+        if (!queryResult.ok) {
+          throw queryResult.value.reason === "mapping_failed"
+            ? parcelMappingFailed(queryResult.value.error)
+            : postgisQueryFailed(queryResult.value.error);
         }
 
-        let features: ParcelsFeatureCollection["features"];
-        try {
-          features = mapParcelRowsToFeatures(rows);
-        } catch (error) {
-          return parcelMappingFailed(honoContext, requestId, error);
-        }
-
-        const responseWarnings = profileMetadataWarnings(parsed.data.profile);
+        const features: ParcelsFeatureCollection["features"] = queryResult.value.features;
         const actualIngestionRunId = readIngestionRunId(features);
-        const conflictResponse = conflictResponseIfNeeded(
-          honoContext,
-          requestId,
-          expectedIngestionRunId,
-          actualIngestionRunId,
-          features.length
-        );
-        if (conflictResponse) {
-          return conflictResponse;
-        }
+        throwIfIngestionRunConflict(expectedIngestionRunId, actualIngestionRunId, features.length);
 
         const payload: ParcelsFeatureCollection = {
           type: "FeatureCollection",
@@ -92,7 +77,7 @@ export function registerParcelsLookupRoute<E extends Env>(app: Hono<E>): void {
             includeGeometry: parsed.data.includeGeometry,
             recordCount: features.length,
             truncated: false,
-            warnings: responseWarnings,
+            warnings: [],
             nextCursor: null,
             ingestionRunId: readIngestionRunId(features),
           }),

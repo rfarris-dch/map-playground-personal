@@ -25,6 +25,7 @@ import {
   toFilteredFeatures,
   toHoverState,
 } from "@/features/boundaries/boundaries-layer.service";
+import { createFeatureHoverController } from "@/lib/map-feature-hover.service";
 
 const basemapBoundaryHideCountByMap = new WeakMap<IMap, number>();
 
@@ -78,47 +79,6 @@ export function mountBoundaryLayer(
   function setLayersVisible(visible: boolean): void {
     map.setLayerVisibility(fillLayerId, visible);
     map.setLayerVisibility(outlineLayerId, visible);
-  }
-
-  function clearHover(clearOptions: { emit?: boolean } = {}): void {
-    const shouldEmit = clearOptions.emit ?? true;
-
-    if (state.hoveredFeatureId === null) {
-      return;
-    }
-
-    map.setFeatureState(
-      {
-        source: sourceId,
-        id: state.hoveredFeatureId,
-      },
-      { hover: false }
-    );
-    state.hoveredFeatureId = null;
-
-    if (shouldEmit) {
-      options.onHoverChange?.(null);
-    }
-  }
-
-  function setHoveredFeature(nextFeatureId: string | number | null): void {
-    if (nextFeatureId === state.hoveredFeatureId) {
-      return;
-    }
-
-    clearHover({ emit: false });
-    if (nextFeatureId === null) {
-      return;
-    }
-
-    map.setFeatureState(
-      {
-        source: sourceId,
-        id: nextFeatureId,
-      },
-      { hover: true }
-    );
-    state.hoveredFeatureId = nextFeatureId;
   }
 
   function applySourceData(): void {
@@ -269,53 +229,48 @@ export function mountBoundaryLayer(
     state.dataLoaded = true;
   }
 
-  function onPointerMove(event: MapPointerEvent): void {
-    if (!(options.isInteractionEnabled?.() ?? true)) {
-      clearHover();
-      return;
-    }
-
-    if (isPointerDragging(event)) {
-      clearHover();
-      return;
-    }
-
-    if (!(state.ready && state.visible)) {
-      clearHover();
-      return;
-    }
-
-    if (!map.hasLayer(fillLayerId)) {
-      clearHover();
-      return;
-    }
-
-    const queryPoint: [number, number] = [event.point[0], event.point[1]];
-    const features = map.queryRenderedFeatures(queryPoint, {
-      layers: [fillLayerId],
-    });
-    const screenPoint: readonly [number, number] = [event.point[0], event.point[1]];
-
-    for (const feature of features) {
-      if (!isBoundaryFeatureId(feature.id)) {
-        continue;
+  const hoverController = createFeatureHoverController(map, {
+    isInteractionEnabled: options.isInteractionEnabled,
+    onHoverChange: options.onHoverChange,
+    resolveHoverCandidate(event: MapPointerEvent) {
+      if (isPointerDragging(event)) {
+        return null;
       }
 
-      const nextHover = toHoverState(feature, layerId, screenPoint);
-      if (nextHover === null) {
-        continue;
+      if (!(state.ready && state.visible && map.hasLayer(fillLayerId))) {
+        return null;
       }
 
-      setHoveredFeature(feature.id);
-      options.onHoverChange?.(nextHover);
-      return;
-    }
+      const features = map.queryRenderedFeatures(event.point, {
+        layers: [fillLayerId],
+      });
+      const screenPoint: readonly [number, number] = [event.point[0], event.point[1]];
 
-    clearHover();
-  }
+      for (const feature of features) {
+        if (!isBoundaryFeatureId(feature.id)) {
+          continue;
+        }
 
-  function onPointerLeave(): void {
-    clearHover();
+        const nextHover = toHoverState(feature, layerId, screenPoint);
+        if (nextHover === null) {
+          continue;
+        }
+
+        return {
+          nextHover,
+          nextTarget: {
+            source: sourceId,
+            id: feature.id,
+          },
+        };
+      }
+
+      return null;
+    },
+  });
+
+  function clearHover(): void {
+    hoverController.clear();
   }
 
   function onLoad(): void {
@@ -333,8 +288,6 @@ export function mountBoundaryLayer(
   }
 
   map.on("load", onLoad);
-  map.onPointerMove(onPointerMove);
-  map.onPointerLeave(onPointerLeave);
 
   return {
     clearHover,
@@ -372,9 +325,8 @@ export function mountBoundaryLayer(
     destroy(): void {
       state.requestSequence += 1;
       map.off("load", onLoad);
-      map.offPointerMove(onPointerMove);
-      map.offPointerLeave(onPointerLeave);
       clearHover();
+      hoverController.destroy();
       restoreBasemapBoundaryLayers();
       if (map.hasLayer(fillLayerId)) {
         map.removeLayer(fillLayerId);

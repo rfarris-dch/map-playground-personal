@@ -1,5 +1,9 @@
 import type { ApiEffectError, ApiEffectSuccess } from "@map-migration/core-runtime/api";
-import { type ApiResult, apiGetJson, apiGetJsonEffect } from "@map-migration/core-runtime/api";
+import {
+  type ApiResult,
+  apiRequestJson,
+  apiRequestJsonEffect,
+} from "@map-migration/core-runtime/api";
 import { buildSpatialAnalysisSummaryRoute } from "@map-migration/http-contracts/api-routes";
 import {
   type SpatialAnalysisSummaryRequest,
@@ -36,7 +40,7 @@ export function fetchSpatialAnalysisSummary(
   request: SpatialAnalysisSummaryRequest,
   options: FetchSpatialAnalysisSummaryOptions
 ): Promise<SpatialAnalysisSummaryResult> {
-  return apiGetJson(
+  return apiRequestJson(
     buildSpatialAnalysisSummaryRoute(),
     SpatialAnalysisSummaryResponseSchema,
     buildSpatialAnalysisSummaryRequestInit(request, options)
@@ -47,7 +51,7 @@ export function fetchSpatialAnalysisSummaryEffect(
   request: SpatialAnalysisSummaryRequest,
   options: FetchSpatialAnalysisSummaryOptions
 ): Effect.Effect<ApiEffectSuccess<SpatialAnalysisSummaryResponse>, ApiEffectError, never> {
-  return apiGetJsonEffect(
+  return apiRequestJsonEffect(
     buildSpatialAnalysisSummaryRoute(),
     SpatialAnalysisSummaryResponseSchema,
     buildSpatialAnalysisSummaryRequestInit(request, options)

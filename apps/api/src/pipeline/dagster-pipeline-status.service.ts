@@ -66,7 +66,15 @@ function summarizeCommandFailure(stdout: string, stderr: string): string {
   return "Dagster status command produced no output";
 }
 
+const CACHE_TTL_MS = 30_000;
+const statusCache = new Map<string, { readonly expiresAt: number; readonly value: unknown }>();
+
 export async function getDagsterPipelineStatusSnapshot(dataset: PipelineDataset) {
+  const cached = statusCache.get(dataset);
+  if (cached !== undefined && Date.now() < cached.expiresAt) {
+    return cached.value as ReturnType<typeof ParcelsSyncStatusResponseSchema.parse>;
+  }
+
   const result = await runBufferedCommand({
     command: resolveDagsterPythonBin(),
     args: ["-m", "map_dagster.status", "--dataset", dataset],
@@ -79,5 +87,7 @@ export async function getDagsterPipelineStatusSnapshot(dataset: PipelineDataset)
   }
 
   const parsed = JSON.parse(result.stdout);
-  return ParcelsSyncStatusResponseSchema.parse(parsed);
+  const validated = ParcelsSyncStatusResponseSchema.parse(parsed);
+  statusCache.set(dataset, { expiresAt: Date.now() + CACHE_TTL_MS, value: validated });
+  return validated;
 }

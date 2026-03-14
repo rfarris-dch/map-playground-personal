@@ -1,13 +1,10 @@
 <script setup lang="ts">
   import type {
-    FacilitiesTableResponse,
     FacilitySortBy,
     FacilityTableRow,
-    SortDirection,
   } from "@map-migration/http-contracts/table-contracts";
-  import { useInfiniteQuery } from "@tanstack/vue-query";
-  import { createColumnHelper, type SortingState } from "@tanstack/vue-table";
-  import { computed, shallowRef, useTemplateRef } from "vue";
+  import { createColumnHelper } from "@tanstack/vue-table";
+  import { computed } from "vue";
   import Badge from "@/components/ui/badge/badge.vue";
   import Button from "@/components/ui/button/button.vue";
   import Card from "@/components/ui/card/card.vue";
@@ -17,18 +14,13 @@
   import CardHeader from "@/components/ui/card/card-header.vue";
   import CardTitle from "@/components/ui/card/card-title.vue";
   import DataTable from "@/components/ui/table/data-table.vue";
+  import { useInfiniteTablePage } from "@/composables/use-infinite-table-page";
   import { fetchFacilitiesTable } from "@/features/facilities/facilities-table.api";
-  import { useInfiniteScroll } from "@/features/table/use-infinite-scroll";
 
   interface FacilitiesSummary {
     readonly label: string;
     readonly value: string;
   }
-
-  const pageSize = 100;
-  const scrollContainerRef = useTemplateRef<HTMLDivElement>("hyperscale-scroll-container");
-  const loadSentinelRef = useTemplateRef<HTMLDivElement>("hyperscale-load-sentinel");
-  const sorting = shallowRef<SortingState>([{ id: "facilityName", desc: false }]);
 
   const facilitySortByColumnId: Record<string, FacilitySortBy> = {
     facilityName: "facilityName",
@@ -40,90 +32,37 @@
     underConstructionPowerMw: "underConstructionPowerMw",
   };
 
-  const sortRequest = computed<{
-    readonly sortBy: FacilitySortBy;
-    readonly sortOrder: SortDirection;
-  }>(() => {
-    const currentSort = sorting.value[0];
-    const fallback: { readonly sortBy: FacilitySortBy; readonly sortOrder: SortDirection } = {
-      sortBy: "facilityName",
-      sortOrder: "asc",
-    };
-    if (!currentSort) {
-      return fallback;
-    }
-
-    const sortBy = facilitySortByColumnId[currentSort.id];
-    if (!sortBy) {
-      return fallback;
-    }
-
-    return {
-      sortBy,
-      sortOrder: currentSort.desc ? "desc" : "asc",
-    };
-  });
-
-  const facilitiesQuery = useInfiniteQuery({
-    queryKey: computed(() => [
-      "facilities-table",
-      "hyperscale",
-      pageSize,
-      sortRequest.value.sortBy,
-      sortRequest.value.sortOrder,
-    ]),
-    initialPageParam: 0,
-    queryFn: ({ pageParam, signal }) =>
+  const {
+    sorting,
+    flattenedRows,
+    totalCount,
+    loadedPages,
+    hasNextPage,
+    isFetching,
+    isLoadingMore,
+    loadMoreButtonLabel,
+    loadErrorMessage,
+    loadMoreRows,
+  } = useInfiniteTablePage<
+    FacilitySortBy,
+    FacilityTableRow,
+    { readonly perspective: "hyperscale" }
+  >({
+    queryKey: computed(() => ["facilities-table", "hyperscale"]),
+    fetchPage: (request) =>
       fetchFacilitiesTable({
-        perspective: "hyperscale",
-        page: pageParam,
-        pageSize,
-        sortBy: sortRequest.value.sortBy,
-        sortOrder: sortRequest.value.sortOrder,
-        signal,
+        perspective: request.perspective,
+        page: request.page,
+        pageSize: request.pageSize,
+        sortBy: request.sortBy,
+        sortOrder: request.sortOrder,
+        signal: request.signal,
       }),
-    getNextPageParam: (lastPage) => {
-      if (!lastPage.ok) {
-        return undefined;
-      }
-
-      const nextPage = lastPage.data.pagination.page + 1;
-      if (nextPage >= lastPage.data.pagination.totalPages) {
-        return undefined;
-      }
-
-      return nextPage;
-    },
-  });
-
-  const successfulPages = computed(() => {
-    const pages = facilitiesQuery.data.value?.pages ?? [];
-    return pages.filter((result) => result.ok).map((result) => result.data);
-  });
-
-  const flattenedRows = computed(() => successfulPages.value.flatMap((page) => page.rows));
-
-  const firstPage = computed<FacilitiesTableResponse | null>(() => {
-    const page = successfulPages.value[0];
-    if (typeof page === "undefined") {
-      return null;
-    }
-
-    return page;
-  });
-
-  const totalCount = computed(() => firstPage.value?.pagination.totalCount ?? 0);
-  const loadedPages = computed(() => successfulPages.value.length);
-
-  const loadErrorMessage = computed(() => {
-    const pages = facilitiesQuery.data.value?.pages ?? [];
-    for (const result of pages) {
-      if (!result.ok) {
-        return result.message ?? `Request failed (${result.reason})`;
-      }
-    }
-
-    return null;
+    defaultSortId: "facilityName",
+    sortByColumnId: facilitySortByColumnId,
+    scrollContainerRefName: "hyperscale-scroll-container",
+    loadSentinelRefName: "hyperscale-load-sentinel",
+    extraParams: { perspective: "hyperscale" as const },
   });
 
   const summaries = computed<readonly FacilitiesSummary[]>(() => [
@@ -140,20 +79,6 @@
       value: String(loadedPages.value),
     },
   ]);
-
-  const hasNextPage = computed(() => facilitiesQuery.hasNextPage.value === true);
-  const isLoadingMore = computed(() => facilitiesQuery.isFetchingNextPage.value);
-  const loadMoreButtonLabel = computed(() => {
-    if (isLoadingMore.value) {
-      return "Loading...";
-    }
-
-    if (hasNextPage.value) {
-      return "Load More";
-    }
-
-    return "All Rows Loaded";
-  });
 
   const facilityColumnHelper = createColumnHelper<FacilityTableRow>();
 
@@ -217,22 +142,6 @@
       cell: (context) => formatNullableNumber(context.getValue()),
     }),
   ];
-
-  async function loadMoreRows(): Promise<void> {
-    if (!hasNextPage.value || isLoadingMore.value) {
-      return;
-    }
-
-    await facilitiesQuery.fetchNextPage();
-  }
-
-  useInfiniteScroll({
-    containerRef: scrollContainerRef,
-    sentinelRef: loadSentinelRef,
-    canLoadMore: hasNextPage,
-    isLoadingMore,
-    loadMore: loadMoreRows,
-  });
 </script>
 
 <template>
@@ -256,7 +165,7 @@
       </CardHeader>
       <CardContent class="flex min-h-0 flex-1 flex-col gap-3">
         <div
-          v-if="facilitiesQuery.isFetching.value && flattenedRows.length === 0"
+          v-if="isFetching && flattenedRows.length === 0"
           class="space-y-3 py-4"
           role="status"
           aria-live="polite"

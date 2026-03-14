@@ -109,7 +109,7 @@ export function useAppShellRuntime(
       gasPipelineController: state.gasPipelineController,
       hydroBasinsController: state.hydroBasinsController,
       parcelsController: state.parcelsController,
-      powerControllers: state.powerControllers,
+      powerLayersController: state.powerLayersController,
       powerHoverController: state.powerHoverController,
       sketchMeasureController: state.sketchMeasureController,
       waterController: state.waterController,

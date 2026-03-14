@@ -1,6 +1,7 @@
-import type { BrowserEffectFiber } from "@map-migration/core-runtime/browser";
-import { forkBrowserEffect, interruptBrowserFiber } from "@map-migration/core-runtime/browser";
-import { Cause, Effect, Exit, Fiber } from "effect";
+import type { BrowserEffectFiber, BrowserEffectRuntime } from "@map-migration/core-runtime/browser";
+import { createBrowserEffectRuntime } from "@map-migration/core-runtime/browser";
+import type { Effect } from "effect";
+import { Cause, Exit } from "effect";
 
 interface LatestRunnerState {
   activeFiber: BrowserEffectFiber<unknown, unknown> | null;
@@ -10,6 +11,7 @@ interface LatestRunnerState {
 
 export interface LatestRunnerOptions {
   readonly onUnexpectedError?: (error: unknown) => void;
+  readonly runtime?: BrowserEffectRuntime;
 }
 
 export interface LatestRunner {
@@ -18,7 +20,11 @@ export interface LatestRunner {
   run(program: Effect.Effect<void, unknown, never>): Promise<void>;
 }
 
+const defaultRuntime = createBrowserEffectRuntime();
+
 export function createLatestRunner(options: LatestRunnerOptions = {}): LatestRunner {
+  const runtime = options.runtime ?? defaultRuntime;
+
   const state: LatestRunnerState = {
     activeFiber: null,
     disposed: false,
@@ -34,7 +40,8 @@ export function createLatestRunner(options: LatestRunnerOptions = {}): LatestRun
   }
 
   function observeFiber(fiber: BrowserEffectFiber<unknown, unknown>): void {
-    Effect.runPromise(Fiber.await(fiber))
+    runtime
+      .awaitFiber(fiber)
       .then((exit) => {
         if (state.activeFiber === fiber) {
           state.activeFiber = null;
@@ -53,8 +60,12 @@ export function createLatestRunner(options: LatestRunnerOptions = {}): LatestRun
 
   async function interruptActiveFiber(): Promise<void> {
     const activeFiber = state.activeFiber;
+    if (activeFiber === null) {
+      return;
+    }
+
     state.activeFiber = null;
-    await interruptBrowserFiber(activeFiber);
+    await runtime.interruptFiber(activeFiber);
   }
 
   function enqueue(operation: () => Promise<void>): Promise<void> {
@@ -86,7 +97,7 @@ export function createLatestRunner(options: LatestRunnerOptions = {}): LatestRun
           return;
         }
 
-        const fiber = forkBrowserEffect(program);
+        const fiber = runtime.runFork(program);
         state.activeFiber = fiber;
         observeFiber(fiber);
       });

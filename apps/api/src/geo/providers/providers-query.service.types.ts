@@ -33,3 +33,12 @@ export interface QueryProvidersTableArgs {
   readonly sortBy: ProviderSortBy;
   readonly sortOrder: SortDirection;
 }
+
+export interface ProvidersRepoPort {
+  readonly listProvidersPage: (args: {
+    readonly limit: number;
+    readonly offset: number;
+    readonly sortBy: ProviderSortBy;
+    readonly sortOrder: SortDirection;
+  }) => Promise<readonly ProviderListRow[]>;
+}

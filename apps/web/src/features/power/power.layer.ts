@@ -1,10 +1,18 @@
 import type { IMap, MapExpression } from "@map-migration/map-engine";
 import { getPowerStyleLayerIds, type PowerCatalogLayerId } from "@map-migration/map-style";
 import type { PowerLayerId, PowerLayerVisibilityController } from "@/features/power/power.types";
-import type { MountPowerLayerVisibilityOptions } from "./power.layer.types";
+import type { PowerLayerMountResult } from "./power.layer.types";
 
 const POWER_SOURCE_ID = "power.infrastructure";
 const POWER_VECTOR_TILE_URL = "https://openinframap.org/map/power/{z}/{x}/{y}.pbf";
+
+const ALL_STYLE_LAYER_IDS: readonly string[] = [
+  "power.transmission",
+  "power.substations-area",
+  "power.substations",
+  "power.plants-area",
+  "power.plants",
+];
 
 function toPowerCatalogLayerId(layerId: PowerLayerId): PowerCatalogLayerId {
   if (layerId === "transmission") {
@@ -191,47 +199,34 @@ function ensurePowerLayers(map: IMap): void {
   }
 }
 
-export function mountPowerLayerVisibility(
-  options: MountPowerLayerVisibilityOptions
-): PowerLayerVisibilityController {
-  let visible = true;
+function createSubController(map: IMap, layerId: PowerLayerId): PowerLayerVisibilityController {
   let currentFilter: MapExpression | null = null;
+  const visibilityState = { value: true };
 
   function applyVisibility(): void {
-    for (const styleLayerId of getPowerStyleLayerIds(toPowerCatalogLayerId(options.layerId))) {
-      if (!options.map.hasLayer(styleLayerId)) {
+    for (const styleLayerId of getPowerStyleLayerIds(toPowerCatalogLayerId(layerId))) {
+      if (!map.hasLayer(styleLayerId)) {
         continue;
       }
 
-      options.map.setLayerVisibility(styleLayerId, visible);
+      map.setLayerVisibility(styleLayerId, visibilityState.value);
     }
   }
 
   function applyFilter(): void {
-    const catalogLayerId = toPowerCatalogLayerId(options.layerId);
-    for (const styleLayerId of getPowerStyleLayerIds(catalogLayerId)) {
-      if (!options.map.hasLayer(styleLayerId)) {
+    for (const styleLayerId of getPowerStyleLayerIds(toPowerCatalogLayerId(layerId))) {
+      if (!map.hasLayer(styleLayerId)) {
         continue;
       }
 
-      options.map.setLayerFilter(styleLayerId, currentFilter);
+      map.setLayerFilter(styleLayerId, currentFilter);
     }
   }
 
-  const onLoad = (): void => {
-    ensurePowerLayers(options.map);
-    applyVisibility();
-    if (currentFilter !== null) {
-      applyFilter();
-    }
-  };
-
-  options.map.on("load", onLoad);
-
   return {
-    layerId: options.layerId,
+    layerId,
     setVisible(nextVisible: boolean): void {
-      visible = nextVisible;
+      visibilityState.value = nextVisible;
       applyVisibility();
     },
     setFilter(filter: MapExpression | null): void {
@@ -239,7 +234,45 @@ export function mountPowerLayerVisibility(
       applyFilter();
     },
     destroy(): void {
-      options.map.off("load", onLoad);
+      // No-op — parent owns source/layers
+    },
+  };
+}
+
+export function mountPowerLayers(options: { map: IMap }): PowerLayerMountResult {
+  const { map } = options;
+
+  const onLoad = (): void => {
+    ensurePowerLayers(map);
+  };
+
+  map.on("load", onLoad);
+  if ((map.getStyle().layers?.length ?? 0) > 0) {
+    onLoad();
+  }
+
+  const transmission = createSubController(map, "transmission");
+  const substations = createSubController(map, "substations");
+  const plants = createSubController(map, "plants");
+
+  return {
+    controllers: {
+      transmission,
+      substations,
+      plants,
+    },
+    destroy(): void {
+      map.off("load", onLoad);
+
+      for (const styleLayerId of ALL_STYLE_LAYER_IDS) {
+        if (map.hasLayer(styleLayerId)) {
+          map.removeLayer(styleLayerId);
+        }
+      }
+
+      if (map.hasSource(POWER_SOURCE_ID)) {
+        map.removeSource(POWER_SOURCE_ID);
+      }
     },
   };
 }

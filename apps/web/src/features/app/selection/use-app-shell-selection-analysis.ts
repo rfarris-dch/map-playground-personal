@@ -1,5 +1,6 @@
 import { Effect } from "effect";
 import { onBeforeUnmount, shallowRef, watch } from "vue";
+import { useLatestEffectTask } from "@/composables/use-latest-effect-task";
 import type { UseAppShellSelectionAnalysisOptions } from "@/features/app/selection/use-app-shell-selection-analysis.types";
 import { cloneSelectionRing } from "@/features/selection/selection-analysis-request.service";
 import {
@@ -11,17 +12,22 @@ import type {
   SelectionToolAnalysisSummary,
   SelectionToolProgress,
 } from "@/features/selection-tool/selection-tool.types";
-import { createLatestRunner } from "@/lib/effect/latest-runner";
 
 export function useAppShellSelectionAnalysis(options: UseAppShellSelectionAnalysisOptions) {
   const selectionProgress = shallowRef<SelectionToolProgress | null>(null);
   const selectionSummary = shallowRef<SelectionToolAnalysisSummary | null>(null);
   const selectionError = shallowRef<string | null>(null);
   const isSelectionLoading = shallowRef<boolean>(false);
-  const selectionRunner = createLatestRunner({
+  function resetSelectionTaskState(): void {
+    isSelectionLoading.value = false;
+    selectionError.value = null;
+    selectionProgress.value = null;
+  }
+  const selectionTask = useLatestEffectTask({
+    onClear: resetSelectionTaskState,
+    onDispose: resetSelectionTaskState,
     onUnexpectedError(error) {
-      isSelectionLoading.value = false;
-      selectionProgress.value = null;
+      resetSelectionTaskState();
       selectionError.value = "Unable to load spatial analysis summary.";
       console.error("[map] selection analysis refresh failed", error);
     },
@@ -32,10 +38,7 @@ export function useAppShellSelectionAnalysis(options: UseAppShellSelectionAnalys
   }
 
   async function clearSelectionSummary(): Promise<void> {
-    await selectionRunner.interrupt();
-    isSelectionLoading.value = false;
-    selectionError.value = null;
-    selectionProgress.value = null;
+    await selectionTask.clear();
     selectionSummary.value = null;
   }
 
@@ -53,7 +56,7 @@ export function useAppShellSelectionAnalysis(options: UseAppShellSelectionAnalys
     selectionProgress.value = null;
     selectionSummary.value = buildEmptySelectionToolSummary(selectionRing);
 
-    await selectionRunner.run(
+    await selectionTask.run(
       querySelectionToolSummaryEffect({
         expectedParcelsIngestionRunId: options.expectedParcelsIngestionRunId.value,
         includeParcels: options.includeParcels.value,
@@ -95,10 +98,7 @@ export function useAppShellSelectionAnalysis(options: UseAppShellSelectionAnalys
   );
 
   onBeforeUnmount(() => {
-    selectionRunner.dispose().catch(logSelectionRunnerError);
-    isSelectionLoading.value = false;
-    selectionError.value = null;
-    selectionProgress.value = null;
+    selectionTask.dispose().catch(logSelectionRunnerError);
   });
 
   function exportSelection(): void {

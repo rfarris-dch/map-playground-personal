@@ -37,6 +37,7 @@ export function initializeParcelsRuntime(options: UseAppShellMapLifecycleOptions
 }
 
 export function destroyParcelsRuntime(options: UseAppShellMapLifecycleOptions): void {
+  options.runtime.layerRuntime.value?.unregisterLayerController(PARCELS_LAYER_ID);
   options.layers.parcelsController.value?.destroy();
   options.layers.parcelsController.value = null;
 }

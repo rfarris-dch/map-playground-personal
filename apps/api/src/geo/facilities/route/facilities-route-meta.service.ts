@@ -1,5 +1,6 @@
 import type { Warning } from "@map-migration/geo-kernel/warning";
 import type { ResponseMeta } from "@map-migration/http-contracts/api-response-meta";
+import { buildResponseMeta } from "@/http/response-meta.service";
 import { getApiRuntimeConfig } from "@/http/runtime-config";
 
 export function buildFacilitiesRouteMeta(args: {
@@ -9,13 +10,12 @@ export function buildFacilitiesRouteMeta(args: {
   readonly warnings: readonly Warning[];
 }): ResponseMeta {
   const runtimeConfig = getApiRuntimeConfig();
-  return {
+  return buildResponseMeta({
+    dataVersion: runtimeConfig.dataVersion,
+    recordCount: args.recordCount,
     requestId: args.requestId,
     sourceMode: runtimeConfig.facilitiesSourceMode,
-    dataVersion: runtimeConfig.dataVersion,
-    generatedAt: new Date().toISOString(),
-    recordCount: args.recordCount,
     truncated: args.truncated,
-    warnings: [...args.warnings],
-  };
+    warnings: args.warnings,
+  });
 }

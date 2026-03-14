@@ -3,16 +3,12 @@ import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-per
 import type {
   FacilitiesTableResponse,
   FacilitySortBy,
-  SortDirection,
 } from "@map-migration/http-contracts/table-contracts";
+import type { PagedSortedRequest } from "@/lib/api/table-fetcher.service";
 
-export interface FacilitiesTableRequest {
-  readonly page: number;
-  readonly pageSize: number;
-  readonly perspective: FacilityPerspective;
-  readonly signal?: AbortSignal;
-  readonly sortBy: FacilitySortBy;
-  readonly sortOrder: SortDirection;
-}
+export type FacilitiesTableRequest = PagedSortedRequest<
+  FacilitySortBy,
+  { readonly perspective: FacilityPerspective }
+>;
 
 export type FacilitiesTableResult = ApiResult<FacilitiesTableResponse>;

@@ -2,15 +2,9 @@ import type { ApiResult } from "@map-migration/core-runtime/api";
 import type {
   ProviderSortBy,
   ProvidersTableResponse,
-  SortDirection,
 } from "@map-migration/http-contracts/table-contracts";
+import type { PagedSortedRequest } from "@/lib/api/table-fetcher.service";
 
-export interface ProvidersTableRequest {
-  readonly page: number;
-  readonly pageSize: number;
-  readonly signal?: AbortSignal;
-  readonly sortBy: ProviderSortBy;
-  readonly sortOrder: SortDirection;
-}
+export type ProvidersTableRequest = PagedSortedRequest<ProviderSortBy>;
 
 export type ProvidersTableResult = ApiResult<ProvidersTableResponse>;

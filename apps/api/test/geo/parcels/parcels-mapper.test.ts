@@ -92,6 +92,6 @@ describe("parcels mapper", () => {
           },
         })
       )
-    ).toThrow("Invalid geometry payload: missing type");
+    ).toThrow("Invalid geometry payload: geometry did not match GeoJSON schema");
   });
 });

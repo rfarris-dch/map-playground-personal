@@ -4,6 +4,7 @@ import {
   fetchJsonEffect,
   type RequestEffectError,
   runEffectPromise,
+  type SafeParseSchema,
 } from "@map-migration/core-runtime/effect";
 import { either } from "effect/Effect";
 import { type Either, isRight } from "effect/Either";
@@ -12,10 +13,6 @@ import {
   normalizeManifestPath,
   type TilePublishManifest,
 } from "./index";
-
-interface SafeParseSchema<T> {
-  safeParse(input: unknown): { success: true; data: T } | { success: false; error: unknown };
-}
 
 const tilePublishManifestSchema: SafeParseSchema<TilePublishManifest> = {
   safeParse(input) {

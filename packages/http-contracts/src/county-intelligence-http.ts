@@ -1,7 +1,20 @@
 import { z } from "zod";
 import { ResponseMetaSchema } from "./api-response-meta.js";
 
-const CountyFipsSchema = z.string().regex(/^[0-9]{5}$/);
+function parseCountyIdsParam(value: unknown): unknown {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  const countyIds = value
+    .split(",")
+    .map((countyId) => countyId.trim())
+    .filter((countyId) => countyId.length > 0);
+
+  return countyIds;
+}
+
+export const CountyFipsSchema = z.string().regex(/^[0-9]{5}$/);
 
 export const CountyRankStatusSchema = z.enum(["ranked", "deferred", "blocked"]);
 export const CountyAttractivenessTierSchema = z.enum([
@@ -129,6 +142,10 @@ export const CountyScoresSummarySchema = z.object({
   blockedCountyIds: z.array(CountyFipsSchema),
 });
 
+export const CountyScoresRequestSchema = z.object({
+  countyIds: z.preprocess(parseCountyIdsParam, z.array(CountyFipsSchema).min(1).max(500)),
+});
+
 export const CountyScoresResponseSchema = z.object({
   rows: z.array(CountyScoreSchema),
   summary: CountyScoresSummarySchema,
@@ -163,6 +180,7 @@ export type CountyDriver = z.infer<typeof CountyDriverSchema>;
 export type CountyChange = z.infer<typeof CountyChangeSchema>;
 export type CountyPillarValueStates = z.infer<typeof CountyPillarValueStatesSchema>;
 export type CountyDeferredReasonCode = z.infer<typeof CountyDeferredReasonCodeSchema>;
+export type CountyScoresRequest = z.infer<typeof CountyScoresRequestSchema>;
 export type CountyScoresSummary = z.infer<typeof CountyScoresSummarySchema>;
 export type CountyScoresResponse = z.infer<typeof CountyScoresResponseSchema>;
 export type CountyScoresStatusResponse = z.infer<typeof CountyScoresStatusResponseSchema>;

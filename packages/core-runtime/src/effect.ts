@@ -19,7 +19,7 @@ import { createRequestId, normalizeRequestIdHeader } from "./index";
 
 const DEFAULT_REQUEST_ID_HEADER_NAME = "x-request-id";
 
-interface SafeParseSchema<T> {
+export interface SafeParseSchema<T> {
   safeParse(input: unknown): { success: true; data: T } | { success: false; error: unknown };
 }
 

@@ -1,48 +1,38 @@
 import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts/facilities-http";
 import type { ParcelsFeatureCollection } from "@map-migration/http-contracts/parcels-http";
+import type { SpatialAnalysisSummaryResponse } from "@map-migration/http-contracts/spatial-analysis-summary-http";
 import type { SpatialAnalysisFacilityRecord } from "@/features/spatial-analysis/spatial-analysis-facilities.types";
 import type { SpatialAnalysisParcelRecord } from "@/features/spatial-analysis/spatial-analysis-parcels.types";
 import type { SpatialAnalysisProviderSummaryItem } from "@/features/spatial-analysis/spatial-analysis-provider-summary.types";
+
+type SpatialAnalysisSelectionSummary = SpatialAnalysisSummaryResponse["summary"];
 
 export interface ScannerFacility extends SpatialAnalysisFacilityRecord {
   readonly countyFips: string;
 }
 
-export interface ScannerPerspectiveSummary {
-  readonly availablePowerMw: number;
-  readonly commissionedPowerMw: number;
-  readonly count: number;
-  readonly leasedCount: number;
-  readonly operationalCount: number;
-  readonly pipelinePowerMw: number;
-  readonly plannedCount: number;
-  readonly plannedPowerMw: number;
-  readonly squareFootage: number;
-  readonly underConstructionCount: number;
-  readonly underConstructionPowerMw: number;
-  readonly unknownCount: number;
-}
+export type ScannerPerspectiveSummary = SpatialAnalysisSelectionSummary["colocation"];
 
 export interface ScannerProviderSummary extends SpatialAnalysisProviderSummaryItem {}
 
 export interface ScannerParcel extends SpatialAnalysisParcelRecord {}
 
-export interface ScannerParcelSelectionSummary {
-  readonly count: number;
-  readonly nextCursor: string | null;
+export type ScannerParcelSelectionSummary = Omit<
+  SpatialAnalysisSelectionSummary["parcelSelection"],
+  "parcels"
+> & {
   readonly parcels: readonly ScannerParcel[];
-  readonly truncated: boolean;
-}
+};
 
 export interface ScannerSummary {
-  readonly colocation: ScannerPerspectiveSummary;
-  readonly countyIds: readonly string[];
+  readonly colocation: SpatialAnalysisSelectionSummary["colocation"];
+  readonly countyIds: readonly SpatialAnalysisSelectionSummary["countyIds"][number][];
   readonly facilities: readonly ScannerFacility[];
-  readonly hyperscale: ScannerPerspectiveSummary;
+  readonly hyperscale: SpatialAnalysisSelectionSummary["hyperscale"];
   readonly parcelSelection: ScannerParcelSelectionSummary;
   readonly topColocationProviders: readonly ScannerProviderSummary[];
   readonly topHyperscaleProviders: readonly ScannerProviderSummary[];
-  readonly totalCount: number;
+  readonly totalCount: SpatialAnalysisSelectionSummary["totalCount"];
 }
 
 export interface ScannerInput {

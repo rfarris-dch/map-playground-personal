@@ -536,12 +536,11 @@ export function buildParcelLookupByIdsQuery(
     throw new Error("parcelIds must contain at least one id");
   }
 
-  const placeholders = parcelIds.map((_, index) => `$${index + 1}`).join(", ");
-  const sql = `${buildParcelSelect(includeGeometry)}\nWHERE p.parcel_id::text IN (${placeholders})\nORDER BY p.parcel_id::text ASC;`;
+  const sql = `${buildParcelSelect(includeGeometry)}\nWHERE p.parcel_id::text = ANY($1::text[])\nORDER BY p.parcel_id::text ASC;`;
 
   return {
     sql,
-    params: [...parcelIds],
+    params: [[...parcelIds]],
   };
 }
 

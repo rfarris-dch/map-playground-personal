@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { computed, shallowRef } from "vue";
+  import LayerControlsPanel from "@/components/map/layer-controls-panel.vue";
   import Accordion from "@/components/ui/accordion/accordion.vue";
   import AccordionContent from "@/components/ui/accordion/accordion-content.vue";
   import AccordionItem from "@/components/ui/accordion/accordion-item.vue";
@@ -62,12 +63,6 @@
   const countySearchQuery = shallowRef<string>("");
   const stateSearchQuery = shallowRef<string>("");
   const countrySearchQuery = shallowRef<string>("");
-
-  const containerClass = computed(() =>
-    props.embedded
-      ? "w-full font-sans text-muted-foreground"
-      : "w-full rounded-sm border border-border bg-card p-3 shadow-md font-sans text-muted-foreground"
-  );
 
   const heatStops = boundaryHeatStops();
 
@@ -333,12 +328,12 @@
 </script>
 
 <template>
-  <aside :class="containerClass" aria-label="Boundary layers">
-    <header v-if="!props.embedded" class="mb-2 flex items-center justify-between">
-      <h2 class="m-0 text-xs font-semibold tracking-wide text-muted-foreground">Boundaries</h2>
-      <span class="text-xs text-muted-foreground">County, state, country</span>
-    </header>
-
+  <LayerControlsPanel
+    ariaLabel="Boundary layers"
+    :embedded="props.embedded"
+    title="Boundaries"
+    subtitle="County, state, country"
+  >
     <div class="grid gap-2">
       <section
         v-for="section in facetSections"
@@ -484,5 +479,5 @@
         </li>
       </ul>
     </section>
-  </aside>
+  </LayerControlsPanel>
 </template>

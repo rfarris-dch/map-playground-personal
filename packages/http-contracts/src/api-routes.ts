@@ -53,6 +53,7 @@ export interface ApiRoutesTable {
   readonly boundariesPower: string;
   readonly countyScores: string;
   readonly countyScoresStatus: string;
+  readonly effectMetrics: string;
   readonly facilities: string;
   readonly facilitiesSelection: string;
   readonly facilitiesTable: string;
@@ -61,11 +62,13 @@ export interface ApiRoutesTable {
   readonly fiberLocatorTile: string;
   readonly fiberLocatorVectorTile: string;
   readonly health: string;
+  readonly healthAlias: string;
   readonly markets: string;
   readonly marketsSelection: string;
   readonly parcels: string;
   readonly pipelines: string;
   readonly providers: string;
+  readonly usgsWaterTile: string;
 }
 
 export interface ApiHeadersTable {
@@ -74,10 +77,13 @@ export interface ApiHeadersTable {
 }
 
 export interface ApiDefaultsTable {
+  readonly analysisSummarySourceMode: SourceMode;
   readonly boundariesSourceMode: SourceMode;
+  readonly countyIntelligenceSourceMode: SourceMode;
   readonly dataVersion: string;
   readonly facilitiesSourceMode: SourceMode;
   readonly fiberLocatorSourceMode: SourceMode;
+  readonly marketsSourceMode: SourceMode;
   readonly parcelsSourceMode: SourceMode;
 }
 
@@ -102,10 +108,12 @@ export type HealthResponse = z.infer<typeof HealthSchema>;
 
 export const ApiRoutes = Object.freeze<ApiRoutesTable>({
   health: "/api/health",
+  healthAlias: "/health",
   analysisSummary: "/api/geo/analysis/summary",
   boundariesPower: "/api/geo/boundaries/power",
   countyScores: "/api/geo/counties/scores",
   countyScoresStatus: "/api/geo/counties/scores/status",
+  effectMetrics: "/api/debug/effect/issues",
   fiberLocatorLayers: "/api/geo/fiber-locator/layers",
   fiberLocatorLayersInView: "/api/geo/fiber-locator/layers/inview",
   fiberLocatorTile: "/api/geo/fiber-locator/tile",
@@ -118,6 +126,7 @@ export const ApiRoutes = Object.freeze<ApiRoutesTable>({
   providers: "/api/geo/providers",
   parcels: "/api/geo/parcels",
   pipelines: "/api/pipelines",
+  usgsWaterTile: "/api/tiles/usgs-water",
 });
 
 export const ApiQueryDefaults = Object.freeze<ApiQueryDefaultsTable>({
@@ -127,7 +136,7 @@ export const ApiQueryDefaults = Object.freeze<ApiQueryDefaultsTable>({
   },
   parcelDetail: {
     includeGeometry: "full",
-    profile: "full_170",
+    profile: "analysis_v1",
   },
 });
 
@@ -294,16 +303,31 @@ export function buildPipelineStatusRoute(dataset: PipelineDataset): string {
   return `${ApiRoutes.pipelines}/${dataset}/status`;
 }
 
+export function buildEffectMetricsRoute(): string {
+  return ApiRoutes.effectMetrics;
+}
+
+export function buildUsgsWaterTileRoute(
+  z: number | string,
+  x: number | string,
+  y: number | string
+): string {
+  return `${ApiRoutes.usgsWaterTile}/${String(z)}/${String(x)}/${String(y)}`;
+}
+
 export const ApiHeaders = Object.freeze<ApiHeadersTable>({
   parcelIngestionRunId: "x-parcel-ingestion-run-id",
   requestId: "x-request-id",
 });
 
 export const ApiDefaults = Object.freeze<ApiDefaultsTable>({
+  analysisSummarySourceMode: "postgis",
   boundariesSourceMode: "postgis",
+  countyIntelligenceSourceMode: "postgis",
   dataVersion: "dev",
   facilitiesSourceMode: "postgis",
   fiberLocatorSourceMode: "external-xyz",
+  marketsSourceMode: "postgis",
   parcelsSourceMode: "postgis",
 });
 

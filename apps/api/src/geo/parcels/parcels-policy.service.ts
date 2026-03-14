@@ -3,7 +3,7 @@ import { aoiBboxExceedsLimits } from "@map-migration/geo-kernel/area-of-interest
 import type { BBox } from "@map-migration/geo-kernel/geometry";
 import { parsePositiveFloatFlag, parsePositiveIntFlag } from "@/config/env-parsing.service";
 import { resolvePolygonBbox } from "@/http/polygon-bbox.service";
-import type { TileCoordinate } from "./parcels-route-policy.service.types";
+import type { TileCoordinate } from "./parcels-policy.service.types";
 
 export const PARCELS_MAX_TILESET_TILES = parsePositiveIntFlag(
   process.env.PARCELS_MAX_TILESET_TILES,
@@ -36,10 +36,10 @@ function tileYToLatitude(y: number, z: number): number {
 
 function tileToBbox(tile: TileCoordinate, z: number): BBox {
   return {
-    west: tileXToLongitude(tile.x, z),
     east: tileXToLongitude(tile.x + 1, z),
     north: tileYToLatitude(tile.y, z),
     south: tileYToLatitude(tile.y + 1, z),
+    west: tileXToLongitude(tile.x, z),
   };
 }
 
@@ -61,7 +61,7 @@ function mergeBboxes(bboxes: readonly BBox[]): BBox {
     north = Math.max(north, bbox.north);
   }
 
-  return { west, south, east, north };
+  return { east, north, south, west };
 }
 
 function tileToPolygonCoordinates(tile: TileCoordinate, z: number): readonly [number, number][] {
@@ -77,8 +77,8 @@ function tileToPolygonCoordinates(tile: TileCoordinate, z: number): readonly [nu
 
 export function bboxExceedsLimits(bbox: BBox): boolean {
   return aoiBboxExceedsLimits(bbox, {
-    maxWidthDegrees: PARCELS_MAX_BBOX_WIDTH_DEGREES,
     maxHeightDegrees: PARCELS_MAX_BBOX_HEIGHT_DEGREES,
+    maxWidthDegrees: PARCELS_MAX_BBOX_WIDTH_DEGREES,
   });
 }
 
@@ -98,14 +98,12 @@ export function resolveTileSetPolygonGeometry(aoi: Extract<AreaOfInterest, { typ
     coordinates.push([tileToPolygonCoordinates(tile, aoi.z)]);
   }
 
-  const geometry = {
-    type: "MultiPolygon",
-    coordinates,
-  };
-
   return {
     bbox: mergeBboxes(bboxes),
-    geometryText: JSON.stringify(geometry),
+    geometryText: JSON.stringify({
+      coordinates,
+      type: "MultiPolygon",
+    }),
   };
 }
 

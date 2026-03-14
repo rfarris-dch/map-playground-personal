@@ -132,10 +132,12 @@ export function resetBoundaryRuntime(options: UseAppShellMapLifecycleOptions): v
 }
 
 export function destroyBoundaryRuntime(options: UseAppShellMapLifecycleOptions): void {
-  boundaryLayerIds().reduce((_, boundaryId) => {
+  for (const id of boundaryLayerIds()) {
+    options.runtime.layerRuntime.value?.unregisterLayerController(id);
+  }
+  for (const boundaryId of boundaryLayerIds()) {
     options.layers.boundaryControllers.value[boundaryId]?.destroy();
-    return 0;
-  }, 0);
+  }
   options.layers.boundaryControllers.value = initialBoundaryControllerState();
   options.state.boundaryFacetOptions.value = initialBoundaryFacetOptionsState();
   options.state.boundaryFacetSelection.value = initialBoundaryFacetSelectionState();

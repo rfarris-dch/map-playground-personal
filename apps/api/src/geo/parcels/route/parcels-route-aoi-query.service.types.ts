@@ -5,7 +5,11 @@ export type EnrichRowsResult = EnrichRowsOk | EnrichRowsError;
 
 export interface EnrichRowsError {
   readonly ok: false;
-  readonly response: Response;
+  readonly value: {
+    readonly error: unknown;
+    readonly message: string;
+    readonly reason: "policy_rejected" | "query_failed";
+  };
 }
 
 export interface EnrichRowsOk {

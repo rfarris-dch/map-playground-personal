@@ -6,9 +6,12 @@ import {
 } from "@map-migration/http-contracts/spatial-analysis-summary-http";
 import type { Context, Env, Hono } from "hono";
 import { readExpectedIngestionRunId } from "@/geo/parcels/route/parcels-route-meta.service";
-import { jsonError, jsonOk, toDebugDetails } from "@/http/api-response";
+import { jsonOk, toDebugDetails } from "@/http/api-response";
 import { fromApiRequest, routeError, runEffectRoute } from "@/http/effect-route";
 import { readJsonBody } from "@/http/json-request.service";
+import { buildResponseMeta } from "@/http/response-meta.service";
+import { registerRouteTimeoutProfile } from "@/http/route-timeout-profile.service";
+import { getApiRuntimeConfig } from "@/http/runtime-config";
 import { createAnalysisSummaryPorts } from "./adapters/analysis-summary-adapters";
 import { querySpatialAnalysisSummary } from "./analysis-summary.service";
 
@@ -16,23 +19,23 @@ function buildMeta(
   requestId: string,
   payload: Omit<SpatialAnalysisSummaryResponse, "meta">
 ): SpatialAnalysisSummaryResponse["meta"] {
+  const runtimeConfig = getApiRuntimeConfig();
   const marketWarnings = payload.provenance.markets.warnings;
   const facilitiesTruncated =
     payload.provenance.facilities.truncatedByPerspective.colocation ||
     payload.provenance.facilities.truncatedByPerspective.hyperscale;
 
-  return {
-    dataVersion: "dev",
-    generatedAt: new Date().toISOString(),
+  return buildResponseMeta({
+    dataVersion: runtimeConfig.dataVersion,
     recordCount: payload.summary.totalCount,
     requestId,
-    sourceMode: "postgis",
+    sourceMode: runtimeConfig.analysisSummarySourceMode,
     truncated:
       payload.summary.parcelSelection.truncated ||
       facilitiesTruncated ||
       marketWarnings.some((warning) => warning.code === "POSSIBLY_TRUNCATED"),
-    warnings: [...payload.warnings],
-  };
+    warnings: payload.warnings,
+  });
 }
 
 function analysisSummaryErrorHttpStatus(reason: string): number {
@@ -42,6 +45,10 @@ function analysisSummaryErrorHttpStatus(reason: string): number {
 
   if (reason === "parcel_ingestion_run_mismatch") {
     return 409;
+  }
+
+  if (reason === "facilities_mapping_failed" || reason === "parcels_mapping_failed") {
+    return 500;
   }
 
   return 503;
@@ -66,60 +73,46 @@ function analysisSummaryErrorMessage(reason: string): string {
 async function readSpatialAnalysisSummaryRequest(
   c: Context,
   requestId: string
-): Promise<
-  | {
-      readonly ok: true;
-      readonly value: typeof SpatialAnalysisSummaryRequestSchema._type;
-    }
-  | {
-      readonly ok: false;
-      readonly response: Response;
-    }
-> {
+): Promise<typeof SpatialAnalysisSummaryRequestSchema._type | Response> {
   const bodyResult = await readJsonBody(c, {
     requestId,
     invalidJsonMessage: "invalid JSON body",
   });
   if (!bodyResult.ok) {
-    return bodyResult;
+    return bodyResult.response;
   }
 
   const parsed = SpatialAnalysisSummaryRequestSchema.safeParse(bodyResult.value);
   if (!parsed.success) {
-    return {
-      ok: false,
-      response: jsonError(c, {
-        requestId,
-        httpStatus: 400,
-        code: "INVALID_SPATIAL_ANALYSIS_SUMMARY_REQUEST",
-        message: "invalid spatial analysis summary request payload",
-        details: toDebugDetails(parsed.error),
-      }),
-    };
+    throw routeError({
+      httpStatus: 400,
+      code: "INVALID_SPATIAL_ANALYSIS_SUMMARY_REQUEST",
+      message: "invalid spatial analysis summary request payload",
+      details: toDebugDetails(parsed.error),
+    });
   }
 
-  return {
-    ok: true,
-    value: parsed.data,
-  };
+  return parsed.data;
 }
 
 export function registerAnalysisSummaryRoute<E extends Env>(app: Hono<E>): void {
+  registerRouteTimeoutProfile(ApiRoutes.analysisSummary, "selection");
+
   app.post(ApiRoutes.analysisSummary, (c) =>
     runEffectRoute(
       c,
       fromApiRequest(async ({ honoContext, requestId }) => {
-        const requestResult = await readSpatialAnalysisSummaryRequest(honoContext, requestId);
-
-        if (!requestResult.ok) {
-          return requestResult.response;
+        const requestOrResponse = await readSpatialAnalysisSummaryRequest(honoContext, requestId);
+        if (requestOrResponse instanceof Response) {
+          return requestOrResponse;
         }
+        const request = requestOrResponse;
 
         const ports = createAnalysisSummaryPorts();
         const result = await querySpatialAnalysisSummary(
           {
             expectedParcelIngestionRunId: readExpectedIngestionRunId(honoContext),
-            request: requestResult.value,
+            request,
           },
           ports
         );

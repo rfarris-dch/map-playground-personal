@@ -1,8 +1,8 @@
 import {
   type ApiEffectError,
   type ApiEffectSuccess,
-  apiGetJson,
-  apiGetJsonEffect,
+  apiRequestJson,
+  apiRequestJsonEffect,
 } from "@map-migration/core-runtime/api";
 import {
   buildFacilitiesSelectionRoute,
@@ -62,7 +62,7 @@ export function fetchFacilitiesBySelection(
   request: FacilitiesSelectionRequest,
   signal?: AbortSignal
 ): Promise<FacilitiesSelectionResult> {
-  return apiGetJson(
+  return apiRequestJson(
     buildFacilitiesSelectionRoute(),
     FacilitiesSelectionResponseSchema,
     buildFacilitiesSelectionRequestInit(request, signal)
@@ -73,7 +73,7 @@ export function fetchFacilitiesBySelectionEffect(
   request: FacilitiesSelectionRequest,
   signal?: AbortSignal
 ): Effect.Effect<ApiEffectSuccess<FacilitiesSelectionResponse>, ApiEffectError, never> {
-  return apiGetJsonEffect(
+  return apiRequestJsonEffect(
     buildFacilitiesSelectionRoute(),
     FacilitiesSelectionResponseSchema,
     buildFacilitiesSelectionRequestInit(request, signal)
@@ -85,7 +85,7 @@ export function fetchParcelsBySelection(
   signal?: AbortSignal,
   options: FetchParcelsBySelectionOptions = {}
 ): Promise<ParcelsSelectionResult> {
-  return apiGetJson(
+  return apiRequestJson(
     buildParcelEnrichRoute(),
     ParcelsFeatureCollectionSchema,
     buildParcelsSelectionRequestInit(request, signal, options)
@@ -97,7 +97,7 @@ export function fetchParcelsBySelectionEffect(
   signal?: AbortSignal,
   options: FetchParcelsBySelectionOptions = {}
 ): Effect.Effect<ApiEffectSuccess<ParcelsFeatureCollection>, ApiEffectError, never> {
-  return apiGetJsonEffect(
+  return apiRequestJsonEffect(
     buildParcelEnrichRoute(),
     ParcelsFeatureCollectionSchema,
     buildParcelsSelectionRequestInit(request, signal, options)

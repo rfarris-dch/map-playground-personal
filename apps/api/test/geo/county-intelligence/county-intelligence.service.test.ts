@@ -17,7 +17,7 @@ mock.module("@/geo/county-intelligence/county-intelligence.mapper", () => ({
 }));
 
 const { queryCountyScores, queryCountyScoresStatus } = await import(
-  "@/geo/county-intelligence/county-intelligence.service"
+  "../../../src/geo/county-intelligence/county-intelligence.service.ts?county-service-test"
 );
 
 afterAll(() => {

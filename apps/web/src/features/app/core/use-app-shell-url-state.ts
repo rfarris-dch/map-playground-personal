@@ -2,12 +2,12 @@ import type { MapContextTransfer } from "@map-migration/http-contracts/map-conte
 import { Effect } from "effect";
 import { onBeforeUnmount, shallowRef, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { useLatestEffectTask } from "@/composables/use-latest-effect-task";
 import {
   applyMapContextTransferToAppShell,
   readMapContextTransferFromRoute,
   readMapContextTransferTokenFromQuery,
 } from "@/features/map-context-transfer/map-context-transfer.service";
-import { createLatestRunner } from "@/lib/effect/latest-runner";
 import {
   buildAppShellUrlStateQuery,
   serializeNormalizedMapContextQuery,
@@ -43,8 +43,8 @@ export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
   );
   const lastWrittenQuerySignature = shallowRef<string | null>(null);
   const viewportVersion = shallowRef(0);
-  const replaceRunner = createLatestRunner({
-    onUnexpectedError: (error) => {
+  const replaceTask = useLatestEffectTask({
+    onUnexpectedError(error) {
       console.error("[map] url state sync failed", error);
     },
   });
@@ -63,7 +63,7 @@ export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
     contextToken.value = readMapContextTransferTokenFromQuery(nextQuery) ?? null;
     lastWrittenQuerySignature.value = nextSignature;
 
-    return replaceRunner.run(
+    return replaceTask.run(
       Effect.sync(() => {
         if (typeof window === "undefined") {
           return;
@@ -162,6 +162,6 @@ export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
   );
 
   onBeforeUnmount(() => {
-    replaceRunner.dispose().catch(() => undefined);
+    replaceTask.dispose().catch(() => undefined);
   });
 }

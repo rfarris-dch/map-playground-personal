@@ -29,7 +29,7 @@ import type {
   LayerRuntimeSnapshot,
 } from "@/features/layers/layer-runtime.types";
 import type { ParcelsLayerController, ParcelsStatus } from "@/features/parcels/parcels.types";
-import type { PowerLayerVisibilityController } from "@/features/power/power.types";
+import type { PowerLayerMountResult } from "@/features/power/power.layer.types";
 import type { PowerHoverController, PowerHoverState } from "@/features/power/power-hover.types";
 import type {
   SketchAreaGeometry,
@@ -73,8 +73,8 @@ export interface UseAppShellStateResult {
   readonly mapContainer: Readonly<ShallowRef<HTMLDivElement | null>>;
   readonly parcelsController: ShallowRef<ParcelsLayerController | null>;
   readonly parcelsStatus: ShallowRef<ParcelsStatus>;
-  readonly powerControllers: ShallowRef<readonly PowerLayerVisibilityController[]>;
   readonly powerHoverController: ShallowRef<PowerHoverController | null>;
+  readonly powerLayersController: ShallowRef<PowerLayerMountResult | null>;
   readonly selectionGeometry: ShallowRef<SketchAreaGeometry | null>;
   readonly setSketchMeasureAreaShape: (shape: SketchMeasureAreaShape) => void;
   readonly setSketchMeasureMode: (mode: SketchMeasureMode) => void;

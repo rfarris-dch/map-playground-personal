@@ -7,7 +7,7 @@ const {
   FACILITIES_SELECTION_MAX_POLYGON_JSON_CHARS,
   facilitiesSelectionBboxExceedsLimits,
   resolveFacilitiesSelectionGeometry,
-} = await import("@/geo/facilities/route/facilities-route-policy.service");
+} = await import("@/geo/facilities/facilities-selection-policy.service");
 
 function buildGeometry(
   coordinates: FacilitiesSelectionRequest["geometry"]["coordinates"]

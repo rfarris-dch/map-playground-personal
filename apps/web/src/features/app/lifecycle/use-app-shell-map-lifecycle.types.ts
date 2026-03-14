@@ -35,7 +35,7 @@ import type {
   ParcelsStatus,
   SelectedParcelRef,
 } from "@/features/parcels/parcels.types";
-import type { PowerLayerVisibilityController } from "@/features/power/power.types";
+import type { PowerLayerMountResult } from "@/features/power/power.layer.types";
 import type { PowerHoverController, PowerHoverState } from "@/features/power/power-hover.types";
 import type {
   SketchMeasureLayerController,
@@ -75,8 +75,8 @@ export interface AppShellMapLifecycleLayerRefs {
   readonly gasPipelineController: ShallowRef<GasPipelineLayerController | null>;
   readonly hydroBasinsController: ShallowRef<HydroBasinsVisibilityController | null>;
   readonly parcelsController: ShallowRef<ParcelsLayerController | null>;
-  readonly powerControllers: ShallowRef<readonly PowerLayerVisibilityController[]>;
   readonly powerHoverController: ShallowRef<PowerHoverController | null>;
+  readonly powerLayersController: ShallowRef<PowerLayerMountResult | null>;
   readonly sketchMeasureController: ShallowRef<SketchMeasureLayerController | null>;
   readonly waterController: ShallowRef<WaterLayerVisibilityController | null>;
 }

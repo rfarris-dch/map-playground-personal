@@ -4,7 +4,7 @@ import { parsePositiveIntFlag } from "@/config/env-parsing.service";
 import type {
   PageSizeResolution,
   PaginatedEnrichFeatures,
-} from "./parcels-route-enrich.service.types";
+} from "./parcels-pagination.service.types";
 
 const PARCELS_MAX_PAGE_SIZE = parsePositiveIntFlag(process.env.PARCELS_MAX_PAGE_SIZE, 20_000);
 

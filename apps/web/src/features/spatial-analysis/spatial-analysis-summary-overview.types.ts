@@ -1,42 +1,20 @@
-export interface SpatialAnalysisOverviewPerspectiveSummary {
-  readonly availablePowerMw: number;
-  readonly commissionedPowerMw: number;
-  readonly count: number;
-  readonly leasedCount: number;
-  readonly operationalCount: number;
-  readonly pipelinePowerMw: number;
-  readonly plannedCount: number;
-  readonly plannedPowerMw: number;
-  readonly squareFootage: number;
-  readonly underConstructionCount: number;
-  readonly underConstructionPowerMw: number;
-  readonly unknownCount: number;
-}
+import type { SpatialAnalysisSummaryResponse } from "@map-migration/http-contracts/spatial-analysis-summary-http";
+import type { SpatialAnalysisProviderSummaryItem } from "@/features/spatial-analysis/spatial-analysis-provider-summary.types";
 
-export interface SpatialAnalysisOverviewProviderSummary {
-  readonly commissionedPowerMw: number;
-  readonly count: number;
-  readonly providerId?: string;
-  readonly providerName: string;
-}
+type SpatialAnalysisSelectionSummary = SpatialAnalysisSummaryResponse["summary"];
+
+export type SpatialAnalysisOverviewPerspectiveSummary =
+  SpatialAnalysisSelectionSummary["colocation"];
+
+export type SpatialAnalysisOverviewProviderSummary = SpatialAnalysisProviderSummaryItem;
 
 export interface SpatialAnalysisOverviewSummary {
-  readonly colocation: SpatialAnalysisOverviewPerspectiveSummary;
-  readonly flood?: {
-    readonly flood100AreaSqKm: number;
-    readonly flood100SelectionShare: number;
-    readonly flood500AreaSqKm: number;
-    readonly flood500SelectionShare: number;
-    readonly parcelCountIntersectingFlood100: number;
-    readonly parcelCountIntersectingFlood500: number;
-    readonly parcelCountOutsideMappedFlood: number;
-    readonly selectionAreaSqKm: number;
-    readonly unavailableReason: string | null;
-  };
-  readonly hyperscale: SpatialAnalysisOverviewPerspectiveSummary;
+  readonly colocation: SpatialAnalysisSelectionSummary["colocation"];
+  readonly flood?: SpatialAnalysisSelectionSummary["flood"];
+  readonly hyperscale: SpatialAnalysisSelectionSummary["hyperscale"];
   readonly topColocationProviders: readonly SpatialAnalysisOverviewProviderSummary[];
   readonly topHyperscaleProviders: readonly SpatialAnalysisOverviewProviderSummary[];
-  readonly totalCount: number;
+  readonly totalCount: SpatialAnalysisSelectionSummary["totalCount"];
 }
 
 export interface SpatialAnalysisOverviewMetrics {

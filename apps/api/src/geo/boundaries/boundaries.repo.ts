@@ -5,6 +5,9 @@ import type { BoundaryPowerRow } from "./boundaries.repo.types";
 
 export type { BoundaryPowerRow } from "./boundaries.repo.types";
 
+const SIMPLIFY_STATE_TOLERANCE = 0.005;
+const SIMPLIFY_COUNTRY_TOLERANCE = 0.01;
+
 const COUNTY_POWER_SQL = `
 ${FACILITY_POWER_CTE}
 SELECT
@@ -30,7 +33,7 @@ SELECT
   MAX(county.state_abbrev)::text AS region_name,
   'United States'::text AS parent_region_name,
   COALESCE(state_power.commissioned_power_mw, 0)::double precision AS commissioned_power_mw,
-  ST_AsGeoJSON(ST_Multi(ST_Union(county.geom)))::jsonb AS geom_json
+  ST_AsGeoJSON(ST_SimplifyPreserveTopology(ST_Multi(ST_Union(county.geom)), ${String(SIMPLIFY_STATE_TOLERANCE)}))::jsonb AS geom_json
 FROM serve.boundary_county_geom_lod2 AS county
 LEFT JOIN state_power ON state_power.state_fips = LEFT(county.county_fips, 2)
 GROUP BY LEFT(county.county_fips, 2), state_power.commissioned_power_mw;`;
@@ -38,7 +41,7 @@ GROUP BY LEFT(county.county_fips, 2), state_power.commissioned_power_mw;`;
 const COUNTRY_POWER_SQL = `
 ${FACILITY_POWER_CTE},
 country_geom AS (
-  SELECT ST_AsGeoJSON(ST_Multi(ST_Union(county.geom)))::jsonb AS geom_json
+  SELECT ST_AsGeoJSON(ST_SimplifyPreserveTopology(ST_Multi(ST_Union(county.geom)), ${String(SIMPLIFY_COUNTRY_TOLERANCE)}))::jsonb AS geom_json
   FROM serve.boundary_county_geom_lod3 AS county
 ),
 total_power AS (

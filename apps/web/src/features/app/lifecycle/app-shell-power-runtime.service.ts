@@ -1,8 +1,7 @@
 import { powerLayerId } from "@/features/app/core/app-shell.constants";
 import type { UseAppShellMapLifecycleOptions } from "@/features/app/lifecycle/use-app-shell-map-lifecycle.types";
-import { mountPowerLayerVisibility } from "@/features/power/power.layer";
+import { mountPowerLayers } from "@/features/power/power.layer";
 import { powerLayerIds } from "@/features/power/power.service";
-import type { PowerLayerVisibilityController } from "@/features/power/power.types";
 import { mountPowerHover } from "@/features/power/power-hover";
 
 export function initializePowerRuntime(options: UseAppShellMapLifecycleOptions): void {
@@ -11,24 +10,21 @@ export function initializePowerRuntime(options: UseAppShellMapLifecycleOptions):
     return;
   }
 
-  const nextPowerControllers = powerLayerIds().reduce<PowerLayerVisibilityController[]>(
-    (controllers, layerId) => {
-      const controller = mountPowerLayerVisibility({
-        map: currentMap,
-        layerId,
-        styleLayerId: powerLayerId(layerId),
-      });
+  const powerLayersResult = mountPowerLayers({ map: currentMap });
+  options.layers.powerLayersController.value = powerLayersResult;
 
-      options.runtime.layerRuntime.value?.registerLayerController(
-        powerLayerId(layerId),
-        controller
-      );
-      controllers.push(controller);
-      return controllers;
-    },
-    []
+  options.runtime.layerRuntime.value?.registerLayerController(
+    powerLayerId("transmission"),
+    powerLayersResult.controllers.transmission
   );
-  options.layers.powerControllers.value = nextPowerControllers;
+  options.runtime.layerRuntime.value?.registerLayerController(
+    powerLayerId("substations"),
+    powerLayersResult.controllers.substations
+  );
+  options.runtime.layerRuntime.value?.registerLayerController(
+    powerLayerId("plants"),
+    powerLayersResult.controllers.plants
+  );
 
   options.layers.powerHoverController.value = mountPowerHover(currentMap, {
     isInteractionEnabled: () => options.areFacilityInteractionsEnabled.value,
@@ -39,13 +35,14 @@ export function initializePowerRuntime(options: UseAppShellMapLifecycleOptions):
 }
 
 export function destroyPowerRuntime(options: UseAppShellMapLifecycleOptions): void {
+  for (const id of powerLayerIds()) {
+    options.runtime.layerRuntime.value?.unregisterLayerController(powerLayerId(id));
+  }
+
   options.layers.powerHoverController.value?.destroy();
   options.layers.powerHoverController.value = null;
   options.state.hoveredPower.value = null;
 
-  options.layers.powerControllers.value.reduce((_, controller) => {
-    controller.destroy();
-    return 0;
-  }, 0);
-  options.layers.powerControllers.value = [];
+  options.layers.powerLayersController.value?.destroy();
+  options.layers.powerLayersController.value = null;
 }

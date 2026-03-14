@@ -70,7 +70,7 @@ function createLifecycleOptions(fakeMap: FakeMap): UseAppShellMapLifecycleOption
         },
         setVisible: noop,
       }),
-      powerControllers: shallowRef([]),
+      powerLayersController: shallowRef(null),
       powerHoverController: shallowRef({
         clear: noop,
         destroy() {

@@ -1,13 +1,7 @@
 <script setup lang="ts">
-  import type {
-    MarketSortBy,
-    MarketsTableResponse,
-    MarketTableRow,
-    SortDirection,
-  } from "@map-migration/http-contracts/table-contracts";
-  import { useInfiniteQuery } from "@tanstack/vue-query";
-  import { createColumnHelper, type SortingState } from "@tanstack/vue-table";
-  import { computed, shallowRef, useTemplateRef } from "vue";
+  import type { MarketSortBy, MarketTableRow } from "@map-migration/http-contracts/table-contracts";
+  import { createColumnHelper } from "@tanstack/vue-table";
+  import { computed } from "vue";
   import Badge from "@/components/ui/badge/badge.vue";
   import Button from "@/components/ui/button/button.vue";
   import Card from "@/components/ui/card/card.vue";
@@ -17,18 +11,13 @@
   import CardHeader from "@/components/ui/card/card-header.vue";
   import CardTitle from "@/components/ui/card/card-title.vue";
   import DataTable from "@/components/ui/table/data-table.vue";
+  import { useInfiniteTablePage } from "@/composables/use-infinite-table-page";
   import { fetchMarketsTable } from "@/features/markets/markets.api";
-  import { useInfiniteScroll } from "@/features/table/use-infinite-scroll";
 
   interface MarketSummary {
     readonly label: string;
     readonly value: string;
   }
-
-  const pageSize = 100;
-  const scrollContainerRef = useTemplateRef<HTMLDivElement>("market-scroll-container");
-  const loadSentinelRef = useTemplateRef<HTMLDivElement>("market-load-sentinel");
-  const sorting = shallowRef<SortingState>([{ id: "name", desc: false }]);
 
   const marketSortByColumnId: Record<string, MarketSortBy> = {
     name: "name",
@@ -39,88 +28,31 @@
     vacancy: "vacancy",
   };
 
-  const sortRequest = computed<{
-    readonly sortBy: MarketSortBy;
-    readonly sortOrder: SortDirection;
-  }>(() => {
-    const currentSort = sorting.value[0];
-    const fallback: { readonly sortBy: MarketSortBy; readonly sortOrder: SortDirection } = {
-      sortBy: "name",
-      sortOrder: "asc",
-    };
-    if (!currentSort) {
-      return fallback;
-    }
-
-    const sortBy = marketSortByColumnId[currentSort.id];
-    if (!sortBy) {
-      return fallback;
-    }
-
-    return {
-      sortBy,
-      sortOrder: currentSort.desc ? "desc" : "asc",
-    };
-  });
-
-  const marketsQuery = useInfiniteQuery({
-    queryKey: computed(() => [
-      "markets-table",
-      pageSize,
-      sortRequest.value.sortBy,
-      sortRequest.value.sortOrder,
-    ]),
-    initialPageParam: 0,
-    queryFn: ({ pageParam, signal }) =>
+  const {
+    sorting,
+    flattenedRows,
+    totalCount,
+    loadedPages,
+    hasNextPage,
+    isFetching,
+    isLoadingMore,
+    loadMoreButtonLabel,
+    loadErrorMessage,
+    loadMoreRows,
+  } = useInfiniteTablePage<MarketSortBy, MarketTableRow>({
+    queryKey: computed(() => ["markets-table"]),
+    fetchPage: (request) =>
       fetchMarketsTable({
-        page: pageParam,
-        pageSize,
-        sortBy: sortRequest.value.sortBy,
-        sortOrder: sortRequest.value.sortOrder,
-        signal,
+        page: request.page,
+        pageSize: request.pageSize,
+        sortBy: request.sortBy,
+        sortOrder: request.sortOrder,
+        signal: request.signal,
       }),
-    getNextPageParam: (lastPage) => {
-      if (!lastPage.ok) {
-        return undefined;
-      }
-
-      const nextPage = lastPage.data.pagination.page + 1;
-      if (nextPage >= lastPage.data.pagination.totalPages) {
-        return undefined;
-      }
-
-      return nextPage;
-    },
-  });
-
-  const successfulPages = computed(() => {
-    const pages = marketsQuery.data.value?.pages ?? [];
-    return pages.filter((result) => result.ok).map((result) => result.data);
-  });
-
-  const flattenedRows = computed(() => successfulPages.value.flatMap((page) => page.rows));
-
-  const firstPage = computed<MarketsTableResponse | null>(() => {
-    const page = successfulPages.value[0];
-    if (typeof page === "undefined") {
-      return null;
-    }
-
-    return page;
-  });
-
-  const totalCount = computed(() => firstPage.value?.pagination.totalCount ?? 0);
-  const loadedPages = computed(() => successfulPages.value.length);
-
-  const loadErrorMessage = computed(() => {
-    const pages = marketsQuery.data.value?.pages ?? [];
-    for (const result of pages) {
-      if (!result.ok) {
-        return result.message ?? `Request failed (${result.reason})`;
-      }
-    }
-
-    return null;
+    defaultSortId: "name",
+    sortByColumnId: marketSortByColumnId,
+    scrollContainerRefName: "market-scroll-container",
+    loadSentinelRefName: "market-load-sentinel",
   });
 
   const marketSummaries = computed<readonly MarketSummary[]>(() => [
@@ -137,20 +69,6 @@
       value: loadedPages.value.toLocaleString(),
     },
   ]);
-
-  const hasNextPage = computed(() => marketsQuery.hasNextPage.value === true);
-  const isLoadingMore = computed(() => marketsQuery.isFetchingNextPage.value);
-  const loadMoreButtonLabel = computed(() => {
-    if (isLoadingMore.value) {
-      return "Loading...";
-    }
-
-    if (hasNextPage.value) {
-      return "Load More";
-    }
-
-    return "All Rows Loaded";
-  });
 
   const marketColumnHelper = createColumnHelper<MarketTableRow>();
 
@@ -208,22 +126,6 @@
       cell: (context) => formatNullableNumber(context.getValue()),
     }),
   ];
-
-  async function loadMoreRows(): Promise<void> {
-    if (!hasNextPage.value || isLoadingMore.value) {
-      return;
-    }
-
-    await marketsQuery.fetchNextPage();
-  }
-
-  useInfiniteScroll({
-    containerRef: scrollContainerRef,
-    sentinelRef: loadSentinelRef,
-    canLoadMore: hasNextPage,
-    isLoadingMore,
-    loadMore: loadMoreRows,
-  });
 </script>
 
 <template>
@@ -252,7 +154,7 @@
       </CardHeader>
       <CardContent class="flex min-h-0 flex-1 flex-col gap-3">
         <div
-          v-if="marketsQuery.isFetching.value && flattenedRows.length === 0"
+          v-if="isFetching && flattenedRows.length === 0"
           class="space-y-3 py-4"
           role="status"
           aria-live="polite"

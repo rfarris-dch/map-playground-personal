@@ -1,6 +1,6 @@
-import { Cause, Effect, Context as EffectContext, Exit, Option } from "effect";
+import { Cause, Data, Effect, Context as EffectContext, Exit, Option } from "effect";
 import type { Context as HonoContext } from "hono";
-import { runApiEffectExit } from "@/effect/api-effect-runtime";
+import { runApiEffectExit, SupervisorRequestMetadataRef } from "@/effect/api-effect-runtime";
 import { recordRouteEffectFailure } from "@/effect/effect-failure-trail.service";
 import { runWithApiRequestContextStorage } from "@/http/api-request-context-storage.service";
 import { jsonError, resolveRequestId, toDebugDetails, withRequestId } from "./api-response";
@@ -33,19 +33,12 @@ export class ApiRequestLogger extends EffectContext.Tag("ApiRequestLogger")<
   ApiRequestLoggerService
 >() {}
 
-export class ApiRouteError extends Error {
+export class ApiRouteError extends Data.TaggedError("ApiRouteError")<{
   readonly code: string;
   readonly details?: unknown;
   readonly httpStatus: number;
-
-  constructor(args: ApiRouteErrorArgs) {
-    super(args.message);
-    this.name = "ApiRouteError";
-    this.code = args.code;
-    this.details = args.details;
-    this.httpStatus = args.httpStatus;
-  }
-}
+  readonly message: string;
+}> {}
 
 export function routeError(args: ApiRouteErrorArgs): ApiRouteError {
   return new ApiRouteError(args);
@@ -93,7 +86,7 @@ function createApiRequestLogger(requestId: string): ApiRequestLoggerService {
 }
 
 function handleApiRouteError(c: HonoContext, requestId: string, error: ApiRouteError): Response {
-  const cause = `${error.name}: ${error.message}`;
+  const cause = `${error._tag}: ${error.message}`;
   recordRouteEffectFailure({
     cause,
     code: error.code,
@@ -213,7 +206,12 @@ export async function runEffectRoute(
       (error) => Effect.sync(() => handleApiRouteError(c, requestId, error))
     ),
     Effect.provideService(ApiRequestContext, requestContext),
-    Effect.provideService(ApiRequestLogger, createApiRequestLogger(requestId))
+    Effect.provideService(ApiRequestLogger, createApiRequestLogger(requestId)),
+    Effect.locally(SupervisorRequestMetadataRef, {
+      method: c.req.method,
+      path: c.req.path,
+      requestId,
+    })
   );
 
   const exit = await runApiEffectExit(providedProgram, {

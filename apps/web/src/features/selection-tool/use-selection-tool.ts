@@ -1,5 +1,6 @@
 import { Effect } from "effect";
 import { computed, onBeforeUnmount, shallowRef } from "vue";
+import { useLatestEffectTask } from "@/composables/use-latest-effect-task";
 import { cloneSelectionRing } from "@/features/selection/selection-analysis-request.service";
 import {
   buildEmptySelectionToolSummary,
@@ -11,7 +12,6 @@ import type {
   SelectionToolProgress,
   UseSelectionToolOptions,
 } from "@/features/selection-tool/selection-tool.types";
-import { createLatestRunner } from "@/lib/effect/latest-runner";
 
 function buildSelectionRingKey(selectionRing: readonly [number, number][]): string {
   return selectionRing.map((vertex) => `${vertex[0].toFixed(6)},${vertex[1].toFixed(6)}`).join("|");
@@ -23,10 +23,16 @@ export function useSelectionTool(options: UseSelectionToolOptions) {
   const selectionError = shallowRef<string | null>(null);
   const isSelectionLoading = shallowRef<boolean>(false);
   const selectionGeometry = shallowRef<readonly [number, number][] | null>(null);
-  const selectionRunner = createLatestRunner({
+  function resetSelectionTaskState(): void {
+    isSelectionLoading.value = false;
+    selectionError.value = null;
+    selectionProgress.value = null;
+  }
+  const selectionTask = useLatestEffectTask({
+    onClear: resetSelectionTaskState,
+    onDispose: resetSelectionTaskState,
     onUnexpectedError(error) {
-      isSelectionLoading.value = false;
-      selectionProgress.value = null;
+      resetSelectionTaskState();
       selectionError.value = "Unable to load spatial analysis summary.";
       console.error("[map] selection analysis refresh failed", error);
     },
@@ -70,7 +76,7 @@ export function useSelectionTool(options: UseSelectionToolOptions) {
     selectionGeometry.value = cloneSelectionRing(nextSelectionRing);
     selectionSummary.value = buildEmptySelectionToolSummary(nextSelectionRing);
 
-    await selectionRunner.run(
+    await selectionTask.run(
       querySelectionToolSummaryEffect({
         expectedParcelsIngestionRunId: options.expectedParcelsIngestionRunId.value,
         includeParcels: options.includeParcels.value,
@@ -98,11 +104,8 @@ export function useSelectionTool(options: UseSelectionToolOptions) {
   }
 
   async function clearSelectionResult(): Promise<void> {
-    await selectionRunner.interrupt();
-    isSelectionLoading.value = false;
-    selectionError.value = null;
+    await selectionTask.clear();
     selectionGeometry.value = null;
-    selectionProgress.value = null;
     selectionSummary.value = null;
   }
 
@@ -111,10 +114,7 @@ export function useSelectionTool(options: UseSelectionToolOptions) {
   }
 
   onBeforeUnmount(() => {
-    selectionRunner.dispose().catch(logSelectionRunnerError);
-    isSelectionLoading.value = false;
-    selectionError.value = null;
-    selectionProgress.value = null;
+    selectionTask.dispose().catch(logSelectionRunnerError);
   });
 
   return {

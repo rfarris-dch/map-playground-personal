@@ -416,7 +416,11 @@ function isWaterGroupLayer(layerType: string, sourceLayerId: string | null): boo
   return sourceLayerId === "water" && layerType === "fill";
 }
 
-function isLandGroupLayer(layerId: string, layerType: string, sourceLayerId: string | null): boolean {
+function isLandGroupLayer(
+  layerId: string,
+  layerType: string,
+  sourceLayerId: string | null
+): boolean {
   if (layerType === "background") {
     return true;
   }
@@ -425,11 +429,7 @@ function isLandGroupLayer(layerId: string, layerType: string, sourceLayerId: str
     return false;
   }
 
-  if (
-    sourceLayerId === "landcover" ||
-    sourceLayerId === "landuse" ||
-    sourceLayerId === "park"
-  ) {
+  if (sourceLayerId === "landcover" || sourceLayerId === "landuse" || sourceLayerId === "park") {
     return true;
   }
 
@@ -499,17 +499,6 @@ function collectBasemapLayerGroups(map: IMap, profile: BasemapProfile): BasemapL
     roadLayerIds,
     waterLayerIds,
   };
-}
-
-function resolveLayerColorPaintProperty(targetLayer: string): string {
-  switch (targetLayer) {
-    case "road":
-      return "line-color";
-    case "water":
-      return "fill-color";
-    default:
-      return "fill-color";
-  }
 }
 
 function resolveLayerGroupIds(groups: BasemapLayerGroups, targetLayer: string): readonly string[] {

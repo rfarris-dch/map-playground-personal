@@ -1,4 +1,4 @@
-import { apiGetJson } from "@map-migration/core-runtime/api";
+import { apiRequestJson } from "@map-migration/core-runtime/api";
 import { buildMarketsRoute } from "@map-migration/http-contracts/api-routes";
 import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts/facilities-http";
 import { MarketsTableResponseSchema } from "@map-migration/http-contracts/table-contracts";
@@ -122,7 +122,7 @@ export function useMapFilters(): UseMapFiltersResult {
   // Fetch dcH market names from the API on initialization
   async function loadMarkets(): Promise<void> {
     try {
-      const response = await apiGetJson(
+      const response = await apiRequestJson(
         buildMarketsRoute({ page: 1, pageSize: 500, sortBy: "name", sortOrder: "asc" }),
         MarketsTableResponseSchema,
         buildApiRequestInit({})

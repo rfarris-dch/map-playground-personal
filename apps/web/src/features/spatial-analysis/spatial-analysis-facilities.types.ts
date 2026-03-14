@@ -1,28 +1,3 @@
-import type {
-  CommissionedSemantic,
-  LeaseOrOwn,
-} from "@map-migration/geo-kernel/commissioned-semantic";
-import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
-import type { LngLat } from "@map-migration/map-engine";
+import type { SpatialAnalysisSummaryFacilityRecord } from "@map-migration/http-contracts/spatial-analysis-summary-http";
 
-export interface SpatialAnalysisFacilityRecord {
-  readonly address: string | null;
-  readonly availablePowerMw: number | null;
-  readonly city: string | null;
-  readonly commissionedPowerMw: number | null;
-  readonly commissionedSemantic: CommissionedSemantic;
-  readonly coordinates: LngLat;
-  readonly countyFips: string | null;
-  readonly facilityId: string;
-  readonly facilityName: string;
-  readonly leaseOrOwn: LeaseOrOwn | null;
-  readonly perspective: FacilityPerspective;
-  readonly plannedPowerMw: number | null;
-  readonly providerId: string;
-  readonly providerName: string;
-  readonly squareFootage: number | null;
-  readonly state: string | null;
-  readonly stateAbbrev: string | null;
-  readonly statusLabel: string | null;
-  readonly underConstructionPowerMw: number | null;
-}
+export type SpatialAnalysisFacilityRecord = SpatialAnalysisSummaryFacilityRecord;

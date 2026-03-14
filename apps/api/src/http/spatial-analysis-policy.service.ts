@@ -153,3 +153,7 @@ export function isDatasetExportAllowed(
   const policy = policyForDataset(dataset);
   return policy.allowedExportGranularities.includes(granularity);
 }
+
+export function getDatasetCacheTtlSeconds(dataset: PolicyDataset): number {
+  return policyForDataset(dataset).cacheTtlSeconds;
+}

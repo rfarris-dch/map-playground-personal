@@ -1,8 +1,8 @@
 <script setup lang="ts">
   import type {
-    CountyScoresResponse,
-    CountyScoresStatusResponse,
-  } from "@map-migration/http-contracts/county-intelligence-http";
+    SpatialAnalysisCountyScores,
+    SpatialAnalysisCountyScoresStatus,
+  } from "@map-migration/http-contracts/spatial-analysis-summary-http";
   import { computed } from "vue";
   import CountyScoresDatasetStatus from "@/features/county-intelligence/components/county-intelligence-dataset-status.vue";
   import {
@@ -19,8 +19,8 @@
   } from "@/features/county-intelligence/county-intelligence-display.service";
 
   interface SpatialAnalysisCountyScoresSectionProps {
-    readonly countyScores: CountyScoresResponse | null;
-    readonly countyScoresStatus: CountyScoresStatusResponse | null;
+    readonly countyScores: SpatialAnalysisCountyScores | null;
+    readonly countyScoresStatus: SpatialAnalysisCountyScoresStatus | null;
     readonly errorMessage?: string | null;
     readonly isLoading?: boolean;
     readonly isStatusLoading?: boolean;
@@ -29,7 +29,7 @@
 
   const props = defineProps<SpatialAnalysisCountyScoresSectionProps>();
 
-  type CountyScoreRow = CountyScoresResponse["rows"][number];
+  type CountyScoreRow = SpatialAnalysisCountyScores["rows"][number];
 
   const rows = computed(() => props.countyScores?.rows ?? []);
   const requestedCountyIds = computed(() => props.countyScores?.summary.requestedCountyIds ?? []);

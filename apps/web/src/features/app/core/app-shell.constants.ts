@@ -9,6 +9,7 @@ export const FLOOD_100_LAYER_ID: LayerId = "environmental.flood-100";
 export const FLOOD_500_LAYER_ID: LayerId = "environmental.flood-500";
 export const HYDRO_BASINS_LAYER_ID: LayerId = "environmental.hydro-basins";
 export const PARCELS_LAYER_ID: LayerId = "property.parcels";
+export const GAS_PIPELINES_LAYER_ID: LayerId = "infrastructure.gas-pipelines";
 export const WATER_FEATURES_LAYER_ID: LayerId = "environmental.water-features";
 
 const FACILITIES_LAYER_ID_BY_PERSPECTIVE: Readonly<Record<FacilityPerspective, LayerId>> = {

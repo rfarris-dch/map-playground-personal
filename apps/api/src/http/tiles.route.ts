@@ -1,7 +1,11 @@
-import { ApiHeaders } from "@map-migration/http-contracts/api-routes";
+import { ApiHeaders, ApiRoutes } from "@map-migration/http-contracts/api-routes";
+import {
+  UsgsWaterTileContentTypeSchema,
+  UsgsWaterTilePathSchema,
+} from "@map-migration/http-contracts/tiles-http";
 import type { Env, Hono } from "hono";
-import { responseError, toDebugDetails } from "@/http/api-response";
-import { fromApiRequest, runEffectRoute } from "@/http/effect-route";
+import { toDebugDetails } from "@/http/api-response";
+import { fromApiRequest, routeError, runEffectRoute } from "@/http/effect-route";
 
 const USGS_WATER_TILE_URL =
   "https://basemap.nationalmap.gov/arcgis/rest/services/USGSHydroCached/MapServer/tile";
@@ -56,77 +60,58 @@ function createTileResponse(args: {
   });
 }
 
-function parseTileCoordinate(value: string): number | null {
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 0) {
-    return null;
-  }
-
-  return parsed;
-}
-
 export function registerTilesRoute<E extends Env>(app: Hono<E>): void {
-  app.get("/api/tiles/usgs-water/:z/:x/:y", (c) =>
+  app.get(`${ApiRoutes.usgsWaterTile}/:z/:x/:y`, (c) =>
     runEffectRoute(
       c,
       fromApiRequest(async ({ honoContext, requestId, signal }) => {
-        const z = parseTileCoordinate(honoContext.req.param("z"));
-        const x = parseTileCoordinate(honoContext.req.param("x"));
-        const y = parseTileCoordinate(honoContext.req.param("y"));
-
-        if (z === null || x === null || y === null) {
-          return responseError({
-            requestId,
+        const request = UsgsWaterTilePathSchema.safeParse({
+          z: honoContext.req.param("z"),
+          x: honoContext.req.param("x"),
+          y: honoContext.req.param("y"),
+        });
+        if (!request.success) {
+          throw routeError({
             httpStatus: 400,
             code: "INVALID_TILE_COORDINATES",
-            message: "tile coordinates must be nonnegative integers",
+            message: "invalid usgs water tile path params",
+            details: toDebugDetails(request.error),
           });
         }
 
-        try {
-          const upstreamUrl = `${USGS_WATER_TILE_URL}/${z}/${y}/${x}`;
-          const upstreamResponse = await fetch(upstreamUrl, { signal });
+        const upstreamUrl = `${USGS_WATER_TILE_URL}/${request.data.z}/${request.data.y}/${request.data.x}`;
+        const upstreamResponse = await fetch(upstreamUrl, { signal });
 
-          if (!upstreamResponse.ok) {
-            return responseError({
-              requestId,
-              httpStatus: 502,
-              code: "USGS_WATER_TILE_UPSTREAM_ERROR",
-              message: "USGS water tile upstream returned an error",
-              details: {
-                upstreamStatus: upstreamResponse.status,
-              },
-            });
-          }
-
-          const bytes = new Uint8Array(await upstreamResponse.arrayBuffer());
-          const contentType = imageContentType(bytes);
-          if (contentType === null) {
-            return responseError({
-              requestId,
-              httpStatus: 502,
-              code: "USGS_WATER_TILE_INVALID_IMAGE",
-              message: "USGS water tile upstream returned an unsupported image payload",
-            });
-          }
-
-          return createTileResponse({
-            body: bytes,
-            cacheControl:
-              "public, max-age=604800, s-maxage=2592000, stale-while-revalidate=86400, stale-if-error=86400",
-            contentType,
-            requestId,
-            tileCache: "USGS",
-          });
-        } catch (error) {
-          return responseError({
-            requestId,
-            httpStatus: 503,
-            code: "USGS_WATER_TILE_UPSTREAM_FAILED",
-            message: "USGS water tile request failed",
-            details: toDebugDetails(error),
+        if (!upstreamResponse.ok) {
+          throw routeError({
+            httpStatus: 502,
+            code: "USGS_WATER_TILE_UPSTREAM_ERROR",
+            message: "USGS water tile upstream returned an error",
+            details: {
+              upstreamStatus: upstreamResponse.status,
+            },
           });
         }
+
+        const bytes = new Uint8Array(await upstreamResponse.arrayBuffer());
+        const contentType = imageContentType(bytes);
+        const contentTypeResult = UsgsWaterTileContentTypeSchema.safeParse(contentType);
+        if (!contentTypeResult.success) {
+          throw routeError({
+            httpStatus: 502,
+            code: "USGS_WATER_TILE_INVALID_IMAGE",
+            message: "USGS water tile upstream returned an unsupported image payload",
+          });
+        }
+
+        return createTileResponse({
+          body: bytes,
+          cacheControl:
+            "public, max-age=604800, s-maxage=2592000, stale-while-revalidate=86400, stale-if-error=86400",
+          contentType: contentTypeResult.data,
+          requestId,
+          tileCache: "USGS",
+        });
       })
     )
   );

@@ -5,6 +5,9 @@ import type {
 
 export interface QueryCountyScoresArgs {
   readonly countyIds: readonly string[];
+  readonly statusSnapshot?:
+    | import("@/geo/county-intelligence/county-intelligence.repo").CountyScoresStatusRow
+    | undefined;
 }
 
 export type QueryCountyScoresResult =

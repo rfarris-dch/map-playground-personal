@@ -1,11 +1,8 @@
 import type { ProviderTableRow } from "@map-migration/http-contracts/table-contracts";
 import { mapProviderRowsToTableRows } from "@/geo/providers/providers.mapper";
-import {
-  countProviders,
-  listProvidersPage,
-  type ProviderListRow,
-} from "@/geo/providers/providers.repo";
+import { listProvidersPage, type ProviderListRow } from "@/geo/providers/providers.repo";
 import type {
+  ProvidersRepoPort,
   QueryProvidersTableArgs,
   QueryProvidersTableResult,
 } from "./providers-query.service.types";
@@ -16,22 +13,38 @@ export type {
   QueryProvidersTableSuccess,
 } from "./providers-query.service.types";
 
+const defaultProvidersRepo: ProvidersRepoPort = {
+  listProvidersPage,
+};
+
+function parseTotalCount(rows: readonly ProviderListRow[]): number {
+  const firstRow = rows[0];
+  if (firstRow === undefined) {
+    return 0;
+  }
+
+  const raw = firstRow.total_count;
+  const numeric = Number(raw);
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    return 0;
+  }
+
+  return Math.trunc(numeric);
+}
+
 export async function queryProvidersTable(
-  args: QueryProvidersTableArgs
+  args: QueryProvidersTableArgs,
+  repo: ProvidersRepoPort = defaultProvidersRepo
 ): Promise<QueryProvidersTableResult> {
   let rows: readonly ProviderListRow[];
-  let totalCount: number;
 
   try {
-    [totalCount, rows] = await Promise.all([
-      countProviders(),
-      listProvidersPage({
-        limit: args.limit,
-        offset: args.offset,
-        sortBy: args.sortBy,
-        sortOrder: args.sortOrder,
-      }),
-    ]);
+    rows = await repo.listProvidersPage({
+      limit: args.limit,
+      offset: args.offset,
+      sortBy: args.sortBy,
+      sortOrder: args.sortOrder,
+    });
   } catch (error) {
     return {
       ok: false,
@@ -41,6 +54,8 @@ export async function queryProvidersTable(
       },
     };
   }
+
+  const totalCount = parseTotalCount(rows);
 
   let mappedRows: readonly ProviderTableRow[];
   try {

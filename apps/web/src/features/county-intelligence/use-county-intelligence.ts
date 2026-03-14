@@ -1,14 +1,9 @@
-import {
-  ApiAbortedError,
-  type ApiEffectError,
-  type ApiEffectSuccess,
-  getApiErrorMessage,
-} from "@map-migration/core-runtime/api";
+import { ApiAbortedError, getApiErrorMessage } from "@map-migration/core-runtime/api";
 import type {
   CountyScoresResponse,
   CountyScoresStatusResponse,
 } from "@map-migration/http-contracts/county-intelligence-http";
-import { Effect, Either } from "effect";
+import { Effect } from "effect";
 import { computed, onBeforeUnmount, type Ref, shallowRef, watch } from "vue";
 import {
   fetchCountyScoresEffect,
@@ -80,30 +75,28 @@ export function useCountyScores(options: UseCountyScoresOptions) {
     countyScoresStatusLoading.value = true;
     countyScoresStatusError.value = null;
 
-    const statusProgram: Effect.Effect<void, never, never> = Effect.either(
-      fetchCountyScoresStatusEffect()
-    ).pipe(
-      Effect.flatMap(
-        (result: Either.Either<ApiEffectSuccess<CountyScoresStatusResponse>, ApiEffectError>) =>
-          Effect.sync(() => {
-            countyScoresStatusLoading.value = false;
+    const statusProgram: Effect.Effect<void, never, never> = fetchCountyScoresStatusEffect().pipe(
+      Effect.tap((result) =>
+        Effect.sync(() => {
+          countyScoresStatusLoading.value = false;
+          countyScoresStatus.value = result.data;
+          countyScoresStatusError.value = null;
+        })
+      ),
+      Effect.catchAll((error) =>
+        Effect.sync(() => {
+          countyScoresStatusLoading.value = false;
 
-            if (Either.isRight(result)) {
-              countyScoresStatus.value = result.right.data;
-              countyScoresStatusError.value = null;
-              return;
-            }
+          if (error instanceof ApiAbortedError) {
+            return;
+          }
 
-            if (result.left instanceof ApiAbortedError) {
-              return;
-            }
-
-            countyScoresStatus.value = null;
-            countyScoresStatusError.value = getApiErrorMessage(
-              result.left,
-              "Unable to load county intelligence publication status."
-            );
-          })
+          countyScoresStatus.value = null;
+          countyScoresStatusError.value = getApiErrorMessage(
+            error,
+            "Unable to load county intelligence publication status."
+          );
+        })
       )
     );
     await countyScoresStatusRunner.run(statusProgram);
@@ -124,30 +117,30 @@ export function useCountyScores(options: UseCountyScoresOptions) {
     countyScoresError.value = null;
     countyScores.value = null;
 
-    const countyScoresProgram: Effect.Effect<void, never, never> = Effect.either(
-      fetchCountyScoresEffect(countyIds)
+    const countyScoresProgram: Effect.Effect<void, never, never> = fetchCountyScoresEffect(
+      countyIds
     ).pipe(
-      Effect.flatMap(
-        (result: Either.Either<ApiEffectSuccess<CountyScoresResponse>, ApiEffectError>) =>
-          Effect.sync(() => {
-            countyScoresLoading.value = false;
+      Effect.tap((result) =>
+        Effect.sync(() => {
+          countyScoresLoading.value = false;
+          countyScores.value = result.data;
+          countyScoresError.value = null;
+        })
+      ),
+      Effect.catchAll((error) =>
+        Effect.sync(() => {
+          countyScoresLoading.value = false;
 
-            if (Either.isRight(result)) {
-              countyScores.value = result.right.data;
-              countyScoresError.value = null;
-              return;
-            }
+          if (error instanceof ApiAbortedError) {
+            return;
+          }
 
-            if (result.left instanceof ApiAbortedError) {
-              return;
-            }
-
-            countyScores.value = null;
-            countyScoresError.value = getApiErrorMessage(
-              result.left,
-              "Unable to load county market-pressure rows."
-            );
-          })
+          countyScores.value = null;
+          countyScoresError.value = getApiErrorMessage(
+            error,
+            "Unable to load county market-pressure rows."
+          );
+        })
       )
     );
     await countyScoresRunner.run(countyScoresProgram);

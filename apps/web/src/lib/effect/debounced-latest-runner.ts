@@ -1,3 +1,4 @@
+import type { BrowserEffectRuntime } from "@map-migration/core-runtime/browser";
 import { Effect } from "effect";
 import {
   createLatestRunner,
@@ -7,6 +8,7 @@ import {
 
 export interface DebouncedLatestRunnerOptions extends LatestRunnerOptions {
   readonly debounceMs: number;
+  readonly runtime?: BrowserEffectRuntime;
 }
 
 export interface DebouncedLatestRunner extends LatestRunner {}
@@ -14,7 +16,10 @@ export interface DebouncedLatestRunner extends LatestRunner {}
 export function createDebouncedLatestRunner(
   options: DebouncedLatestRunnerOptions
 ): DebouncedLatestRunner {
-  const latestRunner = createLatestRunner(options);
+  const latestRunner = createLatestRunner({
+    onUnexpectedError: options.onUnexpectedError,
+    runtime: options.runtime,
+  });
 
   return {
     dispose: () => latestRunner.dispose(),

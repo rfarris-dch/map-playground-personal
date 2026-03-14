@@ -1,5 +1,4 @@
-import { useQuery } from "@tanstack/vue-query";
-import { computed, type Ref } from "vue";
+import type { Ref } from "vue";
 import { fetchParcelDetail } from "@/features/parcels/parcel-detail/detail.api";
 import { unwrapParcelDetailResult } from "@/features/parcels/parcel-detail/detail.service";
 import type {
@@ -7,6 +6,7 @@ import type {
   ParcelDetailRequest,
 } from "@/features/parcels/parcel-detail/detail.types";
 import type { SelectedParcelRef } from "@/features/parcels/parcels.types";
+import { createEntityDetailQuery } from "@/lib/api/entity-detail-query.service";
 
 function buildParcelDetailQueryKey(selectedParcel: SelectedParcelRef | null): ParcelDetailQueryKey {
   if (selectedParcel === null) {
@@ -17,14 +17,14 @@ function buildParcelDetailQueryKey(selectedParcel: SelectedParcelRef | null): Pa
 }
 
 export function useParcelDetailQuery(selectedParcel: Ref<SelectedParcelRef | null>) {
-  const queryKey = computed(() => buildParcelDetailQueryKey(selectedParcel.value));
-  const enabled = computed(() => selectedParcel.value !== null);
-
-  return useQuery({
-    queryKey,
-    queryFn: async ({ signal, queryKey: activeQueryKey }) => {
-      const parcelId = activeQueryKey[1];
-      const expectedIngestionRunId = activeQueryKey[2];
+  return createEntityDetailQuery({
+    buildQueryKey: buildParcelDetailQueryKey,
+    isEnabled(nextSelectedParcel) {
+      return nextSelectedParcel !== null;
+    },
+    query: async ({ queryKey, signal }) => {
+      const parcelId = queryKey[1];
+      const expectedIngestionRunId = queryKey[2];
       if (typeof parcelId !== "string" || parcelId.trim().length === 0) {
         throw new Error("parcel id is required");
       }
@@ -45,9 +45,8 @@ export function useParcelDetailQuery(selectedParcel: Ref<SelectedParcelRef | nul
               signal,
             };
 
-      const result = await fetchParcelDetail(request);
-      return unwrapParcelDetailResult(result);
+      return unwrapParcelDetailResult(await fetchParcelDetail(request));
     },
-    enabled,
+    selected: selectedParcel,
   });
 }

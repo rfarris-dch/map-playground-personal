@@ -1,7 +1,7 @@
 import {
   type ApiEffectError,
   type ApiEffectSuccess,
-  apiGetJsonEffect,
+  apiRequestJsonEffect,
 } from "@map-migration/core-runtime/api";
 import { buildPipelineStatusRoute } from "@map-migration/http-contracts/api-routes";
 import type { ParcelSyncPhase } from "@map-migration/http-contracts/parcels-http";
@@ -140,7 +140,7 @@ function createPipelineStatusFailure(
     };
   }
 
-  if (error._tag === "ApiHttpError" || error._tag === "ApiPolicyRejectedError") {
+  if (error._tag === "ApiHttpError") {
     return {
       ok: false,
       error: {
@@ -179,7 +179,7 @@ export function createFetchPipelineStatusEffect(
       ApiEffectSuccess<PipelineStatusPayload["response"]>,
       ApiEffectError,
       never
-    > = apiGetJsonEffect(
+    > = apiRequestJsonEffect(
       buildPipelineStatusRoute(dataset),
       PipelineStatusResponseSchema,
       {

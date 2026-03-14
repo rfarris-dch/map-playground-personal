@@ -5,6 +5,7 @@ import {
 } from "@map-migration/core-runtime/api";
 import { runEffectPromise } from "@map-migration/core-runtime/effect";
 import type { Warning } from "@map-migration/geo-kernel/warning";
+import type { SourceMode } from "@map-migration/http-contracts/api-response-meta";
 import type {
   ParcelEnrichRequest,
   ParcelsFeatureCollection,
@@ -50,7 +51,7 @@ function initializeSpatialAnalysisMeta(pageResult: ParcelsSelectionPage): {
   readonly dataVersion: string;
   readonly ingestionRunId: string | null;
   readonly requestId: string;
-  readonly sourceMode: string;
+  readonly sourceMode: SourceMode;
 } {
   return {
     requestId: pageResult.data.meta.requestId,
@@ -80,7 +81,7 @@ export function fetchSpatialAnalysisParcelsPagesEffect(
     let nextCursor: string | null = null;
     let requestId = "";
     let dataVersion = "";
-    let sourceMode = "";
+    let sourceMode: SourceMode = "postgis";
     let ingestionRunId: string | null = null;
     let pageCount = 0;
     const warnings = new Map<string, Warning>();

@@ -3,9 +3,17 @@ import { ApiRoutes } from "@map-migration/http-contracts/api-routes";
 import { Hono } from "hono";
 
 const getParcelByIdMock = mock();
+const lookupParcelsByIdsMock = mock();
+const enrichParcelsByBboxMock = mock();
+const enrichParcelsByCountyMock = mock();
+const enrichParcelsByPolygonMock = mock();
 
 mock.module("../../../src/geo/parcels/parcels.repo", () => ({
+  enrichParcelsByBbox: enrichParcelsByBboxMock,
+  enrichParcelsByCounty: enrichParcelsByCountyMock,
+  enrichParcelsByPolygon: enrichParcelsByPolygonMock,
   getParcelById: getParcelByIdMock,
+  lookupParcelsByIds: lookupParcelsByIdsMock,
 }));
 
 const { registerParcelDetailRoute } = await import(
@@ -18,7 +26,11 @@ afterAll(() => {
 
 describe("parcel detail route", () => {
   beforeEach(() => {
+    enrichParcelsByBboxMock.mockReset();
+    enrichParcelsByCountyMock.mockReset();
+    enrichParcelsByPolygonMock.mockReset();
     getParcelByIdMock.mockReset();
+    lookupParcelsByIdsMock.mockReset();
   });
 
   it("returns 404 when the parcel id is not present", async () => {

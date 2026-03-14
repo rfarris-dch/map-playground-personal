@@ -46,6 +46,10 @@
       "types": "./dist/county-intelligence-http.d.ts",
       "default": "./dist/county-intelligence-http.js"
     },
+    "./effect-http": {
+      "types": "./dist/effect-http.d.ts",
+      "default": "./dist/effect-http.js"
+    },
     "./facilities-http": {
       "types": "./dist/facilities-http.d.ts",
       "default": "./dist/facilities-http.js"
@@ -73,6 +77,10 @@
     "./spatial-analysis-summary-http": {
       "types": "./dist/spatial-analysis-summary-http.d.ts",
       "default": "./dist/spatial-analysis-summary-http.js"
+    },
+    "./tiles-http": {
+      "types": "./dist/tiles-http.d.ts",
+      "default": "./dist/tiles-http.js"
     },
     "./table-contracts": {
       "types": "./dist/table-contracts.d.ts",

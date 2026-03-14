@@ -9,7 +9,7 @@ export interface BunSqlClient {
   reserve(): Promise<BunReservedSqlClient>;
   unsafe<TValue = unknown>(
     query: string,
-    params?: ReadonlyArray<number | string>
+    params?: ReadonlyArray<number | string | readonly string[]>
   ): BunSqlQuery<TValue>;
   <TValue = unknown>(
     strings: TemplateStringsArray,

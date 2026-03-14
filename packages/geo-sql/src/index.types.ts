@@ -8,8 +8,10 @@ export interface ParcelEnrichQueryOptions {
   readonly limit: number;
 }
 
+export type SqlParamValue = number | string | readonly string[];
+
 export interface ParcelSqlQuery {
-  readonly params: readonly (number | string)[];
+  readonly params: readonly SqlParamValue[];
   readonly sql: string;
 }
 

@@ -1,202 +1,107 @@
 <script setup lang="ts">
-  import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
+  import { computed } from "vue";
   import MapLayerControlsPanel from "@/features/app/components/map-layer-controls-panel.vue";
   import MapOverlayActions from "@/features/app/components/map-overlay-actions.vue";
-  import type {
-    MapPageControlsEmits,
-    MapPageControlsProps,
-  } from "@/features/app/components/map-page-controls.types";
   import MapSelectionTools from "@/features/app/components/map-selection-tools.vue";
   import MapSketchMeasureTools from "@/features/app/components/map-sketch-measure-tools.vue";
-  import type { BasemapLayerId } from "@/features/basemap/basemap.types";
-  import type { BoundaryLayerId } from "@/features/boundaries/boundaries.types";
-  import type {
-    FacilitiesViewMode,
-    SelectedFacilityRef,
-  } from "@/features/facilities/facilities.types";
-  import type { FiberLocatorLineId } from "@/features/fiber-locator/fiber-locator.types";
-  import type { PowerLayerId } from "@/features/power/power.types";
-  import type {
-    SketchMeasureAreaShape,
-    SketchMeasureMode,
-  } from "@/features/sketch-measure/sketch-measure.types";
+  import { useMapShellContext } from "@/features/app/core/map-shell-context";
 
-  const props = defineProps<MapPageControlsProps>();
+  const shell = useMapShellContext();
 
-  const emit = defineEmits<MapPageControlsEmits>();
-
-  function forwardBasemapLayerVisible(layerId: BasemapLayerId, visible: boolean): void {
-    emit("update:basemap-layer-visible", layerId, visible);
-  }
-
-  function forwardBasemapLayerColor(targetLayer: string, color: string): void {
-    emit("update:basemap-layer-color", targetLayer, color);
-  }
-
-  function forwardBoundaryVisible(boundaryId: BoundaryLayerId, visible: boolean): void {
-    emit("update:boundary-visible", boundaryId, visible);
-  }
-
-  function forwardBoundarySelectedRegionIds(
-    boundaryId: BoundaryLayerId,
-    regionIds: readonly string[] | null
-  ): void {
-    emit("update:boundary-selected-region-ids", boundaryId, regionIds);
-  }
-
-  function forwardPerspectiveViewMode(
-    perspective: FacilityPerspective,
-    mode: FacilitiesViewMode
-  ): void {
-    emit("update:perspective-view-mode", perspective, mode);
-  }
-
-  function forwardPerspectiveVisibility(perspective: FacilityPerspective, visible: boolean): void {
-    emit("update:perspective-visibility", perspective, visible);
-  }
-
-  function forwardParcelsVisible(visible: boolean): void {
-    emit("update:parcels-visible", visible);
-  }
-
-  function forwardGasPipelineVisible(visible: boolean): void {
-    emit("update:gas-pipeline-visible", visible);
-  }
-
-  function forwardWaterVisible(visible: boolean): void {
-    emit("update:water-visible", visible);
-  }
-
-  function forwardFloodLayerVisible(layerId: "flood100" | "flood500", visible: boolean): void {
-    emit("update:flood-layer-visible", layerId, visible);
-  }
-
-  function forwardHydroBasinsVisible(visible: boolean): void {
-    emit("update:hydro-basins-visible", visible);
-  }
-
-  function forwardFiberLayerVisibility(lineId: FiberLocatorLineId, visible: boolean): void {
-    emit("update:fiber-layer-visibility", lineId, visible);
-  }
-
-  function forwardFiberSourceLayer(
-    lineId: FiberLocatorLineId,
-    layerName: string,
-    visible: boolean
-  ): void {
-    emit("toggle-fiber-source-layer", lineId, layerName, visible);
-  }
-
-  function forwardAllFiberSourceLayers(lineId: FiberLocatorLineId, visible: boolean): void {
-    emit("set-all-fiber-source-layers", lineId, visible);
-  }
-
-  function forwardPowerLayerVisible(layerId: PowerLayerId, visible: boolean): void {
-    emit("update:power-layer-visible", layerId, visible);
-  }
-
-  function forwardSketchMeasureMode(mode: SketchMeasureMode): void {
-    emit("set-mode", mode);
-  }
-
-  function forwardSketchMeasureAreaShape(shape: SketchMeasureAreaShape): void {
-    emit("set-area-shape", shape);
-  }
-
-  function forwardSelectedFacility(facility: SelectedFacilityRef): void {
-    emit("select-facility", facility);
-  }
+  const sketchMeasureActive = computed(
+    () => shell.isSketchMeasurePanelOpen.value || shell.sketchMeasureState.value.mode !== "off"
+  );
 
   function handleToggleSketchMeasurePanel(): void {
-    if (!props.isSketchMeasurePanelOpen && props.sketchMeasureState.mode === "off") {
-      emit("set-mode", "area");
-      emit("set-area-shape", "freeform");
+    if (!shell.isSketchMeasurePanelOpen.value && shell.sketchMeasureState.value.mode === "off") {
+      shell.setSketchMeasureMode("area");
+      shell.setSketchMeasureAreaShape("freeform");
     }
 
-    emit("toggle-sketch-measure-panel");
+    shell.toggleSketchMeasurePanel();
   }
 </script>
 
 <template>
   <MapLayerControlsPanel
-    :is-open="props.isOpen"
-    :basemap-visibility="props.basemapVisibility"
-    :boundary-visibility="props.boundaryVisibility"
-    :boundary-facet-options="props.boundaryFacetOptions"
-    :boundary-facet-selection="props.boundaryFacetSelection"
-    :visible-perspectives="props.visiblePerspectives"
-    :colocation-status-text="props.colocationStatusText"
-    :hyperscale-status-text="props.hyperscaleStatusText"
-    :parcels-visible="props.parcelsVisible"
-    :parcels-status-text="props.parcelsStatusText"
-    :power-visibility="props.powerVisibility"
-    :flood-visibility="props.floodVisibility"
-    :show-flood100-zoom-hint="props.showFlood100ZoomHint"
-    :show-flood500-zoom-hint="props.showFlood500ZoomHint"
-    :hydro-basins-visible="props.hydroBasinsVisible"
-    :show-hydro-basins-zoom-hint="props.showHydroBasinsZoomHint"
-    :gas-pipeline-visible="props.gasPipelineVisible"
-    :water-visible="props.waterVisible"
-    :visible-fiber-layers="props.visibleFiberLayers"
-    :fiber-status-text="props.fiberStatusText"
-    :fiber-source-layer-options="props.fiberSourceLayerOptions"
-    :selected-fiber-source-layer-names="props.selectedFiberSourceLayerNames"
-    @toggle-panel="emit('toggle-layer-panel')"
-    @update:basemap-layer-visible="forwardBasemapLayerVisible"
-    @update:boundary-visible="forwardBoundaryVisible"
-    @update:boundary-selected-region-ids="forwardBoundarySelectedRegionIds"
-    @update:perspective-view-mode="forwardPerspectiveViewMode"
-    @update:perspective-visibility="forwardPerspectiveVisibility"
-    @update:parcels-visible="forwardParcelsVisible"
-    @update:gas-pipeline-visible="forwardGasPipelineVisible"
-    @update:water-visible="forwardWaterVisible"
-    @update:flood-layer-visible="forwardFloodLayerVisible"
-    @update:hydro-basins-visible="forwardHydroBasinsVisible"
-    @update:fiber-layer-visibility="forwardFiberLayerVisibility"
-    @toggle-fiber-source-layer="forwardFiberSourceLayer"
-    @set-all-fiber-source-layers="forwardAllFiberSourceLayers"
-    @update:power-layer-visible="forwardPowerLayerVisible"
-    @update:basemap-layer-color="forwardBasemapLayerColor"
+    :is-open="shell.isLayerPanelOpen.value"
+    :basemap-visibility="shell.basemapVisibility.value"
+    :boundary-visibility="shell.boundaryVisibility.value"
+    :boundary-facet-options="shell.boundaryFacetOptions.value"
+    :boundary-facet-selection="shell.boundaryFacetSelection.value"
+    :visible-perspectives="shell.visiblePerspectives.value"
+    :colocation-status-text="shell.colocationStatusText.value"
+    :hyperscale-status-text="shell.hyperscaleStatusText.value"
+    :parcels-visible="shell.parcelsVisible.value"
+    :parcels-status-text="shell.parcelsStatusText.value"
+    :power-visibility="shell.powerVisibility.value"
+    :flood-visibility="shell.floodVisibility.value"
+    :show-flood100-zoom-hint="shell.showFlood100ZoomHint.value"
+    :show-flood500-zoom-hint="shell.showFlood500ZoomHint.value"
+    :hydro-basins-visible="shell.hydroBasinsVisible.value"
+    :show-hydro-basins-zoom-hint="shell.showHydroBasinsZoomHint.value"
+    :gas-pipeline-visible="shell.gasPipelineVisible.value"
+    :water-visible="shell.waterVisible.value"
+    :visible-fiber-layers="shell.visibleFiberLayers.value"
+    :fiber-status-text="shell.fiberStatusText.value"
+    :fiber-source-layer-options="shell.fiberSourceLayerOptions.value"
+    :selected-fiber-source-layer-names="shell.selectedFiberSourceLayerNames.value"
+    @toggle-panel="shell.toggleLayerPanel"
+    @update:basemap-layer-visible="shell.setBasemapLayerVisible"
+    @update:boundary-visible="shell.setBoundaryVisible"
+    @update:boundary-selected-region-ids="shell.setBoundarySelectedRegionIds"
+    @update:perspective-view-mode="shell.setPerspectiveViewMode"
+    @update:perspective-visibility="shell.setPerspectiveVisibility"
+    @update:parcels-visible="shell.setParcelsVisible"
+    @update:gas-pipeline-visible="shell.setGasPipelineVisible"
+    @update:water-visible="shell.setWaterVisible"
+    @update:flood-layer-visible="shell.setFloodLayerVisible"
+    @update:hydro-basins-visible="shell.setHydroBasinsVisible"
+    @update:fiber-layer-visibility="shell.setFiberLayerVisibility"
+    @toggle-fiber-source-layer="shell.setFiberSourceLayerVisible"
+    @set-all-fiber-source-layers="shell.setAllFiberSourceLayers"
+    @update:power-layer-visible="shell.setPowerLayerVisible"
+    @update:basemap-layer-color="shell.setBasemapLayerColor"
   />
 
   <MapOverlayActions
-    :is-map-exporting="props.isMapExporting"
-    :map-export-disabled-reason="props.mapExportDisabledReason"
-    :sketch-measure-active="props.isSketchMeasurePanelOpen || props.sketchMeasureState.mode !== 'off'"
-    :selection-active="props.isSelectionPanelOpen"
-    :selection-disabled-reason="props.selectionDisabledReason"
-    :quick-view-active="props.quickViewActive"
-    :quick-view-disabled-reason="props.quickViewDisabledReason"
-    :scanner-active="props.scannerActive"
-    :overlays-blocked-reason="props.overlaysBlockedReason"
-    @toggle-quick-view="emit('toggle-quick-view')"
-    @toggle-scanner="emit('toggle-scanner')"
+    :is-map-exporting="shell.isMapExporting.value"
+    :map-export-disabled-reason="shell.mapExportDisabledReason.value"
+    :sketch-measure-active="sketchMeasureActive"
+    :selection-active="shell.isSelectionPanelOpen.value"
+    :selection-disabled-reason="shell.selectionDisabledReason.value"
+    :quick-view-active="shell.quickViewActive.value"
+    :quick-view-disabled-reason="shell.quickViewDisabledReason.value"
+    :scanner-active="shell.scannerActive.value"
+    :overlays-blocked-reason="shell.overlaysBlockedReason.value"
+    @toggle-quick-view="shell.toggleQuickView"
+    @toggle-scanner="shell.toggleScanner"
     @toggle-sketch-measure-panel="handleToggleSketchMeasurePanel"
-    @toggle-selection-panel="emit('toggle-selection-panel')"
-    @export-map-view="emit('export-map-view', $event)"
+    @toggle-selection-panel="shell.toggleSelectionPanel"
+    @export-map-view="shell.exportMapView"
   />
 
   <MapSketchMeasureTools
-    :is-sketch-measure-panel-open="props.isSketchMeasurePanelOpen"
-    :sketch-measure-state="props.sketchMeasureState"
-    @set-mode="forwardSketchMeasureMode"
-    @set-area-shape="forwardSketchMeasureAreaShape"
-    @finish="emit('finish')"
-    @clear="emit('clear')"
-    @use-as-selection="emit('use-as-selection')"
+    :is-sketch-measure-panel-open="shell.isSketchMeasurePanelOpen.value"
+    :sketch-measure-state="shell.sketchMeasureState.value"
+    @set-mode="shell.setSketchMeasureMode"
+    @set-area-shape="shell.setSketchMeasureAreaShape"
+    @finish="shell.finishSketchMeasureArea"
+    @clear="shell.clearSketchMeasure"
+    @use-as-selection="shell.useCompletedSketchAsSelection"
   />
 
   <MapSelectionTools
-    :county-ids="props.countyIds"
-    :is-selection-panel-open="props.isSelectionPanelOpen"
-    :selection-geometry="props.selectionGeometry"
-    :selection-progress="props.selectionProgress"
-    :selection-summary="props.selectionSummary"
-    :selection-error="props.selectionError"
-    :is-loading="props.isLoading"
-    @clear="emit('clear-selection')"
-    @export="emit('export')"
-    @open-dashboard="emit('open-dashboard')"
-    @select-facility="forwardSelectedFacility"
+    :county-ids="shell.selectionSummary.value?.area.countyIds ?? []"
+    :is-selection-panel-open="shell.isSelectionPanelOpen.value"
+    :selection-geometry="shell.selectionGeometry.value"
+    :selection-progress="shell.selectionProgress.value"
+    :selection-summary="shell.selectionSummary.value"
+    :selection-error="shell.selectionError.value"
+    :is-loading="shell.isSelectionLoading.value"
+    @clear="shell.clearSelectionGeometry"
+    @export="shell.exportSelection"
+    @open-dashboard="shell.openSelectionDashboard"
+    @select-facility="shell.selectFacilityFromAnalysis"
   />
 </template>

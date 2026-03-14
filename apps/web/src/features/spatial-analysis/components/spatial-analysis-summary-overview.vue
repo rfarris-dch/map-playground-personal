@@ -35,7 +35,41 @@
   const statusItems = computed(() =>
     buildSpatialAnalysisOverviewStatusItems(props.summary, props.facilities)
   );
-  const facilityPreview = computed(() => props.facilities.slice(0, 8));
+  const facilityPreview = computed(() =>
+    props.facilities.slice(0, 8).map((facility) => ({
+      ...facility,
+      locationText: buildFacilityLocationText(facility),
+      pipelinePowerMw: (facility.plannedPowerMw ?? 0) + (facility.underConstructionPowerMw ?? 0),
+      statusText:
+        typeof facility.statusLabel === "string" && facility.statusLabel.trim().length > 0
+          ? facility.statusLabel
+          : toSpatialAnalysisSemanticLabel(facility.commissionedSemantic),
+      perspectiveLabel: toSpatialAnalysisPerspectiveLabel(facility.perspective),
+      perspectiveDotClass:
+        facility.perspective === "colocation" ? "bg-colocation" : "bg-hyperscale",
+      formattedCommissioned: props.formatPower(facility.commissionedPowerMw ?? 0),
+      formattedSquareFootage: formatNullableSquareFootage(facility.squareFootage ?? 0),
+      leaseOrOwnLabel:
+        facility.leaseOrOwn === null ? "-" : toSpatialAnalysisSemanticLabel(facility.leaseOrOwn),
+    }))
+  );
+
+  const averagePowerDisplay = computed(() =>
+    metrics.value.totalFacilities > 0
+      ? props.formatPower(metrics.value.averageCommissionedPowerMwPerFacility)
+      : "-"
+  );
+
+  const parcelCandidateRows = computed(() =>
+    parcelCandidates.value.sample.map((parcel) => ({
+      ...parcel,
+      label: parcel.address ?? parcel.parcelNumber ?? "Parcel",
+      acresDisplay: parcel.acres === null ? "-" : `${formatNullableAcres(parcel.acres)} ac`,
+      locationDisplay:
+        [parcel.county, parcel.state].filter(Boolean).join(", ") || "Location unavailable",
+      ownerSuffix: parcel.owner === null ? "" : ` · ${parcel.owner}`,
+    }))
+  );
 
   function formatNullableAcres(value: number | null): string {
     if (value === null) {
@@ -55,7 +89,7 @@
     return `${Math.round(value).toLocaleString()} sf`;
   }
 
-  function facilityLocationText(facility: SpatialAnalysisFacilityRecord): string {
+  function buildFacilityLocationText(facility: SpatialAnalysisFacilityRecord): string {
     const parts = [facility.city, facility.state ?? facility.stateAbbrev].filter(
       (value): value is string => typeof value === "string" && value.trim().length > 0
     );
@@ -68,18 +102,6 @@
     }
 
     return "Location unavailable";
-  }
-
-  function facilityPipelinePowerMw(facility: SpatialAnalysisFacilityRecord): number {
-    return (facility.plannedPowerMw ?? 0) + (facility.underConstructionPowerMw ?? 0);
-  }
-
-  function facilityStatusText(facility: SpatialAnalysisFacilityRecord): string {
-    if (typeof facility.statusLabel === "string" && facility.statusLabel.trim().length > 0) {
-      return facility.statusLabel;
-    }
-
-    return toSpatialAnalysisSemanticLabel(facility.commissionedSemantic);
   }
 
   function selectFacility(facility: SpatialAnalysisFacilityRecord): void {
@@ -144,11 +166,7 @@
 
       <div>
         <div class="uppercase tracking-wide text-muted-foreground">Avg MW / Facility</div>
-        <div class="text-lg font-semibold text-foreground/70">
-          {{ metrics.totalFacilities > 0
-              ? props.formatPower(metrics.averageCommissionedPowerMwPerFacility)
-              : "-" }}
-        </div>
+        <div class="text-lg font-semibold text-foreground/70">{{ averagePowerDisplay }}</div>
       </div>
 
       <div>
@@ -284,23 +302,18 @@
           </div>
         </div>
 
-        <div v-if="parcelCandidates.sample.length > 0" class="mt-2 space-y-1">
+        <div v-if="parcelCandidateRows.length > 0" class="mt-2 space-y-1">
           <div
-            v-for="(parcel, index) in parcelCandidates.sample"
+            v-for="(parcel, index) in parcelCandidateRows"
             :key="`${parcel.parcelNumber ?? parcel.address ?? 'parcel'}-${String(index)}`"
             class="border-t border-border/60 pt-1 text-xs"
           >
             <div class="flex items-center justify-between gap-2">
-              <span class="truncate font-medium text-foreground/70">
-                {{ parcel.address ?? parcel.parcelNumber ?? "Parcel" }}
-              </span>
-              <span class="tabular-nums text-muted-foreground">
-                {{ parcel.acres === null ? "-" : `${formatNullableAcres(parcel.acres)} ac` }}
-              </span>
+              <span class="truncate font-medium text-foreground/70"> {{ parcel.label }} </span>
+              <span class="tabular-nums text-muted-foreground"> {{ parcel.acresDisplay }} </span>
             </div>
             <div class="truncate text-xs text-muted-foreground">
-              {{ [parcel.county, parcel.state].filter(Boolean).join(", ") || "Location unavailable" }}
-              {{ parcel.owner === null ? "" : ` · ${parcel.owner}` }}
+              {{ parcel.locationDisplay }}{{ parcel.ownerSuffix }}
             </div>
           </div>
         </div>
@@ -328,7 +341,7 @@
             <div class="flex items-center gap-1 truncate pr-2">
               <span
                 class="inline-block h-2 w-2 rounded-full"
-                :class="facility.perspective === 'colocation' ? 'bg-colocation' : 'bg-hyperscale'"
+                :class="facility.perspectiveDotClass"
               />
               <span class="truncate font-medium text-foreground/70"
                 >{{ facility.facilityName }}</span
@@ -338,28 +351,22 @@
               {{ facility.providerName }}
             </div>
             <div class="mt-0.5 truncate text-xs text-muted-foreground">
-              {{ facilityLocationText(facility) }}
+              {{ facility.locationText }}
             </div>
             <div class="mt-0.5 flex flex-wrap gap-1">
               <span class="rounded-full bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-                {{ toSpatialAnalysisPerspectiveLabel(facility.perspective) }}
+                {{ facility.perspectiveLabel }}
               </span>
               <span class="rounded-full bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-                {{ facilityStatusText(facility) }}
+                {{ facility.statusText }}
               </span>
             </div>
           </div>
           <div class="shrink-0 text-right text-xs text-muted-foreground">
-            <div class="font-medium text-foreground/90">
-              {{ props.formatPower(facility.commissionedPowerMw ?? 0) }}
-            </div>
-            <div>Pipe {{ props.formatPower(facilityPipelinePowerMw(facility)) }}</div>
-            <div>{{ formatNullableSquareFootage(facility.squareFootage ?? 0) }}</div>
-            <div>
-              {{ facility.leaseOrOwn === null
-                  ? "-"
-                  : toSpatialAnalysisSemanticLabel(facility.leaseOrOwn) }}
-            </div>
+            <div class="font-medium text-foreground/90">{{ facility.formattedCommissioned }}</div>
+            <div>Pipe {{ props.formatPower(facility.pipelinePowerMw) }}</div>
+            <div>{{ facility.formattedSquareFootage }}</div>
+            <div>{{ facility.leaseOrOwnLabel }}</div>
           </div>
         </button>
       </div>

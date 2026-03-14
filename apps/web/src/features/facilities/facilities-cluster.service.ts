@@ -1,6 +1,7 @@
 import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
 import type { MapRenderedFeature } from "@map-migration/map-engine";
 import { buildDonutChartArcSegments } from "@/lib/donut-chart.service";
+import { readNullableNumberProperty, readPointCenter } from "@/lib/map-feature-readers";
 import type {
   FacilityClusterMarkerModel,
   FacilityClusterMarkerReconciliation,
@@ -24,30 +25,6 @@ const MARKER_BORDER = "rgba(15, 23, 42, 0.18)";
 const MARKER_TEXT = "#0f172a";
 const MARKER_MUTED_TEXT = "#475569";
 const MARKER_RING_BACKGROUND = "rgba(148, 163, 184, 0.24)";
-
-function readProperty(properties: unknown, key: string): unknown {
-  if (typeof properties !== "object" || properties === null) {
-    return null;
-  }
-
-  return Reflect.get(properties, key);
-}
-
-function readNullableNumberProperty(properties: unknown, key: string): number | null {
-  const value = readProperty(properties, key);
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-
-  if (typeof value === "string" && value.length > 0) {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) {
-      return parsed;
-    }
-  }
-
-  return null;
-}
 
 function clusterMarkerSize(facilityCount: number): number {
   if (facilityCount >= 100) {
@@ -142,25 +119,6 @@ export function buildFacilityClusterPowerSegments(
       value: summary.plannedPowerMw,
     },
   ];
-}
-
-function readPointCenter(coordinates: unknown): readonly [number, number] | null {
-  if (!Array.isArray(coordinates) || coordinates.length < 2) {
-    return null;
-  }
-
-  const longitude = coordinates[0];
-  const latitude = coordinates[1];
-  if (
-    typeof longitude !== "number" ||
-    !Number.isFinite(longitude) ||
-    typeof latitude !== "number" ||
-    !Number.isFinite(latitude)
-  ) {
-    return null;
-  }
-
-  return [longitude, latitude];
 }
 
 export function readFacilityClusterSummary(

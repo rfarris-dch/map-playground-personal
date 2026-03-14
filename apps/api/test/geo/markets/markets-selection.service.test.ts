@@ -1,10 +1,8 @@
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 
-const getSelectionAreaSqKmMock = mock<() => Promise<number>>();
 const listMarketsBySelectionMock = mock<() => Promise<readonly unknown[]>>();
 
 mock.module("../../../src/geo/markets/markets-selection.repo", () => ({
-  getSelectionAreaSqKm: getSelectionAreaSqKmMock,
   listMarketsBySelection: listMarketsBySelectionMock,
 }));
 
@@ -16,12 +14,10 @@ afterAll(() => {
 
 describe("queryMarketsBySelection", () => {
   beforeEach(() => {
-    getSelectionAreaSqKmMock.mockReset();
     listMarketsBySelectionMock.mockReset();
   });
 
-  it("returns selection area even when no markets match", async () => {
-    getSelectionAreaSqKmMock.mockResolvedValue(123.45);
+  it("returns selectionAreaSqKm 0 when no markets match", async () => {
     listMarketsBySelectionMock.mockResolvedValue([]);
 
     const result = await queryMarketsBySelection({
@@ -35,7 +31,7 @@ describe("queryMarketsBySelection", () => {
       throw new Error("Expected successful empty market selection result");
     }
 
-    expect(result.value.selectionAreaSqKm).toBe(123.45);
+    expect(result.value.selectionAreaSqKm).toBe(0);
     expect(result.value.matchedMarkets).toEqual([]);
     expect(result.value.primaryMarket).toBeNull();
     expect(result.value.truncated).toBe(false);
@@ -43,7 +39,6 @@ describe("queryMarketsBySelection", () => {
   });
 
   it("marks market selections as truncated when the limit is exceeded", async () => {
-    getSelectionAreaSqKmMock.mockResolvedValue(50);
     listMarketsBySelectionMock.mockResolvedValue([
       {
         absorption: null,
@@ -90,6 +85,7 @@ describe("queryMarketsBySelection", () => {
 
     expect(result.value.matchedMarkets).toHaveLength(1);
     expect(result.value.primaryMarket?.marketId).toBe("market-1");
+    expect(result.value.selectionAreaSqKm).toBe(50);
     expect(result.value.truncated).toBe(true);
     expect(result.value.warnings).toContainEqual({
       code: "POSSIBLY_TRUNCATED",

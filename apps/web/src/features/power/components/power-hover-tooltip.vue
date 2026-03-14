@@ -1,17 +1,15 @@
 <script setup lang="ts">
+  import { computed } from "vue";
+  import MapTooltipShell from "@/components/map/map-tooltip-shell.vue";
   import type { PowerHoverState } from "@/features/power/power-hover.types";
+  import { formatMegawatts } from "@/lib/power-format.service";
 
   interface PowerHoverTooltipProps {
     readonly hoverState: PowerHoverState | null;
   }
 
   const props = defineProps<PowerHoverTooltipProps>();
-
-  function formatMegawatts(value: number): string {
-    return `${value.toLocaleString(undefined, {
-      maximumFractionDigits: value >= 100 ? 0 : 1,
-    })} MW`;
-  }
+  const displayState = computed(() => props.hoverState);
 
   function formatKilovolts(value: number): string {
     return `${value.toLocaleString(undefined, {
@@ -21,59 +19,56 @@
 </script>
 
 <template>
-  <Transition enter-active-class="transition-opacity duration-100" enter-from-class="opacity-0">
-    <aside
-      v-if="props.hoverState !== null"
-      class="map-glass-surface pointer-events-none absolute z-30 min-w-56 rounded-md p-2"
-      :style="{
-      left: `${props.hoverState.screenPoint[0] + 12}px`,
-      top: `${props.hoverState.screenPoint[1] + 12}px`,
-    }"
-      aria-label="Power hover details"
-    >
+  <MapTooltipShell
+    ariaLabel="Power hover details"
+    :screen-point="displayState?.screenPoint ?? null"
+    :show="displayState !== null"
+    :offset="{ x: 12, y: 12 }"
+  >
+    <template v-if="displayState !== null">
       <header class="mb-1 flex items-center gap-2">
         <span class="text-xs font-semibold uppercase tracking-wide">
-          {{ props.hoverState.layerLabel }}
+          {{ displayState.layerLabel }}
         </span>
         <span
-          v-if="props.hoverState.name !== null"
+          v-if="displayState.name !== null"
           class="max-w-52 truncate text-xs text-muted-foreground"
         >
-          {{ props.hoverState.name }}
+          {{ displayState.name }}
         </span>
       </header>
 
       <dl class="m-0 grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-xs leading-tight">
-        <template v-if="props.hoverState.name !== null">
+        <template v-if="displayState.name !== null">
           <dt class="text-muted-foreground">Name</dt>
-          <dd class="m-0 break-words">{{ props.hoverState.name }}</dd>
+          <dd class="m-0 break-words">{{ displayState.name }}</dd>
         </template>
 
-        <template v-if="props.hoverState.operatorName !== null">
+        <template v-if="displayState.operatorName !== null">
           <dt class="text-muted-foreground">Operator</dt>
-          <dd class="m-0 break-words">{{ props.hoverState.operatorName }}</dd>
+          <dd class="m-0 break-words">{{ displayState.operatorName }}</dd>
         </template>
 
-        <template v-if="props.hoverState.status !== null">
+        <template v-if="displayState.status !== null">
           <dt class="text-muted-foreground">Status</dt>
-          <dd class="m-0">{{ props.hoverState.status }}</dd>
+          <dd class="m-0">{{ displayState.status }}</dd>
         </template>
 
-        <template v-if="props.hoverState.sourceDetail !== null">
+        <template v-if="displayState.sourceDetail !== null">
           <dt class="text-muted-foreground">Source</dt>
-          <dd class="m-0 break-words">{{ props.hoverState.sourceDetail }}</dd>
+          <dd class="m-0 break-words">{{ displayState.sourceDetail }}</dd>
         </template>
 
-        <template v-if="props.hoverState.outputMw !== null">
+        <template v-if="displayState.outputMw !== null">
           <dt class="text-muted-foreground">Output</dt>
-          <dd class="m-0">{{ formatMegawatts(props.hoverState.outputMw) }}</dd>
+          <dd class="m-0">{{ formatMegawatts(displayState.outputMw) }}</dd>
         </template>
 
-        <template v-if="props.hoverState.voltageKv !== null">
+        <template v-if="displayState.voltageKv !== null">
           <dt class="text-muted-foreground">Voltage</dt>
-          <dd class="m-0">{{ formatKilovolts(props.hoverState.voltageKv) }}</dd>
+          <dd class="m-0">{{ formatKilovolts(displayState.voltageKv) }}</dd>
         </template>
       </dl>
-    </aside>
-  </Transition>
+    </template>
+  </MapTooltipShell>
 </template>

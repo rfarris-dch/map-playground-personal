@@ -1,13 +1,10 @@
 <script setup lang="ts">
-  import type {
-    MapPageOverlaysEmits,
-    MapPageOverlaysProps,
-  } from "@/features/app/components/map-page-overlays.types";
+  import { computed } from "vue";
   import MapStatusBar from "@/features/app/components/map-status-bar.vue";
+  import { useMapShellContext } from "@/features/app/core/map-shell-context";
   import BoundaryHoverTooltip from "@/features/boundaries/components/boundary-hover-tooltip.vue";
   import FacilityClusterHoverTooltip from "@/features/facilities/components/facility-cluster-hover-tooltip.vue";
   import FacilityHoverTooltip from "@/features/facilities/components/facility-hover-tooltip.vue";
-  import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";
   import FacilityDetailDrawer from "@/features/facilities/facility-detail/components/facility-detail-drawer.vue";
   import FiberLocatorHoverTooltip from "@/features/fiber-locator/components/fiber-locator-hover-tooltip.vue";
   import ParcelDetailDrawer from "@/features/parcels/parcel-detail/components/parcel-detail-drawer.vue";
@@ -15,69 +12,64 @@
   import QuickViewOverlay from "@/features/quick-view/components/quick-view-overlay.vue";
   import ScannerPanel from "@/features/scanner/components/scanner-panel.vue";
 
-  const props = defineProps<MapPageOverlaysProps>();
+  const shell = useMapShellContext();
 
-  const emit = defineEmits<MapPageOverlaysEmits>();
-
-  function forwardQuickViewObjectCount(count: number): void {
-    emit("quick-view-object-count", count);
-  }
-
-  function forwardSelectedFacility(facility: SelectedFacilityRef): void {
-    emit("select-facility", facility);
-  }
+  const facilityDetail = computed(() => shell.facilityDetailQuery.data.value ?? null);
+  const isFacilityDetailLoading = computed(() => shell.facilityDetailQuery.isLoading.value);
+  const isFacilityDetailError = computed(() => shell.facilityDetailQuery.isError.value);
+  const parcelDetail = computed(() => shell.parcelDetailQuery.data.value ?? null);
+  const isParcelDetailLoading = computed(() => shell.parcelDetailQuery.isLoading.value);
+  const isParcelDetailError = computed(() => shell.parcelDetailQuery.isError.value);
 </script>
 
 <template>
   <QuickViewOverlay
-    v-if="props.isQuickViewVisible"
-    :active="props.isQuickViewVisible"
-    :facilities="props.scannerFacilities"
-    :map="props.map"
+    v-if="shell.isQuickViewVisible.value"
+    :active="shell.isQuickViewVisible.value"
+    :facilities="shell.scannerFacilities.value"
+    :map="shell.map.value"
     :density-limit="15"
-    @object-count="forwardQuickViewObjectCount"
+    @object-count="shell.setQuickViewObjectCount"
   />
 
   <ScannerPanel
-    v-if="props.isScannerVisible"
-    :county-ids="props.countyIds"
-    :summary="props.scannerSummary"
-    :is-filtered="props.scannerIsFiltered"
-    :is-parcels-loading="props.isScannerParcelsLoading"
-    :parcels-error-message="props.scannerParcelsError"
-    :empty-message="props.scannerEmptyMessage"
-    @close="emit('close-scanner')"
-    @export="emit('export-scanner-selection')"
-    @open-dashboard="emit('open-scanner-dashboard')"
-    @select-facility="forwardSelectedFacility"
+    v-if="shell.isScannerVisible.value"
+    :county-ids="shell.scannerAnalysisSummary.value.area.countyIds"
+    :summary="shell.scannerAnalysisSummary.value"
+    :is-filtered="shell.scannerIsFiltered.value"
+    :is-parcels-loading="shell.isScannerParcelsLoading.value"
+    :parcels-error-message="shell.scannerParcelsError.value"
+    :empty-message="shell.scannerEmptyMessage.value"
+    @close="shell.setScannerActive(false)"
+    @export="shell.exportScannerSelection"
+    @open-dashboard="shell.openScannerDashboard"
+    @select-facility="shell.selectFacilityFromAnalysis"
   />
 
-  <MapStatusBar :overlay-status-message="props.overlayStatusMessage" />
+  <MapStatusBar :overlay-status-message="shell.overlayStatusMessage.value" />
 
-  <FacilityHoverTooltip :hover-state="props.hoveredFacility" />
+  <FacilityHoverTooltip :hover-state="shell.hoveredFacility.value" />
   <FacilityClusterHoverTooltip
-    :hover-state="props.hoveredFacilityCluster"
-    @zoom-to-cluster="
-      (perspective, clusterId, center) => emit('zoom-to-cluster', perspective, clusterId, center)
-    "
+    :hover-state="shell.hoveredFacilityCluster.value"
+    @zoom-to-cluster="shell.zoomToCluster"
   />
-  <BoundaryHoverTooltip :hover-state="props.hoveredBoundary" />
-  <FiberLocatorHoverTooltip :hover-state="props.hoveredFiber" />
-  <PowerHoverTooltip :hover-state="props.hoveredPower" />
+  <BoundaryHoverTooltip :hover-state="shell.hoveredBoundary.value" />
+  <FiberLocatorHoverTooltip :hover-state="shell.hoveredFiber.value" />
+  <PowerHoverTooltip :hover-state="shell.hoveredPower.value" />
 
   <FacilityDetailDrawer
-    :selected-facility="props.selectedFacility"
-    :detail="props.facilityDetail"
-    :is-loading="props.isFacilityDetailLoading"
-    :is-error="props.isFacilityDetailError"
-    @close="emit('close-facility-detail')"
+    :selected-facility="shell.selectedFacility.value"
+    :detail="facilityDetail"
+    :is-loading="isFacilityDetailLoading"
+    :is-error="isFacilityDetailError"
+    @close="shell.clearSelectedFacility"
   />
 
   <ParcelDetailDrawer
-    :selected-parcel="props.selectedParcel"
-    :detail="props.parcelDetail"
-    :is-loading="props.isParcelDetailLoading"
-    :is-error="props.isParcelDetailError"
-    @close="emit('close-parcel-detail')"
+    :selected-parcel="shell.selectedParcel.value"
+    :detail="parcelDetail"
+    :is-loading="isParcelDetailLoading"
+    :is-error="isParcelDetailError"
+    @close="shell.clearSelectedParcel"
   />
 </template>

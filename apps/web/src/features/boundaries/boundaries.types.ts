@@ -41,7 +41,6 @@ export interface BoundaryLayerState {
   allFeatures: readonly BoundaryPowerFeature[];
   basemapLayersSuppressed: boolean;
   dataLoaded: boolean;
-  hoveredFeatureId: number | string | null;
   includedRegionIds: readonly string[] | null;
   ready: boolean;
   requestSequence: number;

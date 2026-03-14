@@ -1,13 +1,7 @@
-import { runEffectPromise } from "@map-migration/core-runtime/effect";
-import {
-  assertTileManifestMatchesDataset,
-  createPmtilesSourceUrl,
-  type TilePublishManifest,
-} from "@map-migration/geo-tiles";
-import { loadTilePublishManifestEffect } from "@map-migration/geo-tiles/effect";
+import { createPmtilesSourceUrl, type TilePublishManifest } from "@map-migration/geo-tiles";
 import { getCatalogStyleLayerIds, getHydroBasinsStyleLayerIds } from "@map-migration/map-style";
-import { Effect, Either } from "effect";
 import { resolveEnvironmentalHydroBasinsManifestPath } from "@/features/tiles/tile-manifest-config.service";
+import { mountManifestBackedLayerBootstrap } from "@/lib/manifest-backed-layer.service";
 import type {
   HydroBasinsStressMode,
   HydroBasinsVisibilityController,
@@ -33,20 +27,12 @@ const UPPER_BOUND_LAYER_ANCHORS: readonly string[] = [
 ];
 
 interface HydroBasinsState {
-  destroyed: boolean;
-  ready: boolean;
-  sourceInitializationPromise: Promise<void> | null;
-  sourceInitialized: boolean;
   stressMode: HydroBasinsStressMode;
   visible: boolean;
 }
 
 function initialState(): HydroBasinsState {
   return {
-    destroyed: false,
-    ready: false,
-    sourceInitialized: false,
-    sourceInitializationPromise: null,
     stressMode: "normal",
     visible: false,
   };
@@ -180,7 +166,7 @@ export function mountHydroBasinsLayer(
   const degradedLabelLayerIds = ["environmental-hydro-basins-huc6-label"];
 
   function applyVisibility(): void {
-    if (!(state.ready && state.sourceInitialized)) {
+    if (!(bootstrap.isReady() && bootstrap.isSourceInitialized())) {
       return;
     }
 
@@ -203,77 +189,44 @@ export function mountHydroBasinsLayer(
     setLayerVisibility(options.map, degradedLabelLayerIds, false);
   }
 
-  function completeSourceInitialization(manifest: TilePublishManifest): void {
-    assertTileManifestMatchesDataset(manifest, HYDRO_BASINS_DATASET, "hydro basins layer manifest");
-    ensureHydroBasinsSource(options.map, manifest, manifestPath);
-    ensureHydroBasinsLayers(options.map);
-    state.sourceInitialized = true;
-    applyVisibility();
-  }
-
-  function initializeSource(): Promise<void> {
-    if (state.destroyed || state.sourceInitialized) {
-      return Promise.resolve();
-    }
-
-    if (state.sourceInitializationPromise !== null) {
-      return state.sourceInitializationPromise;
-    }
-
-    const nextPromise = (async (): Promise<void> => {
-      const result = await runEffectPromise(
-        Effect.either(
-          loadTilePublishManifestEffect({
-            contextLabel: "hydro-basins",
-            manifestPath,
-          })
-        )
-      );
-
-      if (state.destroyed) {
+  const bootstrap = mountManifestBackedLayerBootstrap({
+    contextLabel: "hydro-basins",
+    dataset: HYDRO_BASINS_DATASET,
+    ensureLayers() {
+      ensureHydroBasinsLayers(options.map);
+    },
+    ensureSource(manifest) {
+      ensureHydroBasinsSource(options.map, manifest, manifestPath);
+    },
+    manifestPath,
+    map: options.map,
+    onInitializationError(error: unknown) {
+      console.error("[hydro-basins] source initialization failed", error);
+    },
+    onInitialized() {
+      applyVisibility();
+    },
+    onReady(readyBootstrap) {
+      if (state.visible) {
+        readyBootstrap.initializeSource().catch(() => {
+          return;
+        });
         return;
       }
 
-      if (Either.isLeft(result)) {
-        throw result.left;
+      if (readyBootstrap.isSourceInitialized()) {
+        applyVisibility();
       }
-
-      completeSourceInitialization(result.right.data);
-    })().finally(() => {
-      state.sourceInitializationPromise = null;
-    });
-
-    state.sourceInitializationPromise = nextPromise;
-    return nextPromise;
-  }
-
-  const onLoad = (): void => {
-    state.ready = true;
-
-    if (state.visible) {
-      initializeSource().catch((error: unknown) => {
-        console.error("[hydro-basins] source initialization failed", error);
-      });
-      return;
-    }
-
-    if (state.sourceInitialized) {
-      applyVisibility();
-    }
-  };
-
-  options.map.on("load", onLoad);
-  const existingStyleLayers = options.map.getStyle()?.layers ?? [];
-  if (existingStyleLayers.length > 0) {
-    onLoad();
-  }
+    },
+    startWhenStyleReady: true,
+  });
 
   return {
     setVisible(visible: boolean): void {
       state.visible = visible;
       if (visible) {
-        initializeSource().catch((error: unknown) => {
-          console.error("[hydro-basins] source initialization failed", error);
+        bootstrap.initializeSource().catch(() => {
+          return;
         });
       }
 
@@ -284,8 +237,7 @@ export function mountHydroBasinsLayer(
       applyVisibility();
     },
     destroy(): void {
-      state.destroyed = true;
-      options.map.off("load", onLoad);
+      bootstrap.destroy();
 
       for (const layerId of [
         ...HYDRO_BASINS_FILL_LAYER_IDS,

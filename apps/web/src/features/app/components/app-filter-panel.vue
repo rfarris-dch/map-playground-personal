@@ -1,11 +1,11 @@
 <script setup lang="ts">
   import { ChevronDown, Search } from "lucide-vue-next";
-  import { CheckboxIndicator, CheckboxRoot } from "reka-ui";
   import { computed, ref } from "vue";
   import Accordion from "@/components/ui/accordion/accordion.vue";
   import AccordionContent from "@/components/ui/accordion/accordion-content.vue";
   import AccordionItem from "@/components/ui/accordion/accordion-item.vue";
   import AccordionTrigger from "@/components/ui/accordion/accordion-trigger.vue";
+  import Checkbox from "@/components/ui/checkbox/checkbox.vue";
 
   /* ------------------------------------------------------------------ */
   /*  Types                                                              */
@@ -159,23 +159,10 @@
               :key="opt.id"
               class="flex cursor-pointer items-center gap-2 py-1 transition-colors hover:bg-background"
             >
-              <CheckboxRoot
-                :model-value="props.activePowerTypes.has(opt.id)"
-                class="flex size-2.5 shrink-0 items-center justify-center rounded-sm border border-border bg-card data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
-                @update:model-value="emit('toggle:power-type', opt.id)"
-              >
-                <CheckboxIndicator class="flex items-center justify-center text-white">
-                  <svg class="size-2" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                    <path
-                      d="M2 5l2 2 4-4"
-                      stroke="currentColor"
-                      stroke-width="1.5"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                  </svg>
-                </CheckboxIndicator>
-              </CheckboxRoot>
+              <Checkbox
+                :checked="props.activePowerTypes.has(opt.id)"
+                @update:checked="emit('toggle:power-type', opt.id)"
+              />
               <span
                 class="text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground"
                 >{{ opt.label }}</span
@@ -201,23 +188,10 @@
               :key="opt.id"
               class="flex cursor-pointer items-center gap-2 py-1 transition-colors hover:bg-background"
             >
-              <CheckboxRoot
-                :model-value="props.activeStatuses.has(opt.id)"
-                class="flex size-2.5 shrink-0 items-center justify-center rounded-sm border border-border bg-card data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
-                @update:model-value="emit('toggle:status', opt.id)"
-              >
-                <CheckboxIndicator class="flex items-center justify-center text-white">
-                  <svg class="size-2" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                    <path
-                      d="M2 5l2 2 4-4"
-                      stroke="currentColor"
-                      stroke-width="1.5"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                  </svg>
-                </CheckboxIndicator>
-              </CheckboxRoot>
+              <Checkbox
+                :checked="props.activeStatuses.has(opt.id)"
+                @update:checked="emit('toggle:status', opt.id)"
+              />
               <span
                 class="text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground"
                 >{{ opt.label }}</span
@@ -255,23 +229,10 @@
                 :key="opt.id"
                 class="flex cursor-pointer items-center gap-2 py-1 transition-colors hover:bg-background"
               >
-                <CheckboxRoot
-                  :model-value="props.activeMarkets.has(opt.id)"
-                  class="flex size-2.5 shrink-0 items-center justify-center rounded-sm border border-border bg-card data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
-                  @update:model-value="emit('toggle:market', opt.id)"
-                >
-                  <CheckboxIndicator class="flex items-center justify-center text-white">
-                    <svg class="size-2" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                      <path
-                        d="M2 5l2 2 4-4"
-                        stroke="currentColor"
-                        stroke-width="1.5"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
-                  </CheckboxIndicator>
-                </CheckboxRoot>
+                <Checkbox
+                  :checked="props.activeMarkets.has(opt.id)"
+                  @update:checked="emit('toggle:market', opt.id)"
+                />
                 <span
                   class="truncate text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground"
                   >{{ opt.label }}</span
@@ -316,23 +277,10 @@
                 :key="opt.id"
                 class="flex cursor-pointer items-center gap-2 py-1 transition-colors hover:bg-background"
               >
-                <CheckboxRoot
-                  :model-value="props.activeProviders.has(opt.id)"
-                  class="flex size-2.5 shrink-0 items-center justify-center rounded-sm border border-border bg-card data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
-                  @update:model-value="emit('toggle:provider', opt.id)"
-                >
-                  <CheckboxIndicator class="flex items-center justify-center text-white">
-                    <svg class="size-2" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                      <path
-                        d="M2 5l2 2 4-4"
-                        stroke="currentColor"
-                        stroke-width="1.5"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
-                  </CheckboxIndicator>
-                </CheckboxRoot>
+                <Checkbox
+                  :checked="props.activeProviders.has(opt.id)"
+                  @update:checked="emit('toggle:provider', opt.id)"
+                />
                 <span
                   class="truncate text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground"
                   >{{ opt.label }}</span
@@ -377,23 +325,10 @@
                 :key="opt.id"
                 class="flex cursor-pointer items-center gap-2 py-1 transition-colors hover:bg-background"
               >
-                <CheckboxRoot
-                  :model-value="props.activeUsers.has(opt.id)"
-                  class="flex size-2.5 shrink-0 items-center justify-center rounded-sm border border-border bg-card data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
-                  @update:model-value="emit('toggle:user', opt.id)"
-                >
-                  <CheckboxIndicator class="flex items-center justify-center text-white">
-                    <svg class="size-2" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                      <path
-                        d="M2 5l2 2 4-4"
-                        stroke="currentColor"
-                        stroke-width="1.5"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
-                  </CheckboxIndicator>
-                </CheckboxRoot>
+                <Checkbox
+                  :checked="props.activeUsers.has(opt.id)"
+                  @update:checked="emit('toggle:user', opt.id)"
+                />
                 <span
                   class="truncate text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground"
                   >{{ opt.label }}</span
@@ -461,23 +396,10 @@
                     :key="opt.id"
                     class="flex cursor-pointer items-center gap-2 py-1 transition-colors hover:bg-background"
                   >
-                    <CheckboxRoot
-                      :model-value="props.activeVoltages.has(opt.id)"
-                      class="flex size-2.5 shrink-0 items-center justify-center rounded-sm border border-border bg-card data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
-                      @update:model-value="emit('toggle:voltage', opt.id)"
-                    >
-                      <CheckboxIndicator class="flex items-center justify-center text-white">
-                        <svg class="size-2" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                          <path
-                            d="M2 5l2 2 4-4"
-                            stroke="currentColor"
-                            stroke-width="1.5"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                          />
-                        </svg>
-                      </CheckboxIndicator>
-                    </CheckboxRoot>
+                    <Checkbox
+                      :checked="props.activeVoltages.has(opt.id)"
+                      @update:checked="emit('toggle:voltage', opt.id)"
+                    />
                     <span
                       class="text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground"
                       >{{ opt.label }}</span
@@ -501,23 +423,10 @@
                     :key="opt.id"
                     class="flex cursor-pointer items-center gap-2 py-1 transition-colors hover:bg-background"
                   >
-                    <CheckboxRoot
-                      :model-value="props.activeGasCapacities.has(opt.id)"
-                      class="flex size-2.5 shrink-0 items-center justify-center rounded-sm border border-border bg-card data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
-                      @update:model-value="emit('toggle:gas-capacity', opt.id)"
-                    >
-                      <CheckboxIndicator class="flex items-center justify-center text-white">
-                        <svg class="size-2" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                          <path
-                            d="M2 5l2 2 4-4"
-                            stroke="currentColor"
-                            stroke-width="1.5"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                          />
-                        </svg>
-                      </CheckboxIndicator>
-                    </CheckboxRoot>
+                    <Checkbox
+                      :checked="props.activeGasCapacities.has(opt.id)"
+                      @update:checked="emit('toggle:gas-capacity', opt.id)"
+                    />
                     <span
                       class="text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground"
                       >{{ opt.label }}</span
@@ -541,23 +450,10 @@
                     :key="opt.id"
                     class="flex cursor-pointer items-center gap-2 py-1 transition-colors hover:bg-background"
                   >
-                    <CheckboxRoot
-                      :model-value="props.activeGasStatuses.has(opt.id)"
-                      class="flex size-2.5 shrink-0 items-center justify-center rounded-sm border border-border bg-card data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
-                      @update:model-value="emit('toggle:gas-status', opt.id)"
-                    >
-                      <CheckboxIndicator class="flex items-center justify-center text-white">
-                        <svg class="size-2" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                          <path
-                            d="M2 5l2 2 4-4"
-                            stroke="currentColor"
-                            stroke-width="1.5"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                          />
-                        </svg>
-                      </CheckboxIndicator>
-                    </CheckboxRoot>
+                    <Checkbox
+                      :checked="props.activeGasStatuses.has(opt.id)"
+                      @update:checked="emit('toggle:gas-status', opt.id)"
+                    />
                     <span
                       class="text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground"
                       >{{ opt.label }}</span
@@ -647,23 +543,10 @@
                       :key="opt.id"
                       class="flex cursor-pointer items-center gap-2 py-1 transition-colors hover:bg-background"
                     >
-                      <CheckboxRoot
-                        :model-value="props.activeZoningTypes.has(opt.id)"
-                        class="flex size-2.5 shrink-0 items-center justify-center rounded-sm border border-border bg-card data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
-                        @update:model-value="emit('toggle:zoning-type', opt.id)"
-                      >
-                        <CheckboxIndicator class="flex items-center justify-center text-white">
-                          <svg class="size-2" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                            <path
-                              d="M2 5l2 2 4-4"
-                              stroke="currentColor"
-                              stroke-width="1.5"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                            />
-                          </svg>
-                        </CheckboxIndicator>
-                      </CheckboxRoot>
+                      <Checkbox
+                        :checked="props.activeZoningTypes.has(opt.id)"
+                        @update:checked="emit('toggle:zoning-type', opt.id)"
+                      />
                       <span
                         class="text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground"
                         >{{ opt.label }}</span
@@ -686,23 +569,10 @@
                       :key="opt.id"
                       class="flex cursor-pointer items-center gap-2 py-1 transition-colors hover:bg-background"
                     >
-                      <CheckboxRoot
-                        :model-value="props.activeFloodZones.has(opt.id)"
-                        class="flex size-2.5 shrink-0 items-center justify-center rounded-sm border border-border bg-card data-[state=checked]:border-foreground/65 data-[state=checked]:bg-foreground/65"
-                        @update:model-value="emit('toggle:flood-zone', opt.id)"
-                      >
-                        <CheckboxIndicator class="flex items-center justify-center text-white">
-                          <svg class="size-2" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                            <path
-                              d="M2 5l2 2 4-4"
-                              stroke="currentColor"
-                              stroke-width="1.5"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                            />
-                          </svg>
-                        </CheckboxIndicator>
-                      </CheckboxRoot>
+                      <Checkbox
+                        :checked="props.activeFloodZones.has(opt.id)"
+                        @update:checked="emit('toggle:flood-zone', opt.id)"
+                      />
                       <span
                         class="text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground"
                         >{{ opt.label }}</span

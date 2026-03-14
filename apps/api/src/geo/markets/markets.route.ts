@@ -7,12 +7,10 @@ import {
   MarketsSelectionResponseSchema,
 } from "@map-migration/http-contracts/markets-selection-http";
 import {
-  type MarketSortBy,
-  MarketSortBySchema,
+  type MarketsTableRequest,
+  MarketsTableRequestSchema,
   type MarketsTableResponse,
   MarketsTableResponseSchema,
-  type SortDirection,
-  SortDirectionSchema,
 } from "@map-migration/http-contracts/table-contracts";
 import type { Context, Env, Hono } from "hono";
 import { queryMarketsTable } from "@/geo/markets/markets-query.service";
@@ -25,81 +23,33 @@ import { queryMarketsBySelection } from "@/geo/markets/markets-selection.service
 import { jsonOk, toDebugDetails } from "@/http/api-response";
 import { fromApiRequest, routeError, runEffectRoute } from "@/http/effect-route";
 import { readJsonBody } from "@/http/json-request.service";
-import { resolvePaginationParams, totalPages } from "@/http/pagination-params.service";
+import { totalPages } from "@/http/pagination-params.service";
 import {
   buildPolygonRepairWarning,
   normalizePolygonGeometryGeoJson,
 } from "@/http/polygon-normalization.service";
+import { buildResponseMeta, setCacheControlHeader } from "@/http/response-meta.service";
+import { registerRouteTimeoutProfile } from "@/http/route-timeout-profile.service";
+import { getApiRuntimeConfig } from "@/http/runtime-config";
+import { getDatasetCacheTtlSeconds } from "@/http/spatial-analysis-policy.service";
 
-function resolveMarketSortBy(value: string | undefined): MarketSortBy | null {
-  if (typeof value === "undefined") {
-    return "name";
-  }
-
-  const parsed = MarketSortBySchema.safeParse(value);
-  if (!parsed.success) {
-    return null;
-  }
-
-  return parsed.data;
-}
-
-function resolveSortDirection(value: string | undefined): SortDirection | null {
-  if (typeof value === "undefined") {
-    return "asc";
-  }
-
-  const parsed = SortDirectionSchema.safeParse(value);
-  if (!parsed.success) {
-    return null;
-  }
-
-  return parsed.data;
-}
-
-function resolveMarketsTableQuery(honoContext: Context) {
-  const paginationResolution = resolvePaginationParams(
-    honoContext.req.query("page"),
-    honoContext.req.query("pageSize"),
-    {
-      defaultPageSize: 100,
-      maxPageSize: 500,
-      maxOffset: 1_000_000,
-    }
-  );
-
-  if (!paginationResolution.ok) {
+function resolveMarketsTableQuery(honoContext: Context): MarketsTableRequest {
+  const request = MarketsTableRequestSchema.safeParse({
+    page: honoContext.req.query("page"),
+    pageSize: honoContext.req.query("pageSize"),
+    sortBy: honoContext.req.query("sortBy"),
+    sortOrder: honoContext.req.query("sortOrder"),
+  });
+  if (!request.success) {
     throw routeError({
       httpStatus: 400,
-      code: "INVALID_PAGINATION",
-      message: paginationResolution.message,
+      code: "INVALID_MARKETS_TABLE_REQUEST",
+      message: "invalid markets table request",
+      details: toDebugDetails(request.error),
     });
   }
 
-  const sortBy = resolveMarketSortBy(honoContext.req.query("sortBy"));
-  if (sortBy === null) {
-    throw routeError({
-      httpStatus: 400,
-      code: "INVALID_SORT",
-      message:
-        "sortBy must be one of: name, region, country, state, absorption, vacancy, updatedAt",
-    });
-  }
-
-  const sortOrder = resolveSortDirection(honoContext.req.query("sortOrder"));
-  if (sortOrder === null) {
-    throw routeError({
-      httpStatus: 400,
-      code: "INVALID_SORT",
-      message: "sortOrder must be one of: asc, desc",
-    });
-  }
-
-  return {
-    pagination: paginationResolution.value,
-    sortBy,
-    sortOrder,
-  };
+  return request.data;
 }
 
 function buildMarketsTableRouteError(error: unknown, reason: "mapping_failed" | "query_failed") {
@@ -178,17 +128,17 @@ function buildMarketsSelectionPayload(args: {
     { readonly ok: true }
   >;
 }): MarketSelectionResponse {
+  const runtimeConfig = getApiRuntimeConfig();
   return {
     matchedMarkets: [...args.result.value.matchedMarkets],
-    meta: {
-      requestId: args.requestId,
-      sourceMode: "postgis",
-      dataVersion: "dev",
-      generatedAt: new Date().toISOString(),
+    meta: buildResponseMeta({
+      dataVersion: runtimeConfig.dataVersion,
       recordCount: args.result.value.matchedMarkets.length,
+      requestId: args.requestId,
+      sourceMode: runtimeConfig.marketsSourceMode,
       truncated: args.result.value.truncated,
       warnings: [...args.geometryWarnings, ...args.result.value.warnings],
-    },
+    }),
     primaryMarket: args.result.value.primaryMarket,
     selection: {
       matchCount: args.result.value.matchedMarkets.length,
@@ -200,15 +150,18 @@ function buildMarketsSelectionPayload(args: {
 }
 
 export function registerMarketsRoute<E extends Env>(app: Hono<E>): void {
+  registerRouteTimeoutProfile(ApiRoutes.marketsSelection, "selection");
+
   app.get(ApiRoutes.markets, (c) =>
     runEffectRoute(
       c,
       fromApiRequest(async ({ honoContext, requestId }) => {
         const query = resolveMarketsTableQuery(honoContext);
+        const offset = query.page * query.pageSize;
 
         const queryResult = await queryMarketsTable({
-          limit: query.pagination.pageSize,
-          offset: query.pagination.offset,
+          limit: query.pageSize,
+          offset,
           sortBy: query.sortBy,
           sortOrder: query.sortOrder,
         });
@@ -217,13 +170,15 @@ export function registerMarketsRoute<E extends Env>(app: Hono<E>): void {
           throw buildMarketsTableRouteError(queryResult.value.error, queryResult.value.reason);
         }
 
+        setCacheControlHeader(honoContext, getDatasetCacheTtlSeconds("market_metrics"));
+
         const payload: MarketsTableResponse = {
           rows: [...queryResult.value.rows],
           pagination: {
-            page: query.pagination.page,
-            pageSize: query.pagination.pageSize,
+            page: query.page,
+            pageSize: query.pageSize,
             totalCount: queryResult.value.totalCount,
-            totalPages: totalPages(queryResult.value.totalCount, query.pagination.pageSize),
+            totalPages: totalPages(queryResult.value.totalCount, query.pageSize),
           },
         };
 

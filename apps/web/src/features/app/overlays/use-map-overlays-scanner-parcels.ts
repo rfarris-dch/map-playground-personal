@@ -13,8 +13,9 @@ import type {
   ParcelsFeatureCollection,
 } from "@map-migration/http-contracts/parcels-http";
 import type { IMap } from "@map-migration/map-engine";
-import { Effect, Either } from "effect";
+import { Effect } from "effect";
 import { onBeforeUnmount, shallowRef, watch } from "vue";
+import { useDebouncedLatestEffectTask } from "@/composables/use-debounced-latest-effect-task";
 import {
   buildCenterLimitedBbox,
   buildFacilityAnchorParcelRequests,
@@ -39,7 +40,6 @@ import {
   fetchSpatialAnalysisParcelsPagesEffect,
   type SpatialAnalysisParcelsPagesResult,
 } from "@/features/spatial-analysis/spatial-analysis-parcels-query.service";
-import { createDebouncedLatestRunner } from "@/lib/effect/debounced-latest-runner";
 import { listenToMapEvent } from "@/lib/effect/scoped-listener";
 
 const SCANNER_PARCELS_REFRESH_DEBOUNCE_MS = 260;
@@ -74,8 +74,18 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
   const scannerParcelsBlockedReason = shallowRef<string | null>(null);
   const scannerParcelsError = shallowRef<string | null>(null);
   const isScannerParcelsLoading = shallowRef<boolean>(false);
-  const scannerParcelsRunner = createDebouncedLatestRunner({
+  const scannerParcelsTask = useDebouncedLatestEffectTask({
     debounceMs: SCANNER_PARCELS_REFRESH_DEBOUNCE_MS,
+    onClear() {
+      resetScannerParcelsSelection();
+      scannerParcelsBlockedReason.value = null;
+      scannerParcelsLastFetchKey = null;
+    },
+    onDispose() {
+      resetScannerParcelsSelection();
+      scannerParcelsBlockedReason.value = null;
+      scannerParcelsLastFetchKey = null;
+    },
     onUnexpectedError(error) {
       isScannerParcelsLoading.value = false;
       scannerParcelsBlockedReason.value = null;
@@ -100,10 +110,7 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
   }
 
   async function clearScannerParcelsState(): Promise<void> {
-    await scannerParcelsRunner.interrupt();
-    resetScannerParcelsSelection();
-    scannerParcelsBlockedReason.value = null;
-    scannerParcelsLastFetchKey = null;
+    await scannerParcelsTask.clear();
   }
 
   function startScannerParcelsRefresh(): ScannerParcelsRefreshScope | null {
@@ -154,30 +161,22 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
     ApiEffectError | ApiIngestionRunMismatchError,
     never
   > {
-    return Effect.gen(function* () {
-      const request = createScannerBboxRequest(scope.mapBounds);
-      const result = yield* Effect.either(
-        fetchSpatialAnalysisParcelsPagesEffect({
-          expectedIngestionRunId: options.expectedParcelsIngestionRunId.value,
-          request,
-          cursorRepeatLogContext: "scanner-viewport",
-        })
-      );
-
-      if (Either.isRight(result)) {
-        return result.right;
-      }
-
-      if (result.left._tag !== "ApiHttpError" || result.left.code !== "POLICY_REJECTED") {
-        yield* Effect.fail(result.left);
-      }
-
-      return yield* fetchSpatialAnalysisParcelsPagesEffect({
-        expectedIngestionRunId: options.expectedParcelsIngestionRunId.value,
-        request: createScannerBboxRequest(buildCenterLimitedBbox(scope.mapBounds)),
-        cursorRepeatLogContext: "scanner-fallback-bbox",
-      });
-    });
+    const request = createScannerBboxRequest(scope.mapBounds);
+    return fetchSpatialAnalysisParcelsPagesEffect({
+      expectedIngestionRunId: options.expectedParcelsIngestionRunId.value,
+      request,
+      cursorRepeatLogContext: "scanner-viewport",
+    }).pipe(
+      Effect.catchIf(
+        (error) => error._tag === "ApiHttpError" && error.code === "POLICY_REJECTED",
+        () =>
+          fetchSpatialAnalysisParcelsPagesEffect({
+            expectedIngestionRunId: options.expectedParcelsIngestionRunId.value,
+            request: createScannerBboxRequest(buildCenterLimitedBbox(scope.mapBounds)),
+            cursorRepeatLogContext: "scanner-fallback-bbox",
+          })
+      )
+    );
   }
 
   function buildScannerAnchorRequests(): readonly ParcelEnrichRequest[] {
@@ -198,27 +197,27 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
       });
 
       for (const anchorRequest of selectionArgs.anchorRequests) {
-        const anchorResult = yield* Effect.either(
-          fetchSpatialAnalysisParcelsPagesEffect({
-            expectedIngestionRunId: options.expectedParcelsIngestionRunId.value,
-            request: anchorRequest,
-            cursorRepeatLogContext: "scanner-anchor-bbox",
+        yield* fetchSpatialAnalysisParcelsPagesEffect({
+          expectedIngestionRunId: options.expectedParcelsIngestionRunId.value,
+          request: anchorRequest,
+          cursorRepeatLogContext: "scanner-anchor-bbox",
+        }).pipe(
+          Effect.tap((anchorResult) =>
+            Effect.sync(() => {
+              appendScannerAnchorFeatures(accumulator.parcelById, anchorResult.features);
+              accumulator.truncated = accumulator.truncated || anchorResult.truncated;
+              accumulator.nextCursor = mergeScannerAnchorCursor(
+                accumulator.nextCursor,
+                anchorResult.nextCursor
+              );
+            })
+          ),
+          Effect.catchAll((error) => {
+            if (error instanceof ApiAbortedError) {
+              return Effect.fail(error);
+            }
+            return Effect.void;
           })
-        );
-
-        if (Either.isLeft(anchorResult)) {
-          if (anchorResult.left instanceof ApiAbortedError) {
-            yield* Effect.fail(anchorResult.left);
-          }
-
-          continue;
-        }
-
-        appendScannerAnchorFeatures(accumulator.parcelById, anchorResult.right.features);
-        accumulator.truncated = accumulator.truncated || anchorResult.right.truncated;
-        accumulator.nextCursor = mergeScannerAnchorCursor(
-          accumulator.nextCursor,
-          anchorResult.right.nextCursor
         );
       }
 
@@ -273,41 +272,46 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
         return;
       }
 
-      const result = yield* Effect.either(fetchScannerParcelsFromBboxEffect(scope));
-      yield* Effect.sync(() => {
-        isScannerParcelsLoading.value = false;
-      });
+      yield* fetchScannerParcelsFromBboxEffect(scope).pipe(
+        Effect.tap(() =>
+          Effect.sync(() => {
+            isScannerParcelsLoading.value = false;
+          })
+        ),
+        Effect.flatMap((result) => {
+          const initialSelection: ScannerParcelsSelection = {
+            features: result.features,
+            truncated: result.truncated,
+            nextCursor: result.nextCursor,
+          };
+          return enrichScannerSelectionWithAnchorsEffect({
+            selection: initialSelection,
+            nextCursor: result.nextCursor,
+          });
+        }),
+        Effect.tap((selection) =>
+          Effect.sync(() => {
+            scannerParcelsBlockedReason.value = null;
+            scannerParcelFeatures.value = selection.features;
+            scannerParcelTruncated.value = selection.truncated;
+            scannerParcelNextCursor.value = selection.nextCursor;
+          })
+        ),
+        Effect.catchAll((error) => {
+          isScannerParcelsLoading.value = false;
 
-      if (Either.isLeft(result)) {
-        if (typeof result.left === "undefined") {
-          throw new Error("fetchScannerParcelsFromBboxEffect returned an undefined failure.");
-        }
-        if (!(result.left instanceof Error)) {
-          throw new Error("fetchScannerParcelsFromBboxEffect returned a non-error failure.");
-        }
+          if (typeof error === "undefined") {
+            throw new Error("fetchScannerParcelsFromBboxEffect returned an undefined failure.");
+          }
+          if (!(error instanceof Error)) {
+            throw new Error("fetchScannerParcelsFromBboxEffect returned a non-error failure.");
+          }
 
-        yield* Effect.sync(() => {
-          applyFailedScannerParcelsFetch(result.left);
-        });
-        return;
-      }
-
-      const initialSelection: ScannerParcelsSelection = {
-        features: result.right.features,
-        truncated: result.right.truncated,
-        nextCursor: result.right.nextCursor,
-      };
-      const selection = yield* enrichScannerSelectionWithAnchorsEffect({
-        selection: initialSelection,
-        nextCursor: result.right.nextCursor,
-      });
-
-      yield* Effect.sync(() => {
-        scannerParcelsBlockedReason.value = null;
-        scannerParcelFeatures.value = selection.features;
-        scannerParcelTruncated.value = selection.truncated;
-        scannerParcelNextCursor.value = selection.nextCursor;
-      });
+          return Effect.sync(() => {
+            applyFailedScannerParcelsFetch(error);
+          });
+        })
+      );
     });
   }
   function scheduleScannerParcelsRefresh(): void {
@@ -318,7 +322,7 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
       return;
     }
 
-    scannerParcelsRunner.run(refreshScannerParcelsEffect()).catch((error: unknown) => {
+    scannerParcelsTask.run(refreshScannerParcelsEffect()).catch((error: unknown) => {
       logScannerParcelsError("schedule", error);
     });
   }
@@ -391,15 +395,12 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
   );
 
   onBeforeUnmount(() => {
-    scannerParcelsRunner.dispose().catch((error: unknown) => {
+    scannerParcelsTask.dispose().catch((error: unknown) => {
       logScannerParcelsError("dispose", error);
     });
     bindMoveendMap(null).catch((error: unknown) => {
       logScannerParcelsError("unbind moveend", error);
     });
-    resetScannerParcelsSelection();
-    scannerParcelsBlockedReason.value = null;
-    scannerParcelsLastFetchKey = null;
   });
 
   return {

@@ -38,19 +38,19 @@ mock.module("../../../src/geo/parcels/parcels.repo", () => ({
   enrichParcelsByPolygon: enrichParcelsByPolygonMock,
 }));
 
-mock.module("../../../src/geo/parcels/route/parcels-route-enrich.service", () => ({
+mock.module("../../../src/geo/parcels/parcels-pagination.service", () => ({
   coerceCursor: (value: string | null | undefined) => value ?? null,
   paginateEnrichFeatures: paginateEnrichFeaturesMock,
   resolvePageSize: resolvePageSizeMock,
 }));
 
-mock.module("../../../src/geo/parcels/route/parcels-route-policy.service", () => ({
+mock.module("../../../src/geo/parcels/parcels-policy.service", () => ({
   bboxExceedsLimits: bboxExceedsLimitsMock,
   PARCELS_MAX_POLYGON_JSON_CHARS: 100_000,
   resolvePolygonGeometry: resolvePolygonGeometryMock,
 }));
 
-mock.module("../../../src/geo/parcels/route/parcels-route-meta.service", () => ({
+mock.module("../../../src/geo/parcels/parcels-response-meta.service", () => ({
   profileMetadataWarnings: () => [],
   readIngestionRunId: readIngestionRunIdMock,
 }));
@@ -97,6 +97,7 @@ function createRequest() {
         ],
       ],
     },
+    includeFacilities: true,
     includeParcels: false,
     includeFlood: true,
     limitPerPerspective: 5000,
@@ -175,6 +176,223 @@ function createMarketsSelectionResult(args?: {
       selectionAreaSqKm: args?.selectionAreaSqKm ?? 123.45,
       truncated: args?.truncated ?? false,
       warnings: [...(args?.warnings ?? [])],
+    },
+  };
+}
+
+function createPorts() {
+  return {
+    facilitiesBboxExceedsLimits: (bbox: {
+      east: number;
+      north: number;
+      south: number;
+      west: number;
+    }) => bbox.east - bbox.west > 3 || bbox.north - bbox.south > 2,
+    facilitiesMaxPolygonJsonChars: 100_000,
+    getRuntimeMetadata: () => {
+      const runtimeConfig = getApiRuntimeConfigMock();
+
+      return {
+        countyIntelligenceSourceMode: "postgis" as const,
+        facilitiesDataVersion: runtimeConfig.dataVersion,
+        facilitiesSourceMode: runtimeConfig.facilitiesSourceMode,
+        floodSourceMode: "postgis" as const,
+        marketsDataVersion: runtimeConfig.dataVersion,
+        marketsSourceMode: "postgis" as const,
+      };
+    },
+    isDatasetQueryAllowed: ({
+      dataset,
+      queryGranularity,
+    }: {
+      dataset: string;
+      queryGranularity: string;
+    }) => isDatasetQueryAllowedMock(dataset, queryGranularity),
+    lookupMarketBoundarySourceVersion: async () => {
+      try {
+        return {
+          ok: true as const,
+          value: await getMarketBoundarySourceVersionMock(),
+        };
+      } catch (error) {
+        return {
+          ok: false as const,
+          value: {
+            error,
+            reason:
+              error instanceof Error &&
+              error.message.includes('relation "market_current.market_boundaries" does not exist')
+                ? "source_unavailable"
+                : "query_failed",
+          },
+        };
+      }
+    },
+    lookupSelectionAreaAndCountyIds: async (geometryGeoJson: string) => {
+      try {
+        const rows = await listIntersectedCountyIdsMock(geometryGeoJson);
+
+        return {
+          ok: true as const,
+          value: {
+            countyIds: rows
+              .map((row: { county_fips: string | null }) => row.county_fips)
+              .filter((countyId: string | null): countyId is string => countyId !== null),
+            selectionAreaSqKm: Number(rows[0]?.selection_area_sq_km ?? 0),
+          },
+        };
+      } catch (error) {
+        return {
+          ok: false as const,
+          value: {
+            error,
+            reason:
+              error instanceof Error &&
+              error.message.includes('relation "serve.boundary_county_geom_lod1" does not exist')
+                ? "source_unavailable"
+                : "query_failed",
+          },
+        };
+      }
+    },
+    normalizeSelectionGeometry: async (geometryText: string) => {
+      const normalizedGeometry = await normalizePolygonGeometryGeoJsonMock(geometryText);
+
+      return {
+        geometryText: normalizedGeometry.geometryText,
+        warning: normalizedGeometry.wasRepaired
+          ? {
+              code: "POLYGON_GEOMETRY_REPAIRED",
+              message: `analysis selection:${normalizedGeometry.invalidReason ?? "none"}`,
+            }
+          : null,
+      };
+    },
+    queryCountyScores: queryCountyScoresMock,
+    queryCountyScoresStatus: queryCountyScoresStatusMock,
+    queryFacilitiesByPolygon: queryFacilitiesByPolygonMock,
+    queryFloodAnalysis: queryFloodAnalysisMock,
+    queryMarketsBySelection: queryMarketsBySelectionMock,
+    queryParcels: async (args: {
+      expectedIngestionRunId: string | null;
+      geometryText: string;
+      includeGeometry: "centroid" | "full" | "none" | "simplified";
+      pageSize: number | undefined;
+    }) => {
+      const pageSizeResolution = resolvePageSizeMock(args.pageSize ?? 20_000);
+      const warnings = [...pageSizeResolution.warnings];
+      const rows = await enrichParcelsByPolygonMock(args.geometryText, {
+        cursor: null,
+        includeGeometry: args.includeGeometry,
+        limit: pageSizeResolution.pageSize + 1,
+      });
+      const mappedFeatures = mapParcelRowsToFeaturesMock(rows);
+      const paginated = paginateEnrichFeaturesMock(
+        mappedFeatures,
+        pageSizeResolution.pageSize,
+        warnings
+      );
+      const ingestionRunId = readIngestionRunIdMock(paginated.features) ?? null;
+
+      if (
+        args.expectedIngestionRunId !== null &&
+        paginated.features.length > 0 &&
+        ingestionRunId !== args.expectedIngestionRunId
+      ) {
+        return {
+          ok: false as const,
+          value: {
+            error: new Error("parcel ingestion run mismatch"),
+            reason: "parcel_ingestion_run_mismatch" as const,
+          },
+        };
+      }
+
+      const runtimeConfig = getApiRuntimeConfigMock();
+
+      return {
+        ok: true as const,
+        value: {
+          dataVersion: runtimeConfig.dataVersion,
+          features: paginated.features,
+          ingestionRunId,
+          nextCursor: paginated.nextCursor,
+          sourceMode: runtimeConfig.parcelsSourceMode,
+          truncated: paginated.hasMore,
+          warnings: [
+            ...warnings,
+            ...(paginated.hasMore && paginated.features.length >= 20_000
+              ? [
+                  {
+                    code: "PARCELS_TOTAL_CAP_REACHED",
+                    message:
+                      "Parcel analysis summary is capped at 20000 parcels; use the parcels API for full pagination.",
+                  },
+                ]
+              : []),
+          ],
+        },
+      };
+    },
+    resolveFacilitiesGeometry: (geometry: {
+      coordinates: readonly (readonly (readonly [number, number])[])[];
+    }) => {
+      const ring = geometry.coordinates[0] ?? [];
+      const longitudes = ring.map((coordinate) => coordinate[0]);
+      const latitudes = ring.map((coordinate) => coordinate[1]);
+
+      return {
+        bbox: {
+          east: Math.max(...longitudes),
+          north: Math.max(...latitudes),
+          south: Math.min(...latitudes),
+          west: Math.min(...longitudes),
+        },
+        geometryText: JSON.stringify(geometry),
+      };
+    },
+    resolveFacilitiesLimit: ({
+      perspective,
+      requestedLimit,
+    }: {
+      perspective: "colocation" | "hyperscale";
+      requestedLimit: number;
+    }) =>
+      requestedLimit <= 5000
+        ? {
+            limit: requestedLimit,
+            warning: null,
+          }
+        : {
+            limit: 5000,
+            warning: {
+              code: `${perspective.toUpperCase()}_LIMIT_CLAMPED`,
+              message: `${perspective} facilities limit reduced to 5000 due to server policy.`,
+            },
+          },
+    resolveParcelPolicyWarning: ({
+      geometry,
+      includeParcels,
+    }: {
+      geometry: { geometry: unknown; type: "polygon" };
+      includeParcels: boolean;
+    }) => {
+      if (!includeParcels) {
+        return null;
+      }
+
+      const resolvedGeometry = resolvePolygonGeometryMock({
+        type: "polygon",
+        geometry: geometry.geometry,
+      });
+      if (bboxExceedsLimitsMock(resolvedGeometry.bbox)) {
+        return {
+          code: "PARCELS_POLICY_REJECTED",
+          message: "Parcel analysis skipped because the selection exceeds the parcel AOI limit.",
+        };
+      }
+
+      return null;
     },
   };
 }
@@ -329,11 +547,7 @@ describe("querySpatialAnalysisSummary", () => {
         expectedParcelIngestionRunId: null,
         request: createRequest(),
       },
-      {
-        queryCountyScores: queryCountyScoresMock,
-        queryCountyScoresStatus: queryCountyScoresStatusMock,
-        queryFacilitiesByPolygon: queryFacilitiesByPolygonMock,
-      }
+      createPorts()
     );
 
     expect(result.ok).toBe(true);
@@ -420,11 +634,7 @@ describe("querySpatialAnalysisSummary", () => {
         expectedParcelIngestionRunId: null,
         request: createRequest(),
       },
-      {
-        queryCountyScores: queryCountyScoresMock,
-        queryCountyScoresStatus: queryCountyScoresStatusMock,
-        queryFacilitiesByPolygon: queryFacilitiesByPolygonMock,
-      }
+      createPorts()
     );
 
     expect(result.ok).toBe(true);
@@ -473,11 +683,7 @@ describe("querySpatialAnalysisSummary", () => {
           perspectives: [],
         },
       },
-      {
-        queryCountyScores: queryCountyScoresMock,
-        queryCountyScoresStatus: queryCountyScoresStatusMock,
-        queryFacilitiesByPolygon: queryFacilitiesByPolygonMock,
-      }
+      createPorts()
     );
 
     expect(result.ok).toBe(true);
@@ -547,11 +753,7 @@ describe("querySpatialAnalysisSummary", () => {
           includeParcels: true,
         },
       },
-      {
-        queryCountyScores: queryCountyScoresMock,
-        queryCountyScoresStatus: queryCountyScoresStatusMock,
-        queryFacilitiesByPolygon: queryFacilitiesByPolygonMock,
-      }
+      createPorts()
     );
 
     expect(result.ok).toBe(true);
@@ -603,11 +805,7 @@ describe("querySpatialAnalysisSummary", () => {
           includeFlood: false,
         },
       },
-      {
-        queryCountyScores: queryCountyScoresMock,
-        queryCountyScoresStatus: queryCountyScoresStatusMock,
-        queryFacilitiesByPolygon: queryFacilitiesByPolygonMock,
-      }
+      createPorts()
     );
 
     expect(result.ok).toBe(true);
@@ -662,11 +860,7 @@ describe("querySpatialAnalysisSummary", () => {
         expectedParcelIngestionRunId: null,
         request: createRequest(),
       },
-      {
-        queryCountyScores: queryCountyScoresMock,
-        queryCountyScoresStatus: queryCountyScoresStatusMock,
-        queryFacilitiesByPolygon: queryFacilitiesByPolygonMock,
-      }
+      createPorts()
     );
 
     expect(result.ok).toBe(true);
@@ -713,11 +907,7 @@ describe("querySpatialAnalysisSummary", () => {
         expectedParcelIngestionRunId: null,
         request: createRequest(),
       },
-      {
-        queryCountyScores: queryCountyScoresMock,
-        queryCountyScoresStatus: queryCountyScoresStatusMock,
-        queryFacilitiesByPolygon: queryFacilitiesByPolygonMock,
-      }
+      createPorts()
     );
 
     expect(result.ok).toBe(true);
@@ -782,11 +972,7 @@ describe("querySpatialAnalysisSummary", () => {
           includeParcels: true,
         },
       },
-      {
-        queryCountyScores: queryCountyScoresMock,
-        queryCountyScoresStatus: queryCountyScoresStatusMock,
-        queryFacilitiesByPolygon: queryFacilitiesByPolygonMock,
-      }
+      createPorts()
     );
 
     expect(result).toEqual({
@@ -833,11 +1019,7 @@ describe("querySpatialAnalysisSummary", () => {
         expectedParcelIngestionRunId: null,
         request: createRequest(),
       },
-      {
-        queryCountyScores: queryCountyScoresMock,
-        queryCountyScoresStatus: queryCountyScoresStatusMock,
-        queryFacilitiesByPolygon: queryFacilitiesByPolygonMock,
-      }
+      createPorts()
     );
 
     expect(result.ok).toBe(true);
@@ -910,11 +1092,7 @@ describe("querySpatialAnalysisSummary", () => {
         expectedParcelIngestionRunId: null,
         request: createRequest(),
       },
-      {
-        queryCountyScores: queryCountyScoresMock,
-        queryCountyScoresStatus: queryCountyScoresStatusMock,
-        queryFacilitiesByPolygon: queryFacilitiesByPolygonMock,
-      }
+      createPorts()
     );
 
     expect(result.ok).toBe(true);
@@ -945,11 +1123,7 @@ describe("querySpatialAnalysisSummary", () => {
           },
         },
       },
-      {
-        queryCountyScores: queryCountyScoresMock,
-        queryCountyScoresStatus: queryCountyScoresStatusMock,
-        queryFacilitiesByPolygon: queryFacilitiesByPolygonMock,
-      }
+      createPorts()
     );
 
     expect(result).toEqual({
@@ -997,11 +1171,7 @@ describe("querySpatialAnalysisSummary", () => {
         expectedParcelIngestionRunId: null,
         request: createRequest(),
       },
-      {
-        queryCountyScores: queryCountyScoresMock,
-        queryCountyScoresStatus: queryCountyScoresStatusMock,
-        queryFacilitiesByPolygon: queryFacilitiesByPolygonMock,
-      }
+      createPorts()
     );
 
     expect(result.ok).toBe(true);
@@ -1064,11 +1234,7 @@ describe("querySpatialAnalysisSummary", () => {
           limitPerPerspective: 100_000,
         },
       },
-      {
-        queryCountyScores: queryCountyScoresMock,
-        queryCountyScoresStatus: queryCountyScoresStatusMock,
-        queryFacilitiesByPolygon: queryFacilitiesByPolygonMock,
-      }
+      createPorts()
     );
 
     expect(result.ok).toBe(true);
@@ -1135,11 +1301,7 @@ describe("querySpatialAnalysisSummary", () => {
           includeParcels: true,
         },
       },
-      {
-        queryCountyScores: queryCountyScoresMock,
-        queryCountyScoresStatus: queryCountyScoresStatusMock,
-        queryFacilitiesByPolygon: queryFacilitiesByPolygonMock,
-      }
+      createPorts()
     );
 
     expect(result.ok).toBe(true);

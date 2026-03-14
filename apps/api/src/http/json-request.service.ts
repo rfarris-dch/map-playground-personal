@@ -25,8 +25,8 @@ export async function readJsonBody(
       ok: false,
       response: jsonError(c, {
         requestId: args.requestId,
-        httpStatus: 400,
-        code: "BAD_REQUEST",
+        httpStatus: 415,
+        code: "UNSUPPORTED_MEDIA_TYPE",
         message: "content-type must be application/json",
       }),
     };

@@ -18,6 +18,7 @@ const CountyFipsSchema = z.string().regex(/^[0-9]{5}$/);
 
 export const SpatialAnalysisSummaryRequestSchema = z.object({
   geometry: PolygonGeometrySchema,
+  includeFacilities: z.boolean().default(true),
   includeFlood: z.boolean().default(true),
   includeParcels: z.boolean().default(true),
   limitPerPerspective: z.number().int().positive().max(100_000).default(5000),
@@ -119,10 +120,18 @@ export const SpatialAnalysisSelectionSummarySchema = z.object({
   totalCount: z.number().int().nonnegative(),
 });
 
+export const SpatialAnalysisCountyScoresSchema = CountyScoresResponseSchema.omit({
+  meta: true,
+});
+
+export const SpatialAnalysisCountyScoresStatusSchema = CountyScoresStatusResponseSchema.omit({
+  meta: true,
+});
+
 export const SpatialAnalysisCountyIntelligenceSchema = z.object({
   requestedCountyIds: z.array(CountyFipsSchema),
-  scores: CountyScoresResponseSchema.nullable(),
-  status: CountyScoresStatusResponseSchema.nullable(),
+  scores: SpatialAnalysisCountyScoresSchema.nullable(),
+  status: SpatialAnalysisCountyScoresStatusSchema.nullable(),
   unavailableReason: z.string().nullable(),
 });
 
@@ -233,6 +242,10 @@ export type SpatialAnalysisProviderSummary = z.infer<typeof SpatialAnalysisProvi
 export type SpatialAnalysisParcelRecord = z.infer<typeof SpatialAnalysisParcelRecordSchema>;
 export type SpatialAnalysisFloodSummary = z.infer<typeof SpatialAnalysisFloodSummarySchema>;
 export type SpatialAnalysisSelectionSummary = z.infer<typeof SpatialAnalysisSelectionSummarySchema>;
+export type SpatialAnalysisCountyScores = z.infer<typeof SpatialAnalysisCountyScoresSchema>;
+export type SpatialAnalysisCountyScoresStatus = z.infer<
+  typeof SpatialAnalysisCountyScoresStatusSchema
+>;
 export type SpatialAnalysisCountyIntelligence = z.infer<
   typeof SpatialAnalysisCountyIntelligenceSchema
 >;

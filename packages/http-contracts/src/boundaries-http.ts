@@ -2,8 +2,21 @@ import { GeometrySchema } from "@map-migration/geo-kernel/geometry";
 import { z } from "zod";
 import { ResponseMetaSchema } from "./api-response-meta.js";
 
+function trimQueryValue(value: unknown): unknown {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
 export const BoundaryPowerLevelSchema = z.enum(["county", "state", "country"]);
 export type BoundaryPowerLevel = z.infer<typeof BoundaryPowerLevelSchema>;
+
+export const BoundaryPowerRequestSchema = z.object({
+  level: z.preprocess(trimQueryValue, BoundaryPowerLevelSchema).default("county"),
+});
 
 export function parseBoundaryPowerLevelParam(value: string | undefined): BoundaryPowerLevel | null {
   if (typeof value === "undefined") {
@@ -42,3 +55,4 @@ export const BoundaryPowerFeatureCollectionSchema = z.object({
 export type BoundaryPowerProperties = z.infer<typeof BoundaryPowerPropertiesSchema>;
 export type BoundaryPowerFeature = z.infer<typeof BoundaryPowerFeatureSchema>;
 export type BoundaryPowerFeatureCollection = z.infer<typeof BoundaryPowerFeatureCollectionSchema>;
+export type BoundaryPowerRequest = z.infer<typeof BoundaryPowerRequestSchema>;

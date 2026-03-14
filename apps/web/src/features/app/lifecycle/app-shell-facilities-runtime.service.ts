@@ -119,6 +119,9 @@ export function initializeFacilitiesRuntime(options: UseAppShellMapLifecycleOpti
 }
 
 export function destroyFacilitiesRuntime(options: UseAppShellMapLifecycleOptions): void {
+  options.runtime.layerRuntime.value?.unregisterLayerController(facilitiesLayerId("colocation"));
+  options.runtime.layerRuntime.value?.unregisterLayerController(facilitiesLayerId("hyperscale"));
+
   options.layers.facilitiesHoverController.value?.destroy();
   options.layers.facilitiesHoverController.value = null;
   options.state.hoveredFacility.value = null;

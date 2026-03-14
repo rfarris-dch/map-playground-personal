@@ -3,8 +3,17 @@ import { GeometrySchema } from "@map-migration/geo-kernel/geometry";
 import { z } from "zod";
 import { ResponseMetaSchema } from "./api-response-meta.js";
 
+function trimQueryValue(value: unknown): unknown {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
 export const ParcelGeometryModeSchema = z.enum(["none", "centroid", "simplified", "full"]);
-export const ParcelProfileSchema = z.enum(["analysis_v1", "full_170"]);
+export const ParcelProfileSchema = z.literal("analysis_v1");
 export const ParcelAoiTypeSchema = z.enum(["bbox", "polygon", "county", "tileSet"]);
 
 export const ParcelLineageSchema = z.object({
@@ -41,6 +50,15 @@ export const ParcelDetailResponseSchema = z.object({
   meta: ParcelResponseMetaSchema,
 });
 
+export const ParcelDetailPathSchema = z.object({
+  parcelId: z.preprocess(trimQueryValue, z.string().min(1)),
+});
+
+export const ParcelDetailRequestSchema = z.object({
+  profile: z.preprocess(trimQueryValue, ParcelProfileSchema).default("analysis_v1"),
+  includeGeometry: z.preprocess(trimQueryValue, ParcelGeometryModeSchema).default("full"),
+});
+
 export const ParcelsFeatureCollectionSchema = z.object({
   type: z.literal("FeatureCollection"),
   features: z.array(ParcelFeatureSchema),
@@ -48,7 +66,7 @@ export const ParcelsFeatureCollectionSchema = z.object({
 });
 
 export const ParcelLookupRequestSchema = z.object({
-  parcelIds: z.array(z.string().min(1)).min(1).max(10_000),
+  parcelIds: z.array(z.string().min(1)).min(1).max(1000),
   profile: ParcelProfileSchema.default("analysis_v1"),
   includeGeometry: ParcelGeometryModeSchema.default("none"),
 });
@@ -155,6 +173,8 @@ export type ParcelProfile = z.infer<typeof ParcelProfileSchema>;
 export type ParcelResponseMeta = z.infer<typeof ParcelResponseMetaSchema>;
 export type ParcelFeature = z.infer<typeof ParcelFeatureSchema>;
 export type ParcelDetailResponse = z.infer<typeof ParcelDetailResponseSchema>;
+export type ParcelDetailPath = z.infer<typeof ParcelDetailPathSchema>;
+export type ParcelDetailRequest = z.infer<typeof ParcelDetailRequestSchema>;
 export type ParcelsFeatureCollection = z.infer<typeof ParcelsFeatureCollectionSchema>;
 export type ParcelLookupRequest = z.infer<typeof ParcelLookupRequestSchema>;
 export type ParcelEnrichRequest = z.infer<typeof ParcelEnrichRequestSchema>;

@@ -1,7 +1,7 @@
 import type { Warning } from "@map-migration/geo-kernel/warning";
 import type { MarketSelectionMatch } from "@map-migration/http-contracts/markets-selection-http";
 import type { MarketSelectionRow } from "@/geo/markets/markets-selection.repo";
-import { getSelectionAreaSqKm, listMarketsBySelection } from "@/geo/markets/markets-selection.repo";
+import { listMarketsBySelection } from "@/geo/markets/markets-selection.repo";
 
 export type QueryMarketsSelectionResult =
   | {
@@ -152,20 +152,35 @@ function isMissingRelationError(error: unknown): boolean {
   );
 }
 
+function parseSelectionAreaFromRows(rows: readonly MarketSelectionRow[]): number {
+  const firstRow = rows[0];
+  if (firstRow === undefined) {
+    return 0;
+  }
+
+  const raw = firstRow.selection_area_sq_km;
+  if (typeof raw === "number") {
+    return Number.isFinite(raw) ? raw : 0;
+  }
+
+  if (typeof raw === "string" && raw.trim().length > 0) {
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  return 0;
+}
+
 export async function queryMarketsBySelection(
   args: QueryMarketsSelectionArgs
 ): Promise<QueryMarketsSelectionResult> {
   let rows: readonly MarketSelectionRow[];
-  let selectionAreaSqKm = 0;
   try {
-    [rows, selectionAreaSqKm] = await Promise.all([
-      listMarketsBySelection({
-        geometryGeoJson: args.geometryGeoJson,
-        limit: args.limit + 1,
-        minimumSelectionOverlapPercent: args.minimumSelectionOverlapPercent,
-      }),
-      getSelectionAreaSqKm(args.geometryGeoJson),
-    ]);
+    rows = await listMarketsBySelection({
+      geometryGeoJson: args.geometryGeoJson,
+      limit: args.limit + 1,
+      minimumSelectionOverlapPercent: args.minimumSelectionOverlapPercent,
+    });
   } catch (error) {
     if (isMissingRelationError(error)) {
       return {
@@ -187,6 +202,7 @@ export async function queryMarketsBySelection(
   }
 
   try {
+    const selectionAreaSqKm = parseSelectionAreaFromRows(rows);
     const truncated = rows.length > args.limit;
     const rowsWithinLimit = truncated ? rows.slice(0, args.limit) : rows;
     const matchedMarkets = rowsWithinLimit.map((row, index) =>

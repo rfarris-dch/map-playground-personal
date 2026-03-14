@@ -1,6 +1,6 @@
+import { GeometrySchema } from "@map-migration/geo-kernel/geometry";
 import type { ParcelFeature } from "@map-migration/http-contracts/parcels-http";
 import type { ParcelRow } from "@/geo/parcels/parcels.repo";
-import type { GeometryLike } from "./parcels.mapper.types";
 
 function isObject(value: unknown): value is object {
   return typeof value === "object" && value !== null;
@@ -18,29 +18,18 @@ function parseJsonValue(value: string): unknown {
   }
 }
 
-function readGeometry(value: unknown): GeometryLike | null {
+function readGeometry(value: unknown): ParcelFeature["geometry"] {
   if (value === null || typeof value === "undefined") {
     return null;
   }
 
   const parsed = typeof value === "string" ? parseJsonValue(value) : value;
-  if (!isRecord(parsed)) {
-    throw new Error("Invalid geometry payload: expected object");
+  const geometry = GeometrySchema.safeParse(parsed);
+  if (!geometry.success) {
+    throw new Error("Invalid geometry payload: geometry did not match GeoJSON schema");
   }
 
-  const type = Reflect.get(parsed, "type");
-  const coordinates = Reflect.get(parsed, "coordinates");
-  if (typeof type !== "string") {
-    throw new Error("Invalid geometry payload: missing type");
-  }
-  if (typeof coordinates === "undefined") {
-    throw new Error("Invalid geometry payload: missing coordinates");
-  }
-
-  return {
-    type,
-    coordinates,
-  };
+  return geometry.data;
 }
 
 function readAttrs(value: unknown): Record<string, unknown> {

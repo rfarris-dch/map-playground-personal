@@ -198,7 +198,7 @@ describe("api hardening middleware", () => {
     });
 
     const payload = await response.json();
-    expect(response.status).toBe(400);
-    expect(payload.error.code).toBe("BAD_REQUEST");
+    expect(response.status).toBe(415);
+    expect(payload.error.code).toBe("UNSUPPORTED_MEDIA_TYPE");
   });
 });

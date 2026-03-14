@@ -283,10 +283,14 @@ export async function queryCountyScores(
   let rows: readonly CountyScoreRow[];
   let statusRow: CountyScoresStatusRow;
   try {
-    [rows, statusRow] = await Promise.all([
-      listCountyScores(requestedCountyIds),
-      getCountyScoresStatusSnapshot(),
-    ]);
+    if (args.statusSnapshot !== undefined) {
+      [rows, statusRow] = [await listCountyScores(requestedCountyIds), args.statusSnapshot];
+    } else {
+      [rows, statusRow] = await Promise.all([
+        listCountyScores(requestedCountyIds),
+        getCountyScoresStatusSnapshot(),
+      ]);
+    }
   } catch (error) {
     if (isCountyScoresSourceUnavailable(error)) {
       return {
@@ -351,10 +355,12 @@ export async function queryCountyScores(
   }
 }
 
-export async function queryCountyScoresStatus(): Promise<QueryCountyScoresStatusResult> {
+export async function queryCountyScoresStatus(args?: {
+  readonly statusSnapshot?: CountyScoresStatusRow | undefined;
+}): Promise<QueryCountyScoresStatusResult> {
   let row: CountyScoresStatusRow;
   try {
-    row = await getCountyScoresStatusSnapshot();
+    row = args?.statusSnapshot ?? (await getCountyScoresStatusSnapshot());
   } catch (error) {
     if (isCountyScoresSourceUnavailable(error)) {
       return {

@@ -1,97 +1,40 @@
 import { ApiRoutes } from "@map-migration/http-contracts/api-routes";
 import {
-  type ProviderSortBy,
-  ProviderSortBySchema,
+  type ProvidersTableRequest,
+  ProvidersTableRequestSchema,
   type ProvidersTableResponse,
   ProvidersTableResponseSchema,
-  type SortDirection,
-  SortDirectionSchema,
 } from "@map-migration/http-contracts/table-contracts";
 import type { Env, Hono } from "hono";
 import { queryProvidersTable } from "@/geo/providers/providers-query.service";
 import { jsonOk, toDebugDetails } from "@/http/api-response";
 import { fromApiRequest, routeError, runEffectRoute } from "@/http/effect-route";
-import { resolvePaginationParams, totalPages } from "@/http/pagination-params.service";
-
-interface ProvidersQueryParams {
-  readonly pagination: {
-    readonly offset: number;
-    readonly page: number;
-    readonly pageSize: number;
-  };
-  readonly sortBy: ProviderSortBy;
-  readonly sortOrder: SortDirection;
-}
-
-function resolveProviderSortBy(value: string | undefined): ProviderSortBy | null {
-  if (typeof value === "undefined") {
-    return "name";
-  }
-
-  const parsed = ProviderSortBySchema.safeParse(value);
-  if (!parsed.success) {
-    return null;
-  }
-
-  return parsed.data;
-}
-
-function resolveSortDirection(value: string | undefined): SortDirection | null {
-  if (typeof value === "undefined") {
-    return "asc";
-  }
-
-  const parsed = SortDirectionSchema.safeParse(value);
-  if (!parsed.success) {
-    return null;
-  }
-
-  return parsed.data;
-}
+import { totalPages } from "@/http/pagination-params.service";
+import { setCacheControlHeader } from "@/http/response-meta.service";
+import { getDatasetCacheTtlSeconds } from "@/http/spatial-analysis-policy.service";
 
 function resolveProvidersQueryParams(
   page: string | undefined,
   pageSize: string | undefined,
   sortByValue: string | undefined,
   sortOrderValue: string | undefined
-): ProvidersQueryParams {
-  const paginationResolution = resolvePaginationParams(page, pageSize, {
-    defaultPageSize: 100,
-    maxPageSize: 500,
-    maxOffset: 1_000_000,
+): ProvidersTableRequest {
+  const request = ProvidersTableRequestSchema.safeParse({
+    page,
+    pageSize,
+    sortBy: sortByValue,
+    sortOrder: sortOrderValue,
   });
-
-  if (!paginationResolution.ok) {
+  if (!request.success) {
     throw routeError({
       httpStatus: 400,
-      code: "INVALID_PAGINATION",
-      message: paginationResolution.message,
+      code: "INVALID_PROVIDERS_TABLE_REQUEST",
+      message: "invalid providers table request",
+      details: toDebugDetails(request.error),
     });
   }
 
-  const sortBy = resolveProviderSortBy(sortByValue);
-  if (sortBy === null) {
-    throw routeError({
-      httpStatus: 400,
-      code: "INVALID_SORT",
-      message: "sortBy must be one of: name, category, country, state, listingCount, updatedAt",
-    });
-  }
-
-  const sortOrder = resolveSortDirection(sortOrderValue);
-  if (sortOrder === null) {
-    throw routeError({
-      httpStatus: 400,
-      code: "INVALID_SORT",
-      message: "sortOrder must be one of: asc, desc",
-    });
-  }
-
-  return {
-    pagination: paginationResolution.value,
-    sortBy,
-    sortOrder,
-  };
+  return request.data;
 }
 
 function providerResultError(result: { readonly error: unknown; readonly reason: string }) {
@@ -114,10 +57,11 @@ export function registerProvidersRoute<E extends Env>(app: Hono<E>): void {
           honoContext.req.query("sortBy"),
           honoContext.req.query("sortOrder")
         );
+        const offset = (queryParams.page - 1) * queryParams.pageSize;
 
         const queryResult = await queryProvidersTable({
-          limit: queryParams.pagination.pageSize,
-          offset: queryParams.pagination.offset,
+          limit: queryParams.pageSize,
+          offset,
           sortBy: queryParams.sortBy,
           sortOrder: queryParams.sortOrder,
         });
@@ -126,13 +70,15 @@ export function registerProvidersRoute<E extends Env>(app: Hono<E>): void {
           throw providerResultError(queryResult.value);
         }
 
+        setCacheControlHeader(honoContext, getDatasetCacheTtlSeconds("facilities"));
+
         const payload: ProvidersTableResponse = {
           rows: [...queryResult.value.rows],
           pagination: {
-            page: queryParams.pagination.page,
-            pageSize: queryParams.pagination.pageSize,
+            page: queryParams.page,
+            pageSize: queryParams.pageSize,
             totalCount: queryResult.value.totalCount,
-            totalPages: totalPages(queryResult.value.totalCount, queryParams.pagination.pageSize),
+            totalPages: totalPages(queryResult.value.totalCount, queryParams.pageSize),
           },
         };
 

@@ -3,7 +3,11 @@ import type {
   CountyScoresResponse,
   CountyScoresStatusResponse,
 } from "@map-migration/http-contracts/county-intelligence-http";
-import type { SpatialAnalysisSummaryResponse } from "@map-migration/http-contracts/spatial-analysis-summary-http";
+import type {
+  SpatialAnalysisCountyScores,
+  SpatialAnalysisCountyScoresStatus,
+  SpatialAnalysisSummaryResponse,
+} from "@map-migration/http-contracts/spatial-analysis-summary-http";
 import { buildMeasureSelectionSummary } from "@/features/measure/measure-analysis.service";
 import type { ScannerSummary } from "@/features/scanner/scanner.types";
 import type { SpatialAnalysisSummaryModel } from "@/features/spatial-analysis/spatial-analysis-summary.types";
@@ -34,6 +38,49 @@ function emptyFloodSummary() {
     parcelCountOutsideMappedFlood: 0,
     selectionAreaSqKm: 0,
     unavailableReason: null,
+  };
+}
+
+function toSpatialAnalysisCountyScores(
+  value: CountyScoresResponse | null
+): SpatialAnalysisCountyScores | null {
+  if (value === null) {
+    return null;
+  }
+
+  return {
+    rows: value.rows,
+    summary: value.summary,
+  };
+}
+
+function toSpatialAnalysisCountyScoresStatus(
+  value: CountyScoresStatusResponse | null
+): SpatialAnalysisCountyScoresStatus | null {
+  if (value === null) {
+    return null;
+  }
+
+  return {
+    availableFeatureFamilies: value.availableFeatureFamilies,
+    blockedCountyCount: value.blockedCountyCount,
+    dataVersion: value.dataVersion,
+    datasetAvailable: value.datasetAvailable,
+    deferredCountyCount: value.deferredCountyCount,
+    featureCoverage: value.featureCoverage,
+    formulaVersion: value.formulaVersion,
+    freshCountyCount: value.freshCountyCount,
+    highConfidenceCount: value.highConfidenceCount,
+    inputDataVersion: value.inputDataVersion,
+    lowConfidenceCount: value.lowConfidenceCount,
+    mediumConfidenceCount: value.mediumConfidenceCount,
+    methodologyId: value.methodologyId,
+    missingFeatureFamilies: value.missingFeatureFamilies,
+    publicationRunId: value.publicationRunId,
+    publishedAt: value.publishedAt,
+    rankedCountyCount: value.rankedCountyCount,
+    rowCount: value.rowCount,
+    sourceCountyCount: value.sourceCountyCount,
   };
 }
 
@@ -128,9 +175,9 @@ export function buildScannerSpatialAnalysisSummary(args: {
     },
     countyIntelligence: {
       requestedCountyIds: args.countyIds,
-      scores: args.countyScores,
+      scores: toSpatialAnalysisCountyScores(args.countyScores),
       scoresError: args.countyScoresError,
-      status: args.countyScoresStatus,
+      status: toSpatialAnalysisCountyScoresStatus(args.countyScoresStatus),
       statusError: args.countyScoresStatusError,
       unavailableReason: null,
     },

@@ -1,9 +1,9 @@
-import type { SafeParseSchema } from "@map-migration/geo-kernel/geometry";
 import { ApiErrorResponseSchema } from "@map-migration/http-contracts/api-error";
 import { ApiHeaders } from "@map-migration/http-contracts/api-routes";
 import { TaggedError } from "effect/Data";
 import { catchAll, die, type Effect, either, fail, map } from "effect/Effect";
 import { type Either, isRight } from "effect/Either";
+import type { SafeParseSchema } from "./effect";
 import { type FetchJsonEffectSuccess, fetchJsonEffect, runEffectPromise } from "./effect";
 
 export interface ParsedApiError {
@@ -52,22 +52,13 @@ export class ApiNetworkError extends TaggedError("ApiNetworkError")<{
 
 export class ApiHttpError extends TaggedError("ApiHttpError")<ApiFailureShape> {}
 
-export class ApiPolicyRejectedError extends TaggedError(
-  "ApiPolicyRejectedError"
-)<ApiFailureShape> {}
-
 export class ApiSchemaError extends TaggedError("ApiSchemaError")<{
   readonly details: unknown;
   readonly kind: "json-parse" | "schema";
   readonly requestId: string;
 }> {}
 
-export type ApiEffectError =
-  | ApiAbortedError
-  | ApiHttpError
-  | ApiNetworkError
-  | ApiPolicyRejectedError
-  | ApiSchemaError;
+export type ApiEffectError = ApiAbortedError | ApiHttpError | ApiNetworkError | ApiSchemaError;
 
 const API_GET_RETRY_ATTEMPTS = 3;
 const API_GET_RETRY_BASE_DELAY_MS = 150;
@@ -179,7 +170,7 @@ export function toApiResultFailure<TValue>(
   return httpFailure;
 }
 
-export function apiGetJsonEffect<TValue>(
+export function apiRequestJsonEffect<TValue>(
   url: string,
   schema: SafeParseSchema<TValue>,
   init: RequestInit = {},
@@ -224,18 +215,6 @@ export function apiGetJsonEffect<TValue>(
         case "RequestHttpError": {
           const apiError = parseApiError(error.details);
           if (apiError !== null) {
-            if (apiError.code === "POLICY_REJECTED") {
-              return fail(
-                new ApiPolicyRejectedError({
-                  requestId: apiError.requestId,
-                  status: error.status,
-                  code: apiError.code,
-                  message: apiError.message,
-                  details: apiError.details,
-                })
-              );
-            }
-
             return fail(
               new ApiHttpError({
                 requestId: apiError.requestId,
@@ -279,14 +258,14 @@ export function apiGetJsonEffect<TValue>(
   );
 }
 
-export async function apiGetJson<TValue>(
+export async function apiRequestJson<TValue>(
   url: string,
   schema: SafeParseSchema<TValue>,
   init: RequestInit = {},
   options: { requestIdPrefix?: string } = {}
 ): Promise<ApiResult<TValue>> {
   const result: Either<ApiEffectSuccess<TValue>, ApiEffectError> = await runEffectPromise(
-    either(apiGetJsonEffect(url, schema, init, options))
+    either(apiRequestJsonEffect(url, schema, init, options))
   );
 
   if (isRight(result)) {

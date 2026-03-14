@@ -16,9 +16,6 @@ export interface ProviderListRow {
   readonly state: string | null;
   readonly supports_colocation: number | string | boolean | null;
   readonly supports_hyperscale: number | string | boolean | null;
-  readonly updated_at: Date | string | null;
-}
-
-export interface ProviderCountRow {
   readonly total_count: number | string;
+  readonly updated_at: Date | string | null;
 }

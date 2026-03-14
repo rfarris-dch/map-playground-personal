@@ -19,11 +19,11 @@ export const LAYER_ORDER_INVARIANTS: LayerOrderInvariants = {
     getFacilitiesStyleLayerIds("facilities.hyperscale").pointLayerId,
   ],
   flood100BelowParcelOutlines: [
-    floodStyleLayerIds.outline100LayerId,
+    floodStyleLayerIds.fill100LayerId,
     getParcelsStyleLayerIds().outlineLayerId,
   ],
   flood500BelowParcelOutlines: [
-    floodStyleLayerIds.outline500LayerId,
+    floodStyleLayerIds.fill500LayerId,
     getParcelsStyleLayerIds().outlineLayerId,
   ],
   hydroLabelsBelowFacilityPoints: [

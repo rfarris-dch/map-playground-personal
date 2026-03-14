@@ -1,8 +1,10 @@
+import { ApiRoutes } from "@map-migration/http-contracts/api-routes";
 import type { IMap } from "@map-migration/map-engine";
 import type { WaterLayerVisibilityController } from "@/features/water/water.types";
+import { mountLayerVisibilityController } from "@/lib/layer-visibility-controller.service";
 import type { MountWaterLayerVisibilityOptions } from "./water.layer.types";
 
-const WATER_TILE_URL = "/api/tiles/usgs-water/{z}/{x}/{y}";
+const WATER_TILE_URL = `${ApiRoutes.usgsWaterTile}/{z}/{x}/{y}`;
 
 function sourceIdForLayer(styleLayerId: string): string {
   return `${styleLayerId}.source`;
@@ -39,32 +41,22 @@ function ensureWaterLayer(map: IMap, styleLayerId: string): void {
 export function mountWaterLayerVisibility(
   options: MountWaterLayerVisibilityOptions
 ): WaterLayerVisibilityController {
-  let visible = true;
-
   function applyVisibility(): void {
     if (!options.map.hasLayer(options.styleLayerId)) {
       return;
     }
 
-    options.map.setLayerVisibility(options.styleLayerId, visible);
+    options.map.setLayerVisibility(options.styleLayerId, visibilityState.value);
   }
-
-  const onLoad = (): void => {
-    ensureWaterLayer(options.map, options.styleLayerId);
-    applyVisibility();
+  const visibilityState = {
+    value: true,
   };
-
-  options.map.on("load", onLoad);
-
-  return {
-    layerId: options.layerId,
-    setVisible(nextVisible: boolean): void {
-      visible = nextVisible;
+  const controller = mountLayerVisibilityController({
+    applyVisibility(visible) {
+      visibilityState.value = visible;
       applyVisibility();
     },
-    destroy(): void {
-      options.map.off("load", onLoad);
-
+    destroyLayers() {
       if (options.map.hasLayer(options.styleLayerId)) {
         options.map.removeLayer(options.styleLayerId);
       }
@@ -73,6 +65,21 @@ export function mountWaterLayerVisibility(
       if (options.map.hasSource(sourceId)) {
         options.map.removeSource(sourceId);
       }
+    },
+    ensureReady() {
+      ensureWaterLayer(options.map, options.styleLayerId);
+    },
+    map: options.map,
+    startWhenStyleReady: true,
+  });
+
+  return {
+    layerId: options.layerId,
+    setVisible(nextVisible: boolean): void {
+      controller.setVisible(nextVisible);
+    },
+    destroy(): void {
+      controller.destroy();
     },
   };
 }

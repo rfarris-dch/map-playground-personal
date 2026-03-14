@@ -44,10 +44,20 @@ function readSourceMode(
 function createApiRuntimeConfig(
   env: Readonly<Record<string, string | undefined>>
 ): ApiRuntimeConfig {
+  const analysisSummarySourceMode = readSourceMode(
+    env,
+    "ANALYSIS_SUMMARY_SOURCE_MODE",
+    ApiDefaults.analysisSummarySourceMode
+  );
   const boundariesSourceMode = readSourceMode(
     env,
     "BOUNDARIES_SOURCE_MODE",
     ApiDefaults.boundariesSourceMode
+  );
+  const countyIntelligenceSourceMode = readSourceMode(
+    env,
+    "COUNTY_INTELLIGENCE_SOURCE_MODE",
+    ApiDefaults.countyIntelligenceSourceMode
   );
   const facilitiesSourceMode = readSourceMode(
     env,
@@ -64,20 +74,31 @@ function createApiRuntimeConfig(
     "FIBER_LOCATOR_SOURCE_MODE",
     ApiDefaults.fiberLocatorSourceMode
   );
+  const marketsSourceMode = readSourceMode(
+    env,
+    "MARKETS_SOURCE_MODE",
+    ApiDefaults.marketsSourceMode
+  );
 
+  assertPostgisServingMode("ANALYSIS_SUMMARY_SOURCE_MODE", analysisSummarySourceMode);
   assertPostgisServingMode("BOUNDARIES_SOURCE_MODE", boundariesSourceMode);
+  assertPostgisServingMode("COUNTY_INTELLIGENCE_SOURCE_MODE", countyIntelligenceSourceMode);
   assertPostgisServingMode("FACILITIES_SOURCE_MODE", facilitiesSourceMode);
+  assertPostgisServingMode("MARKETS_SOURCE_MODE", marketsSourceMode);
   assertPostgisServingMode("PARCELS_SOURCE_MODE", parcelsSourceMode);
   assertExternalXyzServingMode("FIBER_LOCATOR_SOURCE_MODE", fiberLocatorSourceMode);
 
   return Object.freeze<ApiRuntimeConfig>({
+    analysisSummarySourceMode,
     boundariesSourceMode,
+    countyIntelligenceSourceMode,
     dataVersion: resolveDataVersion({
       env,
       fallback: ApiDefaults.dataVersion,
     }),
     facilitiesSourceMode,
     fiberLocatorSourceMode,
+    marketsSourceMode,
     parcelsSourceMode,
   });
 }

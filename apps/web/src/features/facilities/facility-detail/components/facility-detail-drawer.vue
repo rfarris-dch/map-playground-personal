@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { computed } from "vue";
-  import Button from "@/components/ui/button/button.vue";
+  import EntityDetailDrawerShell from "@/components/map/entity-detail-drawer-shell.vue";
   import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";
   import { formatNullableMw } from "@/features/facilities/facility-detail/detail.service";
   import type { FacilityDetailPayload } from "@/features/facilities/facility-detail/detail.types";
@@ -21,85 +21,69 @@
   const detailProperties = computed(() => props.detail?.response.feature.properties ?? null);
   const facilityName = computed(() => detailProperties.value?.facilityName ?? "Selected facility");
   const providerName = computed(() => detailProperties.value?.providerName ?? "Unknown provider");
+  const eyebrow = computed(() => {
+    if (props.selectedFacility === null) {
+      return "Facility detail";
+    }
 
-  function onClose(): void {
-    emit("close");
-  }
+    return `${props.selectedFacility.perspective} facility`;
+  });
 </script>
 
 <template>
-  <aside
-    v-if="props.selectedFacility !== null"
-    class="map-glass-elevated pointer-events-auto absolute right-4 top-4 z-10 w-[min(28rem,calc(100%-2rem))] rounded-lg p-4"
-    aria-label="Facility detail"
+  <EntityDetailDrawerShell
+    ariaLabel="Facility detail"
+    :selected="props.selectedFacility"
+    :eyebrow="eyebrow"
+    :title="facilityName"
+    :is-loading="props.isLoading"
+    :is-error="props.isError"
+    loading-message="Loading facility detail..."
+    error-message="Facility detail failed to load. Try selecting the facility again."
+    @close="emit('close')"
   >
-    <header class="mb-3 flex items-center gap-2">
-      <h2 class="m-0 text-sm font-semibold tracking-tight">
-        {{ props.selectedFacility.perspective }}
-        facility
-      </h2>
-      <p class="m-0 truncate text-base font-semibold">{{ facilityName }}</p>
-      <Button variant="glass" size="sm" class="ml-auto" @click="onClose">Close</Button>
-    </header>
+    <dl v-if="props.detail !== null" class="m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-2">
+      <dt class="text-xs text-muted-foreground">Request</dt>
+      <dd class="m-0 text-sm font-mono">{{ props.detail.requestId }}</dd>
 
-    <div v-if="props.isLoading" class="space-y-3" role="status" aria-live="polite" aria-busy="true">
-      <div class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2">
-        <div class="h-3 w-16 animate-pulse rounded bg-muted/50" />
-        <div class="h-3 w-32 animate-pulse rounded bg-muted/40" />
-        <div class="h-3 w-14 animate-pulse rounded bg-muted/50" />
-        <div class="h-3 w-40 animate-pulse rounded bg-muted/40" />
-        <div class="h-3 w-16 animate-pulse rounded bg-muted/50" />
-        <div class="h-3 w-28 animate-pulse rounded bg-muted/40" />
-      </div>
-      <p class="m-0 text-xs text-muted-foreground">Loading facility detail...</p>
-    </div>
-    <p v-else-if="props.isError" class="m-0 text-xs text-muted-foreground">
-      Facility detail failed to load. Try selecting the facility again.
-    </p>
-    <template v-else-if="props.detail !== null">
-      <dl class="m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-2">
-        <dt class="text-xs text-muted-foreground">Request</dt>
-        <dd class="m-0 text-sm font-mono">{{ props.detail.requestId }}</dd>
+      <dt class="text-xs text-muted-foreground">Facility</dt>
+      <dd class="m-0 text-sm">{{ facilityName }}</dd>
 
-        <dt class="text-xs text-muted-foreground">Facility</dt>
-        <dd class="m-0 text-sm">{{ facilityName }}</dd>
+      <dt class="text-xs text-muted-foreground">Provider</dt>
+      <dd class="m-0 text-sm">{{ providerName }}</dd>
 
-        <dt class="text-xs text-muted-foreground">Provider</dt>
-        <dd class="m-0 text-sm">{{ providerName }}</dd>
+      <dt class="text-xs text-muted-foreground">County FIPS</dt>
+      <dd class="m-0 text-sm">{{ props.detail.response.feature.properties.countyFips }}</dd>
 
-        <dt class="text-xs text-muted-foreground">County FIPS</dt>
-        <dd class="m-0 text-sm">{{ props.detail.response.feature.properties.countyFips }}</dd>
+      <dt class="text-xs text-muted-foreground">Semantic</dt>
+      <dd class="m-0 text-sm">
+        {{ props.detail.response.feature.properties.commissionedSemantic }}
+      </dd>
 
-        <dt class="text-xs text-muted-foreground">Semantic</dt>
-        <dd class="m-0 text-sm">
-          {{ props.detail.response.feature.properties.commissionedSemantic }}
-        </dd>
+      <dt class="text-xs text-muted-foreground">Lease / Own</dt>
+      <dd class="m-0 text-sm">
+        {{ props.detail.response.feature.properties.leaseOrOwn ?? "n/a" }}
+      </dd>
 
-        <dt class="text-xs text-muted-foreground">Lease / Own</dt>
-        <dd class="m-0 text-sm">
-          {{ props.detail.response.feature.properties.leaseOrOwn ?? "n/a" }}
-        </dd>
+      <dt class="text-xs text-muted-foreground">Commissioned</dt>
+      <dd class="m-0 text-sm">
+        {{ formatNullableMw(props.detail.response.feature.properties.commissionedPowerMw) }}
+      </dd>
 
-        <dt class="text-xs text-muted-foreground">Commissioned</dt>
-        <dd class="m-0 text-sm">
-          {{ formatNullableMw(props.detail.response.feature.properties.commissionedPowerMw) }}
-        </dd>
+      <dt class="text-xs text-muted-foreground">Available</dt>
+      <dd class="m-0 text-sm">
+        {{ formatNullableMw(props.detail.response.feature.properties.availablePowerMw) }}
+      </dd>
 
-        <dt class="text-xs text-muted-foreground">Available</dt>
-        <dd class="m-0 text-sm">
-          {{ formatNullableMw(props.detail.response.feature.properties.availablePowerMw) }}
-        </dd>
+      <dt class="text-xs text-muted-foreground">Under Construction</dt>
+      <dd class="m-0 text-sm">
+        {{ formatNullableMw(props.detail.response.feature.properties.underConstructionPowerMw) }}
+      </dd>
 
-        <dt class="text-xs text-muted-foreground">Under Construction</dt>
-        <dd class="m-0 text-sm">
-          {{ formatNullableMw(props.detail.response.feature.properties.underConstructionPowerMw) }}
-        </dd>
-
-        <dt class="text-xs text-muted-foreground">Planned</dt>
-        <dd class="m-0 text-sm">
-          {{ formatNullableMw(props.detail.response.feature.properties.plannedPowerMw) }}
-        </dd>
-      </dl>
-    </template>
-  </aside>
+      <dt class="text-xs text-muted-foreground">Planned</dt>
+      <dd class="m-0 text-sm">
+        {{ formatNullableMw(props.detail.response.feature.properties.plannedPowerMw) }}
+      </dd>
+    </dl>
+  </EntityDetailDrawerShell>
 </template>

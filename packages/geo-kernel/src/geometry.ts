@@ -7,10 +7,6 @@ export interface BBox {
   readonly west: number;
 }
 
-export interface SafeParseSchema<T> {
-  safeParse(input: unknown): { success: true; data: T } | { success: false; error: unknown };
-}
-
 const LongitudeSchema = z.number().finite().min(-180).max(180);
 const LatitudeSchema = z.number().finite().min(-90).max(90);
 
@@ -81,12 +77,24 @@ export function formatBboxParam(bbox: BBox): string {
   return `${bbox.west},${bbox.south},${bbox.east},${bbox.north}`;
 }
 
-export const GeometrySchema = z.object({
-  type: z.string(),
-  coordinates: z.unknown(),
-});
-
 export const PolygonCoordinateSchema = z.tuple([LongitudeSchema, LatitudeSchema]);
+export const LineStringCoordinateSchema = PolygonCoordinateSchema;
+export const PointGeometrySchema = z.object({
+  type: z.literal("Point"),
+  coordinates: z.tuple([LongitudeSchema, LatitudeSchema]),
+});
+export const MultiPointGeometrySchema = z.object({
+  type: z.literal("MultiPoint"),
+  coordinates: z.array(PolygonCoordinateSchema),
+});
+export const LineStringGeometrySchema = z.object({
+  type: z.literal("LineString"),
+  coordinates: z.array(LineStringCoordinateSchema).min(2),
+});
+export const MultiLineStringGeometrySchema = z.object({
+  type: z.literal("MultiLineString"),
+  coordinates: z.array(z.array(LineStringCoordinateSchema).min(2)).min(1),
+});
 export const PolygonRingSchema = z.array(PolygonCoordinateSchema).min(4);
 
 export const PolygonGeometrySchema = z
@@ -117,10 +125,54 @@ export const PolygonGeometrySchema = z
     }
   });
 
-export const PointGeometrySchema = z.object({
-  type: z.literal("Point"),
-  coordinates: z.tuple([LongitudeSchema, LatitudeSchema]),
-});
+export const MultiPolygonGeometrySchema = z
+  .object({
+    type: z.literal("MultiPolygon"),
+    coordinates: z.array(z.array(PolygonRingSchema).min(1)).min(1),
+  })
+  .superRefine((geometry, ctx) => {
+    for (let polygonIndex = 0; polygonIndex < geometry.coordinates.length; polygonIndex += 1) {
+      const polygon = geometry.coordinates[polygonIndex];
+      if (typeof polygon === "undefined") {
+        continue;
+      }
+
+      for (let ringIndex = 0; ringIndex < polygon.length; ringIndex += 1) {
+        const ring = polygon[ringIndex];
+        if (typeof ring === "undefined" || ring.length < 4) {
+          continue;
+        }
+
+        const firstVertex = ring[0];
+        const lastVertex = ring.at(-1);
+        if (!(firstVertex && lastVertex)) {
+          continue;
+        }
+
+        if (firstVertex[0] !== lastVertex[0] || firstVertex[1] !== lastVertex[1]) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "polygon rings must be closed (first vertex must equal last vertex)",
+            path: ["coordinates", polygonIndex, ringIndex],
+          });
+        }
+      }
+    }
+  });
+
+export const GeometrySchema = z.union([
+  PointGeometrySchema,
+  MultiPointGeometrySchema,
+  LineStringGeometrySchema,
+  MultiLineStringGeometrySchema,
+  PolygonGeometrySchema,
+  MultiPolygonGeometrySchema,
+]);
 
 export type PolygonGeometry = z.infer<typeof PolygonGeometrySchema>;
 export type PointGeometry = z.infer<typeof PointGeometrySchema>;
+export type MultiPointGeometry = z.infer<typeof MultiPointGeometrySchema>;
+export type LineStringGeometry = z.infer<typeof LineStringGeometrySchema>;
+export type MultiLineStringGeometry = z.infer<typeof MultiLineStringGeometrySchema>;
+export type MultiPolygonGeometry = z.infer<typeof MultiPolygonGeometrySchema>;
+export type Geometry = z.infer<typeof GeometrySchema>;

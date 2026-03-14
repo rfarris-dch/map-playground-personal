@@ -21,6 +21,7 @@ export function initializeWaterRuntime(options: UseAppShellMapLifecycleOptions):
 }
 
 export function destroyWaterRuntime(options: UseAppShellMapLifecycleOptions): void {
+  options.runtime.layerRuntime.value?.unregisterLayerController(WATER_FEATURES_LAYER_ID);
   options.layers.waterController.value?.destroy();
   options.layers.waterController.value = null;
 }

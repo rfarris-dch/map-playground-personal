@@ -41,7 +41,7 @@ import type {
   LayerRuntimeSnapshot,
 } from "@/features/layers/layer-runtime.types";
 import type { ParcelsLayerController, ParcelsStatus } from "@/features/parcels/parcels.types";
-import type { PowerLayerVisibilityController } from "@/features/power/power.types";
+import type { PowerLayerMountResult } from "@/features/power/power.layer.types";
 import type { PowerHoverController, PowerHoverState } from "@/features/power/power-hover.types";
 import { cloneSelectionRing } from "@/features/selection/selection-analysis-request.service";
 import type {
@@ -69,7 +69,7 @@ export function useAppShellState(): UseAppShellStateResult {
   const floodLayersController = shallowRef<FloodLayerMountResult | null>(null);
   const gasPipelineController = shallowRef<GasPipelineLayerController | null>(null);
   const hydroBasinsController = shallowRef<HydroBasinsVisibilityController | null>(null);
-  const powerControllers = shallowRef<readonly PowerLayerVisibilityController[]>([]);
+  const powerLayersController = shallowRef<PowerLayerMountResult | null>(null);
   const parcelsController = shallowRef<ParcelsLayerController | null>(null);
   const layerRuntime = shallowRef<LayerRuntimeController | null>(null);
   const layerRuntimeSnapshot = shallowRef<LayerRuntimeSnapshot | null>(null);
@@ -197,7 +197,7 @@ export function useAppShellState(): UseAppShellStateResult {
     floodLayersController,
     gasPipelineController,
     hydroBasinsController,
-    powerControllers,
+    powerLayersController,
     parcelsController,
     layerRuntime,
     layerRuntimeSnapshot,

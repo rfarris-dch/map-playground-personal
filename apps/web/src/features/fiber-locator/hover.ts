@@ -1,4 +1,4 @@
-import type { IMap, MapPointerEvent } from "@map-migration/map-engine";
+import type { FeatureStateTarget, IMap, MapPointerEvent } from "@map-migration/map-engine";
 import { fiberLocatorLineLabel } from "@/features/fiber-locator/fiber-locator.service";
 import type {
   FiberLocatorLineId,
@@ -9,82 +9,16 @@ import type {
   FiberLocatorHoverOptions,
   FiberLocatorHoverState,
 } from "@/features/fiber-locator/hover.types";
-import type { HoverTarget } from "./hover.types";
-
-function isFeatureId(value: unknown): value is number | string {
-  return typeof value === "number" || typeof value === "string";
-}
-
-function readProperty(properties: unknown, key: string): unknown {
-  if (typeof properties !== "object" || properties === null) {
-    return null;
-  }
-
-  return Reflect.get(properties, key);
-}
-
-function readStringProperty(properties: unknown, key: string): string | null {
-  const value = readProperty(properties, key);
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const normalized = value.trim();
-  if (normalized.length === 0) {
-    return null;
-  }
-
-  return normalized;
-}
-
-function readFeatureSource(feature: { source?: unknown }): string | null {
-  if (typeof feature.source !== "string") {
-    return null;
-  }
-
-  const normalized = feature.source.trim();
-  if (normalized.length === 0) {
-    return null;
-  }
-
-  return normalized;
-}
+import { createFeatureHoverController } from "@/lib/map-feature-hover.service";
+import {
+  isFeatureId,
+  readFeatureSource,
+  readFeatureSourceLayerName,
+  readFirstAvailableString,
+} from "@/lib/map-feature-readers";
 
 function normalizeSourceLayerName(value: string): string {
   return value.trim().toLowerCase();
-}
-
-function readFeatureSourceLayerName(feature: {
-  properties?: unknown;
-  sourceLayer?: unknown;
-}): string | null {
-  if (typeof feature.sourceLayer === "string") {
-    const normalized = normalizeSourceLayerName(feature.sourceLayer);
-    if (normalized.length > 0) {
-      return normalized;
-    }
-  }
-
-  const layerNameFromProperties = readStringProperty(feature.properties, "layer_name");
-  if (layerNameFromProperties !== null) {
-    const normalized = normalizeSourceLayerName(layerNameFromProperties);
-    if (normalized.length > 0) {
-      return normalized;
-    }
-  }
-
-  return null;
-}
-
-function readFirstAvailableString(properties: unknown, keys: readonly string[]): string | null {
-  for (const key of keys) {
-    const value = readStringProperty(properties, key);
-    if (value !== null) {
-      return value;
-    }
-  }
-
-  return null;
 }
 
 function resolveSourceLayerLabel(
@@ -126,7 +60,9 @@ function toHoverState(
     return null;
   }
 
-  const sourceLayerName = readFeatureSourceLayerName(feature);
+  const sourceLayerName = readFeatureSourceLayerName(feature, {
+    normalize: normalizeSourceLayerName,
+  });
   if (sourceLayerName === null) {
     return null;
   }
@@ -169,30 +105,6 @@ function toHoverState(
   };
 }
 
-function toFeatureStateTarget(target: HoverTarget): {
-  id: number | string;
-  source: string;
-  sourceLayer: string;
-} {
-  return {
-    source: target.sourceId,
-    sourceLayer: target.sourceLayerName,
-    id: target.featureId,
-  };
-}
-
-function isSameHoverTarget(left: HoverTarget | null, right: HoverTarget): boolean {
-  if (left === null) {
-    return false;
-  }
-
-  return (
-    left.sourceId === right.sourceId &&
-    left.sourceLayerName === right.sourceLayerName &&
-    left.featureId === right.featureId
-  );
-}
-
 function buildHoverQueryContext(
   map: IMap,
   options: FiberLocatorHoverOptions
@@ -223,7 +135,7 @@ function toHoverTarget(feature: {
   source?: unknown;
   sourceLayer?: unknown;
   properties?: unknown;
-}): HoverTarget | null {
+}): FeatureStateTarget | null {
   if (!isFeatureId(feature.id)) {
     return null;
   }
@@ -233,15 +145,17 @@ function toHoverTarget(feature: {
     return null;
   }
 
-  const sourceLayerName = readFeatureSourceLayerName(feature);
+  const sourceLayerName = readFeatureSourceLayerName(feature, {
+    normalize: normalizeSourceLayerName,
+  });
   if (sourceLayerName === null) {
     return null;
   }
 
   return {
-    sourceId,
-    sourceLayerName,
-    featureId: feature.id,
+    source: sourceId,
+    sourceLayer: sourceLayerName,
+    id: feature.id,
   };
 }
 
@@ -257,7 +171,7 @@ function resolveHoverCandidate(
   options: FiberLocatorHoverOptions
 ): {
   nextHover: FiberLocatorHoverState;
-  nextTarget: HoverTarget;
+  nextTarget: FeatureStateTarget;
 } | null {
   for (const feature of features) {
     const nextHover = toHoverState(feature, screenPoint, lineIdBySourceId, options);
@@ -283,70 +197,20 @@ export function mountFiberLocatorHover(
   map: IMap,
   options: FiberLocatorHoverOptions
 ): FiberLocatorHoverController {
-  let hoverTarget: HoverTarget | null = null;
+  return createFeatureHoverController(map, {
+    isInteractionEnabled: options.isInteractionEnabled,
+    onHoverChange: options.onHoverChange,
+    resolveHoverCandidate(event: MapPointerEvent) {
+      const { queryLayerIds, lineIdBySourceId } = buildHoverQueryContext(map, options);
+      if (queryLayerIds.length === 0) {
+        return null;
+      }
 
-  const clear = (): void => {
-    if (hoverTarget !== null) {
-      map.setFeatureState(toFeatureStateTarget(hoverTarget), { hover: false });
-      hoverTarget = null;
-    }
-
-    options.onHoverChange?.(null);
-  };
-
-  const onPointerLeave = (): void => {
-    clear();
-  };
-
-  const onPointerMove = (event: MapPointerEvent): void => {
-    if (!(options.isInteractionEnabled?.() ?? true)) {
-      clear();
-      return;
-    }
-
-    if (event.buttons > 0) {
-      clear();
-      return;
-    }
-
-    const { queryLayerIds, lineIdBySourceId } = buildHoverQueryContext(map, options);
-
-    if (queryLayerIds.length === 0) {
-      clear();
-      return;
-    }
-
-    const features = map.queryRenderedFeatures(event.point, {
-      layers: [...queryLayerIds],
-    });
-
-    const screenPoint: readonly [number, number] = [event.point[0], event.point[1]];
-    const candidate = resolveHoverCandidate(features, screenPoint, lineIdBySourceId, options);
-    if (candidate === null) {
-      clear();
-      return;
-    }
-
-    if (isSameHoverTarget(hoverTarget, candidate.nextTarget)) {
-      options.onHoverChange?.(candidate.nextHover);
-      return;
-    }
-
-    clear();
-    map.setFeatureState(toFeatureStateTarget(candidate.nextTarget), { hover: true });
-    hoverTarget = candidate.nextTarget;
-    options.onHoverChange?.(candidate.nextHover);
-  };
-
-  map.onPointerMove(onPointerMove);
-  map.onPointerLeave(onPointerLeave);
-
-  return {
-    clear,
-    destroy(): void {
-      clear();
-      map.offPointerMove(onPointerMove);
-      map.offPointerLeave(onPointerLeave);
+      const features = map.queryRenderedFeatures(event.point, {
+        layers: [...queryLayerIds],
+      });
+      const screenPoint: readonly [number, number] = [event.point[0], event.point[1]];
+      return resolveHoverCandidate(features, screenPoint, lineIdBySourceId, options);
     },
-  };
+  });
 }

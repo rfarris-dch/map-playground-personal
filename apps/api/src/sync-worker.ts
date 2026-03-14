@@ -25,13 +25,7 @@ function shutdown(signal: string): Promise<void> {
       }
 
       yield* Effect.tryPromise(() => closePostgresPool());
-    }).pipe(
-      Effect.ensuring(
-        Effect.sync(() => {
-          process.exit(0);
-        })
-      )
-    ),
+    }),
     {
       failureMetadata: {
         source: "api-sync-worker-shutdown",
@@ -40,34 +34,31 @@ function shutdown(signal: string): Promise<void> {
   );
 }
 
-process.on("SIGINT", () => {
-  shutdown("SIGINT").catch((error) => {
-    recordRuntimeEffectFailure({
-      cause:
-        error instanceof Error && typeof error.stack === "string" ? error.stack : String(error),
-      code: "SYNC_WORKER_SHUTDOWN_FAILURE",
-      details: error,
-      message: "sync worker shutdown failure",
-      source: "api-sync-worker",
+function handleSignalShutdown(signal: string): void {
+  shutdown(signal)
+    .then(() => {
+      process.exit(0);
+    })
+    .catch((error) => {
+      recordRuntimeEffectFailure({
+        cause:
+          error instanceof Error && typeof error.stack === "string" ? error.stack : String(error),
+        code: "SYNC_WORKER_SHUTDOWN_FAILURE",
+        details: error,
+        message: "sync worker shutdown failure",
+        source: "api-sync-worker",
+      });
+      console.error("[api-sync-worker] shutdown failure", error);
+      process.exit(1);
     });
-    console.error("[api-sync-worker] shutdown failure", error);
-    process.exit(1);
-  });
+}
+
+process.on("SIGINT", () => {
+  handleSignalShutdown("SIGINT");
 });
 
 process.on("SIGTERM", () => {
-  shutdown("SIGTERM").catch((error) => {
-    recordRuntimeEffectFailure({
-      cause:
-        error instanceof Error && typeof error.stack === "string" ? error.stack : String(error),
-      code: "SYNC_WORKER_SHUTDOWN_FAILURE",
-      details: error,
-      message: "sync worker shutdown failure",
-      source: "api-sync-worker",
-    });
-    console.error("[api-sync-worker] shutdown failure", error);
-    process.exit(1);
-  });
+  handleSignalShutdown("SIGTERM");
 });
 
 function startLoopEffect<TController>(

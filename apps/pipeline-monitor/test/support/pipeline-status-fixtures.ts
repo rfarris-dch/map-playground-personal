@@ -20,6 +20,7 @@ interface PipelineResponseOptions {
   readonly progress?: PipelineStatusResponse["run"]["progress"];
   readonly requestId?: string;
   readonly runId?: string | null;
+  readonly startedAt?: string;
   readonly states?: readonly ParcelSyncStateProgress[];
   readonly summary?: string | null;
 }
@@ -35,12 +36,13 @@ interface PipelineStateOptions {
 
 export function createPipelineState(options: PipelineStateOptions = {}): ParcelSyncStateProgress {
   return {
-    expectedCount: options.expectedCount ?? 100,
+    expectedCount: typeof options.expectedCount === "undefined" ? 100 : options.expectedCount,
     isCompleted: options.isCompleted ?? false,
     lastSourceId: 1,
     pagesFetched: options.pagesFetched ?? 1,
     state: options.state ?? "extract",
-    updatedAt: options.updatedAt ?? "2026-03-08T12:00:00.000Z",
+    updatedAt:
+      typeof options.updatedAt === "undefined" ? "2026-03-08T12:00:00.000Z" : options.updatedAt,
     writtenCount: options.writtenCount ?? 10,
   };
 }
@@ -90,7 +92,7 @@ export function createPipelineStatusResponse(
       progress: options.progress,
       reason: "interval",
       runId: options.runId ?? "run-1",
-      startedAt: "2026-03-08T12:00:00.000Z",
+      startedAt: options.startedAt ?? "2026-03-08T12:00:00.000Z",
       states,
       statesCompleted,
       statesTotal: states.length,

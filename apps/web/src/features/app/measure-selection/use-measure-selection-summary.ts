@@ -1,5 +1,6 @@
 import { Effect } from "effect";
 import { onBeforeUnmount, shallowRef, watch } from "vue";
+import { useLatestEffectTask } from "@/composables/use-latest-effect-task";
 import {
   buildEmptyMeasureSelectionSummary,
   queryMeasureSelectionSummary,
@@ -7,15 +8,20 @@ import {
 import type { UseAppShellMeasureSelectionOptions } from "@/features/app/measure-selection/use-app-shell-measure-selection.types";
 import type { MeasureSelectionSummary } from "@/features/measure/measure-analysis.types";
 import { cloneSelectionRing } from "@/features/selection/selection-analysis-request.service";
-import { createLatestRunner } from "@/lib/effect/latest-runner";
 
 export function useMeasureSelectionSummary(options: UseAppShellMeasureSelectionOptions) {
   const measureSelectionSummary = shallowRef<MeasureSelectionSummary | null>(null);
   const measureSelectionError = shallowRef<string | null>(null);
   const isMeasureSelectionLoading = shallowRef<boolean>(false);
-  const measureSelectionRunner = createLatestRunner({
+  function resetMeasureSelectionTaskState(): void {
+    isMeasureSelectionLoading.value = false;
+    measureSelectionError.value = null;
+  }
+  const measureSelectionTask = useLatestEffectTask({
+    onClear: resetMeasureSelectionTaskState,
+    onDispose: resetMeasureSelectionTaskState,
     onUnexpectedError(error) {
-      isMeasureSelectionLoading.value = false;
+      resetMeasureSelectionTaskState();
       measureSelectionError.value = "Unable to load measure selection summary.";
       measureSelectionSummary.value = null;
       console.error("[map] measure selection summary refresh failed", error);
@@ -27,9 +33,7 @@ export function useMeasureSelectionSummary(options: UseAppShellMeasureSelectionO
   }
 
   async function clearMeasureSelectionSummary(): Promise<void> {
-    await measureSelectionRunner.interrupt();
-    isMeasureSelectionLoading.value = false;
-    measureSelectionError.value = null;
+    await measureSelectionTask.clear();
     measureSelectionSummary.value = null;
   }
 
@@ -51,7 +55,7 @@ export function useMeasureSelectionSummary(options: UseAppShellMeasureSelectionO
     measureSelectionError.value = null;
     measureSelectionSummary.value = buildEmptyMeasureSelectionSummary(nextSelectionRing);
 
-    await measureSelectionRunner.run(
+    await measureSelectionTask.run(
       Effect.tryPromise({
         try: (signal) =>
           queryMeasureSelectionSummary({
@@ -97,9 +101,7 @@ export function useMeasureSelectionSummary(options: UseAppShellMeasureSelectionO
   );
 
   onBeforeUnmount(() => {
-    measureSelectionRunner.dispose().catch(logMeasureSelectionRunnerError);
-    isMeasureSelectionLoading.value = false;
-    measureSelectionError.value = null;
+    measureSelectionTask.dispose().catch(logMeasureSelectionRunnerError);
   });
 
   return {

@@ -1,10 +1,10 @@
+import { GeometrySchema } from "@map-migration/geo-kernel/geometry";
 import type {
   BoundaryPowerFeature,
   BoundaryPowerLevel,
   BoundaryPowerProperties,
 } from "@map-migration/http-contracts/boundaries-http";
 import type { BoundaryPowerRow } from "@/geo/boundaries/boundaries.repo";
-import type { GeoJsonGeometry } from "./boundaries.mapper.types";
 
 function parseJsonObject(input: string): unknown {
   try {
@@ -14,25 +14,14 @@ function parseJsonObject(input: string): unknown {
   }
 }
 
-function readGeometry(input: unknown): GeoJsonGeometry {
+function readGeometry(input: unknown): BoundaryPowerFeature["geometry"] {
   const value = typeof input === "string" ? parseJsonObject(input) : input;
-  if (typeof value !== "object" || value === null) {
-    throw new Error("Invalid geom_json: not an object");
+  const parsed = GeometrySchema.safeParse(value);
+  if (!parsed.success) {
+    throw new Error("Invalid geom_json: geometry did not match GeoJSON schema");
   }
 
-  const type = Reflect.get(value, "type");
-  const coordinates = Reflect.get(value, "coordinates");
-  if (typeof type !== "string" || type.trim().length === 0) {
-    throw new Error("Invalid geom_json: missing geometry type");
-  }
-  if (typeof coordinates === "undefined") {
-    throw new Error("Invalid geom_json: missing coordinates");
-  }
-
-  return {
-    type,
-    coordinates,
-  };
+  return parsed.data;
 }
 
 function readCommissionedPowerMw(value: number | string | null | undefined): number {

@@ -29,9 +29,3 @@ export interface FiberLocatorHoverController {
   clear(): void;
   destroy(): void;
 }
-
-export interface HoverTarget {
-  readonly featureId: number | string;
-  readonly sourceId: string;
-  readonly sourceLayerName: string;
-}

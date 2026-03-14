@@ -1,12 +1,13 @@
 <script setup lang="ts">
-  import { ref, toRef, watch } from "vue";
-  import { useTooltipPosition } from "@/composables/use-tooltip-position";
+  import { computed, ref, toRef, watch } from "vue";
+  import MapTooltipShell from "@/components/map/map-tooltip-shell.vue";
   import {
     buildFacilityClusterPowerSegments,
     getFacilityClusterPrimaryLabel,
   } from "@/features/facilities/facilities-cluster.service";
   import type { FacilityClusterHoverState } from "@/features/facilities/hover.types";
   import { buildDonutChartArcSegments } from "@/lib/donut-chart.service";
+  import { formatMegawatts } from "@/lib/power-format.service";
 
   interface FacilityClusterHoverTooltipProps {
     readonly hoverState: FacilityClusterHoverState | null;
@@ -20,45 +21,82 @@
     ];
   }
 
+  interface ClusterMetricRow {
+    readonly label: string;
+    readonly value: number;
+  }
+
   const props = defineProps<FacilityClusterHoverTooltipProps>();
   const emit = defineEmits<FacilityClusterHoverTooltipEmits>();
-
-  function onZoomClick(): void {
-    if (!displayState.value) {
-      return;
-    }
-    emit(
-      "zoom-to-cluster",
-      displayState.value.perspective,
-      displayState.value.clusterId,
-      displayState.value.center
-    );
-  }
 
   const isMouseOver = ref(false);
   const displayState = ref<FacilityClusterHoverState | null>(null);
   let dismissTimer: ReturnType<typeof setTimeout> | null = null;
 
   const clusterScreenPoint = toRef(() => displayState.value?.screenPoint ?? null);
-  const { style: positionStyle } = useTooltipPosition(clusterScreenPoint);
-
-  watch(
-    () => props.hoverState,
-    (next) => {
-      if (next !== null) {
-        if (dismissTimer !== null) {
-          clearTimeout(dismissTimer);
-          dismissTimer = null;
-        }
-        displayState.value = next;
-      } else if (!isMouseOver.value) {
-        dismissTimer = setTimeout(() => {
-          displayState.value = null;
-          dismissTimer = null;
-        }, 200);
-      }
-    }
+  const accentBorderClass = computed(() =>
+    displayState.value?.perspective === "hyperscale" ? "border-hyperscale" : "border-colocation"
   );
+  const accentTextClass = computed(() =>
+    displayState.value?.perspective === "hyperscale" ? "text-hyperscale" : "text-colocation"
+  );
+  const donutSegments = computed(() =>
+    buildDonutChartArcSegments({
+      centerX: 34,
+      centerY: 34,
+      radius: 24,
+      segments: pieSegments(),
+    })
+  );
+  const metricRows = computed<ClusterMetricRow[]>(() => {
+    const hoverState = displayState.value;
+    if (hoverState === null) {
+      return [];
+    }
+
+    const rows: ClusterMetricRow[] = [
+      {
+        label: getFacilityClusterPrimaryLabel(hoverState.perspective),
+        value: hoverState.commissionedPowerMw,
+      },
+      {
+        label: "Under Construction",
+        value: hoverState.underConstructionPowerMw,
+      },
+      {
+        label: "Planned",
+        value: hoverState.plannedPowerMw,
+      },
+    ];
+
+    if (hoverState.perspective === "colocation") {
+      rows.splice(1, 0, {
+        label: "Available",
+        value: hoverState.availablePowerMw,
+      });
+    }
+
+    return rows;
+  });
+  const providerLabel = computed(() =>
+    displayState.value?.perspective === "hyperscale" ? "Top Users" : "Top Providers"
+  );
+  const tooltipState = computed(() => displayState.value);
+  const perspectiveLabel = computed(() => {
+    if (displayState.value === null) {
+      return "";
+    }
+
+    return displayState.value.perspective === "hyperscale" ? "Hyperscale" : "Colocation";
+  });
+
+  function pieSegments() {
+    if (displayState.value === null) {
+      return [];
+    }
+
+    return buildFacilityClusterPowerSegments(displayState.value);
+  }
 
   function onMouseEnter(): void {
     isMouseOver.value = true;
@@ -75,225 +113,147 @@
     }
   }
 
-  function formatMw(value: number): string {
-    if (value === 0) {
-      return "0 MW";
-    }
-    return `${value.toLocaleString(undefined, { maximumFractionDigits: 1 })} MW`;
-  }
-
-  function perspectiveLabel(): string {
-    if (!displayState.value) {
-      return "";
-    }
-    if (displayState.value.perspective === "hyperscale") {
-      return "Hyperscale";
-    }
-    return "Colocation";
-  }
-
-  function accentClass(): string {
-    return displayState.value?.perspective === "hyperscale"
-      ? "border-hyperscale"
-      : "border-colocation";
-  }
-
-  function accentTextClass(): string {
-    return displayState.value?.perspective === "hyperscale" ? "text-hyperscale" : "text-colocation";
-  }
-
-  function providerLabel(): string {
-    return displayState.value?.perspective === "hyperscale" ? "Top Users" : "Top Providers";
-  }
-
-  interface ClusterMetricRow {
-    label: string;
-    value: number;
-  }
-
-  function pieSegments() {
-    if (!displayState.value) {
-      return [];
+  function onZoomClick(): void {
+    if (displayState.value === null) {
+      return;
     }
 
-    return buildFacilityClusterPowerSegments(displayState.value);
+    emit(
+      "zoom-to-cluster",
+      displayState.value.perspective,
+      displayState.value.clusterId,
+      displayState.value.center
+    );
   }
 
-  function metricRows(): ClusterMetricRow[] {
-    if (!displayState.value) {
-      return [];
+  watch(
+    () => props.hoverState,
+    (nextHoverState) => {
+      if (nextHoverState !== null) {
+        if (dismissTimer !== null) {
+          clearTimeout(dismissTimer);
+          dismissTimer = null;
+        }
+        displayState.value = nextHoverState;
+        return;
+      }
+
+      if (!isMouseOver.value) {
+        dismissTimer = setTimeout(() => {
+          displayState.value = null;
+          dismissTimer = null;
+        }, 200);
+      }
     }
-
-    const rows: ClusterMetricRow[] = [
-      {
-        label: getFacilityClusterPrimaryLabel(displayState.value.perspective),
-        value: displayState.value.commissionedPowerMw,
-      },
-      {
-        label: "Under Construction",
-        value: displayState.value.underConstructionPowerMw,
-      },
-      {
-        label: "Planned",
-        value: displayState.value.plannedPowerMw,
-      },
-    ];
-
-    if (displayState.value.perspective === "colocation") {
-      rows.splice(1, 0, {
-        label: "Available",
-        value: displayState.value.availablePowerMw,
-      });
-    }
-
-    return rows;
-  }
-
-  function donutSegments() {
-    return buildDonutChartArcSegments({
-      centerX: 34,
-      centerY: 34,
-      radius: 24,
-      segments: pieSegments(),
-    });
-  }
+  );
 </script>
 
 <template>
-  <Transition enter-active-class="transition-opacity duration-100" enter-from-class="opacity-0">
-    <aside
-      v-if="displayState !== null"
-      class="absolute z-30 rounded-sm border p-0.5"
-      :class="accentClass()"
-      :style="positionStyle"
-      aria-label="Facility cluster details"
-      @mouseenter="onMouseEnter"
-      @mouseleave="onMouseLeave"
+  <MapTooltipShell
+    ariaLabel="Facility cluster details"
+    :screen-point="clusterScreenPoint"
+    :show="tooltipState !== null"
+    :surface-class="`absolute z-30 rounded-sm border p-0.5 ${accentBorderClass}`"
+    @mouseenter="onMouseEnter"
+    @mouseleave="onMouseLeave"
+  >
+    <div
+      v-if="tooltipState !== null"
+      class="flex flex-col gap-2.5 rounded-sm bg-card p-2.5 shadow-sm"
     >
-      <div class="flex flex-col gap-2.5 rounded-sm bg-card p-2.5 shadow-sm">
-        <!-- Header -->
-        <div class="flex items-center justify-between gap-3">
-          <span
-            class="text-xs font-semibold leading-none whitespace-nowrap"
-            :class="accentTextClass()"
-          >
-            {{ perspectiveLabel() }}
-          </span>
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 12 12"
-            class="flex-shrink-0 cursor-pointer opacity-40 hover:opacity-70"
-            aria-hidden="true"
-          >
-            <line x1="3.5" y1="3.5" x2="8.5" y2="8.5" stroke="currentColor" stroke-width="1.2" />
-            <line x1="8.5" y1="3.5" x2="3.5" y2="8.5" stroke="currentColor" stroke-width="1.2" />
+      <div class="flex items-center justify-between gap-3">
+        <span class="text-xs font-semibold leading-none whitespace-nowrap" :class="accentTextClass">
+          {{ perspectiveLabel }}
+        </span>
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 12 12"
+          class="flex-shrink-0 cursor-pointer opacity-40 hover:opacity-70"
+          aria-hidden="true"
+        >
+          <line x1="3.5" y1="3.5" x2="8.5" y2="8.5" stroke="currentColor" stroke-width="1.2" />
+          <line x1="8.5" y1="3.5" x2="3.5" y2="8.5" stroke="currentColor" stroke-width="1.2" />
+        </svg>
+      </div>
+
+      <div class="flex items-start gap-3.5">
+        <div class="relative flex-shrink-0">
+          <svg width="68" height="68" viewBox="0 0 68 68" aria-hidden="true">
+            <circle cx="34" cy="34" r="24" fill="none" stroke="var(--muted)" stroke-width="10" />
+            <template v-for="(segment, index) in donutSegments" :key="`cluster-${String(index)}`">
+              <circle
+                v-if="segment.path === null"
+                cx="34"
+                cy="34"
+                r="24"
+                fill="none"
+                :stroke="segment.color"
+                stroke-width="10"
+                stroke-linecap="butt"
+              />
+              <path
+                v-else
+                :d="segment.path"
+                fill="none"
+                :stroke="segment.color"
+                stroke-width="10"
+                stroke-linecap="butt"
+              />
+            </template>
           </svg>
-        </div>
-
-        <!-- Body: donut chart + details -->
-        <div class="flex items-start gap-3.5">
-          <!-- Donut Chart (stroke-based) -->
-          <div class="relative flex-shrink-0">
-            <svg width="68" height="68" viewBox="0 0 68 68" aria-hidden="true">
-              <!-- Background ring -->
-              <circle cx="34" cy="34" r="24" fill="none" stroke="var(--muted)" stroke-width="10" />
-              <!-- Data segments -->
-              <template v-for="(seg, i) in donutSegments()" :key="`cluster-${String(i)}`">
-                <circle
-                  v-if="seg.path === null"
-                  cx="34"
-                  cy="34"
-                  r="24"
-                  fill="none"
-                  :stroke="seg.color"
-                  stroke-width="10"
-                  stroke-linecap="butt"
-                />
-                <path
-                  v-else
-                  :d="seg.path"
-                  fill="none"
-                  :stroke="seg.color"
-                  stroke-width="10"
-                  stroke-linecap="butt"
-                />
-              </template>
-            </svg>
-            <!-- Center text -->
-            <div class="pointer-events-none absolute inset-0 grid place-items-center px-2">
-              <span
-                class="block max-w-[38px] text-center text-xs leading-none tracking-tight text-muted-foreground"
-              >
-                {{ formatMw(displayState.totalPowerMw) }}
-              </span>
-            </div>
-          </div>
-
-          <!-- Top Providers/Users -->
-          <div class="flex flex-col gap-1.5">
-            <span class="text-xs font-semibold text-muted-foreground">{{ providerLabel() }}</span>
-            <div class="flex flex-col gap-1.5">
-              <template v-for="(provider, i) in displayState.topProviders" :key="i">
-                <div class="flex flex-col gap-0.5">
-                  <span class="text-xs leading-none" :class="accentTextClass()">
-                    {{ provider.name }}
-                  </span>
-                  <span class="text-xs leading-none text-muted-foreground">
-                    Total Power: {{ formatMw(provider.totalPowerMw) }}
-                  </span>
-                </div>
-              </template>
-            </div>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-[auto_auto] gap-x-3 gap-y-1 text-xs">
-          <template v-for="row in metricRows()" :key="row.label">
-            <span class="text-muted-foreground">{{ row.label }}</span>
-            <span class="text-right font-medium" :class="accentTextClass()">
-              {{ formatMw(row.value) }}
-            </span>
-          </template>
-        </div>
-
-        <!-- Key -->
-        <div class="flex items-center gap-1.5">
-          <div v-for="(segment, i) in pieSegments()" :key="i" class="flex items-center gap-1">
+          <div class="pointer-events-none absolute inset-0 grid place-items-center px-2">
             <span
-              class="inline-block h-2 w-2 rounded-full"
-              :style="{ backgroundColor: segment.color }"
-            />
-            <span class="text-xs text-muted-foreground">{{ segment.shortLabel }}</span>
+              class="block max-w-[38px] text-center text-xs leading-none tracking-tight text-muted-foreground"
+            >
+              {{ formatMegawatts(tooltipState.totalPowerMw) }}
+            </span>
           </div>
         </div>
 
-        <!-- Controls -->
-        <div class="flex items-center gap-1.5">
-          <div
-            role="button"
-            tabindex="0"
-            class="flex cursor-pointer items-center gap-0 opacity-60 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
-            @click="onZoomClick"
-            @keydown.enter="onZoomClick"
-            @keydown.space.prevent="onZoomClick"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-              <circle cx="7" cy="7" r="3.5" stroke="currentColor" stroke-width="1" fill="none" />
-              <line x1="9.5" y1="9.5" x2="12.5" y2="12.5" stroke="currentColor" stroke-width="1" />
-              <line x1="5.5" y1="7" x2="8.5" y2="7" stroke="currentColor" stroke-width="0.7" />
-              <line x1="7" y1="5.5" x2="7" y2="8.5" stroke="currentColor" stroke-width="0.7" />
-            </svg>
-            <span class="text-xs text-muted-foreground">Zoom</span>
-          </div>
-          <div class="flex items-center gap-0 opacity-60">
-            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-              <path d="M5 4L11 8L5 12Z" fill="currentColor" />
-            </svg>
-            <span class="text-xs text-muted-foreground">Select All</span>
+        <div class="flex flex-col gap-1.5">
+          <span class="text-xs font-semibold text-muted-foreground">{{ providerLabel }}</span>
+          <div class="flex flex-col gap-1.5">
+            <template v-for="provider in tooltipState.topProviders" :key="provider.name">
+              <div class="flex flex-col gap-0.5">
+                <span class="text-xs leading-none" :class="accentTextClass">
+                  {{ provider.name }}
+                </span>
+                <span class="text-xs leading-none text-muted-foreground">
+                  {{ formatMegawatts(provider.totalPowerMw) }}
+                </span>
+              </div>
+            </template>
           </div>
         </div>
       </div>
-    </aside>
-  </Transition>
+
+      <div class="grid grid-cols-2 gap-1.5">
+        <div
+          v-for="metricRow in metricRows"
+          :key="metricRow.label"
+          class="rounded-sm border border-border/60 bg-background/70 px-2 py-1.5"
+        >
+          <span class="block text-[11px] leading-none text-muted-foreground"
+            >{{ metricRow.label }}</span
+          >
+          <span class="mt-1 block text-xs font-semibold leading-none"
+            >{{ formatMegawatts(metricRow.value) }}</span
+          >
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="flex items-center justify-between rounded-sm border border-border/60 bg-background/70 px-2.5 py-1.5 text-left transition-colors hover:border-border hover:bg-background"
+        @click="onZoomClick"
+      >
+        <span class="text-xs font-semibold" :class="accentTextClass">Zoom to cluster</span>
+        <span class="text-xs text-muted-foreground">
+          {{ tooltipState.facilityCount.toLocaleString() }}
+          sites
+        </span>
+      </button>
+    </div>
+  </MapTooltipShell>
 </template>

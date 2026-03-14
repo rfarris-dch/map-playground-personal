@@ -1,9 +1,6 @@
 import type { PipelineLiveSample } from "@/features/pipeline/pipeline.types";
 import type { PipelineRateEstimate } from "@/features/pipeline/pipeline-tracking/pipeline-tracking.types";
-import {
-  parseIsoToTimestamp,
-  parseNullableIsoToTimestamp,
-} from "@/features/pipeline/pipeline-tracking/pipeline-tracking-time.service";
+import { parseIsoToTimestamp, parseNullableIsoToTimestamp } from "./pipeline-tracking-time.service";
 
 function emptyRateEstimate(): PipelineRateEstimate {
   return {

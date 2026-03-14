@@ -1,17 +1,22 @@
+import { ApiRoutes } from "@map-migration/http-contracts/api-routes";
+import { EffectIssuesSnapshotSchema } from "@map-migration/http-contracts/effect-http";
 import type { Env, Hono } from "hono";
 import { getEffectIssuesSnapshot } from "@/effect/effect-metrics.service";
-import { withRequestId } from "@/http/api-response";
+import { jsonOk } from "@/http/api-response";
 import { fromApiRequest, routeError, runEffectRoute } from "@/http/effect-route";
 
-const EFFECT_ISSUES_ROUTE = "/api/debug/effect/issues";
-
 export function registerEffectMetricsRoute<E extends Env>(app: Hono<E>): void {
-  app.get(EFFECT_ISSUES_ROUTE, (c) =>
+  app.get(ApiRoutes.effectMetrics, (c) =>
     runEffectRoute(
       c,
       fromApiRequest(({ honoContext, requestId }) => {
         try {
-          return withRequestId(honoContext.json(getEffectIssuesSnapshot()), requestId);
+          return jsonOk(
+            honoContext,
+            EffectIssuesSnapshotSchema,
+            getEffectIssuesSnapshot(),
+            requestId
+          );
         } catch (error) {
           throw routeError({
             code: "EFFECT_ISSUES_SNAPSHOT_FAILED",

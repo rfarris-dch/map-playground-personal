@@ -2,6 +2,7 @@ import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 import type { AreaOfInterest } from "@map-migration/geo-kernel/area-of-interest";
 import type { ParcelGeometryMode } from "@map-migration/http-contracts/parcels-http";
 import { Hono } from "hono";
+import { jsonError } from "../../../src/http/api-response";
 
 const enrichParcelsByBboxMock =
   mock<(bbox: unknown, options: unknown) => Promise<readonly unknown[]>>();
@@ -45,14 +46,26 @@ function callAoiQuery(aoi: AreaOfInterest): Promise<Response> {
   const includeGeometry: ParcelGeometryMode = "none";
 
   app.get("/test", async (c) => {
-    const result = await queryEnrichRowsByAoi(c, "req-test", aoi, includeGeometry, 10, null);
+    const result = await queryEnrichRowsByAoi(aoi, includeGeometry, 10, null);
     if (result.ok) {
       return c.json({
         rowCount: result.rows.length,
       });
     }
 
-    return result.response;
+    return result.value.reason === "policy_rejected"
+      ? jsonError(c, {
+          requestId: "req-test",
+          httpStatus: 422,
+          code: "POLICY_REJECTED",
+          message: result.value.message,
+        })
+      : jsonError(c, {
+          requestId: "req-test",
+          httpStatus: 503,
+          code: "POSTGIS_QUERY_FAILED",
+          message: "postgis query failed",
+        });
   });
 
   return app.request("/test");

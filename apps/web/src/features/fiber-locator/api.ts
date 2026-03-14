@@ -1,4 +1,4 @@
-import { apiGetJson } from "@map-migration/core-runtime/api";
+import { apiRequestJson } from "@map-migration/core-runtime/api";
 import type { BBox } from "@map-migration/geo-kernel/geometry";
 import {
   ApiRoutes,
@@ -14,14 +14,14 @@ import type {
 } from "@/features/fiber-locator/fiber-locator.types";
 
 export function fetchFiberLocatorCatalog(): Promise<FiberLocatorCatalogFetchResult> {
-  return apiGetJson(ApiRoutes.fiberLocatorLayers, FiberLocatorCatalogResponseSchema);
+  return apiRequestJson(ApiRoutes.fiberLocatorLayers, FiberLocatorCatalogResponseSchema);
 }
 
 export function fetchFiberLocatorLayersInView(
   bbox: BBox,
   init: RequestInit = {}
 ): Promise<FiberLocatorInViewFetchResult> {
-  return apiGetJson(
+  return apiRequestJson(
     buildFiberLocatorLayersInViewRoute(bbox),
     FiberLocatorLayersInViewResponseSchema,
     init

@@ -1,5 +1,7 @@
 <script setup lang="ts">
   import { computed, ref } from "vue";
+  import LayerControlsPanel from "@/components/map/layer-controls-panel.vue";
+  import VisibilityToggleRow from "@/components/map/visibility-toggle-row.vue";
   import type {
     FiberLocatorLineId,
     FiberLocatorSourceLayerOption,
@@ -36,7 +38,6 @@
     () =>
       new Set(props.selectedLonghaulSourceLayerNames.map((layerName) => layerName.toLowerCase()))
   );
-
   const filteredMetroSourceLayers = computed(() => {
     const query = normalizedSearchQuery.value;
     if (query.length === 0) {
@@ -49,7 +50,6 @@
       return label.includes(query) || layerName.includes(query);
     });
   });
-
   const filteredLonghaulSourceLayers = computed(() => {
     const query = normalizedSearchQuery.value;
     if (query.length === 0) {
@@ -62,42 +62,9 @@
       return label.includes(query) || layerName.includes(query);
     });
   });
-
   const totalSourceLayerCount = computed(
     () => props.metroSourceLayers.length + props.longhaulSourceLayers.length
   );
-  const containerClass = computed(() =>
-    props.embedded
-      ? "w-full font-sans text-muted-foreground"
-      : "w-full rounded-sm border border-border bg-card p-3 shadow-md font-sans text-muted-foreground"
-  );
-
-  function onToggleMetro(event: Event): void {
-    const target = event.target;
-    if (!(target instanceof HTMLInputElement)) {
-      return;
-    }
-
-    emit("update:metroVisible", target.checked);
-  }
-
-  function onToggleLonghaul(event: Event): void {
-    const target = event.target;
-    if (!(target instanceof HTMLInputElement)) {
-      return;
-    }
-
-    emit("update:longhaulVisible", target.checked);
-  }
-
-  function onToggleSourceLayer(lineId: FiberLocatorLineId, layerName: string, event: Event): void {
-    const target = event.target;
-    if (!(target instanceof HTMLInputElement)) {
-      return;
-    }
-
-    emit("toggleSourceLayer", lineId, layerName, target.checked);
-  }
 
   function isSourceLayerSelected(lineId: FiberLocatorLineId, layerName: string): boolean {
     const normalizedLayerName = layerName.toLowerCase();
@@ -108,14 +75,6 @@
     return selectedLonghaulSourceLayers.value.has(normalizedLayerName);
   }
 
-  function rowClass(visible: boolean): string {
-    if (visible) {
-      return "border-border bg-background shadow-sm";
-    }
-
-    return "border-transparent bg-card hover:border-border hover:bg-background";
-  }
-
   function sourceLayerRowClass(selected: boolean): string {
     if (selected) {
       return "border-border bg-background";
@@ -123,73 +82,41 @@
 
     return "border-transparent hover:border-border hover:bg-background";
   }
+
+  function onToggleSourceLayer(lineId: FiberLocatorLineId, layerName: string, event: Event): void {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) {
+      return;
+    }
+
+    emit("toggleSourceLayer", lineId, layerName, target.checked);
+  }
 </script>
 
 <template>
-  <aside :class="containerClass" aria-label="Fiber layers">
-    <header v-if="!props.embedded" class="mb-2 flex items-center justify-between">
-      <h2 class="m-0 text-xs font-semibold tracking-wide text-muted-foreground">Fiber Locator</h2>
-      <span class="text-xs text-muted-foreground">Vector tiles</span>
-    </header>
-
+  <LayerControlsPanel
+    ariaLabel="Fiber layers"
+    :embedded="props.embedded"
+    title="Fiber Locator"
+    subtitle="Vector tiles"
+  >
     <p class="mb-2 break-words text-xs text-muted-foreground">{{ props.status }}</p>
 
     <div class="grid gap-2">
-      <label
-        class="group flex min-h-[44px] cursor-pointer items-start gap-2 rounded-sm border px-3 py-2 transition-colors focus-within:ring-2 focus-within:ring-primary/40 focus-within:outline-none"
-        :class="rowClass(props.metroVisible)"
-      >
-        <input
-          class="h-4 w-4 shrink-0 rounded-sm border border-border accent-muted-foreground"
-          type="checkbox"
-          :checked="props.metroVisible"
-          @change="onToggleMetro"
-        >
-        <div class="min-w-0 flex-1">
-          <div class="flex items-center gap-2">
-            <span class="h-2 w-2 rounded-full bg-pink-500" aria-hidden="true" />
-            <span
-              class="text-xs font-semibold transition-colors"
-              :class="props.metroVisible ? 'text-foreground/70' : 'text-muted-foreground'"
-              >Metro</span
-            >
-          </div>
-          <p
-            class="mt-1 break-words text-xs transition-colors"
-            :class="props.metroVisible ? 'text-foreground/70' : 'text-muted-foreground'"
-          >
-            Composite metro network
-          </p>
-        </div>
-      </label>
-
-      <label
-        class="group flex min-h-[44px] cursor-pointer items-start gap-2 rounded-sm border px-3 py-2 transition-colors focus-within:ring-2 focus-within:ring-primary/40 focus-within:outline-none"
-        :class="rowClass(props.longhaulVisible)"
-      >
-        <input
-          class="h-4 w-4 shrink-0 rounded-sm border border-border accent-muted-foreground"
-          type="checkbox"
-          :checked="props.longhaulVisible"
-          @change="onToggleLonghaul"
-        >
-        <div class="min-w-0 flex-1">
-          <div class="flex items-center gap-2">
-            <span class="h-2 w-2 rounded-full bg-cyan-500" aria-hidden="true" />
-            <span
-              class="text-xs font-semibold transition-colors"
-              :class="props.longhaulVisible ? 'text-foreground/70' : 'text-muted-foreground'"
-              >Longhaul</span
-            >
-          </div>
-          <p
-            class="mt-1 break-words text-xs transition-colors"
-            :class="props.longhaulVisible ? 'text-foreground/70' : 'text-muted-foreground'"
-          >
-            Composite longhaul network
-          </p>
-        </div>
-      </label>
+      <VisibilityToggleRow
+        :checked="props.metroVisible"
+        title="Metro"
+        description="Composite metro network"
+        dot-class="bg-pink-500"
+        @update:checked="emit('update:metroVisible', $event)"
+      />
+      <VisibilityToggleRow
+        :checked="props.longhaulVisible"
+        title="Longhaul"
+        description="Composite longhaul network"
+        dot-class="bg-cyan-500"
+        @update:checked="emit('update:longhaulVisible', $event)"
+      />
     </div>
 
     <input
@@ -250,8 +177,9 @@
                 ? 'font-medium text-foreground/70'
                 : 'text-muted-foreground'
             "
-            >{{ layer.label }}</span
           >
+            {{ layer.label }}
+          </span>
         </label>
         <p
           v-if="filteredMetroSourceLayers.length === 0"
@@ -306,8 +234,9 @@
                 ? 'font-medium text-foreground/70'
                 : 'text-muted-foreground'
             "
-            >{{ layer.label }}</span
           >
+            {{ layer.label }}
+          </span>
         </label>
         <p
           v-if="filteredLonghaulSourceLayers.length === 0"
@@ -317,5 +246,5 @@
         </p>
       </div>
     </section>
-  </aside>
+  </LayerControlsPanel>
 </template>

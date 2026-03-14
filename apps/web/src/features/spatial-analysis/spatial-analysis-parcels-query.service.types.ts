@@ -1,4 +1,5 @@
 import type { Warning } from "@map-migration/geo-kernel/warning";
+import type { SourceMode } from "@map-migration/http-contracts/api-response-meta";
 import type {
   ParcelEnrichRequest,
   ParcelsFeatureCollection,
@@ -26,7 +27,7 @@ export type SpatialAnalysisParcelsPagesResult =
       truncated: boolean;
       nextCursor: string | null;
       readonly requestId: string;
-      readonly sourceMode: string;
+      readonly sourceMode: SourceMode;
       readonly warnings: readonly Warning[];
     }
   | {

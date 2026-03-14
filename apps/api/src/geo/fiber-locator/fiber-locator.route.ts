@@ -1,8 +1,8 @@
-import { parseBboxParam } from "@map-migration/geo-kernel/geometry";
 import { ApiRoutes } from "@map-migration/http-contracts/api-routes";
 import {
   type FiberLocatorCatalogResponse,
   FiberLocatorCatalogResponseSchema,
+  FiberLocatorLayersInViewPathSchema,
   type FiberLocatorLayersInViewResponse,
   FiberLocatorLayersInViewResponseSchema,
 } from "@map-migration/http-contracts/fiber-locator-http";
@@ -13,7 +13,6 @@ import {
   readFiberLocatorConfig,
 } from "@/geo/fiber-locator/fiber-locator.service";
 import { buildFiberLocatorResponseMeta } from "@/geo/fiber-locator/route/fiber-locator-route-meta.service";
-import { decodeFiberLocatorPathParam } from "@/geo/fiber-locator/route/fiber-locator-route-param.service";
 import { proxyFiberLocatorTileRequest } from "@/geo/fiber-locator/route/fiber-locator-route-proxy.service";
 import { jsonOk, toDebugDetails } from "@/http/api-response";
 import { fromApiRequest, routeError, runEffectRoute } from "@/http/effect-route";
@@ -47,20 +46,21 @@ export function registerFiberLocatorRoute<E extends Env>(app: Hono<E>): void {
     runEffectRoute(
       c,
       fromApiRequest(async ({ honoContext, requestId, signal }) => {
-        const bboxParam = honoContext.req.param("bbox") ?? "";
-        const decodedBboxParam = decodeFiberLocatorPathParam(bboxParam);
-        const bbox = decodedBboxParam === null ? null : parseBboxParam(decodedBboxParam);
-        if (bbox === null) {
+        const request = FiberLocatorLayersInViewPathSchema.safeParse({
+          bbox: honoContext.req.param("bbox"),
+        });
+        if (!request.success) {
           throw routeError({
             httpStatus: 400,
             code: "INVALID_BBOX",
-            message: "bbox must be west,south,east,north in WGS84",
+            message: "invalid fiber locator layers/inview request",
+            details: toDebugDetails(request.error),
           });
         }
 
         try {
           const config = readFiberLocatorConfig();
-          const inView = await fetchFiberLocatorLayersInView(config, bbox, signal);
+          const inView = await fetchFiberLocatorLayersInView(config, request.data.bbox, signal);
           const payload: FiberLocatorLayersInViewResponse = {
             layers: [...inView.layerNames],
             meta: buildFiberLocatorResponseMeta(requestId, inView.layerNames.length),

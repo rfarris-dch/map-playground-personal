@@ -2,7 +2,7 @@ import {
   createRequestId,
   normalizeRequestIdHeader as normalizeRequestIdHeaderValue,
 } from "@map-migration/core-runtime";
-import type { SafeParseSchema } from "@map-migration/geo-kernel/geometry";
+import type { SafeParseSchema } from "@map-migration/core-runtime/effect";
 import {
   type ApiErrorResponse,
   ApiErrorResponseSchema,

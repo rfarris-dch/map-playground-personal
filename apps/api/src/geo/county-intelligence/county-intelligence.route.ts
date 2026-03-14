@@ -1,5 +1,7 @@
 import { ApiRoutes } from "@map-migration/http-contracts/api-routes";
 import {
+  type CountyScoresRequest,
+  CountyScoresRequestSchema,
   type CountyScoresResponse,
   CountyScoresResponseSchema,
   type CountyScoresStatusResponse,
@@ -18,72 +20,45 @@ import {
   buildCountyScoresStatusQueryRouteError,
   buildCountyScoresStatusSourceUnavailableRouteError,
 } from "@/geo/county-intelligence/county-intelligence-route-errors.service";
-import { jsonOk } from "@/http/api-response";
+import { jsonOk, toDebugDetails } from "@/http/api-response";
 import { fromApiRequest, routeError, runEffectRoute } from "@/http/effect-route";
-import { isDatasetQueryAllowed } from "@/http/spatial-analysis-policy.service";
-import type {
-  BuildCountyScoresResponseMeta,
-  CountyScoresQueryParamsResult,
-} from "./county-intelligence.route.types";
+import { buildResponseMeta, setCacheControlHeader } from "@/http/response-meta.service";
+import { getApiRuntimeConfig } from "@/http/runtime-config";
+import {
+  getDatasetCacheTtlSeconds,
+  isDatasetQueryAllowed,
+} from "@/http/spatial-analysis-policy.service";
 
-const COUNTY_ID_LIMIT = 500;
-const COUNTY_ID_PATTERN = /^[0-9]{5}$/;
 const COUNTY_SCORES_UNPUBLISHED_META_VERSION = "unpublished";
 
-const buildResponseMeta: BuildCountyScoresResponseMeta = (args) => {
-  return {
-    requestId: args.requestId,
-    sourceMode: "postgis",
+function buildCountyScoresResponseMeta(args: {
+  readonly dataVersion?: string | null | undefined;
+  readonly recordCount: number;
+  readonly requestId: string;
+}) {
+  const runtimeConfig = getApiRuntimeConfig();
+  return buildResponseMeta({
     dataVersion: args.dataVersion ?? COUNTY_SCORES_UNPUBLISHED_META_VERSION,
-    generatedAt: new Date().toISOString(),
     recordCount: args.recordCount,
-    truncated: false,
-    warnings: [],
-  };
-};
+    requestId: args.requestId,
+    sourceMode: runtimeConfig.countyIntelligenceSourceMode,
+  });
+}
 
-function parseCountyIds(rawValue: string | undefined): CountyScoresQueryParamsResult {
-  if (typeof rawValue !== "string") {
-    return {
-      ok: false,
-      message: "countyIds query param is required",
-    };
+function readCountyScoresRequest(countyIdsRaw: string | undefined): CountyScoresRequest {
+  const parsed = CountyScoresRequestSchema.safeParse({
+    countyIds: countyIdsRaw,
+  });
+  if (!parsed.success) {
+    throw routeError({
+      httpStatus: 400,
+      code: "INVALID_COUNTY_IDS",
+      message: "invalid county scores request",
+      details: toDebugDetails(parsed.error),
+    });
   }
 
-  const countyIds = rawValue
-    .split(",")
-    .map((countyId) => countyId.trim())
-    .filter((countyId) => countyId.length > 0);
-
-  if (countyIds.length === 0) {
-    return {
-      ok: false,
-      message: "countyIds query param must include at least one county id",
-    };
-  }
-
-  if (countyIds.length > COUNTY_ID_LIMIT) {
-    return {
-      ok: false,
-      message: `countyIds query param must include at most ${String(COUNTY_ID_LIMIT)} county ids`,
-    };
-  }
-
-  for (const countyId of countyIds) {
-    if (!COUNTY_ID_PATTERN.test(countyId)) {
-      return {
-        ok: false,
-        message: "countyIds query param must contain only 5-digit county ids",
-      };
-    }
-  }
-
-  return {
-    ok: true,
-    value: {
-      countyIds,
-    },
-  };
+  return parsed.data;
 }
 
 function countyScoresStatusRouteError(reason: string, error: unknown) {
@@ -124,9 +99,11 @@ export function registerCountyIntelligenceRoute<E extends Env>(app: Hono<E>): vo
           );
         }
 
+        setCacheControlHeader(honoContext, getDatasetCacheTtlSeconds("county_scores"));
+
         const payload: CountyScoresStatusResponse = {
           ...countyScoresStatusResult.value,
-          meta: buildResponseMeta({
+          meta: buildCountyScoresResponseMeta({
             dataVersion: countyScoresStatusResult.value.dataVersion,
             requestId,
             recordCount: 1,
@@ -150,17 +127,10 @@ export function registerCountyIntelligenceRoute<E extends Env>(app: Hono<E>): vo
           });
         }
 
-        const countyIdsResult = parseCountyIds(honoContext.req.query("countyIds"));
-        if (!countyIdsResult.ok) {
-          throw routeError({
-            httpStatus: 400,
-            code: "INVALID_COUNTY_IDS",
-            message: countyIdsResult.message,
-          });
-        }
+        const request = readCountyScoresRequest(honoContext.req.query("countyIds"));
 
         const countyScoresResult = await queryCountyScores({
-          countyIds: countyIdsResult.value.countyIds,
+          countyIds: request.countyIds,
         });
 
         if (!countyScoresResult.ok) {
@@ -170,6 +140,8 @@ export function registerCountyIntelligenceRoute<E extends Env>(app: Hono<E>): vo
           );
         }
 
+        setCacheControlHeader(honoContext, getDatasetCacheTtlSeconds("county_scores"));
+
         const payload: CountyScoresResponse = {
           rows: [...countyScoresResult.value.rows],
           summary: {
@@ -178,7 +150,7 @@ export function registerCountyIntelligenceRoute<E extends Env>(app: Hono<E>): vo
             requestedCountyIds: [...countyScoresResult.value.requestedCountyIds],
             missingCountyIds: [...countyScoresResult.value.missingCountyIds],
           },
-          meta: buildResponseMeta({
+          meta: buildCountyScoresResponseMeta({
             dataVersion: countyScoresResult.value.dataVersion,
             requestId,
             recordCount: countyScoresResult.value.rows.length,

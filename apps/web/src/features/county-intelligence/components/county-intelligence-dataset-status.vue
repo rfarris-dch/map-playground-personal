@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { CountyScoresStatusResponse } from "@map-migration/http-contracts/county-intelligence-http";
+  import type { SpatialAnalysisCountyScoresStatus } from "@map-migration/http-contracts/spatial-analysis-summary-http";
   import { computed } from "vue";
   import {
     formatDateTime,
@@ -9,7 +9,7 @@
   interface CountyScoresDatasetStatusProps {
     readonly errorMessage?: string | null;
     readonly isLoading?: boolean;
-    readonly status: CountyScoresStatusResponse | null;
+    readonly status: SpatialAnalysisCountyScoresStatus | null;
   }
 
   const props = defineProps<CountyScoresDatasetStatusProps>();

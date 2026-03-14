@@ -7,7 +7,6 @@ import {
   parseFacilityPerspective,
 } from "@map-migration/geo-kernel/facility-perspective";
 import type { IMap, MapPointerEvent, MapRenderedFeature } from "@map-migration/map-engine";
-import { isFeatureId } from "@/features/facilities/facilities.service";
 import { createFacilityClusterSummary } from "@/features/facilities/facilities-cluster.service";
 import type { FacilityClusterSummary } from "@/features/facilities/facilities-cluster.types";
 import type {
@@ -17,7 +16,13 @@ import type {
   FacilityClusterHoverState,
   FacilityHoverState,
 } from "@/features/facilities/hover.types";
-import type { HoverTarget } from "./hover.types";
+import { createFeatureHoverController } from "@/lib/map-feature-hover.service";
+import {
+  isFeatureId,
+  readNullableNumberProperty,
+  readPointCenter,
+  readStringProperty,
+} from "@/lib/map-feature-readers";
 
 function pointLayerIdForPerspective(perspective: FacilityPerspective): string {
   return `facilities.${perspective}.points`;
@@ -40,45 +45,6 @@ function perspectiveForClusterLayerId(
       return perspective;
     }
   }
-  return null;
-}
-
-function readProperty(properties: unknown, key: string): unknown {
-  if (typeof properties !== "object" || properties === null) {
-    return null;
-  }
-
-  return Reflect.get(properties, key);
-}
-
-function readStringProperty(properties: unknown, key: string): string | null {
-  const value = readProperty(properties, key);
-  if (typeof value !== "string") {
-    return null;
-  }
-  if (value.length === 0) {
-    return null;
-  }
-
-  return value;
-}
-
-function readNullableNumberProperty(properties: unknown, key: string): number | null {
-  const value = readProperty(properties, key);
-  if (value === null) {
-    return null;
-  }
-
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-  if (typeof value === "string" && value.length > 0) {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) {
-      return parsed;
-    }
-  }
-
   return null;
 }
 
@@ -167,25 +133,6 @@ function aggregateClusterLeaves(
   };
 }
 
-function readPointCenter(coordinates: unknown): readonly [number, number] | null {
-  if (!Array.isArray(coordinates) || coordinates.length < 2) {
-    return null;
-  }
-
-  const longitude = coordinates[0];
-  const latitude = coordinates[1];
-  if (
-    typeof longitude !== "number" ||
-    !Number.isFinite(longitude) ||
-    typeof latitude !== "number" ||
-    !Number.isFinite(latitude)
-  ) {
-    return null;
-  }
-
-  return [longitude, latitude];
-}
-
 export function mountFacilitiesHover(
   map: IMap,
   options: FacilitiesHoverOptions
@@ -196,7 +143,6 @@ export function mountFacilitiesHover(
   const clusterLayerIds = options.perspectives.map((perspective) => {
     return clusterLayerIdForPerspective(perspective);
   });
-  let hoverTarget: HoverTarget | null = null;
   let hoveredClusterId: number | null = null;
   let clusterFetchSequence = 0;
 
@@ -208,25 +154,51 @@ export function mountFacilitiesHover(
     return clusterLayerIds.filter((layerId) => map.hasLayer(layerId));
   };
 
-  const clearPointHover = (): void => {
-    if (hoverTarget !== null) {
-      map.setFeatureState(
-        {
-          source: hoverTarget.sourceId,
-          id: hoverTarget.featureId,
-        },
-        { hover: false }
-      );
-      hoverTarget = null;
-    }
-
-    options.onHoverChange?.(null);
-  };
-
   const clearClusterHover = (): void => {
     hoveredClusterId = null;
     clusterFetchSequence += 1;
     options.onClusterHoverChange?.(null);
+  };
+
+  const toScreenPoint = (event: MapPointerEvent): readonly [number, number] => {
+    return [event.point[0], event.point[1]];
+  };
+  const pointHoverController = createFeatureHoverController(map, {
+    autoBind: false,
+    isInteractionEnabled: options.isInteractionEnabled,
+    onHoverChange: options.onHoverChange,
+    resolveHoverCandidate(event) {
+      const layers = queryablePointLayerIds();
+      if (layers.length === 0) {
+        return null;
+      }
+
+      const features = map.queryRenderedFeatures(event.point, {
+        layers,
+      });
+      const screenPoint = toScreenPoint(event);
+
+      for (const feature of features) {
+        const nextHover = toHoverState(feature, screenPoint);
+        if (nextHover === null || !isFeatureId(feature.id)) {
+          continue;
+        }
+
+        return {
+          nextHover,
+          nextTarget: {
+            source: sourceIdForPerspective(nextHover.perspective),
+            id: feature.id,
+          },
+        };
+      }
+
+      return null;
+    },
+  });
+
+  const clearPointHover = (): void => {
+    pointHoverController.clear();
   };
 
   const clear = (): void => {
@@ -235,69 +207,8 @@ export function mountFacilitiesHover(
   };
 
   const onPointerLeave = (): void => {
-    clear();
-  };
-
-  const toScreenPoint = (event: MapPointerEvent): readonly [number, number] => {
-    return [event.point[0], event.point[1]];
-  };
-
-  const isSameHoverTarget = (nextTarget: HoverTarget): boolean => {
-    return (
-      hoverTarget !== null &&
-      hoverTarget.sourceId === nextTarget.sourceId &&
-      hoverTarget.featureId === nextTarget.featureId
-    );
-  };
-
-  const setPointHover = (nextTarget: HoverTarget, nextHover: FacilityHoverState): void => {
-    if (isSameHoverTarget(nextTarget)) {
-      options.onHoverChange?.(nextHover);
-      return;
-    }
-
-    clearPointHover();
-    map.setFeatureState(
-      {
-        source: nextTarget.sourceId,
-        id: nextTarget.featureId,
-      },
-      { hover: true }
-    );
-    hoverTarget = nextTarget;
-    options.onHoverChange?.(nextHover);
-  };
-
-  const handlePointPointerMove = (
-    event: MapPointerEvent,
-    screenPoint: readonly [number, number]
-  ): void => {
-    const layers = queryablePointLayerIds();
-    if (layers.length === 0) {
-      clearPointHover();
-      return;
-    }
-
-    const features = map.queryRenderedFeatures(event.point, {
-      layers,
-    });
-
-    for (const feature of features) {
-      const nextHover = toHoverState(feature, screenPoint);
-      if (nextHover === null || !isFeatureId(feature.id)) {
-        continue;
-      }
-
-      const nextTarget: HoverTarget = {
-        sourceId: sourceIdForPerspective(nextHover.perspective),
-        featureId: feature.id,
-      };
-
-      setPointHover(nextTarget, nextHover);
-      return;
-    }
-
-    clearPointHover();
+    pointHoverController.handlePointerLeave();
+    clearClusterHover();
   };
 
   const readClusterCenter = (
@@ -380,9 +291,7 @@ export function mountFacilitiesHover(
       return false;
     }
 
-    if (hoverTarget !== null) {
-      clearPointHover();
-    }
+    pointHoverController.clear();
 
     if (hoveredClusterId === clusterId) {
       return true;
@@ -412,7 +321,7 @@ export function mountFacilitiesHover(
       clearClusterHover();
     }
 
-    handlePointPointerMove(event, screenPoint);
+    pointHoverController.handlePointerMove(event);
   };
 
   map.onPointerMove(onPointerMove);

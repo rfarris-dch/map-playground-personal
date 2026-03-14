@@ -2,6 +2,8 @@ import { parsePositiveIntFlag } from "@/config/env-parsing.service";
 import { readApiRequestContextStorage } from "@/http/api-request-context-storage.service";
 import type { BunReservedSqlClient, BunSqlClient } from "./postgres.types";
 
+export type SqlParameterValue = number | string | readonly string[];
+
 declare const Bun: {
   sql: BunSqlClient;
 };
@@ -77,7 +79,7 @@ export function isConnectionClosedError(error: unknown): boolean {
 function runQueryWithClient<T extends object>(
   sqlClient: BunSqlClient,
   text: string,
-  values: ReadonlyArray<number | string>,
+  values: readonly SqlParameterValue[],
   options: ResolvedRunQueryOptions
 ): Promise<T[]> {
   return sqlClient.reserve().then(async (reserved: BunReservedSqlClient) => {
@@ -131,7 +133,7 @@ function attachAbortHandler<TValue extends object[]>(
 function runQueryWithReservedClient<T extends object>(
   reserved: BunReservedSqlClient,
   text: string,
-  values: ReadonlyArray<number | string>,
+  values: readonly SqlParameterValue[],
   options: ResolvedRunQueryOptions
 ): Promise<T[]> {
   return reserved.begin("read only", async (sql: BunSqlClient) => {
@@ -153,7 +155,7 @@ function runQueryWithReservedClient<T extends object>(
 async function runQueryWithReconnect<T extends object>(
   sqlClient: BunSqlClient,
   text: string,
-  values: ReadonlyArray<number | string>,
+  values: readonly SqlParameterValue[],
   options: ResolvedRunQueryOptions
 ): Promise<T[]> {
   try {
@@ -169,7 +171,7 @@ async function runQueryWithReconnect<T extends object>(
 
 export function runQuery<T extends object>(
   text: string,
-  values: ReadonlyArray<number | string>,
+  values: readonly SqlParameterValue[],
   options?: RunQueryOptions
 ): Promise<T[]> {
   const sqlClient = getSqlClient();

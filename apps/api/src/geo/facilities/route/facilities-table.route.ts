@@ -1,5 +1,7 @@
 import { ApiRoutes } from "@map-migration/http-contracts/api-routes";
 import {
+  type FacilitiesTableRequest,
+  FacilitiesTableRequestSchema,
   type FacilitiesTableResponse,
   FacilitiesTableResponseSchema,
 } from "@map-migration/http-contracts/table-contracts";
@@ -8,69 +10,29 @@ import {
   buildFacilitiesMappingRouteError,
   buildFacilitiesTableQueryRouteError,
 } from "@/geo/facilities/route/facilities-route-errors.service";
-import {
-  resolveFacilitySortBy,
-  resolvePerspectiveParam,
-  resolveSortDirection,
-} from "@/geo/facilities/route/facilities-route-param.service";
 import { queryFacilitiesTable } from "@/geo/facilities/route/facilities-route-query.service";
-import { jsonOk } from "@/http/api-response";
+import { jsonOk, toDebugDetails } from "@/http/api-response";
 import { fromApiRequest, routeError, runEffectRoute } from "@/http/effect-route";
-import { resolvePaginationParams, totalPages } from "@/http/pagination-params.service";
+import { totalPages } from "@/http/pagination-params.service";
 
-function resolveFacilitiesTableQuery(honoContext: Context) {
-  const perspectiveResolution = resolvePerspectiveParam(honoContext.req.query("perspective"));
-  if (!(perspectiveResolution.ok && perspectiveResolution.perspective)) {
+function resolveFacilitiesTableQuery(honoContext: Context): FacilitiesTableRequest {
+  const request = FacilitiesTableRequestSchema.safeParse({
+    page: honoContext.req.query("page"),
+    pageSize: honoContext.req.query("pageSize"),
+    perspective: honoContext.req.query("perspective"),
+    sortBy: honoContext.req.query("sortBy"),
+    sortOrder: honoContext.req.query("sortOrder"),
+  });
+  if (!request.success) {
     throw routeError({
       httpStatus: 400,
-      code: "INVALID_PERSPECTIVE",
-      message: perspectiveResolution.error ?? "perspective query param is invalid",
+      code: "INVALID_FACILITIES_TABLE_REQUEST",
+      message: "invalid facilities table request",
+      details: toDebugDetails(request.error),
     });
   }
 
-  const paginationResolution = resolvePaginationParams(
-    honoContext.req.query("page"),
-    honoContext.req.query("pageSize"),
-    {
-      defaultPageSize: 100,
-      maxPageSize: 500,
-      maxOffset: 1_000_000,
-    }
-  );
-
-  if (!paginationResolution.ok) {
-    throw routeError({
-      httpStatus: 400,
-      code: "INVALID_PAGINATION",
-      message: paginationResolution.message,
-    });
-  }
-
-  const sortBy = resolveFacilitySortBy(honoContext.req.query("sortBy"));
-  if (sortBy === null) {
-    throw routeError({
-      httpStatus: 400,
-      code: "INVALID_SORT",
-      message:
-        "sortBy must be one of: facilityName, providerId, stateAbbrev, commissionedSemantic, leaseOrOwn, commissionedPowerMw, plannedPowerMw, underConstructionPowerMw, availablePowerMw, updatedAt",
-    });
-  }
-
-  const sortOrder = resolveSortDirection(honoContext.req.query("sortOrder"));
-  if (sortOrder === null) {
-    throw routeError({
-      httpStatus: 400,
-      code: "INVALID_SORT",
-      message: "sortOrder must be one of: asc, desc",
-    });
-  }
-
-  return {
-    perspective: perspectiveResolution.perspective,
-    pagination: paginationResolution.value,
-    sortBy,
-    sortOrder,
-  };
+  return request.data;
 }
 
 export function registerFacilitiesTableRoute<E extends Env>(app: Hono<E>): void {
@@ -79,11 +41,12 @@ export function registerFacilitiesTableRoute<E extends Env>(app: Hono<E>): void 
       c,
       fromApiRequest(async ({ honoContext, requestId }) => {
         const query = resolveFacilitiesTableQuery(honoContext);
+        const offset = query.page * query.pageSize;
 
         const queryResult = await queryFacilitiesTable({
           perspective: query.perspective,
-          limit: query.pagination.pageSize,
-          offset: query.pagination.offset,
+          limit: query.pageSize,
+          offset,
           sortBy: query.sortBy,
           sortOrder: query.sortOrder,
         });
@@ -97,10 +60,10 @@ export function registerFacilitiesTableRoute<E extends Env>(app: Hono<E>): void 
         const payload: FacilitiesTableResponse = {
           rows: [...queryResult.value.rows],
           pagination: {
-            page: query.pagination.page,
-            pageSize: query.pagination.pageSize,
+            page: query.page,
+            pageSize: query.pageSize,
             totalCount: queryResult.value.totalCount,
-            totalPages: totalPages(queryResult.value.totalCount, query.pagination.pageSize),
+            totalPages: totalPages(queryResult.value.totalCount, query.pageSize),
           },
         };
 

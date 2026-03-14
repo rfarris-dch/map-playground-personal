@@ -16,6 +16,7 @@ import type {
 import {
   appendPipelineLiveEvents,
   appendPipelineLiveSample,
+  appendResumedPipelineLiveSample,
 } from "./pipeline-tracking/pipeline-tracking-history.service";
 import {
   buildPipelineFetchErrorEvent,
@@ -178,6 +179,7 @@ export function createPipelineStatusController(
   function applyRefreshResult(result: PipelineStatusFetchResult, completedAt: string): void {
     if (result.ok) {
       const previousConsecutiveFailures = consecutiveFailures.value;
+      const isFirstSuccessfulRefresh = payload.value === null;
       payload.value = result.payload;
       error.value = null;
       successfulRequests.value += 1;
@@ -186,7 +188,9 @@ export function createPipelineStatusController(
 
       const nextSample = buildPipelineLiveSample(result.payload, completedAt);
       const previousSample = history.value.at(-1) ?? null;
-      history.value = appendPipelineLiveSample(history.value, nextSample);
+      history.value = isFirstSuccessfulRefresh
+        ? appendResumedPipelineLiveSample(history.value, nextSample)
+        : appendPipelineLiveSample(history.value, nextSample);
       deps.savePersistedHistory?.(history.value);
 
       const builtEvents = buildPipelineLiveEvents(previousSample, nextSample);

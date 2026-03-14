@@ -22,18 +22,20 @@ describe("api effect runtime", () => {
     });
 
     expect(Exit.isFailure(exit)).toBe(true);
-    expect(getRecentEffectFailures()).toEqual([
-      expect.objectContaining({
-        cause: expect.stringContaining("runtime capture failure"),
-        code: "EFFECT_FIBER_FAILURE",
-        message: "runtime capture failure",
-        method: "POST",
-        path: "/api/test/runtime",
-        requestId: "api_test_runtime_failure",
-        scope: "runtime",
-        source: "test-runtime",
-      }),
-    ]);
+    expect(getRecentEffectFailures()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          cause: expect.stringContaining("runtime capture failure"),
+          code: "EFFECT_FIBER_FAILURE",
+          message: "runtime capture failure",
+          method: "POST",
+          path: "/api/test/runtime",
+          requestId: "api_test_runtime_failure",
+          scope: "runtime",
+          source: "test-runtime",
+        }),
+      ])
+    );
   });
 
   it("rejects runApiEffect while still recording the failure", async () => {

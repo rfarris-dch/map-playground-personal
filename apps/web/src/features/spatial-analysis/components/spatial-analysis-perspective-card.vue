@@ -1,21 +1,8 @@
 <script setup lang="ts">
+  import type { SpatialAnalysisSummaryResponse } from "@map-migration/http-contracts/spatial-analysis-summary-http";
   import { computed } from "vue";
   import SpatialAnalysisProviderSummary from "@/features/spatial-analysis/components/spatial-analysis-provider-summary.vue";
   import type { SpatialAnalysisProviderSummaryItem } from "@/features/spatial-analysis/spatial-analysis-provider-summary.types";
-
-  interface SpatialAnalysisPerspectiveSummary {
-    readonly availablePowerMw: number;
-    readonly commissionedPowerMw: number;
-    readonly count: number;
-    readonly leasedCount: number;
-    readonly operationalCount: number;
-    readonly pipelinePowerMw: number;
-    readonly plannedCount: number;
-    readonly plannedPowerMw: number;
-    readonly squareFootage: number;
-    readonly underConstructionCount: number;
-    readonly underConstructionPowerMw: number;
-  }
 
   interface SpatialAnalysisPerspectiveCardProps {
     readonly accent: "colocation" | "hyperscale";
@@ -23,7 +10,7 @@
     readonly powerLabel?: string;
     readonly providerHeading?: string;
     readonly providers?: readonly SpatialAnalysisProviderSummaryItem[];
-    readonly summary: SpatialAnalysisPerspectiveSummary;
+    readonly summary: SpatialAnalysisSummaryResponse["summary"]["colocation"];
     readonly title: string;
   }
 

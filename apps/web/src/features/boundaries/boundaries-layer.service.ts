@@ -5,6 +5,7 @@ import type {
   BoundaryLayerId,
   BoundaryLayerState,
 } from "@/features/boundaries/boundaries.types";
+import { readNullableNumberProperty, readStringProperty } from "@/lib/map-feature-readers";
 
 export const BASEMAP_BOUNDARY_LAYER_IDS: readonly string[] = ["boundary_2", "boundary_disputed"];
 
@@ -15,7 +16,6 @@ export function initialBoundaryLayerState(): BoundaryLayerState {
     allFeatures: [],
     basemapLayersSuppressed: false,
     dataLoaded: false,
-    hoveredFeatureId: null,
     includedRegionIds: null,
     ready: false,
     requestSequence: 0,
@@ -27,44 +27,6 @@ export function isBoundaryFeatureId(value: unknown): value is string | number {
   return typeof value === "string" || typeof value === "number";
 }
 
-function readProperty(properties: unknown, key: string): unknown {
-  if (typeof properties !== "object" || properties === null) {
-    return null;
-  }
-
-  return Reflect.get(properties, key);
-}
-
-function readStringProperty(properties: unknown, key: string): string | null {
-  const value = readProperty(properties, key);
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const normalized = value.trim();
-  if (normalized.length === 0) {
-    return null;
-  }
-
-  return normalized;
-}
-
-function readNumberProperty(properties: unknown, key: string): number | null {
-  const value = readProperty(properties, key);
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-
-  if (typeof value === "string" && value.length > 0) {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) {
-      return parsed;
-    }
-  }
-
-  return null;
-}
-
 export function toHoverState(
   feature: { properties: unknown },
   layerId: BoundaryLayerId,
@@ -72,7 +34,7 @@ export function toHoverState(
 ): BoundaryHoverState | null {
   const regionId = readStringProperty(feature.properties, "regionId");
   const regionName = readStringProperty(feature.properties, "regionName");
-  const commissionedPowerMw = readNumberProperty(feature.properties, "commissionedPowerMw");
+  const commissionedPowerMw = readNullableNumberProperty(feature.properties, "commissionedPowerMw");
   if (regionId === null || regionName === null || commissionedPowerMw === null) {
     return null;
   }

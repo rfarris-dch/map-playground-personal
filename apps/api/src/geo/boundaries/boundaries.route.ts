@@ -1,49 +1,19 @@
-import type { Warning } from "@map-migration/geo-kernel/warning";
-import type { ResponseMeta } from "@map-migration/http-contracts/api-response-meta";
 import { ApiRoutes } from "@map-migration/http-contracts/api-routes";
 import {
   type BoundaryPowerFeatureCollection,
   BoundaryPowerFeatureCollectionSchema,
   type BoundaryPowerLevel,
-  parseBoundaryPowerLevelParam,
+  BoundaryPowerRequestSchema,
 } from "@map-migration/http-contracts/boundaries-http";
 import type { Env, Hono } from "hono";
 import { mapBoundaryPowerRowsToFeatures } from "@/geo/boundaries/boundaries.mapper";
 import { type BoundaryPowerRow, listBoundaryPower } from "@/geo/boundaries/boundaries.repo";
 import { jsonOk, toDebugDetails } from "@/http/api-response";
 import { fromApiRequest, routeError, runEffectRoute } from "@/http/effect-route";
+import { buildResponseMeta, setCacheControlHeader } from "@/http/response-meta.service";
 import { getApiRuntimeConfig } from "@/http/runtime-config";
+import { getDatasetCacheTtlSeconds } from "@/http/spatial-analysis-policy.service";
 import type { MapFeaturesResult, QueryRowsResult } from "./boundaries.route.types";
-
-function buildResponseMeta(args: {
-  readonly requestId: string;
-  readonly recordCount: number;
-  readonly truncated: boolean;
-  readonly warnings: readonly Warning[];
-}): ResponseMeta {
-  const runtimeConfig = getApiRuntimeConfig();
-  return {
-    requestId: args.requestId,
-    sourceMode: runtimeConfig.boundariesSourceMode,
-    dataVersion: runtimeConfig.dataVersion,
-    generatedAt: new Date().toISOString(),
-    recordCount: args.recordCount,
-    truncated: args.truncated,
-    warnings: [...args.warnings],
-  };
-}
-
-function defaultBoundaryLevel(): BoundaryPowerLevel {
-  return "county";
-}
-
-function parseBoundaryLevel(value: string | undefined): BoundaryPowerLevel | null {
-  if (typeof value === "undefined") {
-    return defaultBoundaryLevel();
-  }
-
-  return parseBoundaryPowerLevelParam(value);
-}
 
 function queryBoundaryRows(level: BoundaryPowerLevel): Promise<QueryRowsResult> {
   return listBoundaryPower(level).then(
@@ -81,16 +51,19 @@ export function registerBoundariesRoute<E extends Env>(app: Hono<E>): void {
     runEffectRoute(
       c,
       fromApiRequest(async ({ honoContext, requestId }) => {
-        const level = parseBoundaryLevel(honoContext.req.query("level"));
-        if (level === null) {
+        const request = BoundaryPowerRequestSchema.safeParse({
+          level: honoContext.req.query("level"),
+        });
+        if (!request.success) {
           throw routeError({
             httpStatus: 400,
             code: "INVALID_LEVEL",
-            message: "level query param must be one of: county, state, country",
+            message: "invalid boundary power request",
+            details: toDebugDetails(request.error),
           });
         }
 
-        const rowsResult = await queryBoundaryRows(level);
+        const rowsResult = await queryBoundaryRows(request.data.level);
 
         if (!rowsResult.ok) {
           throw routeError({
@@ -101,7 +74,7 @@ export function registerBoundariesRoute<E extends Env>(app: Hono<E>): void {
           });
         }
 
-        const featuresResult = mapBoundaryFeatures(rowsResult.rows, level);
+        const featuresResult = mapBoundaryFeatures(rowsResult.rows, request.data.level);
 
         if (!featuresResult.ok) {
           throw routeError({
@@ -112,14 +85,16 @@ export function registerBoundariesRoute<E extends Env>(app: Hono<E>): void {
           });
         }
 
+        setCacheControlHeader(honoContext, getDatasetCacheTtlSeconds("power"));
+
         const payload: BoundaryPowerFeatureCollection = {
           type: "FeatureCollection",
           features: featuresResult.features,
           meta: buildResponseMeta({
+            dataVersion: getApiRuntimeConfig().dataVersion,
             requestId,
             recordCount: featuresResult.features.length,
-            truncated: false,
-            warnings: [],
+            sourceMode: getApiRuntimeConfig().boundariesSourceMode,
           }),
         };
 

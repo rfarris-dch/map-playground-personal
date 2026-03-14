@@ -5,6 +5,7 @@ import {
   Exit,
   type Fiber,
   FiberId,
+  FiberRef,
   Layer,
   ManagedRuntime,
   Supervisor,
@@ -12,7 +13,6 @@ import {
 import { recordRuntimeEffectFailure } from "@/effect/effect-failure-trail.service";
 
 const DEFAULT_EFFECT_DEVTOOLS_URL = "ws://localhost:34437";
-const API_REQUEST_CONTEXT_KEY = "ApiRequestContext";
 
 interface RunApiEffectOptions {
   readonly failureMetadata?: RuntimeFailureMetadata;
@@ -26,65 +26,19 @@ interface RuntimeFailureMetadata {
   readonly source: string;
 }
 
-interface HonoRequestSnapshot {
+export interface SupervisorRequestMetadata {
   readonly method: string;
   readonly path: string;
-}
-
-interface HonoContextSnapshot {
-  readonly req: HonoRequestSnapshot;
-}
-
-interface ApiRequestContextSnapshot {
-  readonly honoContext: HonoContextSnapshot;
   readonly requestId: string;
-  readonly signal: AbortSignal;
 }
 
-function isHonoRequestSnapshot(value: unknown): value is HonoRequestSnapshot {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-
-  const method = Reflect.get(value, "method");
-  const path = Reflect.get(value, "path");
-  return typeof method === "string" && typeof path === "string";
-}
-
-function isAbortSignalSnapshot(value: unknown): value is AbortSignal {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-
-  return typeof Reflect.get(value, "aborted") === "boolean";
-}
-
-function isHonoContextSnapshot(value: unknown): value is HonoContextSnapshot {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-
-  return isHonoRequestSnapshot(Reflect.get(value, "req"));
-}
-
-function isApiRequestContextSnapshot(value: unknown): value is ApiRequestContextSnapshot {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-
-  return (
-    isHonoContextSnapshot(Reflect.get(value, "honoContext")) &&
-    typeof Reflect.get(value, "requestId") === "string" &&
-    isAbortSignalSnapshot(Reflect.get(value, "signal"))
-  );
-}
-
-function readApiRequestContextSnapshot(
-  fiber: Fiber.RuntimeFiber<unknown, unknown>
-): ApiRequestContextSnapshot | null {
-  const candidate = fiber.currentContext.unsafeMap.get(API_REQUEST_CONTEXT_KEY);
-  return isApiRequestContextSnapshot(candidate) ? candidate : null;
-}
+/**
+ * A FiberRef that carries request metadata into child fibers for the
+ * runtime supervisor. This replaces the brittle `unsafeMap.get("ApiRequestContext")`
+ * string-key lookup with an explicit, type-safe propagation mechanism.
+ */
+export const SupervisorRequestMetadataRef: FiberRef.FiberRef<SupervisorRequestMetadata | null> =
+  FiberRef.unsafeMake<SupervisorRequestMetadata | null>(null);
 
 function buildFailureSummary(cause: Cause.Cause<unknown>): {
   readonly code: string;
@@ -183,7 +137,7 @@ class RuntimeFailureSupervisor extends Supervisor.AbstractSupervisor<void> {
       return;
     }
 
-    const requestContext = readApiRequestContextSnapshot(fiber);
+    const requestMetadata = fiber.getFiberRef(SupervisorRequestMetadataRef);
     const fiberId = fiber.id();
     const failure = buildFailureSummary(exit.cause);
 
@@ -194,14 +148,15 @@ class RuntimeFailureSupervisor extends Supervisor.AbstractSupervisor<void> {
       fiberId: fiberId.id,
       fiberThreadName: FiberId.threadName(fiberId),
       message: failure.message,
-      ...(requestContext === null
+      ...(requestMetadata === null
         ? {}
         : {
-            method: requestContext.honoContext.req.method,
-            path: requestContext.honoContext.req.path,
-            requestId: requestContext.requestId,
+            method: requestMetadata.method,
+            path: requestMetadata.path,
+            requestId: requestMetadata.requestId,
           }),
-      source: requestContext === null ? "api-runtime-supervisor" : "api-runtime-supervisor-request",
+      source:
+        requestMetadata === null ? "api-runtime-supervisor" : "api-runtime-supervisor-request",
     });
   }
 }

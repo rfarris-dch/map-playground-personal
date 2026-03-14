@@ -20,8 +20,8 @@ export const FACILITIES_SELECTION_MAX_POLYGON_JSON_CHARS = parsePositiveIntFlag(
 
 export function facilitiesSelectionBboxExceedsLimits(bbox: BBox): boolean {
   return aoiBboxExceedsLimits(bbox, {
-    maxWidthDegrees: FACILITIES_SELECTION_MAX_BBOX_WIDTH_DEGREES,
     maxHeightDegrees: FACILITIES_SELECTION_MAX_BBOX_HEIGHT_DEGREES,
+    maxWidthDegrees: FACILITIES_SELECTION_MAX_BBOX_WIDTH_DEGREES,
   });
 }
 

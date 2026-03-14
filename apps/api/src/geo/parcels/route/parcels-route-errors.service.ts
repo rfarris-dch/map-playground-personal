@@ -1,32 +1,27 @@
-import type { Context } from "hono";
-import { jsonError, toDebugDetails } from "@/http/api-response";
+import { toDebugDetails } from "@/http/api-response";
+import { type ApiRouteError, routeError } from "@/http/effect-route";
 
-export function rejectWithBadRequest(c: Context, requestId: string, error: string): Response {
-  return jsonError(c, {
-    requestId,
+export function rejectWithBadRequest(message: string): ApiRouteError {
+  return routeError({
     httpStatus: 400,
     code: "BAD_REQUEST",
-    message: error,
+    message,
   });
 }
 
-export function rejectWithPolicyError(c: Context, requestId: string, error: string): Response {
-  return jsonError(c, {
-    requestId,
+export function rejectWithPolicyError(message: string): ApiRouteError {
+  return routeError({
     httpStatus: 422,
     code: "POLICY_REJECTED",
-    message: error,
+    message,
   });
 }
 
 export function rejectWithConflict(
-  c: Context,
-  requestId: string,
   expectedIngestionRunId: string,
   actualIngestionRunId: string | undefined
-): Response {
-  return jsonError(c, {
-    requestId,
+): ApiRouteError {
+  return routeError({
     httpStatus: 409,
     code: "INGESTION_RUN_MISMATCH",
     message: "parcel ingestion run mismatch; refresh map tiles or retry",
@@ -37,9 +32,8 @@ export function rejectWithConflict(
   });
 }
 
-export function postgisQueryFailed(c: Context, requestId: string, error: unknown): Response {
-  return jsonError(c, {
-    requestId,
+export function postgisQueryFailed(error: unknown): ApiRouteError {
+  return routeError({
     httpStatus: 503,
     code: "POSTGIS_QUERY_FAILED",
     message: "postgis query failed",
@@ -47,9 +41,8 @@ export function postgisQueryFailed(c: Context, requestId: string, error: unknown
   });
 }
 
-export function parcelMappingFailed(c: Context, requestId: string, error: unknown): Response {
-  return jsonError(c, {
-    requestId,
+export function parcelMappingFailed(error: unknown): ApiRouteError {
+  return routeError({
     httpStatus: 500,
     code: "PARCEL_MAPPING_FAILED",
     message: "parcel mapping failed",

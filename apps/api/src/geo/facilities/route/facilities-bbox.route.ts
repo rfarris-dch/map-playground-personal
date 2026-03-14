@@ -1,6 +1,6 @@
-import { parseBboxParam } from "@map-migration/geo-kernel/geometry";
 import { ApiQueryDefaults, ApiRoutes } from "@map-migration/http-contracts/api-routes";
 import {
+  FacilitiesBboxRequestSchema,
   type FacilitiesFeatureCollection,
   FacilitiesFeatureCollectionSchema,
 } from "@map-migration/http-contracts/facilities-http";
@@ -11,12 +11,9 @@ import {
   buildFacilitiesPostgisQueryRouteError,
 } from "@/geo/facilities/route/facilities-route-errors.service";
 import { buildFacilitiesRouteMeta } from "@/geo/facilities/route/facilities-route-meta.service";
-import {
-  clampLimit,
-  resolvePerspectiveParam,
-} from "@/geo/facilities/route/facilities-route-param.service";
+import { clampLimit } from "@/geo/facilities/route/facilities-route-param.service";
 import { queryFacilitiesByBbox } from "@/geo/facilities/route/facilities-route-query.service";
-import { jsonOk } from "@/http/api-response";
+import { jsonOk, toDebugDetails } from "@/http/api-response";
 import { fromApiRequest, routeError, runEffectRoute } from "@/http/effect-route";
 
 export function registerFacilitiesBboxRoute<E extends Env>(app: Hono<E>): void {
@@ -24,36 +21,30 @@ export function registerFacilitiesBboxRoute<E extends Env>(app: Hono<E>): void {
     runEffectRoute(
       c,
       fromApiRequest(async ({ honoContext, requestId }) => {
-        const bboxRaw = honoContext.req.query("bbox");
-        const bbox = bboxRaw ? parseBboxParam(bboxRaw) : null;
-
-        if (bbox === null) {
+        const request = FacilitiesBboxRequestSchema.safeParse({
+          bbox: honoContext.req.query("bbox"),
+          limit: honoContext.req.query("limit"),
+          perspective: honoContext.req.query("perspective"),
+        });
+        if (!request.success) {
           throw routeError({
             httpStatus: 400,
-            code: "INVALID_BBOX",
-            message: "bbox query param required: west,south,east,north",
+            code: "INVALID_FACILITIES_BBOX_REQUEST",
+            message: "invalid facilities bbox request",
+            details: toDebugDetails(request.error),
           });
         }
 
-        const perspectiveResolution = resolvePerspectiveParam(honoContext.req.query("perspective"));
-        if (!(perspectiveResolution.ok && perspectiveResolution.perspective)) {
-          throw routeError({
-            httpStatus: 400,
-            code: "INVALID_PERSPECTIVE",
-            message: perspectiveResolution.error ?? "perspective query param is invalid",
-          });
-        }
-
-        const perspective = perspectiveResolution.perspective;
+        const perspective = request.data.perspective;
         const maxRows = getFacilitiesBboxMaxRows(perspective);
         const limit = clampLimit(
-          honoContext.req.query("limit"),
+          String(request.data.limit),
           maxRows,
           ApiQueryDefaults.facilities.bboxLimit
         );
 
         const queryResult = await queryFacilitiesByBbox({
-          bbox,
+          bbox: request.data.bbox,
           limit,
           perspective,
         });

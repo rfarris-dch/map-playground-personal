@@ -1,9 +1,11 @@
 import type { ResponseMeta } from "@map-migration/http-contracts/api-response-meta";
 import { ApiHeaders } from "@map-migration/http-contracts/api-routes";
+import { buildResponseMeta } from "@/http/response-meta.service";
 import { getApiRuntimeConfig } from "@/http/runtime-config";
 
 const PASSTHROUGH_HEADER_NAMES: readonly string[] = [
   "cache-control",
+  "content-encoding",
   "content-length",
   "content-type",
   "etag",
@@ -16,15 +18,12 @@ export function buildFiberLocatorResponseMeta(
   recordCount: number
 ): ResponseMeta {
   const runtimeConfig = getApiRuntimeConfig();
-  return {
+  return buildResponseMeta({
+    dataVersion: runtimeConfig.dataVersion,
+    recordCount,
     requestId,
     sourceMode: runtimeConfig.fiberLocatorSourceMode,
-    dataVersion: runtimeConfig.dataVersion,
-    generatedAt: new Date().toISOString(),
-    recordCount,
-    truncated: false,
-    warnings: [],
-  };
+  });
 }
 
 export function copyFiberLocatorPassthroughHeaders(upstream: Response, requestId: string): Headers {

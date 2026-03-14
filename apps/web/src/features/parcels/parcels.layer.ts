@@ -1,18 +1,11 @@
-import { runEffectPromise } from "@map-migration/core-runtime/effect";
 import { makeParcelSnapshotId } from "@map-migration/geo-kernel/parcel-snapshot-id";
-import {
-  assertTileManifestMatchesDataset,
-  createPmtilesSourceUrl,
-  type VectorTilesetSchemaContract,
-} from "@map-migration/geo-tiles";
-import { loadTilePublishManifestEffect } from "@map-migration/geo-tiles/effect";
-import type { IMap, MapClickEvent, MapPointerEvent } from "@map-migration/map-engine";
+import { createPmtilesSourceUrl, type VectorTilesetSchemaContract } from "@map-migration/geo-tiles";
+import type { IMap, MapClickEvent } from "@map-migration/map-engine";
 import {
   getFacilitiesStyleLayerIds,
   getParcelsStyleLayerIds,
   validateLayerOrder,
 } from "@map-migration/map-style";
-import { Effect, Either } from "effect";
 import type { ParcelFeatureTarget } from "@/features/parcels/parcels.layer.types";
 import {
   createStressGovernor,
@@ -26,6 +19,9 @@ import type {
   ParcelsStatus,
 } from "@/features/parcels/parcels.types";
 import { resolveParcelsManifestPath } from "@/features/tiles/tile-manifest-config.service";
+import { mountManifestBackedLayerBootstrap } from "@/lib/manifest-backed-layer.service";
+import { createFeatureHoverController } from "@/lib/map-feature-hover.service";
+import { isFeatureId, readStringProperty } from "@/lib/map-feature-readers";
 
 const PARCELS_DRAW_TILESET_SCHEMA = Object.freeze<VectorTilesetSchemaContract>({
   dataset: "parcels-draw-v1",
@@ -43,36 +39,9 @@ function initialState(): ParcelsLayerState {
     stressBlocked: false,
     manifest: null,
     guardrail: null,
-    hoverFeatureId: null,
     selectedFeatureId: null,
     selectedParcelId: null,
   };
-}
-
-function isFeatureId(value: unknown): value is number | string {
-  return typeof value === "number" || typeof value === "string";
-}
-
-function readProperty(properties: unknown, key: string): unknown {
-  if (typeof properties !== "object" || properties === null) {
-    return null;
-  }
-
-  return Reflect.get(properties, key);
-}
-
-function readStringProperty(properties: unknown, key: string): string | null {
-  const value = readProperty(properties, key);
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const normalized = value.trim();
-  if (normalized.length === 0) {
-    return null;
-  }
-
-  return normalized;
 }
 
 function toParcelFeatureTarget(feature: {
@@ -159,17 +128,6 @@ export function mountParcelsLayer(
     }
   };
 
-  const setFeatureHoverState = (featureId: number | string, hover: boolean): void => {
-    map.setFeatureState(
-      {
-        source: sourceId,
-        sourceLayer,
-        id: featureId,
-      },
-      { hover }
-    );
-  };
-
   const setFeatureSelectedState = (featureId: number | string, selected: boolean): void => {
     map.setFeatureState(
       {
@@ -179,25 +137,6 @@ export function mountParcelsLayer(
       },
       { selected }
     );
-  };
-
-  const clearHover = (): void => {
-    if (state.hoverFeatureId === null) {
-      return;
-    }
-
-    setFeatureHoverState(state.hoverFeatureId, false);
-    state.hoverFeatureId = null;
-  };
-
-  const setHover = (featureId: number | string): void => {
-    if (state.hoverFeatureId === featureId) {
-      return;
-    }
-
-    clearHover();
-    setFeatureHoverState(featureId, true);
-    state.hoverFeatureId = featureId;
   };
 
   const clearSelection = (): void => {
@@ -440,83 +379,59 @@ export function mountParcelsLayer(
     console.error(`[parcels] layer order invariant failures: ${layerOrderFailures.join(" | ")}`);
   };
 
-  const completeSourceInitialization = (
-    manifest: NonNullable<ParcelsLayerState["manifest"]>
-  ): void => {
-    if (state.destroyed) {
-      return;
-    }
-
-    assertTileManifestMatchesDataset(
-      manifest,
-      PARCELS_DRAW_TILESET_SCHEMA.dataset,
-      "parcels layer manifest"
-    );
-    state.manifest = manifest;
-    ensureSource(manifest);
-    ensureFillLayer();
-    ensureOutlineLayer();
-
-    logLayerOrderFailures();
-    state.sourceInitialized = true;
-    applyVisibility();
-  };
-
-  const initializeSource = (): Promise<void> => {
-    if (state.destroyed || state.sourceInitialized) {
-      return Promise.resolve();
-    }
-
-    if (state.sourceInitializationPromise !== null) {
-      return state.sourceInitializationPromise;
-    }
-
-    const sourceInitializationPromise = (async (): Promise<void> => {
+  const bootstrap = mountManifestBackedLayerBootstrap({
+    contextLabel: "parcels",
+    dataset: PARCELS_DRAW_TILESET_SCHEMA.dataset,
+    ensureLayers() {
+      ensureFillLayer();
+      ensureOutlineLayer();
+      logLayerOrderFailures();
+    },
+    ensureSource(manifest) {
+      state.manifest = manifest;
+      ensureSource(manifest);
+    },
+    manifestPath,
+    map,
+    onInitializeSettled() {
+      state.sourceInitializationPromise = null;
+    },
+    onInitializeStart(sourceInitializationPromise) {
+      state.sourceInitializationPromise = sourceInitializationPromise;
       setStatus({ state: "loading-manifest" });
-      const result = await runEffectPromise(
-        Effect.either(
-          loadTilePublishManifestEffect({
-            contextLabel: "parcels",
-            manifestPath,
-            preserveNetworkErrorCause: true,
-          })
-        )
-      );
-
-      if (Either.isLeft(result)) {
-        throw result.left;
+    },
+    onInitializationError(error: unknown) {
+      if (state.destroyed) {
+        return;
       }
 
-      completeSourceInitialization(result.right.data);
-    })()
-      .catch((error: unknown) => {
-        if (state.destroyed) {
-          return;
-        }
-        setStatus({
-          state: "error",
-          reason: error instanceof Error ? error.message : String(error),
-        });
-        throw error;
-      })
-      .finally(() => {
-        state.sourceInitializationPromise = null;
+      setStatus({
+        state: "error",
+        reason: error instanceof Error ? error.message : String(error),
       });
+    },
+    onInitialized(manifest) {
+      state.manifest = manifest;
+      state.sourceInitialized = true;
+      applyVisibility();
+    },
+    onReady(readyBootstrap) {
+      state.ready = true;
+      stressGovernor.setEnabled(state.visible);
+      if (!state.visible) {
+        return;
+      }
 
-    state.sourceInitializationPromise = sourceInitializationPromise;
-    return sourceInitializationPromise;
-  };
+      readyBootstrap.initializeSource().catch(() => {
+        return;
+      });
+    },
+    preserveNetworkErrorCause: true,
+    startWhenStyleReady: true,
+  });
 
-  const onLoad = (): void => {
-    state.ready = true;
-    stressGovernor.setEnabled(state.visible);
-    if (!state.visible) {
-      return;
-    }
-
-    initializeSource().catch(() => {
-      return;
-    });
+  const initializeSource = (): Promise<void> => {
+    return bootstrap.initializeSource();
   };
 
   const collectViewportFacets = (): void => {
@@ -561,36 +476,42 @@ export function mountParcelsLayer(
     collectViewportFacets();
   };
 
-  const onPointerLeave = (): void => {
-    clearHover();
-  };
-
-  const onPointerMove = (event: MapPointerEvent): void => {
-    if (!(state.visible && state.sourceInitialized && isInteractionEnabled())) {
-      clearHover();
+  const hoverController = createFeatureHoverController(map, {
+    isInteractionEnabled,
+    onHoverChange() {
       return;
-    }
-
-    if (event.buttons > 0) {
-      clearHover();
-      return;
-    }
-
-    const features = map.queryRenderedFeatures(event.point, {
-      layers: [outlineLayerId, fillLayerId],
-    });
-
-    for (const feature of features) {
-      const target = toParcelFeatureTarget(feature);
-      if (target === null) {
-        continue;
+    },
+    resolveHoverCandidate(event) {
+      if (!(state.visible && state.sourceInitialized)) {
+        return null;
       }
 
-      setHover(target.featureId);
-      return;
-    }
+      const features = map.queryRenderedFeatures(event.point, {
+        layers: [outlineLayerId, fillLayerId],
+      });
 
-    clearHover();
+      for (const feature of features) {
+        const target = toParcelFeatureTarget(feature);
+        if (target === null) {
+          continue;
+        }
+
+        return {
+          nextHover: target,
+          nextTarget: {
+            source: sourceId,
+            sourceLayer,
+            id: target.featureId,
+          },
+        };
+      }
+
+      return null;
+    },
+  });
+
+  const clearHover = (): void => {
+    hoverController.clear({ emit: false });
   };
 
   const onClick = (event: MapClickEvent): void => {
@@ -615,10 +536,7 @@ export function mountParcelsLayer(
     clearSelection();
   };
 
-  map.on("load", onLoad);
   map.on("moveend", onMoveEnd);
-  map.onPointerMove(onPointerMove);
-  map.onPointerLeave(onPointerLeave);
   map.onClick(onClick);
 
   let currentFilter: import("@map-migration/map-engine").MapExpression | null = null;
@@ -685,11 +603,9 @@ export function mountParcelsLayer(
 
       stressGovernor.destroy();
 
-      map.off("load", onLoad);
       map.off("moveend", onMoveEnd);
-      map.offPointerMove(onPointerMove);
-      map.offPointerLeave(onPointerLeave);
       map.offClick(onClick);
+      hoverController.destroy();
 
       if (map.hasLayer(outlineLayerId)) {
         map.removeLayer(outlineLayerId);

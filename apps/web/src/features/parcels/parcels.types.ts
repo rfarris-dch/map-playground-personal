@@ -80,7 +80,6 @@ export interface ParcelsLayerController {
 export interface ParcelsLayerState {
   destroyed: boolean;
   guardrail: ParcelsGuardrailResult | null;
-  hoverFeatureId: number | string | null;
   manifest: TilePublishManifest | null;
   ready: boolean;
   selectedFeatureId: number | string | null;

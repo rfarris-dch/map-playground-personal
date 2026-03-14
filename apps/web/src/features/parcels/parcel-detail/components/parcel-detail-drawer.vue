@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { computed } from "vue";
-  import Button from "@/components/ui/button/button.vue";
+  import EntityDetailDrawerShell from "@/components/map/entity-detail-drawer-shell.vue";
   import { classifyParcelFloodAttributes } from "@/features/flood/flood-zone-classification.service";
   import { toParcelAttributeEntries } from "@/features/parcels/parcel-detail/detail.service";
   import type { ParcelDetailPayload } from "@/features/parcels/parcel-detail/detail.types";
@@ -35,58 +35,40 @@
 
     return classifyParcelFloodAttributes(detail.response.feature.properties.attrs);
   });
-
-  function onClose(): void {
-    emit("close");
-  }
 </script>
 
 <template>
-  <aside
-    v-if="selectedParcel !== null"
-    class="map-glass-elevated pointer-events-auto absolute right-4 top-4 z-10 w-[min(28rem,calc(100%-2rem))] rounded-lg p-4"
-    aria-label="Parcel detail"
+  <EntityDetailDrawerShell
+    ariaLabel="Parcel detail"
+    :selected="props.selectedParcel"
+    eyebrow="Parcel detail"
+    :title="props.selectedParcel?.parcelId ?? 'Parcel detail'"
+    :is-loading="props.isLoading"
+    :is-error="props.isError"
+    loading-message="Loading parcel detail..."
+    error-message="Parcel detail failed to load. Try selecting the parcel again."
+    @close="emit('close')"
   >
-    <header class="mb-3 flex items-center gap-2">
-      <h2 class="m-0 text-sm font-semibold tracking-tight">Parcel detail</h2>
-      <p class="m-0 truncate text-base font-semibold">{{ selectedParcel.parcelId }}</p>
-      <Button variant="glass" size="sm" class="ml-auto" @click="onClose">Close</Button>
-    </header>
-
-    <div v-if="isLoading" class="space-y-3" role="status" aria-live="polite" aria-busy="true">
-      <div class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2">
-        <div class="h-3 w-16 animate-pulse rounded bg-muted/50" />
-        <div class="h-3 w-32 animate-pulse rounded bg-muted/40" />
-        <div class="h-3 w-20 animate-pulse rounded bg-muted/50" />
-        <div class="h-3 w-24 animate-pulse rounded bg-muted/40" />
-        <div class="h-3 w-14 animate-pulse rounded bg-muted/50" />
-        <div class="h-3 w-28 animate-pulse rounded bg-muted/40" />
-      </div>
-      <p class="m-0 text-xs text-muted-foreground">Loading parcel detail...</p>
-    </div>
-    <p v-else-if="isError" class="m-0 text-xs text-muted-foreground">
-      Parcel detail failed to load. Try selecting the parcel again.
-    </p>
-    <template v-else-if="detail !== null">
+    <template v-if="props.detail !== null">
       <dl class="mb-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-2">
         <dt class="text-xs text-muted-foreground">Request</dt>
-        <dd class="m-0 text-sm font-mono">{{ detail.requestId }}</dd>
+        <dd class="m-0 text-sm font-mono">{{ props.detail.requestId }}</dd>
 
         <dt class="text-xs text-muted-foreground">Data version</dt>
-        <dd class="m-0 text-sm font-mono">{{ detail.response.meta.dataVersion }}</dd>
+        <dd class="m-0 text-sm font-mono">{{ props.detail.response.meta.dataVersion }}</dd>
 
         <dt class="text-xs text-muted-foreground">Source mode</dt>
-        <dd class="m-0 text-sm font-mono">{{ detail.response.meta.sourceMode }}</dd>
+        <dd class="m-0 text-sm font-mono">{{ props.detail.response.meta.sourceMode }}</dd>
 
         <dt class="text-xs text-muted-foreground">State</dt>
-        <dd class="m-0 text-sm">{{ detail.response.feature.properties.state2 ?? "n/a" }}</dd>
+        <dd class="m-0 text-sm">{{ props.detail.response.feature.properties.state2 ?? "n/a" }}</dd>
 
         <dt class="text-xs text-muted-foreground">GEOID</dt>
-        <dd class="m-0 text-sm">{{ detail.response.feature.properties.geoid ?? "n/a" }}</dd>
+        <dd class="m-0 text-sm">{{ props.detail.response.feature.properties.geoid ?? "n/a" }}</dd>
 
         <dt class="text-xs text-muted-foreground">Ingestion run</dt>
         <dd class="m-0 text-sm font-mono">
-          {{ detail.response.feature.lineage.ingestionRunId ?? "n/a" }}
+          {{ props.detail.response.feature.lineage.ingestionRunId ?? "n/a" }}
         </dd>
       </dl>
 
@@ -98,12 +80,12 @@
 
           <dt class="text-xs text-muted-foreground">Zone</dt>
           <dd class="m-0 text-sm font-mono">
-            {{ floodClassification?.normalizedZone ?? detail.response.feature.properties.attrs.fema_flood_zone ?? "n/a" }}
+            {{ floodClassification?.normalizedZone ?? props.detail.response.feature.properties.attrs.fema_flood_zone ?? "n/a" }}
           </dd>
 
           <dt class="text-xs text-muted-foreground">Subtype</dt>
           <dd class="m-0 text-sm font-mono">
-            {{ floodClassification?.normalizedZoneSubtype ?? detail.response.feature.properties.attrs.fema_flood_zone_subtype ?? "n/a" }}
+            {{ floodClassification?.normalizedZoneSubtype ?? props.detail.response.feature.properties.attrs.fema_flood_zone_subtype ?? "n/a" }}
           </dd>
         </dl>
       </section>
@@ -136,5 +118,5 @@
         </div>
       </section>
     </template>
-  </aside>
+  </EntityDetailDrawerShell>
 </template>

@@ -31,6 +31,10 @@ import {
   toDebugDetails,
 } from "@/http/api-response";
 import { ApiRequestContext, routeError, runEffectRoute } from "@/http/effect-route";
+import {
+  readRouteTimeoutProfile,
+  resolveRouteTimeoutMs,
+} from "@/http/route-timeout-profile.service";
 import { registerTilesRoute } from "@/http/tiles.route";
 import { registerPipelineStatusRoute } from "@/pipeline/pipeline-status.route";
 import type { ApiAppOptions, CreateApiAppOptions } from "./app.types";
@@ -48,16 +52,6 @@ const DEFAULT_PARCELS_REQUEST_TIMEOUT_MS = parsePositiveIntFlag(
   process.env.API_PARCELS_REQUEST_TIMEOUT_MS,
   180_000
 );
-
-const SELECTION_TIMEOUT_ROUTES = new Set<string>([
-  ApiRoutes.analysisSummary,
-  ApiRoutes.facilitiesSelection,
-  ApiRoutes.marketsSelection,
-]);
-const PARCELS_TIMEOUT_ROUTES = new Set<string>([
-  `${ApiRoutes.parcels}/enrich`,
-  `${ApiRoutes.parcels}/lookup`,
-]);
 
 function resolvePositiveIntOverride(value: number | undefined, fallback: number): number {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
@@ -87,18 +81,6 @@ function resolveApiAppOptions(options: CreateApiAppOptions): ApiAppOptions {
       DEFAULT_PARCELS_REQUEST_TIMEOUT_MS
     ),
   };
-}
-
-function resolveRequestTimeoutMsForPath(path: string, options: ApiAppOptions): number {
-  if (PARCELS_TIMEOUT_ROUTES.has(path)) {
-    return options.parcelsRequestTimeoutMs;
-  }
-
-  if (SELECTION_TIMEOUT_ROUTES.has(path)) {
-    return options.selectionRequestTimeoutMs;
-  }
-
-  return options.requestTimeoutMs;
 }
 
 function resolveInboundRequestId(c: Context): string {
@@ -166,7 +148,10 @@ export function createApiApp(options: CreateApiAppOptions = {}): Hono {
   );
 
   app.use("/api/*", (c, next) => {
-    const requestTimeoutMs = resolveRequestTimeoutMsForPath(c.req.path, resolvedOptions);
+    const requestTimeoutMs = resolveRouteTimeoutMs(
+      readRouteTimeoutProfile(c.req.path),
+      resolvedOptions
+    );
     const timeoutMiddleware = timeout(
       requestTimeoutMs,
       () =>
@@ -209,7 +194,9 @@ export function createApiApp(options: CreateApiAppOptions = {}): Hono {
     });
   });
 
-  app.get("/health", (c) => runEffectRoute(c, healthRouteProgram(resolvedOptions.readinessCheck)));
+  app.get(ApiRoutes.healthAlias, (c) =>
+    runEffectRoute(c, healthRouteProgram(resolvedOptions.readinessCheck))
+  );
 
   app.get(ApiRoutes.health, (c) =>
     runEffectRoute(c, healthRouteProgram(resolvedOptions.readinessCheck))
