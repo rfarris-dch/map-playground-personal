@@ -1,8 +1,8 @@
-import type { BBox } from "@map-migration/geo-kernel/geometry";
-import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
-import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts/facilities-http";
 import { getApiErrorMessage, getApiErrorReason } from "@map-migration/core-runtime/api";
 import { runEffectPromise } from "@map-migration/core-runtime/effect";
+import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
+import type { BBox } from "@map-migration/geo-kernel/geometry";
+import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts/facilities-http";
 import type {
   IMap,
   IMapMarker,

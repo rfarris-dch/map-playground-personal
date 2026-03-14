@@ -1,10 +1,13 @@
-import type { CountyScoresResponse, CountyScoresStatusResponse } from "@map-migration/http-contracts/county-intelligence-http";
 import {
   ApiAbortedError,
   type ApiEffectError,
   type ApiEffectSuccess,
   getApiErrorMessage,
 } from "@map-migration/core-runtime/api";
+import type {
+  CountyScoresResponse,
+  CountyScoresStatusResponse,
+} from "@map-migration/http-contracts/county-intelligence-http";
 import { Effect, Either } from "effect";
 import { computed, onBeforeUnmount, type Ref, shallowRef, watch } from "vue";
 import {

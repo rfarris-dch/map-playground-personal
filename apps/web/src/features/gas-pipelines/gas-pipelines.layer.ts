@@ -24,21 +24,27 @@ export function mountGasPipelineLayer(map: IMap): GasPipelineLayerController {
   let destroyed = false;
 
   function applyVisibility(): void {
-    if (!sourceInitialized) return;
+    if (!sourceInitialized) {
+      return;
+    }
     if (map.hasLayer(LINE_LAYER_ID)) {
       map.setLayerVisibility(LINE_LAYER_ID, visible);
     }
   }
 
   function applyFilter(): void {
-    if (!sourceInitialized) return;
+    if (!sourceInitialized) {
+      return;
+    }
     if (map.hasLayer(LINE_LAYER_ID)) {
       map.setLayerFilter(LINE_LAYER_ID, currentFilter);
     }
   }
 
   function ensureSource(manifestUrl: string): void {
-    if (map.hasSource(SOURCE_ID)) return;
+    if (map.hasSource(SOURCE_ID)) {
+      return;
+    }
     map.addSource(SOURCE_ID, {
       type: "vector",
       url: manifestUrl,
@@ -46,7 +52,9 @@ export function mountGasPipelineLayer(map: IMap): GasPipelineLayerController {
   }
 
   function ensureLayers(): void {
-    if (map.hasLayer(LINE_LAYER_ID)) return;
+    if (map.hasLayer(LINE_LAYER_ID)) {
+      return;
+    }
 
     map.addLayer({
       id: LINE_LAYER_ID,
@@ -67,21 +75,15 @@ export function mountGasPipelineLayer(map: IMap): GasPipelineLayerController {
           "#a3a3a3",
         ],
         "line-opacity": 0.7,
-        "line-width": [
-          "interpolate",
-          ["linear"],
-          ["zoom"],
-          3, 0.4,
-          6, 0.8,
-          9, 1.4,
-          13, 2.5,
-        ],
+        "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.4, 6, 0.8, 9, 1.4, 13, 2.5],
       },
     });
   }
 
   async function initializeSource(): Promise<void> {
-    if (destroyed || sourceInitialized) return;
+    if (destroyed || sourceInitialized) {
+      return;
+    }
 
     const result = await runEffectPromise(
       Effect.either(
@@ -93,7 +95,9 @@ export function mountGasPipelineLayer(map: IMap): GasPipelineLayerController {
       )
     );
 
-    if (Either.isLeft(result) || destroyed) return;
+    if (Either.isLeft(result) || destroyed) {
+      return;
+    }
 
     const manifest = result.right.data;
     const pmtilesUrl = createPmtilesSourceUrl(manifest, resolveManifestPath());
@@ -107,7 +111,9 @@ export function mountGasPipelineLayer(map: IMap): GasPipelineLayerController {
   }
 
   const onLoad = (): void => {
-    if (!visible) return;
+    if (!visible) {
+      return;
+    }
     initializeSource().catch((err) => {
       console.error("[gas-pipelines] init failed", err);
     });
@@ -115,11 +121,17 @@ export function mountGasPipelineLayer(map: IMap): GasPipelineLayerController {
 
   map.on("load", onLoad);
 
+  function initializeSourceWithLogging(context: string): void {
+    initializeSource().catch((error) => {
+      console.error(`[gas-pipelines] ${context} failed`, error);
+    });
+  }
+
   return {
     setVisible(nextVisible: boolean): void {
       visible = nextVisible;
       if (visible && !sourceInitialized) {
-        initializeSource().catch(() => {});
+        initializeSourceWithLogging("visibility sync");
       }
       applyVisibility();
     },
@@ -130,8 +142,12 @@ export function mountGasPipelineLayer(map: IMap): GasPipelineLayerController {
     destroy(): void {
       destroyed = true;
       map.off("load", onLoad);
-      if (map.hasLayer(LINE_LAYER_ID)) map.removeLayer(LINE_LAYER_ID);
-      if (map.hasSource(SOURCE_ID)) map.removeSource(SOURCE_ID);
+      if (map.hasLayer(LINE_LAYER_ID)) {
+        map.removeLayer(LINE_LAYER_ID);
+      }
+      if (map.hasSource(SOURCE_ID)) {
+        map.removeSource(SOURCE_ID);
+      }
     },
   };
 }

@@ -1,12 +1,18 @@
-import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts/facilities-http";
-import type { MarketSelectionMatch, MarketsSelectionRequest } from "@map-migration/http-contracts/markets-selection-http";
-import type { SpatialAnalysisSummaryRequest, SpatialAnalysisSummaryResponse } from "@map-migration/http-contracts/spatial-analysis-summary-http";
 import {
   ApiAbortedError,
   type ApiEffectError,
   type ApiEffectSuccess,
   getApiErrorMessage,
 } from "@map-migration/core-runtime/api";
+import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts/facilities-http";
+import type {
+  MarketSelectionMatch,
+  MarketsSelectionRequest,
+} from "@map-migration/http-contracts/markets-selection-http";
+import type {
+  SpatialAnalysisSummaryRequest,
+  SpatialAnalysisSummaryResponse,
+} from "@map-migration/http-contracts/spatial-analysis-summary-http";
 import { Effect, Either } from "effect";
 import { exportMeasureSelectionSummary } from "@/features/app/measure-selection/measure-selection-export.service";
 import { fetchFacilitiesByBboxEffect } from "@/features/facilities/api";
@@ -291,7 +297,13 @@ function queryLargeSelectionToolSummaryEffect(
           buildSelectionProgress([
             hasFacilitiesError
               ? createProgressStage("facilities", "error", "Failed to load facilities.", 0)
-              : createProgressStage("facilities", "complete", "Facilities loaded.", perspectives.length, perspectives.length),
+              : createProgressStage(
+                  "facilities",
+                  "complete",
+                  "Facilities loaded.",
+                  perspectives.length,
+                  perspectives.length
+                ),
             hasMarketsError
               ? createProgressStage("markets", "error", "Failed to load markets.", 0)
               : createProgressStage("markets", "complete", "Markets loaded.", 1),

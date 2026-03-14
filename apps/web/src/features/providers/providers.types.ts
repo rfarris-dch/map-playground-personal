@@ -1,5 +1,9 @@
-import type { ProviderSortBy, ProvidersTableResponse, SortDirection } from "@map-migration/http-contracts/table-contracts";
 import type { ApiResult } from "@map-migration/core-runtime/api";
+import type {
+  ProviderSortBy,
+  ProvidersTableResponse,
+  SortDirection,
+} from "@map-migration/http-contracts/table-contracts";
 
 export interface ProvidersTableRequest {
   readonly page: number;

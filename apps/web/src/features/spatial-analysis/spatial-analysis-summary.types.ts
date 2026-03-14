@@ -1,5 +1,8 @@
 import type { Warning } from "@map-migration/geo-kernel/warning";
-import type { CountyScoresResponse, CountyScoresStatusResponse } from "@map-migration/http-contracts/county-intelligence-http";
+import type {
+  CountyScoresResponse,
+  CountyScoresStatusResponse,
+} from "@map-migration/http-contracts/county-intelligence-http";
 import type { SpatialAnalysisPanelSummary } from "@/features/spatial-analysis/components/spatial-analysis-panel.types";
 
 // ---------------------------------------------------------------------------
@@ -30,14 +33,14 @@ export interface SpatialAnalysisCoverageModel {
 }
 
 export interface SpatialAnalysisMetaModel {
-  readonly requestId: string;
-  readonly sourceMode: string;
   readonly dataVersion: string;
   readonly generatedAt: string;
+  readonly ingestionRunId?: string | undefined;
   readonly recordCount: number;
+  readonly requestId: string;
+  readonly sourceMode: string;
   readonly truncated: boolean;
   readonly warnings: readonly Warning[];
-  readonly ingestionRunId?: string | undefined;
 }
 
 export interface SpatialAnalysisPolicyEntryModel {
@@ -48,8 +51,8 @@ export interface SpatialAnalysisPolicyEntryModel {
 
 export interface SpatialAnalysisPolicyModel {
   readonly countyIntelligence: SpatialAnalysisPolicyEntryModel;
-  readonly flood: SpatialAnalysisPolicyEntryModel;
   readonly facilities: SpatialAnalysisPolicyEntryModel;
+  readonly flood: SpatialAnalysisPolicyEntryModel;
   readonly parcels: SpatialAnalysisPolicyEntryModel;
 }
 
@@ -62,14 +65,6 @@ export interface SpatialAnalysisProvenanceModel {
     readonly publicationRunId: string | null;
     readonly publishedAt: string | null;
   };
-  readonly flood: {
-    readonly dataVersion: string | null;
-    readonly runId: string | null;
-    readonly sourceMode: string | null;
-    readonly sourceVersion: string | null;
-    readonly unavailableReason: string | null;
-    readonly warnings: readonly Warning[];
-  };
   readonly facilities: {
     readonly countsByPerspective: {
       readonly colocation: number;
@@ -81,6 +76,14 @@ export interface SpatialAnalysisProvenanceModel {
       readonly colocation: boolean;
       readonly hyperscale: boolean;
     };
+    readonly warnings: readonly Warning[];
+  };
+  readonly flood: {
+    readonly dataVersion: string | null;
+    readonly runId: string | null;
+    readonly sourceMode: string | null;
+    readonly sourceVersion: string | null;
+    readonly unavailableReason: string | null;
     readonly warnings: readonly Warning[];
   };
   readonly markets: {

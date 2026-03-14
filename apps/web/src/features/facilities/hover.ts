@@ -1,5 +1,11 @@
-import { type FacilityPerspective, parseFacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
-import { parseCommissionedSemantic, parseLeaseOrOwn } from "@map-migration/geo-kernel/commissioned-semantic";
+import {
+  parseCommissionedSemantic,
+  parseLeaseOrOwn,
+} from "@map-migration/geo-kernel/commissioned-semantic";
+import {
+  type FacilityPerspective,
+  parseFacilityPerspective,
+} from "@map-migration/geo-kernel/facility-perspective";
 import type { IMap, MapPointerEvent, MapRenderedFeature } from "@map-migration/map-engine";
 import { isFeatureId } from "@/features/facilities/facilities.service";
 import { createFacilityClusterSummary } from "@/features/facilities/facilities-cluster.service";

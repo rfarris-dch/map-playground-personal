@@ -1,4 +1,8 @@
-import type { MarketSortBy, MarketTableRow, SortDirection } from "@map-migration/http-contracts/table-contracts";
+import type {
+  MarketSortBy,
+  MarketTableRow,
+  SortDirection,
+} from "@map-migration/http-contracts/table-contracts";
 import type { MarketListRow } from "@/geo/markets/markets.repo";
 
 export type QueryMarketsRowsResult =

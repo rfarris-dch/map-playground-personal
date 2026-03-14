@@ -1,10 +1,10 @@
 <script setup lang="ts">
   import type {
-  ProviderSortBy,
-  ProvidersTableResponse,
-  ProviderTableRow,
-  SortDirection,
-} from "@map-migration/http-contracts/table-contracts";
+    ProviderSortBy,
+    ProvidersTableResponse,
+    ProviderTableRow,
+    SortDirection,
+  } from "@map-migration/http-contracts/table-contracts";
   import { useInfiniteQuery } from "@tanstack/vue-query";
   import { createColumnHelper, type SortingState } from "@tanstack/vue-table";
   import { computed, shallowRef, useTemplateRef } from "vue";

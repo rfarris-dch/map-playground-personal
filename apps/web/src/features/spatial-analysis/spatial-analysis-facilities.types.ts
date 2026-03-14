@@ -1,4 +1,7 @@
-import type { CommissionedSemantic, LeaseOrOwn } from "@map-migration/geo-kernel/commissioned-semantic";
+import type {
+  CommissionedSemantic,
+  LeaseOrOwn,
+} from "@map-migration/geo-kernel/commissioned-semantic";
 import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
 import type { LngLat } from "@map-migration/map-engine";
 

@@ -14,8 +14,8 @@ export interface ProviderListRow {
   readonly name: string | null;
   readonly provider_id: number | string;
   readonly state: string | null;
-  readonly supports_hyperscale: number | string | boolean | null;
   readonly supports_colocation: number | string | boolean | null;
+  readonly supports_hyperscale: number | string | boolean | null;
   readonly updated_at: Date | string | null;
 }
 

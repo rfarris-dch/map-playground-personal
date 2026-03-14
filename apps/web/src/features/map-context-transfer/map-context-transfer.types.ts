@@ -1,5 +1,9 @@
 import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
-import type { MapContextHighlightTarget, MapContextSurface, MapContextTransfer } from "@map-migration/http-contracts/map-context-transfer";
+import type {
+  MapContextHighlightTarget,
+  MapContextSurface,
+  MapContextTransfer,
+} from "@map-migration/http-contracts/map-context-transfer";
 import type { IMap } from "@map-migration/map-engine";
 import type { RouteLocationNormalizedLoaded } from "vue-router";
 import type {

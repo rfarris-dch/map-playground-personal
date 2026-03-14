@@ -18,21 +18,66 @@
     "zod": "^3.24.2"
   },
   "exports": {
-    "./api-error": { "types": "./dist/api-error.d.ts", "default": "./dist/api-error.js" },
-    "./api-response-meta": { "types": "./dist/api-response-meta.d.ts", "default": "./dist/api-response-meta.js" },
-    "./api-routes": { "types": "./dist/api-routes.d.ts", "default": "./dist/api-routes.js" },
-    "./feature-schemas": { "types": "./dist/feature-schemas.d.ts", "default": "./dist/feature-schemas.js" },
-    "./analysis-contracts": { "types": "./dist/analysis-contracts.d.ts", "default": "./dist/analysis-contracts.js" },
-    "./boundaries-http": { "types": "./dist/boundaries-http.d.ts", "default": "./dist/boundaries-http.js" },
-    "./county-intelligence-http": { "types": "./dist/county-intelligence-http.d.ts", "default": "./dist/county-intelligence-http.js" },
-    "./facilities-http": { "types": "./dist/facilities-http.d.ts", "default": "./dist/facilities-http.js" },
-    "./fiber-locator-http": { "types": "./dist/fiber-locator-http.d.ts", "default": "./dist/fiber-locator-http.js" },
-    "./map-context-transfer": { "types": "./dist/map-context-transfer.d.ts", "default": "./dist/map-context-transfer.js" },
-    "./markets-selection-http": { "types": "./dist/markets-selection-http.d.ts", "default": "./dist/markets-selection-http.js" },
-    "./parcels-http": { "types": "./dist/parcels-http.d.ts", "default": "./dist/parcels-http.js" },
-    "./pipeline-http": { "types": "./dist/pipeline-http.d.ts", "default": "./dist/pipeline-http.js" },
-    "./spatial-analysis-summary-http": { "types": "./dist/spatial-analysis-summary-http.d.ts", "default": "./dist/spatial-analysis-summary-http.js" },
-    "./table-contracts": { "types": "./dist/table-contracts.d.ts", "default": "./dist/table-contracts.js" }
+    "./api-error": {
+      "types": "./dist/api-error.d.ts",
+      "default": "./dist/api-error.js"
+    },
+    "./api-response-meta": {
+      "types": "./dist/api-response-meta.d.ts",
+      "default": "./dist/api-response-meta.js"
+    },
+    "./api-routes": {
+      "types": "./dist/api-routes.d.ts",
+      "default": "./dist/api-routes.js"
+    },
+    "./feature-schemas": {
+      "types": "./dist/feature-schemas.d.ts",
+      "default": "./dist/feature-schemas.js"
+    },
+    "./analysis-contracts": {
+      "types": "./dist/analysis-contracts.d.ts",
+      "default": "./dist/analysis-contracts.js"
+    },
+    "./boundaries-http": {
+      "types": "./dist/boundaries-http.d.ts",
+      "default": "./dist/boundaries-http.js"
+    },
+    "./county-intelligence-http": {
+      "types": "./dist/county-intelligence-http.d.ts",
+      "default": "./dist/county-intelligence-http.js"
+    },
+    "./facilities-http": {
+      "types": "./dist/facilities-http.d.ts",
+      "default": "./dist/facilities-http.js"
+    },
+    "./fiber-locator-http": {
+      "types": "./dist/fiber-locator-http.d.ts",
+      "default": "./dist/fiber-locator-http.js"
+    },
+    "./map-context-transfer": {
+      "types": "./dist/map-context-transfer.d.ts",
+      "default": "./dist/map-context-transfer.js"
+    },
+    "./markets-selection-http": {
+      "types": "./dist/markets-selection-http.d.ts",
+      "default": "./dist/markets-selection-http.js"
+    },
+    "./parcels-http": {
+      "types": "./dist/parcels-http.d.ts",
+      "default": "./dist/parcels-http.js"
+    },
+    "./pipeline-http": {
+      "types": "./dist/pipeline-http.d.ts",
+      "default": "./dist/pipeline-http.js"
+    },
+    "./spatial-analysis-summary-http": {
+      "types": "./dist/spatial-analysis-summary-http.d.ts",
+      "default": "./dist/spatial-analysis-summary-http.js"
+    },
+    "./table-contracts": {
+      "types": "./dist/table-contracts.d.ts",
+      "default": "./dist/table-contracts.js"
+    }
   },
   "files": [
     "dist"

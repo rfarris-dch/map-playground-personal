@@ -1,3 +1,4 @@
+import type { MapContextTransfer } from "@map-migration/http-contracts/map-context-transfer";
 import { Effect } from "effect";
 import { onBeforeUnmount, shallowRef, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
@@ -14,7 +15,7 @@ import {
 import type { UseAppShellUrlStateOptions } from "./app-shell-url-state.types";
 
 function normalizeViewportForMap(
-  viewport: NonNullable<import("@map-migration/http-contracts").MapContextTransfer["viewport"]>
+  viewport: NonNullable<MapContextTransfer["viewport"]>
 ): import("@map-migration/map-engine").MapViewport {
   if (viewport.type === "bounds") {
     return {

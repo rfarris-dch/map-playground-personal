@@ -1,5 +1,12 @@
-import type { ParcelSyncPhase, ParcelSyncStateProgress } from "@map-migration/http-contracts/parcels-http";
-import { type PipelineStatusResponse, getPipelineDatasetDescriptor, PIPELINE_PLATFORM } from "@map-migration/http-contracts/pipeline-http";
+import type {
+  ParcelSyncPhase,
+  ParcelSyncStateProgress,
+} from "@map-migration/http-contracts/parcels-http";
+import {
+  getPipelineDatasetDescriptor,
+  PIPELINE_PLATFORM,
+  type PipelineStatusResponse,
+} from "@map-migration/http-contracts/pipeline-http";
 import type {
   PipelineStatusFetchResult,
   PipelineStatusPayload,

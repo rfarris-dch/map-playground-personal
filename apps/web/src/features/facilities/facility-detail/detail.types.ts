@@ -1,6 +1,6 @@
+import type { ApiResult } from "@map-migration/core-runtime/api";
 import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
 import type { FacilitiesDetailResponse } from "@map-migration/http-contracts/facilities-http";
-import type { ApiResult } from "@map-migration/core-runtime/api";
 import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";
 
 export type FacilityDetailResult = ApiResult<FacilitiesDetailResponse>;

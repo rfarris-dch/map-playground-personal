@@ -1,5 +1,8 @@
 <script setup lang="ts">
-  import type { CountyScoresResponse, CountyScoresStatusResponse } from "@map-migration/http-contracts/county-intelligence-http";
+  import type {
+    CountyScoresResponse,
+    CountyScoresStatusResponse,
+  } from "@map-migration/http-contracts/county-intelligence-http";
   import { computed } from "vue";
   import CountyScoresDatasetStatus from "@/features/county-intelligence/components/county-intelligence-dataset-status.vue";
   import {

@@ -1,4 +1,7 @@
-import { type FacilityPerspective, FacilityPerspectiveSchema } from "@map-migration/geo-kernel/facility-perspective";
+import {
+  type FacilityPerspective,
+  FacilityPerspectiveSchema,
+} from "@map-migration/geo-kernel/facility-perspective";
 import { parseBboxParam } from "@map-migration/geo-kernel/geometry";
 import {
   MAP_CONTEXT_TRANSFER_SCHEMA_VERSION,

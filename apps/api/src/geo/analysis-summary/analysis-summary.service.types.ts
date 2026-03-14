@@ -1,4 +1,7 @@
-import type { SpatialAnalysisSummaryRequest, SpatialAnalysisSummaryResponse } from "@map-migration/http-contracts/spatial-analysis-summary-http";
+import type {
+  SpatialAnalysisSummaryRequest,
+  SpatialAnalysisSummaryResponse,
+} from "@map-migration/http-contracts/spatial-analysis-summary-http";
 
 export interface QuerySpatialAnalysisSummaryArgs {
   readonly expectedParcelIngestionRunId: string | null;

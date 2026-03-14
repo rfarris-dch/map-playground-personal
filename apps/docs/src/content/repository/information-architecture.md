@@ -28,7 +28,7 @@ flowchart LR
 | Getting Started | `/` and `/docs/getting-started/*` | Onboarding, workspace layout, shared commands, and contributor starting points. |
 | Repository | `/docs/repository/*` | Architecture boundaries, docs IA, and how the monorepo is divided. |
 | Applications | `/docs/applications/*` | Runtime foundations and feature-domain coverage for `apps/web`, `apps/api`, and `apps/pipeline-monitor`. |
-| Packages | `/docs/packages/*` | Shared runtime, contract, SQL, tile, ops, bench, and fixture packages under `packages/*`. |
+| Packages | `/docs/packages/*` | Shared runtime, contract, SQL, tile, and ops packages under `packages/*`. |
 | Data And Sync | `/docs/data-and-sync/*` | Cross-surface data movement, sync lifecycles, and workflow seams shared by scripts, the API worker, and the pipeline monitor. |
 | Operations | `/docs/operations/*` | Operational commands, troubleshooting paths, publish, rollback, and incident response guidance. |
 | References | `/docs/references/*` | Contracts, API surfaces, workspace maps, and documentation rules that point readers toward the right runtime surfaces. |

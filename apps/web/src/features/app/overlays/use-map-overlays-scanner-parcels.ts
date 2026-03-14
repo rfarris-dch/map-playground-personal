@@ -1,4 +1,3 @@
-import type { ParcelEnrichRequest, ParcelsFeatureCollection } from "@map-migration/http-contracts/parcels-http";
 import {
   ApiAbortedError,
   type ApiEffectError,
@@ -10,6 +9,10 @@ import {
   forkScopedBrowserEffect,
   interruptBrowserFiber,
 } from "@map-migration/core-runtime/browser";
+import type {
+  ParcelEnrichRequest,
+  ParcelsFeatureCollection,
+} from "@map-migration/http-contracts/parcels-http";
 import type { IMap } from "@map-migration/map-engine";
 import { Effect, Either } from "effect";
 import { onBeforeUnmount, shallowRef, watch } from "vue";

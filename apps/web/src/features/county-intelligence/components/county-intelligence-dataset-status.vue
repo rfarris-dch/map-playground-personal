@@ -74,49 +74,37 @@
 
     <div v-else-if="props.status !== null" class="space-y-3">
       <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-        <div
-          class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm"
-        >
+        <div class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm">
           <div class="text-xs uppercase tracking-wide text-muted-foreground">Published</div>
           <div class="mt-1 text-sm font-semibold text-foreground/70">
             {{ formatDateTime(props.status.publishedAt) }}
           </div>
         </div>
-        <div
-          class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm"
-        >
+        <div class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm">
           <div class="text-xs uppercase tracking-wide text-muted-foreground">Data Version</div>
           <div class="mt-1 break-all text-sm font-semibold text-foreground/70">
             {{ props.status.dataVersion ?? "-" }}
           </div>
         </div>
-        <div
-          class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm"
-        >
+        <div class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm">
           <div class="text-xs uppercase tracking-wide text-muted-foreground">Formula Version</div>
           <div class="mt-1 break-all text-sm font-semibold text-foreground/70">
             {{ props.status.formulaVersion ?? "-" }}
           </div>
         </div>
-        <div
-          class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm"
-        >
+        <div class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm">
           <div class="text-xs uppercase tracking-wide text-muted-foreground">Methodology</div>
           <div class="mt-1 break-all text-sm font-semibold text-foreground/70">
             {{ props.status.methodologyId ?? "-" }}
           </div>
         </div>
-        <div
-          class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm"
-        >
+        <div class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm">
           <div class="text-xs uppercase tracking-wide text-muted-foreground">Publication Run</div>
           <div class="mt-1 break-all text-xs font-semibold text-foreground/70">
             {{ props.status.publicationRunId ?? "-" }}
           </div>
         </div>
-        <div
-          class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm"
-        >
+        <div class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm">
           <div class="text-xs uppercase tracking-wide text-muted-foreground">
             Ranked / Deferred / Blocked
           </div>
@@ -126,15 +114,11 @@
             / {{ props.status.blockedCountyCount }}
           </div>
         </div>
-        <div
-          class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm"
-        >
+        <div class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm">
           <div class="text-xs uppercase tracking-wide text-muted-foreground">Confidence</div>
           <div class="mt-1 text-sm font-semibold text-foreground/70">{{ confidenceSummary }}</div>
         </div>
-        <div
-          class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm"
-        >
+        <div class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm">
           <div class="text-xs uppercase tracking-wide text-muted-foreground">Fresh Counties</div>
           <div class="mt-1 text-sm font-semibold text-foreground/70">
             {{ props.status.freshCountyCount }}
@@ -144,17 +128,13 @@
       </div>
 
       <dl class="grid gap-2 text-xs sm:grid-cols-2">
-        <div
-          class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm"
-        >
+        <div class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm">
           <dt class="text-xs uppercase tracking-wide text-muted-foreground">Input Data</dt>
           <dd class="mt-1 break-all text-xs font-medium text-foreground/70">
             {{ props.status.inputDataVersion ?? "-" }}
           </dd>
         </div>
-        <div
-          class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm"
-        >
+        <div class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm">
           <dt class="text-xs uppercase tracking-wide text-muted-foreground">Rows Published</dt>
           <dd class="mt-1 text-xs font-medium text-foreground/70">
             {{ props.status.rowCount }}
@@ -164,9 +144,7 @@
       </dl>
 
       <div class="grid gap-2 text-xs lg:grid-cols-2">
-        <div
-          class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm"
-        >
+        <div class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm">
           <div class="text-xs uppercase tracking-wide text-muted-foreground">
             Available Feature Families
           </div>
@@ -177,9 +155,7 @@
           </p>
         </div>
 
-        <div
-          class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm"
-        >
+        <div class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm">
           <div class="text-xs uppercase tracking-wide text-muted-foreground">
             Missing Feature Families
           </div>

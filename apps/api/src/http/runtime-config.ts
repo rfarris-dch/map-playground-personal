@@ -1,5 +1,5 @@
-import { ApiDefaults, resolveDataVersion } from "@map-migration/http-contracts/api-routes";
 import { type SourceMode, SourceModeSchema } from "@map-migration/http-contracts/api-response-meta";
+import { ApiDefaults, resolveDataVersion } from "@map-migration/http-contracts/api-routes";
 import type { ApiRuntimeConfig } from "./runtime-config.types";
 
 function assertPostgisServingMode(envKey: string, mode: SourceMode): void {

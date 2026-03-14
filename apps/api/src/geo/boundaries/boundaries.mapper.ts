@@ -1,4 +1,8 @@
-import type { BoundaryPowerFeature, BoundaryPowerLevel, BoundaryPowerProperties } from "@map-migration/http-contracts/boundaries-http";
+import type {
+  BoundaryPowerFeature,
+  BoundaryPowerLevel,
+  BoundaryPowerProperties,
+} from "@map-migration/http-contracts/boundaries-http";
 import type { BoundaryPowerRow } from "@/geo/boundaries/boundaries.repo";
 import type { GeoJsonGeometry } from "./boundaries.mapper.types";
 

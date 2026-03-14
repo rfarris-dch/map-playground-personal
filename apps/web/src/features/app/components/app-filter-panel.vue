@@ -18,59 +18,59 @@
 
   export interface ParcelDropdownState {
     readonly dataset: string;
-    readonly styleAcres: string;
     readonly davPercent: string;
+    readonly styleAcres: string;
   }
 
   export interface AppFilterPanelProps {
-    /** Power Type (MW) */
-    readonly powerTypeOptions: readonly FilterOption[];
-    readonly activePowerTypes: ReadonlySet<string>;
-
-    /** Status */
-    readonly statusOptions: readonly FilterOption[];
-    readonly activeStatuses: ReadonlySet<string>;
-
-    /** Markets */
-    readonly marketOptions: readonly FilterOption[];
-    readonly activeMarkets: ReadonlySet<string>;
-
-    /** Providers */
-    readonly providerOptions: readonly FilterOption[];
-    readonly activeProviders: ReadonlySet<string>;
-
-    /** Users */
-    readonly userOptions: readonly FilterOption[];
-    readonly activeUsers: ReadonlySet<string>;
-
-    /** Interconnectivity Hub */
-    readonly interconnectivityHub: boolean;
-
-    /** Infrastructure — Transmission Lines Voltage (kV) */
-    readonly voltageOptions: readonly FilterOption[];
-    readonly activeVoltages: ReadonlySet<string>;
-
-    /** Infrastructure — Natural Gas Lines Capacity (BWh) */
-    readonly gasCapacityOptions: readonly FilterOption[];
+    readonly activeFloodZones: ReadonlySet<string>;
     readonly activeGasCapacities: ReadonlySet<string>;
-
-    /** Infrastructure — Natural Gas Lines Status */
-    readonly gasStatusOptions: readonly FilterOption[];
     readonly activeGasStatuses: ReadonlySet<string>;
-
-    /** Parcels — Dropdowns */
-    readonly parcelDatasetOptions: readonly FilterOption[];
-    readonly parcelStyleOptions: readonly FilterOption[];
-    readonly parcelDavOptions: readonly FilterOption[];
-    readonly parcelDropdowns: ParcelDropdownState;
-
-    /** Parcels — Zoning Type */
-    readonly zoningTypeOptions: readonly FilterOption[];
+    readonly activeMarkets: ReadonlySet<string>;
+    readonly activePowerTypes: ReadonlySet<string>;
+    readonly activeProviders: ReadonlySet<string>;
+    readonly activeStatuses: ReadonlySet<string>;
+    readonly activeUsers: ReadonlySet<string>;
+    readonly activeVoltages: ReadonlySet<string>;
     readonly activeZoningTypes: ReadonlySet<string>;
 
     /** Parcels — Flood Zone */
     readonly floodZoneOptions: readonly FilterOption[];
-    readonly activeFloodZones: ReadonlySet<string>;
+
+    /** Infrastructure — Natural Gas Lines Capacity (BWh) */
+    readonly gasCapacityOptions: readonly FilterOption[];
+
+    /** Infrastructure — Natural Gas Lines Status */
+    readonly gasStatusOptions: readonly FilterOption[];
+
+    /** Interconnectivity Hub */
+    readonly interconnectivityHub: boolean;
+
+    /** Markets */
+    readonly marketOptions: readonly FilterOption[];
+
+    /** Parcels — Dropdowns */
+    readonly parcelDatasetOptions: readonly FilterOption[];
+    readonly parcelDavOptions: readonly FilterOption[];
+    readonly parcelDropdowns: ParcelDropdownState;
+    readonly parcelStyleOptions: readonly FilterOption[];
+    /** Power Type (MW) */
+    readonly powerTypeOptions: readonly FilterOption[];
+
+    /** Providers */
+    readonly providerOptions: readonly FilterOption[];
+
+    /** Status */
+    readonly statusOptions: readonly FilterOption[];
+
+    /** Users */
+    readonly userOptions: readonly FilterOption[];
+
+    /** Infrastructure — Transmission Lines Voltage (kV) */
+    readonly voltageOptions: readonly FilterOption[];
+
+    /** Parcels — Zoning Type */
+    readonly zoningTypeOptions: readonly FilterOption[];
   }
 
   type ToggleFilterEmit =
@@ -85,12 +85,15 @@
     | "toggle:zoning-type"
     | "toggle:flood-zone";
 
+  type StringValueEmit =
+    | ToggleFilterEmit
+    | "update:parcel-dataset"
+    | "update:parcel-style"
+    | "update:parcel-dav";
+
   interface AppFilterPanelEmits {
-    (e: ToggleFilterEmit, id: string): void;
+    (e: StringValueEmit, value: string): void;
     (e: "update:interconnectivity-hub", value: boolean): void;
-    (e: "update:parcel-dataset", value: string): void;
-    (e: "update:parcel-style", value: string): void;
-    (e: "update:parcel-dav", value: string): void;
   }
 
   const props = defineProps<AppFilterPanelProps>();
@@ -104,22 +107,17 @@
   const providerSearch = ref("");
   const userSearch = ref("");
 
-  const filteredMarkets = computed(() =>
-    filterOptions(props.marketOptions, marketSearch.value)
-  );
+  const filteredMarkets = computed(() => filterOptions(props.marketOptions, marketSearch.value));
   const filteredProviders = computed(() =>
     filterOptions(props.providerOptions, providerSearch.value)
   );
-  const filteredUsers = computed(() =>
-    filterOptions(props.userOptions, userSearch.value)
-  );
+  const filteredUsers = computed(() => filterOptions(props.userOptions, userSearch.value));
 
-  function filterOptions(
-    options: readonly FilterOption[],
-    query: string
-  ): readonly FilterOption[] {
+  function filterOptions(options: readonly FilterOption[], query: string): readonly FilterOption[] {
     const q = query.trim().toLowerCase();
-    if (q.length === 0) return options;
+    if (q.length === 0) {
+      return options;
+    }
     return options.filter((o) => o.label.toLowerCase().includes(q));
   }
 
@@ -137,11 +135,7 @@
     "parcels",
   ]);
 
-  const openInfraSections = ref<string[]>([
-    "voltage",
-    "gas-capacity",
-    "gas-status",
-  ]);
+  const openInfraSections = ref<string[]>(["voltage", "gas-capacity", "gas-status"]);
 
   const openParcelSections = ref<string[]>(["zoning-type", "flood-zone"]);
 </script>
@@ -172,11 +166,20 @@
               >
                 <CheckboxIndicator class="flex items-center justify-center text-white">
                   <svg class="size-2" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                    <path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                    <path
+                      d="M2 5l2 2 4-4"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
                   </svg>
                 </CheckboxIndicator>
               </CheckboxRoot>
-              <span class="text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground">{{ opt.label }}</span>
+              <span
+                class="text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground"
+                >{{ opt.label }}</span
+              >
             </label>
           </div>
         </AccordionContent>
@@ -205,11 +208,20 @@
               >
                 <CheckboxIndicator class="flex items-center justify-center text-white">
                   <svg class="size-2" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                    <path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                    <path
+                      d="M2 5l2 2 4-4"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
                   </svg>
                 </CheckboxIndicator>
               </CheckboxRoot>
-              <span class="text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground">{{ opt.label }}</span>
+              <span
+                class="text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground"
+                >{{ opt.label }}</span
+              >
             </label>
           </div>
         </AccordionContent>
@@ -227,7 +239,9 @@
         <AccordionContent>
           <div class="flex flex-col gap-[var(--space-1)] px-3 pb-2">
             <div class="relative">
-              <Search class="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+              <Search
+                class="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground"
+              />
               <input
                 v-model="marketSearch"
                 type="text"
@@ -248,13 +262,25 @@
                 >
                   <CheckboxIndicator class="flex items-center justify-center text-white">
                     <svg class="size-2" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                      <path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                      <path
+                        d="M2 5l2 2 4-4"
+                        stroke="currentColor"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
                     </svg>
                   </CheckboxIndicator>
                 </CheckboxRoot>
-                <span class="truncate text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground">{{ opt.label }}</span>
+                <span
+                  class="truncate text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground"
+                  >{{ opt.label }}</span
+                >
               </label>
-              <p v-if="filteredMarkets.length === 0" class="py-1 text-[length:var(--size-2)] italic text-muted-foreground">
+              <p
+                v-if="filteredMarkets.length === 0"
+                class="py-1 text-[length:var(--size-2)] italic text-muted-foreground"
+              >
                 No markets match "{{ marketSearch }}"
               </p>
             </div>
@@ -274,7 +300,9 @@
         <AccordionContent>
           <div class="flex flex-col gap-[var(--space-1)] px-3 pb-2">
             <div class="relative">
-              <Search class="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+              <Search
+                class="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground"
+              />
               <input
                 v-model="providerSearch"
                 type="text"
@@ -295,13 +323,25 @@
                 >
                   <CheckboxIndicator class="flex items-center justify-center text-white">
                     <svg class="size-2" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                      <path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                      <path
+                        d="M2 5l2 2 4-4"
+                        stroke="currentColor"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
                     </svg>
                   </CheckboxIndicator>
                 </CheckboxRoot>
-                <span class="truncate text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground">{{ opt.label }}</span>
+                <span
+                  class="truncate text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground"
+                  >{{ opt.label }}</span
+                >
               </label>
-              <p v-if="filteredProviders.length === 0" class="py-1 text-[length:var(--size-2)] italic text-muted-foreground">
+              <p
+                v-if="filteredProviders.length === 0"
+                class="py-1 text-[length:var(--size-2)] italic text-muted-foreground"
+              >
                 No providers match "{{ providerSearch }}"
               </p>
             </div>
@@ -321,7 +361,9 @@
         <AccordionContent>
           <div class="flex flex-col gap-[var(--space-1)] px-3 pb-2">
             <div class="relative">
-              <Search class="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+              <Search
+                class="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground"
+              />
               <input
                 v-model="userSearch"
                 type="text"
@@ -342,13 +384,25 @@
                 >
                   <CheckboxIndicator class="flex items-center justify-center text-white">
                     <svg class="size-2" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                      <path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                      <path
+                        d="M2 5l2 2 4-4"
+                        stroke="currentColor"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
                     </svg>
                   </CheckboxIndicator>
                 </CheckboxRoot>
-                <span class="truncate text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground">{{ opt.label }}</span>
+                <span
+                  class="truncate text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground"
+                  >{{ opt.label }}</span
+                >
               </label>
-              <p v-if="filteredUsers.length === 0" class="py-1 text-[length:var(--size-2)] italic text-muted-foreground">
+              <p
+                v-if="filteredUsers.length === 0"
+                class="py-1 text-[length:var(--size-2)] italic text-muted-foreground"
+              >
                 No users match "{{ userSearch }}"
               </p>
             </div>
@@ -361,13 +415,15 @@
     <!-- Interconnectivity Hub (toggle, not accordion)                  -->
     <!-- ============================================================ -->
     <div class="flex items-center justify-between border-b border-border px-3 py-2">
-      <span class="text-[length:var(--size-2)] font-[number:var(--weight-3)] uppercase tracking-wide text-muted-foreground">
+      <span
+        class="text-[length:var(--size-2)] font-[number:var(--weight-3)] uppercase tracking-wide text-muted-foreground"
+      >
         Interconnectivity Hub
       </span>
       <button
         type="button"
-        role="switch"
-        :aria-checked="props.interconnectivityHub"
+        aria-label="Interconnectivity Hub"
+        :aria-pressed="props.interconnectivityHub"
         class="relative inline-flex h-4 w-7 shrink-0 cursor-pointer items-center rounded-full border border-border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
         :class="props.interconnectivityHub ? 'bg-primary' : 'bg-muted'"
         @click="emit('update:interconnectivity-hub', !props.interconnectivityHub)"
@@ -412,11 +468,20 @@
                     >
                       <CheckboxIndicator class="flex items-center justify-center text-white">
                         <svg class="size-2" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                          <path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                          <path
+                            d="M2 5l2 2 4-4"
+                            stroke="currentColor"
+                            stroke-width="1.5"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          />
                         </svg>
                       </CheckboxIndicator>
                     </CheckboxRoot>
-                    <span class="text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground">{{ opt.label }}</span>
+                    <span
+                      class="text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground"
+                      >{{ opt.label }}</span
+                    >
                   </label>
                 </div>
               </AccordionContent>
@@ -443,11 +508,20 @@
                     >
                       <CheckboxIndicator class="flex items-center justify-center text-white">
                         <svg class="size-2" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                          <path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                          <path
+                            d="M2 5l2 2 4-4"
+                            stroke="currentColor"
+                            stroke-width="1.5"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          />
                         </svg>
                       </CheckboxIndicator>
                     </CheckboxRoot>
-                    <span class="text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground">{{ opt.label }}</span>
+                    <span
+                      class="text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground"
+                      >{{ opt.label }}</span
+                    >
                   </label>
                 </div>
               </AccordionContent>
@@ -474,11 +548,20 @@
                     >
                       <CheckboxIndicator class="flex items-center justify-center text-white">
                         <svg class="size-2" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                          <path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                          <path
+                            d="M2 5l2 2 4-4"
+                            stroke="currentColor"
+                            stroke-width="1.5"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          />
                         </svg>
                       </CheckboxIndicator>
                     </CheckboxRoot>
-                    <span class="text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground">{{ opt.label }}</span>
+                    <span
+                      class="text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground"
+                      >{{ opt.label }}</span
+                    >
                   </label>
                 </div>
               </AccordionContent>
@@ -500,7 +583,10 @@
           <div class="flex flex-col gap-[var(--space-2)] px-3 pb-2">
             <!-- Parcel Dataset -->
             <div class="flex flex-col gap-1">
-              <span class="text-[length:var(--size-2)] font-[number:var(--weight-2)] leading-none text-foreground/70">Parcel Dataset</span>
+              <span
+                class="text-[length:var(--size-2)] font-[number:var(--weight-2)] leading-none text-foreground/70"
+                >Parcel Dataset</span
+              >
               <select
                 :value="props.parcelDropdowns.dataset"
                 class="h-7 w-full rounded-sm border border-border bg-background px-2 text-[length:var(--size-2)] text-foreground/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
@@ -514,7 +600,10 @@
 
             <!-- Parcel Style (Acres) -->
             <div class="flex flex-col gap-1">
-              <span class="text-[length:var(--size-2)] font-[number:var(--weight-2)] leading-none text-foreground/70">Parcel Style (Acres)</span>
+              <span
+                class="text-[length:var(--size-2)] font-[number:var(--weight-2)] leading-none text-foreground/70"
+                >Parcel Style (Acres)</span
+              >
               <select
                 :value="props.parcelDropdowns.styleAcres"
                 class="h-7 w-full rounded-sm border border-border bg-background px-2 text-[length:var(--size-2)] text-foreground/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
@@ -528,7 +617,10 @@
 
             <!-- DAV % -->
             <div class="flex flex-col gap-1">
-              <span class="text-[length:var(--size-2)] font-[number:var(--weight-2)] leading-none text-foreground/70">Display at % Down-Assessed Value (DAV)</span>
+              <span
+                class="text-[length:var(--size-2)] font-[number:var(--weight-2)] leading-none text-foreground/70"
+                >Display at % Down-Assessed Value (DAV)</span
+              >
               <select
                 :value="props.parcelDropdowns.davPercent"
                 class="h-7 w-full rounded-sm border border-border bg-background px-2 text-[length:var(--size-2)] text-foreground/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
@@ -562,11 +654,20 @@
                       >
                         <CheckboxIndicator class="flex items-center justify-center text-white">
                           <svg class="size-2" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                            <path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                            <path
+                              d="M2 5l2 2 4-4"
+                              stroke="currentColor"
+                              stroke-width="1.5"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                            />
                           </svg>
                         </CheckboxIndicator>
                       </CheckboxRoot>
-                      <span class="text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground">{{ opt.label }}</span>
+                      <span
+                        class="text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground"
+                        >{{ opt.label }}</span
+                      >
                     </label>
                   </div>
                 </AccordionContent>
@@ -592,11 +693,20 @@
                       >
                         <CheckboxIndicator class="flex items-center justify-center text-white">
                           <svg class="size-2" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                            <path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                            <path
+                              d="M2 5l2 2 4-4"
+                              stroke="currentColor"
+                              stroke-width="1.5"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                            />
                           </svg>
                         </CheckboxIndicator>
                       </CheckboxRoot>
-                      <span class="text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground">{{ opt.label }}</span>
+                      <span
+                        class="text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground"
+                        >{{ opt.label }}</span
+                      >
                     </label>
                   </div>
                 </AccordionContent>

@@ -41,9 +41,7 @@
 </script>
 
 <template>
-  <article
-    class="rounded-sm border border-border bg-card p-2 shadow-sm"
-  >
+  <article class="rounded-sm border border-border bg-card p-2 shadow-sm">
     <div class="mb-1 flex items-center gap-1.5">
       <span class="inline-block h-2 w-2 rounded-full" :class="dotClass" />
       <h3 class="m-0 text-xs font-semibold text-muted-foreground">{{ props.title }}</h3>

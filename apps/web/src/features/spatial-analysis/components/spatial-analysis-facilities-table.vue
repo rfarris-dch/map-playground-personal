@@ -85,9 +85,7 @@
 
 <template>
   <table class="w-full min-w-[640px] border-collapse text-xs text-muted-foreground">
-    <thead
-      class="sticky top-0 z-10 border-b border-border bg-card shadow-sm"
-    >
+    <thead class="sticky top-0 z-10 border-b border-border bg-card shadow-sm">
       <tr class="text-left text-xs uppercase tracking-wide text-muted-foreground">
         <th class="px-2 py-1.5">{{ useBadgePerspective ? "Perspective" : "" }}</th>
         <th class="px-2 py-1.5">Facility</th>

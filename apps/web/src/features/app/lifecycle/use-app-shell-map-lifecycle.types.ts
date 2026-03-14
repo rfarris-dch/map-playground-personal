@@ -6,7 +6,6 @@ import type {
   BoundaryControllerState,
   BoundaryHoverByLayerState,
 } from "@/features/app/boundary/app-shell-boundary.types";
-import type { GasPipelineLayerController } from "@/features/gas-pipelines/gas-pipelines.types";
 import type {
   BoundaryFacetOptionsState,
   BoundaryFacetSelectionState,
@@ -25,6 +24,7 @@ import type {
   FacilityHoverState,
 } from "@/features/facilities/hover.types";
 import type { FloodLayerMountResult } from "@/features/flood/flood-layer.types";
+import type { GasPipelineLayerController } from "@/features/gas-pipelines/gas-pipelines.types";
 import type { HydroBasinsVisibilityController } from "@/features/hydro-basins/hydro-basins.types";
 import type {
   LayerRuntimeController,
@@ -109,9 +109,13 @@ export interface AppShellMapLifecycleSelectionActions {
 export interface AppShellMapFiltersRefs {
   readonly facilitiesPredicate: Readonly<ShallowRef<FacilitiesFilterPredicate | null | undefined>>;
   readonly onCachedFeaturesUpdate: (features: FacilitiesFeatureCollection["features"]) => void;
-  readonly onParcelViewportFacets: (facets: import("@/features/parcels/parcels.types").ParcelsViewportFacets) => void;
+  readonly onParcelViewportFacets: (
+    facets: import("@/features/parcels/parcels.types").ParcelsViewportFacets
+  ) => void;
   readonly parcelFilter: Readonly<ShallowRef<MapExpression | null | undefined>>;
-  readonly parcelViewportFacets: Readonly<ShallowRef<import("@/features/parcels/parcels.types").ParcelsViewportFacets | null | undefined>>;
+  readonly parcelViewportFacets: Readonly<
+    ShallowRef<import("@/features/parcels/parcels.types").ParcelsViewportFacets | null | undefined>
+  >;
   readonly transmissionFilter: Readonly<ShallowRef<MapExpression | null | undefined>>;
 }
 

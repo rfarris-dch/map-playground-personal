@@ -3,7 +3,10 @@ import type { Warning } from "@map-migration/geo-kernel/warning";
 import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts/facilities-http";
 import type { MarketSelectionMatch } from "@map-migration/http-contracts/markets-selection-http";
 import type { ParcelsFeatureCollection } from "@map-migration/http-contracts/parcels-http";
-import type { SpatialAnalysisSummaryRequest, SpatialAnalysisSummaryResponse } from "@map-migration/http-contracts/spatial-analysis-summary-http";
+import type {
+  SpatialAnalysisSummaryRequest,
+  SpatialAnalysisSummaryResponse,
+} from "@map-migration/http-contracts/spatial-analysis-summary-http";
 import type {
   QueryCountyScoresResult,
   QueryCountyScoresStatusResult,

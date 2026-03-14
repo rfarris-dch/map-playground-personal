@@ -1,4 +1,7 @@
-import { type FacilityPerspective, parseFacilityPerspectiveParam } from "@map-migration/geo-kernel/facility-perspective";
+import {
+  type FacilityPerspective,
+  parseFacilityPerspectiveParam,
+} from "@map-migration/geo-kernel/facility-perspective";
 import { ApiQueryDefaults } from "@map-migration/http-contracts/api-routes";
 import {
   type FacilitySortBy,

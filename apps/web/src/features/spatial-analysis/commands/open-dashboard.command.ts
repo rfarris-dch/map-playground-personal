@@ -9,11 +9,11 @@ import type { SpatialAnalysisSummaryModel } from "@/features/spatial-analysis/sp
  * before constructing the command.
  */
 export interface OpenDashboardCommand {
-  readonly source: "selection" | "scanner";
-  readonly title: string;
   readonly isFiltered: boolean;
-  readonly summary: SpatialAnalysisSummaryModel;
   readonly mapContext?: MapContextTransfer | undefined;
+  readonly source: "selection" | "scanner";
+  readonly summary: SpatialAnalysisSummaryModel;
+  readonly title: string;
 }
 
 /**

@@ -1,5 +1,4 @@
 import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
-import type { FacilitySortBy } from "@map-migration/http-contracts/table-contracts";
 import {
   buildFacilitiesBboxQuery,
   buildFacilitiesPolygonQuery,
@@ -7,6 +6,7 @@ import {
   getFacilitiesBboxQuerySpec,
   getFacilitiesPolygonQuerySpec,
 } from "@map-migration/geo-sql";
+import type { FacilitySortBy } from "@map-migration/http-contracts/table-contracts";
 import { runQuery } from "@/db/postgres";
 import type {
   FacilitiesBboxQuery,

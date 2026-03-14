@@ -1,6 +1,6 @@
 import type { AreaOfInterest } from "@map-migration/geo-kernel/area-of-interest";
-import type { BBox, PolygonGeometry } from "@map-migration/geo-kernel/geometry";
 import { aoiBboxExceedsLimits } from "@map-migration/geo-kernel/area-of-interest-policy";
+import type { BBox, PolygonGeometry } from "@map-migration/geo-kernel/geometry";
 
 type SelectionRing = readonly [number, number][];
 
@@ -39,9 +39,7 @@ export function closeSelectionRing(selectionRing: SelectionRing): [number, numbe
   return ring;
 }
 
-export function selectionGeometryFromRing(
-  selectionRing: SelectionRing
-): PolygonGeometry {
+export function selectionGeometryFromRing(selectionRing: SelectionRing): PolygonGeometry {
   return {
     type: "Polygon",
     coordinates: [closeSelectionRing(selectionRing)],

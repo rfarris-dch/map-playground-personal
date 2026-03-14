@@ -1,9 +1,9 @@
-import { type BBox, formatBboxParam } from "@map-migration/geo-kernel/geometry";
 import {
   fetchJsonEffect,
   runEffectPromise,
   waitForAbortableValue,
 } from "@map-migration/core-runtime/effect";
+import { type BBox, formatBboxParam } from "@map-migration/geo-kernel/geometry";
 import { Effect } from "effect";
 import type {
   FiberLocatorCatalogResult,

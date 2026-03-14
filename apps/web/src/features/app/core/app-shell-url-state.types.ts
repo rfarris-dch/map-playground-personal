@@ -1,3 +1,4 @@
+import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
 import type { MapContextSurface } from "@map-migration/http-contracts/map-context-transfer";
 import type { ComputedRef, ShallowRef } from "vue";
 import type {
@@ -43,10 +44,7 @@ export interface UseAppShellUrlStateOptions {
   readonly setFloodLayerVisible: (layerId: "flood100" | "flood500", visible: boolean) => void;
   readonly setHydroBasinsVisible: (visible: boolean) => void;
   readonly setParcelsVisible: (visible: boolean) => void;
-  readonly setPerspectiveVisibility: (
-    perspective: import("@map-migration/geo-kernel").FacilityPerspective,
-    visible: boolean
-  ) => void;
+  readonly setPerspectiveVisibility: (perspective: FacilityPerspective, visible: boolean) => void;
   readonly setPowerLayerVisible: (layerId: PowerLayerId, visible: boolean) => void;
   readonly setWaterVisible: (visible: boolean) => void;
   readonly visiblePerspectives: ShallowRef<PerspectiveVisibilityState>;

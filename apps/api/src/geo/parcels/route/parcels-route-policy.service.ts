@@ -1,6 +1,6 @@
-import type { BBox } from "@map-migration/geo-kernel/geometry";
 import type { AreaOfInterest } from "@map-migration/geo-kernel/area-of-interest";
 import { aoiBboxExceedsLimits } from "@map-migration/geo-kernel/area-of-interest-policy";
+import type { BBox } from "@map-migration/geo-kernel/geometry";
 import { parsePositiveFloatFlag, parsePositiveIntFlag } from "@/config/env-parsing.service";
 import { resolvePolygonBbox } from "@/http/polygon-bbox.service";
 import type { TileCoordinate } from "./parcels-route-policy.service.types";

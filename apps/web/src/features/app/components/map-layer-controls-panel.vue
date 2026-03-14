@@ -2,17 +2,20 @@
   import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
   import { computed, inject, ref } from "vue";
   import MapNavIcon from "@/components/icons/map-nav-icon.vue";
-  import AppFilterPanel from "@/features/app/components/app-filter-panel.vue";
   import type { FilterOption } from "@/features/app/components/app-filter-panel.vue";
+  import AppFilterPanel from "@/features/app/components/app-filter-panel.vue";
   import type {
     MapLayerControlsPanelEmits,
     MapLayerControlsPanelProps,
   } from "@/features/app/components/map-layer-controls-panel.types";
-  import { MAP_FILTERS_KEY } from "@/features/app/filters/map-filters.keys";
-  import type { FacilityStatusFilterId } from "@/features/app/filters/map-filters.types";
   import type { MapNavViewModeId } from "@/features/app/components/map-nav.types";
   import MapNavLayerRow from "@/features/app/components/map-nav-layer-row.vue";
   import MapNavViewModes from "@/features/app/components/map-nav-view-modes.vue";
+  import { MAP_FILTERS_KEY } from "@/features/app/filters/map-filters.keys";
+  import type {
+    FacilityStatusFilterId,
+    TransmissionVoltageFilterId,
+  } from "@/features/app/filters/map-filters.types";
   import type { BasemapLayerId } from "@/features/basemap/basemap.types";
   import type { FacilitiesViewMode } from "@/features/facilities/facilities.types";
   import type { FiberLocatorLineId } from "@/features/fiber-locator/fiber-locator.types";
@@ -72,17 +75,11 @@
     { id: "in-development", label: "In Development" },
   ];
 
-  const parcelDatasetOptions: readonly FilterOption[] = [
-    { id: "", label: "All Datasets" },
-  ];
+  const parcelDatasetOptions: readonly FilterOption[] = [{ id: "", label: "All Datasets" }];
 
-  const parcelStyleOptions: readonly FilterOption[] = [
-    { id: "", label: "All Sizes" },
-  ];
+  const parcelStyleOptions: readonly FilterOption[] = [{ id: "", label: "All Sizes" }];
 
-  const parcelDavOptions: readonly FilterOption[] = [
-    { id: "", label: "Any %" },
-  ];
+  const parcelDavOptions: readonly FilterOption[] = [{ id: "", label: "Any %" }];
 
   const ALL_ZONING_TYPES: readonly FilterOption[] = [
     { id: "residential", label: "Residential" },
@@ -136,19 +133,21 @@
     return ALL_FLOOD_ZONES.filter((opt) => viewportFilterIds.has(opt.id));
   });
 
-  const marketOptions = computed<readonly FilterOption[]>(() =>
-    mapFilters?.availableMarkets.value?.map((m) => ({ id: m, label: m })) ?? []
+  const marketOptions = computed<readonly FilterOption[]>(
+    () => mapFilters?.availableMarkets.value?.map((m) => ({ id: m, label: m })) ?? []
   );
 
-  const providerOptions = computed<readonly FilterOption[]>(() =>
-    mapFilters?.availableProviders.value?.map((p) => ({ id: p, label: p })) ?? []
+  const providerOptions = computed<readonly FilterOption[]>(
+    () => mapFilters?.availableProviders.value?.map((p) => ({ id: p, label: p })) ?? []
   );
 
   const userOptions = computed<readonly FilterOption[]>(() => []);
 
   const activeVoltages = computed<ReadonlySet<string>>(() => {
     const v = mapFilters?.state.value?.transmissionMinVoltage ?? null;
-    if (v === null) return new Set();
+    if (v === null) {
+      return new Set();
+    }
     const entry = voltageOptions.find(
       (opt) =>
         (opt.id === "ge-25" && v === 25_000) ||
@@ -160,12 +159,29 @@
     return entry ? new Set([entry.id]) : new Set();
   });
 
+  function readTransmissionVoltageFilterId(id: string): TransmissionVoltageFilterId | null {
+    switch (id) {
+      case "ge-25":
+      case "ge-50":
+      case "ge-100":
+      case "ge-230":
+      case "ge-765":
+        return id;
+      default:
+        return null;
+    }
+  }
+
   function onToggleVoltage(id: string): void {
     const currentVoltages = activeVoltages.value;
     if (currentVoltages.has(id)) {
       mapFilters?.setTransmissionVoltage(null);
-    } else {
-      mapFilters?.setTransmissionVoltage(id as any);
+      return;
+    }
+
+    const transmissionVoltage = readTransmissionVoltageFilterId(id);
+    if (transmissionVoltage !== null) {
+      mapFilters?.setTransmissionVoltage(transmissionVoltage);
     }
   }
 

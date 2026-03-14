@@ -1,5 +1,8 @@
 import { ApiQueryDefaults, ApiRoutes } from "@map-migration/http-contracts/api-routes";
-import { type ParcelDetailResponse, ParcelDetailResponseSchema } from "@map-migration/http-contracts/parcels-http";
+import {
+  type ParcelDetailResponse,
+  ParcelDetailResponseSchema,
+} from "@map-migration/http-contracts/parcels-http";
 import type { Context, Env, Hono } from "hono";
 import { mapParcelRowToFeature } from "@/geo/parcels/parcels.mapper";
 import { getParcelById, type ParcelRow } from "@/geo/parcels/parcels.repo";

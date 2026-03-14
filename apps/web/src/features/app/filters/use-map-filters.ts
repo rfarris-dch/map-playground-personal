@@ -1,11 +1,11 @@
-import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts/facilities-http";
+import { apiGetJson } from "@map-migration/core-runtime/api";
 import { buildMarketsRoute } from "@map-migration/http-contracts/api-routes";
+import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts/facilities-http";
 import { MarketsTableResponseSchema } from "@map-migration/http-contracts/table-contracts";
 import type { MapExpression } from "@map-migration/map-engine";
-import { apiGetJson } from "@map-migration/core-runtime/api";
 import { computed, type Ref, shallowRef, watch } from "vue";
-import { buildApiRequestInit } from "@/lib/api/api-request-init.service";
 import type { ParcelsViewportFacets } from "@/features/parcels/parcels.types";
+import { buildApiRequestInit } from "@/lib/api/api-request-init.service";
 import {
   buildFacilitiesFilterPredicate,
   buildParcelFilter,
@@ -21,7 +21,13 @@ import { VOLTAGE_THRESHOLDS } from "./map-filters.types";
 
 type ToggleSetField = Extract<
   keyof MapFiltersState,
-  "activeMarkets" | "activeUsers" | "powerTypes" | "gasCapacities" | "gasStatuses" | "zoningTypes" | "floodZones"
+  | "activeMarkets"
+  | "activeUsers"
+  | "powerTypes"
+  | "gasCapacities"
+  | "gasStatuses"
+  | "zoningTypes"
+  | "floodZones"
 >;
 
 type FacilitiesFeatures = FacilitiesFeatureCollection["features"];
@@ -37,30 +43,32 @@ export interface UseMapFiltersResult {
   readonly facilitiesPredicate: Readonly<
     ReturnType<typeof shallowRef<FacilitiesFilterPredicate | null>>
   >;
+  readonly parcelFilter: Readonly<ReturnType<typeof shallowRef<MapExpression | null>>>;
+  readonly parcelViewportFacets: Readonly<
+    ReturnType<typeof shallowRef<ParcelsViewportFacets | null>>
+  >;
 
   /** Feed raw (unfiltered) cached features to update available filter options. */
   setAvailableFeatures(features: FacilitiesFeatures): void;
+  setInterconnectivityHub(enabled: boolean): void;
+  setParcelDataset(value: string): void;
+  setParcelDavPercent(value: string): void;
+  setParcelStyleAcres(value: string): void;
+  setParcelViewportFacets(facets: ParcelsViewportFacets): void;
   setTransmissionVoltage(id: TransmissionVoltageFilterId | null): void;
   readonly state: Readonly<ReturnType<typeof shallowRef<MapFiltersState>>>;
   toggleFacilityProvider(providerName: string): void;
 
   toggleFacilityStatus(id: FacilityStatusFilterId): void;
-  readonly parcelFilter: Readonly<ReturnType<typeof shallowRef<MapExpression | null>>>;
-  readonly parcelViewportFacets: Readonly<ReturnType<typeof shallowRef<ParcelsViewportFacets | null>>>;
-  setParcelViewportFacets(facets: ParcelsViewportFacets): void;
-  readonly transmissionFilter: Readonly<ReturnType<typeof shallowRef<MapExpression | null>>>;
-
-  togglePowerType(id: string): void;
-  toggleMarket(id: string): void;
-  toggleUser(id: string): void;
-  setInterconnectivityHub(enabled: boolean): void;
+  toggleFloodZone(id: string): void;
   toggleGasCapacity(id: string): void;
   toggleGasStatus(id: string): void;
-  setParcelDataset(value: string): void;
-  setParcelStyleAcres(value: string): void;
-  setParcelDavPercent(value: string): void;
+  toggleMarket(id: string): void;
+
+  togglePowerType(id: string): void;
+  toggleUser(id: string): void;
   toggleZoningType(id: string): void;
-  toggleFloodZone(id: string): void;
+  readonly transmissionFilter: Readonly<ReturnType<typeof shallowRef<MapExpression | null>>>;
 }
 
 function createInitialState(): MapFiltersState {
@@ -119,7 +127,15 @@ export function useMapFilters(): UseMapFiltersResult {
         MarketsTableResponseSchema,
         buildApiRequestInit({})
       );
-      const names = new Set(response.rows.map((row) => row.name));
+      if (!response.ok) {
+        return;
+      }
+
+      const names = new Set(
+        response.data.rows
+          .map((row) => row.name)
+          .filter((name): name is string => name.trim().length > 0)
+      );
       if (names.size > 0) {
         knownMarkets.value = names;
       }

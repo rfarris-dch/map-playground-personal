@@ -520,7 +520,7 @@ export function mountParcelsLayer(
   };
 
   const collectViewportFacets = (): void => {
-    if (!state.visible || !state.sourceInitialized || !options.onViewportFacets) {
+    if (!(state.visible && state.sourceInitialized && options.onViewportFacets)) {
       return;
     }
     if (!map.hasLayer(fillLayerId)) {
@@ -529,7 +529,10 @@ export function mountParcelsLayer(
 
     const canvasSize = map.getCanvasSize();
     const features = map.queryRenderedFeatures(
-      [[0, 0], [canvasSize.width, canvasSize.height]],
+      [
+        [0, 0],
+        [canvasSize.width, canvasSize.height],
+      ],
       { layers: [fillLayerId] }
     );
     const zoningTypes = new Set<string>();
