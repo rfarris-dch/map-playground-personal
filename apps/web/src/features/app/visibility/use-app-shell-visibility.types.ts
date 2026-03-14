@@ -1,5 +1,5 @@
-import type { FacilityPerspective } from "@map-migration/geo-kernel";
-import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts";
+import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
+import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts/facilities-http";
 import type { ShallowRef } from "vue";
 import type { BoundaryControllerState } from "@/features/app/boundary/app-shell-boundary.types";
 import type { BoundaryFacetSelectionState } from "@/features/app/core/app-shell.types";

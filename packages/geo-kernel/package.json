@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/geometry.js",
+  "types": "dist/geometry.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json --resolve-full-paths --resolve-full-extension .js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
@@ -17,10 +17,17 @@
     "zod": "^3.24.2"
   },
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    }
+    "./geometry": { "types": "./dist/geometry.d.ts", "default": "./dist/geometry.js" },
+    "./facility-perspective": { "types": "./dist/facility-perspective.d.ts", "default": "./dist/facility-perspective.js" },
+    "./commissioned-semantic": { "types": "./dist/commissioned-semantic.d.ts", "default": "./dist/commissioned-semantic.js" },
+    "./facility-lifecycle": { "types": "./dist/facility-lifecycle.d.ts", "default": "./dist/facility-lifecycle.js" },
+    "./warning": { "types": "./dist/warning.d.ts", "default": "./dist/warning.js" },
+    "./area-of-interest": { "types": "./dist/area-of-interest.d.ts", "default": "./dist/area-of-interest.js" },
+    "./area-of-interest-policy": { "types": "./dist/area-of-interest-policy.d.ts", "default": "./dist/area-of-interest-policy.js" },
+    "./parcel-snapshot-id": { "types": "./dist/parcel-snapshot-id.d.ts", "default": "./dist/parcel-snapshot-id.js" },
+    "./map-viewport": { "types": "./dist/map-viewport.d.ts", "default": "./dist/map-viewport.js" },
+    "./layer-visibility-state": { "types": "./dist/layer-visibility-state.d.ts", "default": "./dist/layer-visibility-state.js" },
+    "./entity-focus": { "types": "./dist/entity-focus.d.ts", "default": "./dist/entity-focus.js" }
   },
   "files": [
     "dist"

@@ -1,9 +1,5 @@
-import {
-  ApiRoutes,
-  ParcelLookupRequestSchema,
-  type ParcelsFeatureCollection,
-  ParcelsFeatureCollectionSchema,
-} from "@map-migration/http-contracts";
+import { ApiRoutes } from "@map-migration/http-contracts/api-routes";
+import { ParcelLookupRequestSchema, type ParcelsFeatureCollection, ParcelsFeatureCollectionSchema } from "@map-migration/http-contracts/parcels-http";
 import type { Env, Hono } from "hono";
 import { mapParcelRowsToFeatures } from "@/geo/parcels/parcels.mapper";
 import { lookupParcelsByIds, type ParcelRow } from "@/geo/parcels/parcels.repo";

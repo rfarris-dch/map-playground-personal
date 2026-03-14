@@ -1,4 +1,4 @@
-import type { MarketSortBy, SortDirection } from "@map-migration/http-contracts";
+import type { MarketSortBy, SortDirection } from "@map-migration/http-contracts/table-contracts";
 
 export interface MarketPageQuery {
   readonly limit: number;

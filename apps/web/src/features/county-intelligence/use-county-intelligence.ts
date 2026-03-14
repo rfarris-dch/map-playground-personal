@@ -1,4 +1,4 @@
-import type { CountyScoresResponse, CountyScoresStatusResponse } from "@map-migration/http-contracts";
+import type { CountyScoresResponse, CountyScoresStatusResponse } from "@map-migration/http-contracts/county-intelligence-http";
 import {
   ApiAbortedError,
   type ApiEffectError,

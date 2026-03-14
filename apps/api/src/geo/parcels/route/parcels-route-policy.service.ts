@@ -1,5 +1,6 @@
-import type { BBox, ParcelAoi } from "@map-migration/geo-kernel";
-import { aoiBboxExceedsLimits } from "@map-migration/geo-kernel";
+import type { BBox } from "@map-migration/geo-kernel/geometry";
+import type { AreaOfInterest } from "@map-migration/geo-kernel/area-of-interest";
+import { aoiBboxExceedsLimits } from "@map-migration/geo-kernel/area-of-interest-policy";
 import { parsePositiveFloatFlag, parsePositiveIntFlag } from "@/config/env-parsing.service";
 import { resolvePolygonBbox } from "@/http/polygon-bbox.service";
 import type { TileCoordinate } from "./parcels-route-policy.service.types";
@@ -81,7 +82,7 @@ export function bboxExceedsLimits(bbox: BBox): boolean {
   });
 }
 
-export function resolveTileSetPolygonGeometry(aoi: Extract<ParcelAoi, { type: "tileSet" }>): {
+export function resolveTileSetPolygonGeometry(aoi: Extract<AreaOfInterest, { type: "tileSet" }>): {
   readonly bbox: BBox;
   readonly geometryText: string;
 } {
@@ -108,7 +109,7 @@ export function resolveTileSetPolygonGeometry(aoi: Extract<ParcelAoi, { type: "t
   };
 }
 
-export function resolvePolygonGeometry(aoi: Extract<ParcelAoi, { type: "polygon" }>): {
+export function resolvePolygonGeometry(aoi: Extract<AreaOfInterest, { type: "polygon" }>): {
   readonly bbox: BBox;
   readonly geometryText: string;
 } {

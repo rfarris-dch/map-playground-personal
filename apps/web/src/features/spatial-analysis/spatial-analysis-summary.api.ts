@@ -1,9 +1,5 @@
-import {
-  buildSpatialAnalysisSummaryRoute,
-  type SpatialAnalysisSummaryRequest,
-  type SpatialAnalysisSummaryResponse,
-  SpatialAnalysisSummaryResponseSchema,
-} from "@map-migration/http-contracts";
+import { buildSpatialAnalysisSummaryRoute } from "@map-migration/http-contracts/api-routes";
+import { type SpatialAnalysisSummaryRequest, type SpatialAnalysisSummaryResponse, SpatialAnalysisSummaryResponseSchema } from "@map-migration/http-contracts/spatial-analysis-summary-http";
 import type { ApiEffectError, ApiEffectSuccess } from "@map-migration/core-runtime/api";
 import { type ApiResult, apiGetJson, apiGetJsonEffect } from "@map-migration/core-runtime/api";
 import type { Effect } from "effect";

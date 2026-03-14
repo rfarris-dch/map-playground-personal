@@ -1,5 +1,5 @@
 import { describe, expect, it, mock } from "bun:test";
-import type { FacilitiesSelectionRequest } from "@map-migration/http-contracts";
+import type { FacilitiesSelectionRequest } from "@map-migration/http-contracts/facilities-http";
 
 mock.restore();
 

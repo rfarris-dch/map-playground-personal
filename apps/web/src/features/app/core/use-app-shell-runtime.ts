@@ -1,4 +1,4 @@
-import type { MapContextTransfer } from "@map-migration/http-contracts";
+import type { MapContextTransfer } from "@map-migration/http-contracts/map-context-transfer";
 import { computed } from "vue";
 import { useAppShellFiber } from "@/features/app/fiber/use-app-shell-fiber";
 import { useMapFilters } from "@/features/app/filters/use-map-filters";

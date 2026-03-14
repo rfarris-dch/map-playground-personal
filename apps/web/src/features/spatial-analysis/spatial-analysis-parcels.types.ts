@@ -1,4 +1,4 @@
-import type { ParcelFeature } from "@map-migration/http-contracts";
+import type { ParcelFeature } from "@map-migration/http-contracts/parcels-http";
 import type { LngLat } from "@map-migration/map-engine";
 
 export interface SpatialAnalysisParcelRecord {

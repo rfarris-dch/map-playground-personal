@@ -1,5 +1,5 @@
-import type { FacilityPerspective } from "@map-migration/geo-kernel";
-import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts";
+import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
+import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts/facilities-http";
 import type { IMap } from "@map-migration/map-engine";
 import type { ComputedRef, ShallowRef } from "vue";
 import type {

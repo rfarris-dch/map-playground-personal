@@ -1,4 +1,4 @@
-import type { SpatialAnalysisSummaryRequest } from "@map-migration/http-contracts";
+import type { SpatialAnalysisSummaryRequest } from "@map-migration/http-contracts/spatial-analysis-summary-http";
 import type { ShallowRef } from "vue";
 import type { PerspectiveVisibilityState } from "@/features/app/core/app-shell.types";
 import type { MeasureState } from "@/features/measure/measure.types";

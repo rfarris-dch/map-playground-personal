@@ -1,4 +1,4 @@
-import type { ProviderTableRow } from "@map-migration/http-contracts";
+import type { ProviderTableRow } from "@map-migration/http-contracts/table-contracts";
 import type { ProviderListRow } from "@/geo/providers/providers.repo";
 
 function readNullableText(value: string | null | undefined): string | null {

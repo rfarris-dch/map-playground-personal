@@ -1,4 +1,4 @@
-import type { ParcelEnrichRequest, ParcelsFeatureCollection } from "@map-migration/http-contracts";
+import type { ParcelEnrichRequest, ParcelsFeatureCollection } from "@map-migration/http-contracts/parcels-http";
 import {
   ApiAbortedError,
   type ApiEffectError,

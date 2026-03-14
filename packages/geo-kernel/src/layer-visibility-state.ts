@@ -1,6 +1,4 @@
 export interface LayerVisibilityState {
-  readonly visibleLayerIds?: string[];
-  readonly visibleBasemapLayerIds?: string[];
   readonly selectedBoundaryIds?: {
     readonly country?: string[];
     readonly county?: string[];
@@ -10,4 +8,6 @@ export interface LayerVisibilityState {
     readonly longhaul?: string[];
     readonly metro?: string[];
   };
+  readonly visibleBasemapLayerIds?: string[];
+  readonly visibleLayerIds?: string[];
 }

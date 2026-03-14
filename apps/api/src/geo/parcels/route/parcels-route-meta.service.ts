@@ -1,13 +1,14 @@
-import type { ParcelAoi, Warning } from "@map-migration/geo-kernel";
+import type { AreaOfInterest } from "@map-migration/geo-kernel/area-of-interest";
+import type { Warning } from "@map-migration/geo-kernel/warning";
+import { ApiHeaders } from "@map-migration/http-contracts/api-routes";
 import {
-  ApiHeaders,
   type ParcelGeometryMode,
   ParcelGeometryModeSchema,
   type ParcelProfile,
   ParcelProfileSchema,
   type ParcelResponseMeta,
   type ParcelsFeatureCollection,
-} from "@map-migration/http-contracts";
+} from "@map-migration/http-contracts/parcels-http";
 import type { Context } from "hono";
 import { parseBooleanFlag } from "@/config/env-parsing.service";
 import { rejectWithConflict } from "@/geo/parcels/route/parcels-route-errors.service";
@@ -60,7 +61,7 @@ export function buildParcelMeta(args: {
   readonly recordCount: number;
   readonly truncated: boolean;
   readonly warnings: readonly Warning[];
-  readonly aoiType?: ParcelAoi["type"];
+  readonly aoiType?: AreaOfInterest["type"];
   readonly nextCursor?: string | null;
   readonly ingestionRunId: string | undefined;
 }): ParcelResponseMeta {

@@ -1,9 +1,9 @@
-import { z } from "zod";
 import {
   CommissionedSemanticSchema,
-  FacilityPerspectiveSchema,
   LeaseOrOwnSchema,
-} from "@map-migration/geo-kernel";
+} from "@map-migration/geo-kernel/commissioned-semantic";
+import { FacilityPerspectiveSchema } from "@map-migration/geo-kernel/facility-perspective";
+import { z } from "zod";
 
 export const PaginationSchema = z.object({
   page: z.number().int().nonnegative(),

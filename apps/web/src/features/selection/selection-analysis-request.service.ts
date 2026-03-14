@@ -1,5 +1,6 @@
-import type { AreaOfInterest, BBox, PolygonGeometry } from "@map-migration/geo-kernel";
-import { aoiBboxExceedsLimits } from "@map-migration/geo-kernel";
+import type { AreaOfInterest } from "@map-migration/geo-kernel/area-of-interest";
+import type { BBox, PolygonGeometry } from "@map-migration/geo-kernel/geometry";
+import { aoiBboxExceedsLimits } from "@map-migration/geo-kernel/area-of-interest-policy";
 
 type SelectionRing = readonly [number, number][];
 

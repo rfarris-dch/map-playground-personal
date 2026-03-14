@@ -1,4 +1,4 @@
-import type { FacilityPerspective } from "@map-migration/geo-kernel";
+import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
 import { computed, shallowRef } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {

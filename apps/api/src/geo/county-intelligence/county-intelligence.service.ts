@@ -1,4 +1,4 @@
-import type { CountyScore, CountyScoresStatusResponse } from "@map-migration/http-contracts";
+import type { CountyScore, CountyScoresStatusResponse } from "@map-migration/http-contracts/county-intelligence-http";
 import { mapCountyScoreRow } from "@/geo/county-intelligence/county-intelligence.mapper";
 import type { CountyScoreRow, CountyScoresStatusRow } from "@/geo/county-intelligence/county-intelligence.repo";
 import {

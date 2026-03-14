@@ -1,10 +1,6 @@
-import type {
-  FacilitiesFeatureCollection,
-  MarketSelectionMatch,
-  MarketsSelectionRequest,
-  SpatialAnalysisSummaryRequest,
-  SpatialAnalysisSummaryResponse,
-} from "@map-migration/http-contracts";
+import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts/facilities-http";
+import type { MarketSelectionMatch, MarketsSelectionRequest } from "@map-migration/http-contracts/markets-selection-http";
+import type { SpatialAnalysisSummaryRequest, SpatialAnalysisSummaryResponse } from "@map-migration/http-contracts/spatial-analysis-summary-http";
 import {
   ApiAbortedError,
   type ApiEffectError,

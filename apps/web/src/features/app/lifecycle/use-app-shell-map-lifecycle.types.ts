@@ -1,4 +1,5 @@
-import type { FacilitiesFeatureCollection, MapContextTransfer } from "@map-migration/http-contracts";
+import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts/facilities-http";
+import type { MapContextTransfer } from "@map-migration/http-contracts/map-context-transfer";
 import type { IMap, MapExpression } from "@map-migration/map-engine";
 import type { ComputedRef, ShallowRef } from "vue";
 import type {

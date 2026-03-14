@@ -1,4 +1,4 @@
-import type { SpatialAnalysisFloodSummary } from "@map-migration/http-contracts";
+import type { SpatialAnalysisFloodSummary } from "@map-migration/http-contracts/spatial-analysis-summary-http";
 
 export interface QueryFloodAnalysisArgs {
   readonly geometryGeoJson: string;

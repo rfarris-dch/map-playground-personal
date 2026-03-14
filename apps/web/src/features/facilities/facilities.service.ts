@@ -1,5 +1,5 @@
-import type { BBox } from "@map-migration/geo-kernel";
-import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts";
+import type { BBox } from "@map-migration/geo-kernel/geometry";
+import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts/facilities-http";
 import type {
   FacilitiesFeatureFilterPredicate,
   FacilitiesSourceData,

@@ -1,4 +1,4 @@
-import type { FacilityPerspective } from "@map-migration/geo-kernel";
+import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
 import { shallowRef } from "vue";
 import {
   FLOOD_100_LAYER_ID,

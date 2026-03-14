@@ -1,13 +1,6 @@
-import {
-  buildFacilitiesSelectionRoute,
-  buildParcelEnrichRoute,
-  type FacilitiesSelectionRequest,
-  type FacilitiesSelectionResponse,
-  FacilitiesSelectionResponseSchema,
-  type ParcelEnrichRequest,
-  type ParcelsFeatureCollection,
-  ParcelsFeatureCollectionSchema,
-} from "@map-migration/http-contracts";
+import { buildFacilitiesSelectionRoute, buildParcelEnrichRoute } from "@map-migration/http-contracts/api-routes";
+import { type FacilitiesSelectionRequest, type FacilitiesSelectionResponse, FacilitiesSelectionResponseSchema } from "@map-migration/http-contracts/facilities-http";
+import { type ParcelEnrichRequest, type ParcelsFeatureCollection, ParcelsFeatureCollectionSchema } from "@map-migration/http-contracts/parcels-http";
 import {
   type ApiEffectError,
   type ApiEffectSuccess,

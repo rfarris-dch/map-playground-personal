@@ -1,4 +1,4 @@
-import type { FiberLocatorLayer } from "@map-migration/http-contracts";
+import type { FiberLocatorLayer } from "@map-migration/http-contracts/fiber-locator-http";
 import type {
   FiberLocatorLineId,
   FiberLocatorSourceLayerOption,

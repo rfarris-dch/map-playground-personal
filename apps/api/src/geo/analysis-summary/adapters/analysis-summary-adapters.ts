@@ -1,5 +1,5 @@
-import type { Warning } from "@map-migration/geo-kernel";
-import type { ParcelEnrichRequest, ParcelsFeatureCollection } from "@map-migration/http-contracts";
+import type { Warning } from "@map-migration/geo-kernel/warning";
+import type { ParcelEnrichRequest, ParcelsFeatureCollection } from "@map-migration/http-contracts/parcels-http";
 import { parsePositiveIntFlag } from "@/config/env-parsing.service";
 import {
   queryCountyScores,

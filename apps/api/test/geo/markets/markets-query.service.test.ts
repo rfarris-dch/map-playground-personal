@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
-import type { MarketTableRow } from "@map-migration/http-contracts";
+import type { MarketTableRow } from "@map-migration/http-contracts/table-contracts";
 
 const countMarketsMock = mock<() => Promise<number>>();
 const listMarketsPageMock =

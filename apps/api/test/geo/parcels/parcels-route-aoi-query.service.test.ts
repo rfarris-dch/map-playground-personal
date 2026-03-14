@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
-import type { ParcelAoi } from "@map-migration/geo-kernel";
-import type { ParcelGeometryMode } from "@map-migration/http-contracts";
+import type { AreaOfInterest } from "@map-migration/geo-kernel/area-of-interest";
+import type { ParcelGeometryMode } from "@map-migration/http-contracts/parcels-http";
 import { Hono } from "hono";
 
 const enrichParcelsByBboxMock =
@@ -40,7 +40,7 @@ afterAll(() => {
   mock.restore();
 });
 
-function callAoiQuery(aoi: ParcelAoi): Promise<Response> {
+function callAoiQuery(aoi: AreaOfInterest): Promise<Response> {
   const app = new Hono();
   const includeGeometry: ParcelGeometryMode = "none";
 
@@ -72,7 +72,7 @@ describe("parcels route AOI query service", () => {
   });
 
   it("rejects polygon AOIs whose bbox exceeds configured limits", async () => {
-    const aoi: ParcelAoi = {
+    const aoi: AreaOfInterest = {
       type: "polygon",
       geometry: {
         type: "Polygon",
@@ -99,7 +99,7 @@ describe("parcels route AOI query service", () => {
 
   it("queries polygon AOIs when bbox is within limits", async () => {
     enrichParcelsByPolygonMock.mockResolvedValue([]);
-    const aoi: ParcelAoi = {
+    const aoi: AreaOfInterest = {
       type: "polygon",
       geometry: {
         type: "Polygon",

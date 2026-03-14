@@ -1,4 +1,4 @@
-import type { ProviderSortBy, SortDirection } from "@map-migration/http-contracts";
+import type { ProviderSortBy, SortDirection } from "@map-migration/http-contracts/table-contracts";
 
 export interface ProvidersPageQuery {
   readonly limit: number;

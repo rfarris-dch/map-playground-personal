@@ -33,12 +33,13 @@ export function toLifecycleDisplayLabel(lifecycle: FacilityLifecycle): string {
       return "Planned";
     case "unknown":
       return "Unknown";
+    default:
+      return lifecycle.commissionedSemantic;
   }
 }
 
 export function isCommissionedCapacity(lifecycle: FacilityLifecycle): boolean {
   return (
-    lifecycle.commissionedSemantic === "operational" ||
-    lifecycle.commissionedSemantic === "leased"
+    lifecycle.commissionedSemantic === "operational" || lifecycle.commissionedSemantic === "leased"
   );
 }

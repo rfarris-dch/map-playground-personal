@@ -1,5 +1,5 @@
-import type { Warning } from "@map-migration/geo-kernel";
-import type { ParcelsFeatureCollection } from "@map-migration/http-contracts";
+import type { Warning } from "@map-migration/geo-kernel/warning";
+import type { ParcelsFeatureCollection } from "@map-migration/http-contracts/parcels-http";
 
 export interface PaginatedEnrichFeatures {
   readonly features: ParcelsFeatureCollection["features"];

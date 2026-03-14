@@ -1,4 +1,6 @@
-import { type FacilitiesFeatureCollection, buildMarketsRoute, MarketsTableResponseSchema } from "@map-migration/http-contracts";
+import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts/facilities-http";
+import { buildMarketsRoute } from "@map-migration/http-contracts/api-routes";
+import { MarketsTableResponseSchema } from "@map-migration/http-contracts/table-contracts";
 import type { MapExpression } from "@map-migration/map-engine";
 import { apiGetJson } from "@map-migration/core-runtime/api";
 import { computed, type Ref, shallowRef, watch } from "vue";

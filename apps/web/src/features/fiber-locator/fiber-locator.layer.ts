@@ -1,4 +1,4 @@
-import { buildFiberLocatorVectorTileRoute } from "@map-migration/http-contracts";
+import { buildFiberLocatorVectorTileRoute } from "@map-migration/http-contracts/api-routes";
 import { getFacilitiesStyleLayerIds } from "@map-migration/map-style";
 import { fiberLocatorLineColor } from "@/features/fiber-locator/fiber-locator.service";
 import type {

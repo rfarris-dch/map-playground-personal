@@ -1,5 +1,5 @@
+import { GeometrySchema } from "@map-migration/geo-kernel/geometry";
 import { z } from "zod";
-import { GeometrySchema } from "@map-migration/geo-kernel";
 import { ResponseMetaSchema } from "./api-response-meta.js";
 
 export const BoundaryPowerLevelSchema = z.enum(["county", "state", "country"]);

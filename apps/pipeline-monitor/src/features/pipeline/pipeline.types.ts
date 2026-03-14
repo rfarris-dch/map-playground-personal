@@ -1,6 +1,6 @@
-export type { PipelineDataset } from "@map-migration/contracts";
+export type { PipelineDataset } from "@map-migration/http-contracts/pipeline-http";
 
-import type { PipelineStatusResponse } from "@map-migration/http-contracts";
+import type { PipelineStatusResponse } from "@map-migration/http-contracts/pipeline-http";
 import type { Ref } from "vue";
 
 export interface PipelineStatusPayload {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { CountyScoresStatusResponse } from "@map-migration/http-contracts";
+  import type { CountyScoresStatusResponse } from "@map-migration/http-contracts/county-intelligence-http";
   import { computed } from "vue";
   import {
     formatDateTime,

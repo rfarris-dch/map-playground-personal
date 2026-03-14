@@ -1,4 +1,4 @@
-import type { MapContextTransfer } from "@map-migration/http-contracts";
+import type { MapContextTransfer } from "@map-migration/http-contracts/map-context-transfer";
 import type { Router } from "vue-router";
 import { saveSpatialAnalysisDashboardState } from "@/features/spatial-analysis/spatial-analysis-dashboard.service";
 import type { SpatialAnalysisSummaryModel } from "@/features/spatial-analysis/spatial-analysis-summary.types";

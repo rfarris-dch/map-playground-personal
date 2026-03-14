@@ -1,4 +1,4 @@
-import type { MarketSelectionResponse, MarketsSelectionRequest } from "@map-migration/http-contracts";
+import type { MarketSelectionResponse, MarketsSelectionRequest } from "@map-migration/http-contracts/markets-selection-http";
 import type { SpatialAnalysisPanelSummary } from "@/features/spatial-analysis/components/spatial-analysis-panel.types";
 import type { MapBounds } from "./map-overlays.types";
 

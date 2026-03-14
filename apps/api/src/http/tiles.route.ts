@@ -1,4 +1,4 @@
-import { ApiHeaders } from "@map-migration/http-contracts";
+import { ApiHeaders } from "@map-migration/http-contracts/api-routes";
 import type { Env, Hono } from "hono";
 import { responseError, toDebugDetails } from "@/http/api-response";
 import { fromApiRequest, runEffectRoute } from "@/http/effect-route";

@@ -1,4 +1,4 @@
-import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts";
+import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts/facilities-http";
 import type {
   PerspectiveStatusState,
   PerspectiveVisibilityState,

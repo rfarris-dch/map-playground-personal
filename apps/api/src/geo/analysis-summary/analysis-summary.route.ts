@@ -1,9 +1,5 @@
-import {
-  ApiRoutes,
-  SpatialAnalysisSummaryRequestSchema,
-  type SpatialAnalysisSummaryResponse,
-  SpatialAnalysisSummaryResponseSchema,
-} from "@map-migration/http-contracts";
+import { ApiRoutes } from "@map-migration/http-contracts/api-routes";
+import { SpatialAnalysisSummaryRequestSchema, type SpatialAnalysisSummaryResponse, SpatialAnalysisSummaryResponseSchema } from "@map-migration/http-contracts/spatial-analysis-summary-http";
 import type { Context, Env, Hono } from "hono";
 import { readExpectedIngestionRunId } from "@/geo/parcels/route/parcels-route-meta.service";
 import { jsonError, jsonOk, toDebugDetails } from "@/http/api-response";

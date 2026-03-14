@@ -1,4 +1,4 @@
-import { parseFacilityPerspective } from "@map-migration/geo-kernel";
+import { parseFacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
 import { useQuery } from "@tanstack/vue-query";
 import { computed, type Ref } from "vue";
 import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";

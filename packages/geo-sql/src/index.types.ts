@@ -1,5 +1,6 @@
-import type { BBox, FacilityPerspective } from "@map-migration/geo-kernel";
-import type { ParcelGeometryMode } from "@map-migration/http-contracts";
+import type { BBox } from "@map-migration/geo-kernel/geometry";
+import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
+import type { ParcelGeometryMode } from "@map-migration/http-contracts/parcels-http";
 
 export interface ParcelEnrichQueryOptions {
   readonly cursor?: string | null;

@@ -1,4 +1,4 @@
-import type { ResponseMeta } from "@map-migration/http-contracts";
+import type { ResponseMeta } from "@map-migration/http-contracts/api-response-meta";
 
 export interface CountyScoresResponseMetaArgs {
   readonly dataVersion?: string | null | undefined;

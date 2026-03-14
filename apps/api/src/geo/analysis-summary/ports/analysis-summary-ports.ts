@@ -1,11 +1,9 @@
-import type { FacilityPerspective, Warning } from "@map-migration/geo-kernel";
-import type {
-  FacilitiesFeatureCollection,
-  MarketSelectionMatch,
-  ParcelsFeatureCollection,
-  SpatialAnalysisSummaryRequest,
-  SpatialAnalysisSummaryResponse,
-} from "@map-migration/http-contracts";
+import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
+import type { Warning } from "@map-migration/geo-kernel/warning";
+import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts/facilities-http";
+import type { MarketSelectionMatch } from "@map-migration/http-contracts/markets-selection-http";
+import type { ParcelsFeatureCollection } from "@map-migration/http-contracts/parcels-http";
+import type { SpatialAnalysisSummaryRequest, SpatialAnalysisSummaryResponse } from "@map-migration/http-contracts/spatial-analysis-summary-http";
 import type {
   QueryCountyScoresResult,
   QueryCountyScoresStatusResult,

@@ -1,11 +1,11 @@
 import {
   type CommissionedSemantic,
-  type FacilityPerspective,
   type LeaseOrOwn,
   parseCommissionedSemantic,
   parseLeaseOrOwn,
-} from "@map-migration/geo-kernel";
-import type { FacilityTableRow as FacilityTableRowContract } from "@map-migration/http-contracts";
+} from "@map-migration/geo-kernel/commissioned-semantic";
+import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
+import type { FacilityTableRow as FacilityTableRowContract } from "@map-migration/http-contracts/table-contracts";
 import type { FacilityTableRow as FacilityTableRowRepo } from "@/geo/facilities/facilities.repo";
 
 function readNullableNumber(value: number | string | null | undefined): number | null {

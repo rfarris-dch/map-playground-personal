@@ -1,4 +1,4 @@
-import type { MarketSortBy } from "@map-migration/http-contracts";
+import type { MarketSortBy } from "@map-migration/http-contracts/table-contracts";
 import { runQuery } from "@/db/postgres";
 import type { MarketCountRow, MarketListRow, MarketPageQuery } from "./markets.repo.types";
 

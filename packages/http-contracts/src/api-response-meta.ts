@@ -1,4 +1,4 @@
-import { WarningSchema } from "@map-migration/geo-kernel";
+import { WarningSchema } from "@map-migration/geo-kernel/warning";
 import { z } from "zod";
 
 export const SourceModeSchema = z.enum(["pmtiles", "postgis", "arcgis-proxy", "external-xyz"]);

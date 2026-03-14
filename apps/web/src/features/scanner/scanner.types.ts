@@ -1,4 +1,5 @@
-import type { FacilitiesFeatureCollection, ParcelsFeatureCollection } from "@map-migration/http-contracts";
+import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts/facilities-http";
+import type { ParcelsFeatureCollection } from "@map-migration/http-contracts/parcels-http";
 import type { SpatialAnalysisFacilityRecord } from "@/features/spatial-analysis/spatial-analysis-facilities.types";
 import type { SpatialAnalysisParcelRecord } from "@/features/spatial-analysis/spatial-analysis-parcels.types";
 import type { SpatialAnalysisProviderSummaryItem } from "@/features/spatial-analysis/spatial-analysis-provider-summary.types";

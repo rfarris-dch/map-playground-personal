@@ -1,4 +1,4 @@
-import type { ProviderSortBy } from "@map-migration/http-contracts";
+import type { ProviderSortBy } from "@map-migration/http-contracts/table-contracts";
 import { runQuery } from "@/db/postgres";
 import type { ProviderCountRow, ProviderListRow, ProvidersPageQuery } from "./providers.repo.types";
 

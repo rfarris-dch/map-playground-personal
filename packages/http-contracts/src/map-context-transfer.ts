@@ -1,5 +1,6 @@
+import { FacilityPerspectiveSchema } from "@map-migration/geo-kernel/facility-perspective";
+import { MapViewportSchema } from "@map-migration/geo-kernel/map-viewport";
 import { z } from "zod";
-import { FacilityPerspectiveSchema, MapViewportSchema } from "@map-migration/geo-kernel";
 
 export const MAP_CONTEXT_TRANSFER_SCHEMA_VERSION = 1;
 

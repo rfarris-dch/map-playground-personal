@@ -1,12 +1,12 @@
+import { ApiRoutes } from "@map-migration/http-contracts/api-routes";
 import {
-  ApiRoutes,
   type ProviderSortBy,
   ProviderSortBySchema,
   type ProvidersTableResponse,
   ProvidersTableResponseSchema,
   type SortDirection,
   SortDirectionSchema,
-} from "@map-migration/http-contracts";
+} from "@map-migration/http-contracts/table-contracts";
 import type { Env, Hono } from "hono";
 import { queryProvidersTable } from "@/geo/providers/providers-query.service";
 import { jsonOk, toDebugDetails } from "@/http/api-response";

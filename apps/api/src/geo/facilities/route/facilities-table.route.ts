@@ -1,4 +1,5 @@
-import { ApiRoutes, type FacilitiesTableResponse, FacilitiesTableResponseSchema } from "@map-migration/http-contracts";
+import { ApiRoutes } from "@map-migration/http-contracts/api-routes";
+import { type FacilitiesTableResponse, FacilitiesTableResponseSchema } from "@map-migration/http-contracts/table-contracts";
 import type { Context, Env, Hono } from "hono";
 import {
   buildFacilitiesMappingRouteError,

@@ -4,7 +4,7 @@ import {
   PIPELINE_DATASETS,
   type PipelineDataset,
   type PipelineDatasetDescriptor,
-} from "@map-migration/http-contracts";
+} from "@map-migration/http-contracts/pipeline-http";
 
 export const pipelineDatasets = Object.values(PIPELINE_DATASETS);
 

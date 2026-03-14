@@ -4,7 +4,7 @@ import type {
   CountyDriver,
   CountyPillarValueStates,
   CountyScore,
-} from "@map-migration/http-contracts";
+} from "@map-migration/http-contracts/county-intelligence-http";
 import type { CountyScoreRow } from "./county-intelligence.repo";
 
 const COUNTY_FIPS_PATTERN = /^[0-9]{5}$/;

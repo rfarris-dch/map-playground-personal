@@ -1,16 +1,17 @@
-import type { BBox, FacilityPerspective } from "@map-migration/geo-kernel";
-import { formatBboxParam } from "@map-migration/geo-kernel";
+import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
+import type { BBox } from "@map-migration/geo-kernel/geometry";
+import { formatBboxParam } from "@map-migration/geo-kernel/geometry";
+import { z } from "zod";
+import type { SourceMode } from "./api-response-meta.js";
 import type { BoundaryPowerLevel } from "./boundaries-http.js";
 import type { ParcelGeometryMode, ParcelProfile } from "./parcels-http.js";
 import { isPipelineDataset, type PipelineDataset } from "./pipeline-http.js";
-import type { SourceMode } from "./api-response-meta.js";
 import type {
   FacilitySortBy,
   MarketSortBy,
   ProviderSortBy,
   SortDirection,
 } from "./table-contracts.js";
-import { z } from "zod";
 
 export interface DataVersionResolveOptions {
   readonly env?: Readonly<Record<string, string | undefined>>;

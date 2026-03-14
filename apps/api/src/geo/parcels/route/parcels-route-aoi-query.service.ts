@@ -1,5 +1,6 @@
-import type { ParcelAoi, Warning } from "@map-migration/geo-kernel";
-import type { ParcelGeometryMode } from "@map-migration/http-contracts";
+import type { AreaOfInterest } from "@map-migration/geo-kernel/area-of-interest";
+import type { Warning } from "@map-migration/geo-kernel/warning";
+import type { ParcelGeometryMode } from "@map-migration/http-contracts/parcels-http";
 import type { Context } from "hono";
 import {
   enrichParcelsByBbox,
@@ -109,7 +110,7 @@ function rejectPolygonPolicy(args: {
 export async function queryEnrichRowsByAoi(
   c: Context,
   requestId: string,
-  aoi: ParcelAoi,
+  aoi: AreaOfInterest,
   includeGeometry: ParcelGeometryMode,
   queryLimit: number,
   cursor: string | null

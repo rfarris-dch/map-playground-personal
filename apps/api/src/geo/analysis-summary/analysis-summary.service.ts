@@ -1,19 +1,21 @@
-import type { Warning } from "@map-migration/geo-kernel";
+import type { Warning } from "@map-migration/geo-kernel/warning";
 import {
   type CountyScoresResponse,
   CountyScoresResponseSchema,
   type CountyScoresStatusResponse,
   CountyScoresStatusResponseSchema,
-  type FacilitiesFeatureCollection,
-  type ParcelsFeatureCollection,
-  type SpatialAnalysisFloodSummary,
-  type SpatialAnalysisParcelRecord,
-  type SpatialAnalysisPerspectiveSummary,
-  type SpatialAnalysisProviderSummary,
-  type SpatialAnalysisSelectionSummary,
-  type SpatialAnalysisSummaryFacilityRecord,
-  type SpatialAnalysisSummaryResponse,
-} from "@map-migration/http-contracts";
+} from "@map-migration/http-contracts/county-intelligence-http";
+import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts/facilities-http";
+import type { ParcelsFeatureCollection } from "@map-migration/http-contracts/parcels-http";
+import type {
+  SpatialAnalysisFloodSummary,
+  SpatialAnalysisParcelRecord,
+  SpatialAnalysisPerspectiveSummary,
+  SpatialAnalysisProviderSummary,
+  SpatialAnalysisSelectionSummary,
+  SpatialAnalysisSummaryFacilityRecord,
+  SpatialAnalysisSummaryResponse,
+} from "@map-migration/http-contracts/spatial-analysis-summary-http";
 import {
   buildPolygonRepairWarning,
   normalizePolygonGeometryGeoJson,

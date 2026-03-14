@@ -1,4 +1,4 @@
-import type { BoundaryPowerLevel } from "@map-migration/http-contracts";
+import type { BoundaryPowerLevel } from "@map-migration/http-contracts/boundaries-http";
 import { runQuery } from "@/db/postgres";
 import { FACILITY_POWER_CTE } from "@/geo/facilities/facilities-capacity.repo";
 import type { BoundaryPowerRow } from "./boundaries.repo.types";

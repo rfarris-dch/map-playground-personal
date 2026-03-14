@@ -1,4 +1,5 @@
-import type { BBox, ParcelSnapshotId } from "@map-migration/geo-kernel";
+import type { BBox } from "@map-migration/geo-kernel/geometry";
+import type { ParcelSnapshotId } from "@map-migration/geo-kernel/parcel-snapshot-id";
 import type { TileDataset, TilePublishManifest } from "@map-migration/geo-tiles";
 import type { MapExpression } from "@map-migration/map-engine";
 

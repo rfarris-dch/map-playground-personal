@@ -1,11 +1,10 @@
-import { z } from "zod";
 import {
   CommissionedSemanticSchema,
-  FacilityPerspectiveSchema,
   LeaseOrOwnSchema,
-  PointGeometrySchema,
-  PolygonGeometrySchema,
-} from "@map-migration/geo-kernel";
+} from "@map-migration/geo-kernel/commissioned-semantic";
+import { FacilityPerspectiveSchema } from "@map-migration/geo-kernel/facility-perspective";
+import { PointGeometrySchema, PolygonGeometrySchema } from "@map-migration/geo-kernel/geometry";
+import { z } from "zod";
 import { ResponseMetaSchema } from "./api-response-meta.js";
 
 export const FacilitiesPropertiesSchema = z.object({

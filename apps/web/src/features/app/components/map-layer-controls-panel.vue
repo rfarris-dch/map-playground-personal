@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { FacilityPerspective } from "@map-migration/geo-kernel";
+  import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
   import { computed, inject, ref } from "vue";
   import MapNavIcon from "@/components/icons/map-nav-icon.vue";
   import AppFilterPanel from "@/features/app/components/app-filter-panel.vue";

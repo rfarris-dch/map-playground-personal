@@ -1,5 +1,6 @@
-import type { Warning } from "@map-migration/geo-kernel";
-import type { CountyScoresResponse, CountyScoresStatusResponse, SpatialAnalysisSummaryResponse } from "@map-migration/http-contracts";
+import type { Warning } from "@map-migration/geo-kernel/warning";
+import type { CountyScoresResponse, CountyScoresStatusResponse } from "@map-migration/http-contracts/county-intelligence-http";
+import type { SpatialAnalysisSummaryResponse } from "@map-migration/http-contracts/spatial-analysis-summary-http";
 import { buildMeasureSelectionSummary } from "@/features/measure/measure-analysis.service";
 import type { ScannerSummary } from "@/features/scanner/scanner.types";
 import type { SpatialAnalysisSummaryModel } from "@/features/spatial-analysis/spatial-analysis-summary.types";

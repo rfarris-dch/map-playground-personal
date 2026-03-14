@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
-import type { ProviderTableRow } from "@map-migration/http-contracts";
+import type { ProviderTableRow } from "@map-migration/http-contracts/table-contracts";
 
 const countProvidersMock = mock<() => Promise<number>>();
 const listProvidersPageMock =

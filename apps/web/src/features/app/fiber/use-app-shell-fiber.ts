@@ -1,4 +1,4 @@
-import type { BBox } from "@map-migration/geo-kernel";
+import type { BBox } from "@map-migration/geo-kernel/geometry";
 import type { IMap } from "@map-migration/map-engine";
 import { computed, shallowRef } from "vue";
 import { FIBER_MIN_ZOOM, fiberLayerId } from "@/features/app/core/app-shell.constants";

@@ -1,5 +1,5 @@
-import type { FacilityPerspective } from "@map-migration/geo-kernel";
-import type { FacilitiesDetailResponse } from "@map-migration/http-contracts";
+import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
+import type { FacilitiesDetailResponse } from "@map-migration/http-contracts/facilities-http";
 import {
   mapFacilitiesRowsToFeatures,
   mapFacilityDetailRowToFeature,

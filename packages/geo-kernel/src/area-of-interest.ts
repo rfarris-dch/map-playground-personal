@@ -65,18 +65,3 @@ export const AreaOfInterestSchema = z
   });
 
 export type AreaOfInterest = z.infer<typeof AreaOfInterestSchema>;
-
-/** @deprecated Use AreaOfInterestBboxSchema */
-export const ParcelAoiBboxSchema = AreaOfInterestBboxSchema;
-/** @deprecated Use AreaOfInterestPolygonSchema */
-export const ParcelAoiPolygonSchema = AreaOfInterestPolygonSchema;
-/** @deprecated Use AreaOfInterestCountySchema */
-export const ParcelAoiCountySchema = AreaOfInterestCountySchema;
-/** @deprecated Use AreaOfInterestTileCoordinateSchema */
-export const ParcelAoiTileCoordinateSchema = AreaOfInterestTileCoordinateSchema;
-/** @deprecated Use AreaOfInterestTileSetSchema */
-export const ParcelAoiTileSetSchema = AreaOfInterestTileSetSchema;
-/** @deprecated Use AreaOfInterestSchema */
-export const ParcelAoiSchema = AreaOfInterestSchema;
-/** @deprecated Use AreaOfInterest */
-export type ParcelAoi = AreaOfInterest;

@@ -1,10 +1,10 @@
+import { ApiRoutes } from "@map-migration/http-contracts/api-routes";
 import {
-  ApiRoutes,
   type CountyScoresResponse,
   CountyScoresResponseSchema,
   type CountyScoresStatusResponse,
   CountyScoresStatusResponseSchema,
-} from "@map-migration/http-contracts";
+} from "@map-migration/http-contracts/county-intelligence-http";
 import type { Env, Hono } from "hono";
 import {
   queryCountyScores,

@@ -1,4 +1,4 @@
-import type { ParcelDetailResponse, ParcelGeometryMode, ParcelProfile } from "@map-migration/http-contracts";
+import type { ParcelDetailResponse, ParcelGeometryMode, ParcelProfile } from "@map-migration/http-contracts/parcels-http";
 import type { ApiResult } from "@map-migration/core-runtime/api";
 import type { SelectedParcelRef } from "@/features/parcels/parcels.types";
 

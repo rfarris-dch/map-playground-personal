@@ -1,4 +1,4 @@
-import { GeometrySchema } from "@map-migration/geo-kernel";
+import { GeometrySchema } from "@map-migration/geo-kernel/geometry";
 import { z } from "zod";
 import { ResponseMetaSchema } from "./api-response-meta.js";
 

@@ -4,7 +4,7 @@
   ProvidersTableResponse,
   ProviderTableRow,
   SortDirection,
-} from "@map-migration/http-contracts";
+} from "@map-migration/http-contracts/table-contracts";
   import { useInfiniteQuery } from "@tanstack/vue-query";
   import { createColumnHelper, type SortingState } from "@tanstack/vue-table";
   import { computed, shallowRef, useTemplateRef } from "vue";

@@ -1,5 +1,5 @@
-import type { Warning } from "@map-migration/geo-kernel";
-import type { ResponseMeta } from "@map-migration/http-contracts";
+import type { Warning } from "@map-migration/geo-kernel/warning";
+import type { ResponseMeta } from "@map-migration/http-contracts/api-response-meta";
 import { getApiRuntimeConfig } from "@/http/runtime-config";
 
 export function buildFacilitiesRouteMeta(args: {

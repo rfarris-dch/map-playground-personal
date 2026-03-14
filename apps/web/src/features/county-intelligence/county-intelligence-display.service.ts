@@ -1,4 +1,4 @@
-import type { CountyScore } from "@map-migration/http-contracts";
+import type { CountyScore } from "@map-migration/http-contracts/county-intelligence-http";
 
 function titleCasePart(value: string): string {
   if (value.length === 0) {

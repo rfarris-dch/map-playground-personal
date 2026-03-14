@@ -1,11 +1,10 @@
+import { buildCountyScoresRoute, buildCountyScoresStatusRoute } from "@map-migration/http-contracts/api-routes";
 import {
-  buildCountyScoresRoute,
-  buildCountyScoresStatusRoute,
   type CountyScoresResponse,
   CountyScoresResponseSchema,
   type CountyScoresStatusResponse,
   CountyScoresStatusResponseSchema,
-} from "@map-migration/http-contracts";
+} from "@map-migration/http-contracts/county-intelligence-http";
 import {
   type ApiEffectError,
   type ApiEffectSuccess,

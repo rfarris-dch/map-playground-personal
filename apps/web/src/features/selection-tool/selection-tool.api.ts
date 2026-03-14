@@ -1,4 +1,5 @@
-import { buildMarketsSelectionRoute, type MarketsSelectionRequest, MarketsSelectionResponseSchema } from "@map-migration/http-contracts";
+import { buildMarketsSelectionRoute } from "@map-migration/http-contracts/api-routes";
+import { type MarketsSelectionRequest, MarketsSelectionResponseSchema } from "@map-migration/http-contracts/markets-selection-http";
 import type { ApiEffectError, ApiEffectSuccess, ApiResult } from "@map-migration/core-runtime/api";
 import { apiGetJson, apiGetJsonEffect } from "@map-migration/core-runtime/api";
 import type { Effect } from "effect";

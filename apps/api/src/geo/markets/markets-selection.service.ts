@@ -1,5 +1,5 @@
-import type { Warning } from "@map-migration/geo-kernel";
-import type { MarketSelectionMatch } from "@map-migration/http-contracts";
+import type { Warning } from "@map-migration/geo-kernel/warning";
+import type { MarketSelectionMatch } from "@map-migration/http-contracts/markets-selection-http";
 import type { MarketSelectionRow } from "@/geo/markets/markets-selection.repo";
 import { getSelectionAreaSqKm, listMarketsBySelection } from "@/geo/markets/markets-selection.repo";
 

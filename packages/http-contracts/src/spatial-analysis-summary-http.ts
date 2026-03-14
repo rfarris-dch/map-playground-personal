@@ -1,15 +1,17 @@
-import { z } from "zod";
 import {
   CommissionedSemanticSchema,
-  FacilityPerspectiveSchema,
   LeaseOrOwnSchema,
-  PointGeometrySchema,
-  PolygonGeometrySchema,
-  WarningSchema,
-} from "@map-migration/geo-kernel";
-import { ResponseMetaSchema } from "./api-response-meta.js";
+} from "@map-migration/geo-kernel/commissioned-semantic";
+import { FacilityPerspectiveSchema } from "@map-migration/geo-kernel/facility-perspective";
+import { PointGeometrySchema, PolygonGeometrySchema } from "@map-migration/geo-kernel/geometry";
+import { WarningSchema } from "@map-migration/geo-kernel/warning";
+import { z } from "zod";
 import { PolicyDatasetSchema, QueryGranularitySchema } from "./analysis-contracts.js";
-import { CountyScoresResponseSchema, CountyScoresStatusResponseSchema } from "./county-intelligence-http.js";
+import { ResponseMetaSchema } from "./api-response-meta.js";
+import {
+  CountyScoresResponseSchema,
+  CountyScoresStatusResponseSchema,
+} from "./county-intelligence-http.js";
 import { MarketSelectionMatchSchema } from "./markets-selection-http.js";
 
 const CountyFipsSchema = z.string().regex(/^[0-9]{5}$/);
@@ -221,15 +223,23 @@ export const SpatialAnalysisSummaryResponseSchema = z.object({
 });
 
 export type SpatialAnalysisSummaryRequest = z.infer<typeof SpatialAnalysisSummaryRequestSchema>;
-export type SpatialAnalysisSummaryFacilityRecord = z.infer<typeof SpatialAnalysisSummaryFacilityRecordSchema>;
-export type SpatialAnalysisPerspectiveSummary = z.infer<typeof SpatialAnalysisPerspectiveSummarySchema>;
+export type SpatialAnalysisSummaryFacilityRecord = z.infer<
+  typeof SpatialAnalysisSummaryFacilityRecordSchema
+>;
+export type SpatialAnalysisPerspectiveSummary = z.infer<
+  typeof SpatialAnalysisPerspectiveSummarySchema
+>;
 export type SpatialAnalysisProviderSummary = z.infer<typeof SpatialAnalysisProviderSummarySchema>;
 export type SpatialAnalysisParcelRecord = z.infer<typeof SpatialAnalysisParcelRecordSchema>;
 export type SpatialAnalysisFloodSummary = z.infer<typeof SpatialAnalysisFloodSummarySchema>;
 export type SpatialAnalysisSelectionSummary = z.infer<typeof SpatialAnalysisSelectionSummarySchema>;
-export type SpatialAnalysisCountyIntelligence = z.infer<typeof SpatialAnalysisCountyIntelligenceSchema>;
+export type SpatialAnalysisCountyIntelligence = z.infer<
+  typeof SpatialAnalysisCountyIntelligenceSchema
+>;
 export type SpatialAnalysisArea = z.infer<typeof SpatialAnalysisAreaSchema>;
 export type SpatialAnalysisSummaryCoverage = z.infer<typeof SpatialAnalysisSummaryCoverageSchema>;
-export type SpatialAnalysisSummaryProvenance = z.infer<typeof SpatialAnalysisSummaryProvenanceSchema>;
+export type SpatialAnalysisSummaryProvenance = z.infer<
+  typeof SpatialAnalysisSummaryProvenanceSchema
+>;
 export type SpatialAnalysisPolicyEntry = z.infer<typeof SpatialAnalysisPolicyEntrySchema>;
 export type SpatialAnalysisSummaryResponse = z.infer<typeof SpatialAnalysisSummaryResponseSchema>;

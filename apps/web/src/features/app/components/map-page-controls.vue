@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { FacilityPerspective } from "@map-migration/geo-kernel";
+  import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
   import MapLayerControlsPanel from "@/features/app/components/map-layer-controls-panel.vue";
   import MapOverlayActions from "@/features/app/components/map-overlay-actions.vue";
   import type {

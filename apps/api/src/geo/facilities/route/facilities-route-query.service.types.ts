@@ -1,11 +1,7 @@
-import type { FacilityPerspective, Warning } from "@map-migration/geo-kernel";
-import type {
-  FacilitiesDetailResponse,
-  FacilitiesFeatureCollection,
-  FacilitiesTableResponse,
-  FacilitySortBy,
-  SortDirection,
-} from "@map-migration/http-contracts";
+import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
+import type { Warning } from "@map-migration/geo-kernel/warning";
+import type { FacilitiesDetailResponse, FacilitiesFeatureCollection } from "@map-migration/http-contracts/facilities-http";
+import type { FacilitiesTableResponse, FacilitySortBy, SortDirection } from "@map-migration/http-contracts/table-contracts";
 import type {
   FacilitiesBboxRow,
   FacilityDetailRow,

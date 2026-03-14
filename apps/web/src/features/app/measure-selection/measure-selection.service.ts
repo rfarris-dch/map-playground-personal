@@ -1,10 +1,6 @@
-import type { FacilityPerspective } from "@map-migration/geo-kernel";
-import type {
-  FacilitiesFeatureCollection,
-  FacilitiesSelectionRequest,
-  ParcelEnrichRequest,
-  ParcelsFeatureCollection,
-} from "@map-migration/http-contracts";
+import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
+import type { FacilitiesFeatureCollection, FacilitiesSelectionRequest } from "@map-migration/http-contracts/facilities-http";
+import type { ParcelEnrichRequest, ParcelsFeatureCollection } from "@map-migration/http-contracts/parcels-http";
 import type { PerspectiveVisibilityState } from "@/features/app/core/app-shell.types";
 import type {
   QueryMeasureSelectionSummaryArgs,

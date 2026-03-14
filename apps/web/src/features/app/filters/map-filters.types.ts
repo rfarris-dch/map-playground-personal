@@ -1,5 +1,5 @@
-import type { CommissionedSemantic } from "@map-migration/geo-kernel";
-import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts";
+import type { CommissionedSemantic } from "@map-migration/geo-kernel/commissioned-semantic";
+import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts/facilities-http";
 
 /**
  * Facility status filter IDs map to CommissionedSemantic values.

@@ -1,5 +1,6 @@
+import { AreaOfInterestSchema } from "@map-migration/geo-kernel/area-of-interest";
+import { GeometrySchema } from "@map-migration/geo-kernel/geometry";
 import { z } from "zod";
-import { AreaOfInterestSchema, GeometrySchema } from "@map-migration/geo-kernel";
 import { ResponseMetaSchema } from "./api-response-meta.js";
 
 export const ParcelGeometryModeSchema = z.enum(["none", "centroid", "simplified", "full"]);

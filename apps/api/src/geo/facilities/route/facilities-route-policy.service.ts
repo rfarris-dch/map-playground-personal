@@ -1,6 +1,6 @@
-import type { BBox } from "@map-migration/geo-kernel";
-import { aoiBboxExceedsLimits } from "@map-migration/geo-kernel";
-import type { FacilitiesSelectionRequest } from "@map-migration/http-contracts";
+import type { BBox } from "@map-migration/geo-kernel/geometry";
+import { aoiBboxExceedsLimits } from "@map-migration/geo-kernel/area-of-interest-policy";
+import type { FacilitiesSelectionRequest } from "@map-migration/http-contracts/facilities-http";
 import { parsePositiveFloatFlag, parsePositiveIntFlag } from "@/config/env-parsing.service";
 import { resolvePolygonBbox } from "@/http/polygon-bbox.service";
 

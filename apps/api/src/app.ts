@@ -3,7 +3,7 @@ import {
   ApiRoutes,
   type HealthResponse,
   HealthSchema,
-} from "@map-migration/http-contracts";
+} from "@map-migration/http-contracts/api-routes";
 import { createRequestId, REQUEST_ID_MAX_LENGTH } from "@map-migration/core-runtime";
 import { Effect } from "effect";
 import type { Context } from "hono";

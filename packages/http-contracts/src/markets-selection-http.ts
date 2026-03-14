@@ -1,5 +1,5 @@
+import { PointGeometrySchema, PolygonGeometrySchema } from "@map-migration/geo-kernel/geometry";
 import { z } from "zod";
-import { PointGeometrySchema, PolygonGeometrySchema } from "@map-migration/geo-kernel";
 import { ResponseMetaSchema } from "./api-response-meta.js";
 
 export const MarketSelectionMatchSchema = z.object({

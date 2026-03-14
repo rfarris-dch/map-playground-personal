@@ -1,10 +1,10 @@
+import { ApiRoutes } from "@map-migration/http-contracts/api-routes";
 import {
-  ApiRoutes,
   type ParcelEnrichRequest,
   ParcelEnrichRequestSchema,
   type ParcelsFeatureCollection,
   ParcelsFeatureCollectionSchema,
-} from "@map-migration/http-contracts";
+} from "@map-migration/http-contracts/parcels-http";
 import type { Context, Env, Hono } from "hono";
 import { mapParcelRowsToFeatures } from "@/geo/parcels/parcels.mapper";
 import {

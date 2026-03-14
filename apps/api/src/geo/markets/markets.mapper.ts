@@ -1,4 +1,4 @@
-import type { MarketTableRow } from "@map-migration/http-contracts";
+import type { MarketTableRow } from "@map-migration/http-contracts/table-contracts";
 import type { MarketListRow } from "@/geo/markets/markets.repo";
 
 function readNullableNumber(value: number | string | null | undefined): number | null {

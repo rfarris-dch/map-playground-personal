@@ -1,5 +1,5 @@
-import type { Warning } from "@map-migration/geo-kernel";
-import type { CountyScoresResponse, CountyScoresStatusResponse } from "@map-migration/http-contracts";
+import type { Warning } from "@map-migration/geo-kernel/warning";
+import type { CountyScoresResponse, CountyScoresStatusResponse } from "@map-migration/http-contracts/county-intelligence-http";
 import type { SpatialAnalysisPanelSummary } from "@/features/spatial-analysis/components/spatial-analysis-panel.types";
 
 // ---------------------------------------------------------------------------

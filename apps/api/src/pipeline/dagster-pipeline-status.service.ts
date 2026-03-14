@@ -1,7 +1,8 @@
 import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ParcelsSyncStatusResponseSchema, type PipelineDataset } from "@map-migration/http-contracts";
+import { ParcelsSyncStatusResponseSchema } from "@map-migration/http-contracts/parcels-http";
+import type { PipelineDataset } from "@map-migration/http-contracts/pipeline-http";
 import { runBufferedCommand } from "@map-migration/ops/etl/command-runner";
 
 const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");

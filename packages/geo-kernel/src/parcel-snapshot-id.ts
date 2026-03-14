@@ -1,6 +1,6 @@
 export interface ParcelSnapshotId {
-  readonly parcelId: string;
   readonly ingestionRunId: string;
+  readonly parcelId: string;
 }
 
 export function makeParcelSnapshotId(parcelId: string, ingestionRunId: string): ParcelSnapshotId {

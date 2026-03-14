@@ -1,17 +1,19 @@
-import type { Warning } from "@map-migration/geo-kernel";
+import type { Warning } from "@map-migration/geo-kernel/warning";
+import { ApiRoutes } from "@map-migration/http-contracts/api-routes";
 import {
-  ApiRoutes,
   type MarketSelectionResponse,
-  type MarketSortBy,
-  MarketSortBySchema,
   type MarketsSelectionRequest,
   MarketsSelectionRequestSchema,
   MarketsSelectionResponseSchema,
+} from "@map-migration/http-contracts/markets-selection-http";
+import {
+  type MarketSortBy,
+  MarketSortBySchema,
   type MarketsTableResponse,
   MarketsTableResponseSchema,
   type SortDirection,
   SortDirectionSchema,
-} from "@map-migration/http-contracts";
+} from "@map-migration/http-contracts/table-contracts";
 import type { Context, Env, Hono } from "hono";
 import { queryMarketsTable } from "@/geo/markets/markets-query.service";
 import {

@@ -1,4 +1,4 @@
-import type { MapContextSurface } from "@map-migration/http-contracts";
+import type { MapContextSurface } from "@map-migration/http-contracts/map-context-transfer";
 import type { ComputedRef, ShallowRef } from "vue";
 import type {
   BoundaryFacetSelectionState,

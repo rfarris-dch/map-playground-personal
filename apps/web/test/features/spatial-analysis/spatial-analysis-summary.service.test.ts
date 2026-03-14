@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import type { SpatialAnalysisSummaryResponse } from "@map-migration/http-contracts";
+import type { SpatialAnalysisSummaryResponse } from "@map-migration/http-contracts/spatial-analysis-summary-http";
 import {
   buildEmptySpatialAnalysisSummary,
   buildSpatialAnalysisSummaryModel,

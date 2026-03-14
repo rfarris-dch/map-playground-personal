@@ -1,4 +1,4 @@
-import type { FacilityPerspective } from "@map-migration/geo-kernel";
+import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
 import type {
   BoundaryFacetOptionsState,
   BoundaryFacetSelectionState,

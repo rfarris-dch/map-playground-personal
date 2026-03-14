@@ -1,5 +1,5 @@
 import { runEffectPromise } from "@map-migration/core-runtime/effect";
-import { makeParcelSnapshotId } from "@map-migration/geo-kernel";
+import { makeParcelSnapshotId } from "@map-migration/geo-kernel/parcel-snapshot-id";
 import {
   assertTileManifestMatchesDataset,
   createPmtilesSourceUrl,
