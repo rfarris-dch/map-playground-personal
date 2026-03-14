@@ -55,6 +55,7 @@ export interface ParcelsLayerOptions {
 export interface ParcelsLayerController {
   clearSelection(): void;
   destroy(): void;
+  setFilter(filter: import("@map-migration/map-engine").MapExpression | null): void;
   setVisible(visible: boolean): void;
 }
 

@@ -1,8 +1,15 @@
-import type { FacilitiesFeatureCollection } from "@map-migration/contracts";
+import {
+  type FacilitiesFeatureCollection,
+  buildMarketsRoute,
+  MarketsTableResponseSchema,
+} from "@map-migration/contracts";
 import type { MapExpression } from "@map-migration/map-engine";
+import { apiGetJson } from "@map-migration/core-runtime/api";
 import { computed, type Ref, shallowRef, watch } from "vue";
+import { buildApiRequestInit } from "@/lib/api/api-request-init.service";
 import {
   buildFacilitiesFilterPredicate,
+  buildParcelFilter,
   buildTransmissionVoltageFilter,
 } from "./map-filters.service";
 import type {
@@ -39,6 +46,7 @@ export interface UseMapFiltersResult {
   toggleFacilityProvider(providerName: string): void;
 
   toggleFacilityStatus(id: FacilityStatusFilterId): void;
+  readonly parcelFilter: Readonly<ReturnType<typeof shallowRef<MapExpression | null>>>;
   readonly transmissionFilter: Readonly<ReturnType<typeof shallowRef<MapExpression | null>>>;
 
   togglePowerType(id: string): void;
@@ -76,6 +84,7 @@ function createInitialState(): MapFiltersState {
 export function useMapFilters(): UseMapFiltersResult {
   const state = shallowRef<MapFiltersState>(createInitialState());
   const facilitiesPredicate = shallowRef<FacilitiesFilterPredicate | null>(null);
+  const parcelFilter = shallowRef<MapExpression | null>(null);
   const transmissionFilter = shallowRef<MapExpression | null>(null);
 
   // Accumulate unique values from features — never shrink, only grow
@@ -86,6 +95,7 @@ export function useMapFilters(): UseMapFiltersResult {
     state,
     (current) => {
       facilitiesPredicate.value = buildFacilitiesFilterPredicate(current);
+      parcelFilter.value = buildParcelFilter(current);
       transmissionFilter.value = buildTransmissionVoltageFilter(current);
     },
     { immediate: true }
@@ -98,6 +108,25 @@ export function useMapFilters(): UseMapFiltersResult {
   const availableMarkets = computed(() =>
     [...knownMarkets.value].sort((a, b) => a.localeCompare(b))
   );
+
+  // Fetch dcH market names from the API on initialization
+  async function loadMarkets(): Promise<void> {
+    try {
+      const response = await apiGetJson(
+        buildMarketsRoute({ page: 1, pageSize: 500, sortBy: "name", sortOrder: "asc" }),
+        MarketsTableResponseSchema,
+        buildApiRequestInit({})
+      );
+      const names = new Set(response.rows.map((row) => row.name));
+      if (names.size > 0) {
+        knownMarkets.value = names;
+      }
+    } catch {
+      // Markets API unavailable — fall back to feature-derived labels
+    }
+  }
+
+  loadMarkets();
 
   function updateState(updater: (prev: MapFiltersState) => MapFiltersState): void {
     state.value = updater(state.value);
@@ -235,6 +264,7 @@ export function useMapFilters(): UseMapFiltersResult {
     setTransmissionVoltage,
     clearAll,
     facilitiesPredicate,
+    parcelFilter,
     transmissionFilter,
     availableProviders,
     availableMarkets,

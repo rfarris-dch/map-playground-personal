@@ -106,6 +106,7 @@ export interface AppShellMapLifecycleSelectionActions {
 export interface AppShellMapFiltersRefs {
   readonly facilitiesPredicate: Readonly<ShallowRef<FacilitiesFilterPredicate | null | undefined>>;
   readonly onCachedFeaturesUpdate: (features: FacilitiesFeatureCollection["features"]) => void;
+  readonly parcelFilter: Readonly<ShallowRef<MapExpression | null | undefined>>;
   readonly transmissionFilter: Readonly<ShallowRef<MapExpression | null | undefined>>;
 }
 

@@ -40,6 +40,13 @@ export function useAppShellMapLifecycle(options: UseAppShellMapLifecycleOptions)
     }
   });
 
+  watch(options.filters.parcelFilter, (filter) => {
+    const controller = options.layers.parcelsController.value;
+    if (controller !== null) {
+      controller.setFilter(filter ?? null);
+    }
+  });
+
   onMounted(() => {
     initializeMapLifecycleRuntime(options).catch((error: unknown) => {
       console.error("Map initialization failed", error);

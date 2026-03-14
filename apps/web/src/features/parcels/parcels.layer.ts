@@ -584,8 +584,26 @@ export function mountParcelsLayer(
   map.onPointerLeave(onPointerLeave);
   map.onClick(onClick);
 
+  let currentFilter: import("@map-migration/map-engine").MapExpression | null = null;
+
+  const applyFilter = (): void => {
+    if (!state.sourceInitialized) {
+      return;
+    }
+    if (map.hasLayer(fillLayerId)) {
+      map.setLayerFilter(fillLayerId, currentFilter);
+    }
+    if (map.hasLayer(outlineLayerId)) {
+      map.setLayerFilter(outlineLayerId, currentFilter);
+    }
+  };
+
   return {
     clearSelection,
+    setFilter(filter: import("@map-migration/map-engine").MapExpression | null): void {
+      currentFilter = filter;
+      applyFilter();
+    },
     setVisible(visible: boolean): void {
       if (state.visible === visible) {
         return;

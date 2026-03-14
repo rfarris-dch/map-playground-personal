@@ -9,6 +9,7 @@
     MapLayerControlsPanelProps,
   } from "@/features/app/components/map-layer-controls-panel.types";
   import { MAP_FILTERS_KEY } from "@/features/app/filters/map-filters.keys";
+  import type { FacilityStatusFilterId } from "@/features/app/filters/map-filters.types";
   import type { MapNavViewModeId } from "@/features/app/components/map-nav.types";
   import MapNavLayerRow from "@/features/app/components/map-nav-layer-row.vue";
   import MapNavViewModes from "@/features/app/components/map-nav-view-modes.vue";
@@ -681,7 +682,7 @@
             :flood-zone-options="floodZoneOptions"
             :active-flood-zones="mapFilters?.state.value?.floodZones ?? new Set()"
             @toggle:power-type="mapFilters?.togglePowerType($event)"
-            @toggle:status="mapFilters?.toggleFacilityStatus($event)"
+            @toggle:status="mapFilters?.toggleFacilityStatus($event as FacilityStatusFilterId)"
             @toggle:market="mapFilters?.toggleMarket($event)"
             @toggle:provider="mapFilters?.toggleFacilityProvider($event)"
             @toggle:user="mapFilters?.toggleUser($event)"

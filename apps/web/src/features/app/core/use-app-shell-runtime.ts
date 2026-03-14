@@ -93,6 +93,7 @@ export function useAppShellRuntime(
     filters: {
       facilitiesPredicate: mapFilters.facilitiesPredicate,
       onCachedFeaturesUpdate: mapFilters.setAvailableFeatures,
+      parcelFilter: mapFilters.parcelFilter,
       transmissionFilter: mapFilters.transmissionFilter,
     },
     initialViewport: options.initialViewport,
