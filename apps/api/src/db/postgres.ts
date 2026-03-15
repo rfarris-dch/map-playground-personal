@@ -10,6 +10,32 @@ declare const Bun: {
 
 const CONNECTION_CLOSED_RE = /connection closed/i;
 const POSTGRES_READY_QUERY = "select 1 as db_ready";
+const MAX_CONCURRENT_QUERIES = parsePositiveIntFlag(process.env.API_DB_MAX_CONCURRENT_QUERIES, 8);
+
+let activeQueries = 0;
+const queryQueue: Array<() => void> = [];
+
+function acquireQuerySlot(): Promise<void> {
+  if (activeQueries < MAX_CONCURRENT_QUERIES) {
+    activeQueries++;
+    return Promise.resolve();
+  }
+  return new Promise<void>((resolve) => {
+    queryQueue.push(() => {
+      activeQueries++;
+      resolve();
+    });
+  });
+}
+
+function releaseQuerySlot(): void {
+  const next = queryQueue.shift();
+  if (next) {
+    next();
+  } else {
+    activeQueries--;
+  }
+}
 const DEFAULT_DB_STATEMENT_TIMEOUT_MS = parsePositiveIntFlag(
   process.env.API_DB_STATEMENT_TIMEOUT_MS,
   180_000
@@ -169,13 +195,18 @@ async function runQueryWithReconnect<T extends object>(
   }
 }
 
-export function runQuery<T extends object>(
+export async function runQuery<T extends object>(
   text: string,
   values: readonly SqlParameterValue[],
   options?: RunQueryOptions
 ): Promise<T[]> {
-  const sqlClient = getSqlClient();
-  return runQueryWithReconnect<T>(sqlClient, text, values, resolveRunQueryOptions(options));
+  await acquireQuerySlot();
+  try {
+    const sqlClient = getSqlClient();
+    return await runQueryWithReconnect<T>(sqlClient, text, values, resolveRunQueryOptions(options));
+  } finally {
+    releaseQuerySlot();
+  }
 }
 
 export async function assertPostgresReady(): Promise<void> {
