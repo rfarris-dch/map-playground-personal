@@ -313,7 +313,9 @@ export function useAppShell() {
     setGasPipelineVisible: visibility.setGasPipelineVisible,
     setPowerLayerVisible: visibility.setPowerLayerVisible,
     setMarketBoundaryVisible: visibility.setMarketBoundaryVisible,
-    setMarketBoundaryColorMode(colorMode: import("@/features/market-boundaries/market-boundaries.types").MarketBoundaryColorMode): void {
+    setMarketBoundaryColorMode(
+      colorMode: import("@/features/market-boundaries/market-boundaries.types").MarketBoundaryColorMode
+    ): void {
       state.marketBoundaryColorMode.value = colorMode;
       state.marketBoundaryControllers.value.market?.setColorMode(colorMode);
       state.marketBoundaryControllers.value.submarket?.setColorMode(colorMode);
@@ -331,6 +333,7 @@ export function useAppShell() {
     exportScannerSelection: mapOverlays.exportScannerSelection,
     openScannerDashboard,
     clearSketchMeasure: state.clearSketchMeasure,
+    dismissAllToolPanels: state.dismissAllToolPanels,
     useCompletedSketchAsSelection: state.useCompletedSketchAsSelection,
     clearSelection: state.clearSelectionGeometry,
     clearSelectionGeometry: state.clearSelectionGeometry,

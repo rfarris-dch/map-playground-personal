@@ -127,7 +127,6 @@
 
 <template>
   <article class="space-y-4 p-3">
-    <!-- Header row -->
     <div class="flex items-start justify-between gap-3">
       <div>
         <div class="mb-1 flex items-center gap-1.5">
@@ -144,7 +143,6 @@
       </div>
     </div>
 
-    <!-- Key metrics — flat grid, no card wrappers -->
     <div class="grid gap-x-4 gap-y-2 text-xs sm:grid-cols-2 xl:grid-cols-3">
       <div>
         <div class="uppercase tracking-wide text-muted-foreground">Colocation</div>
@@ -191,7 +189,6 @@
       </div>
     </div>
 
-    <!-- Commissioned Mix + Status Breakdown -->
     <div class="grid gap-6 lg:grid-cols-2">
       <section>
         <div class="mb-2 flex items-center gap-1.5">
@@ -250,7 +247,6 @@
 
     <hr class="border-t border-border/50">
 
-    <!-- Top Providers + Parcel Candidates -->
     <div class="grid gap-6 lg:grid-cols-2">
       <section>
         <div class="mb-2 flex items-center gap-1.5">
@@ -322,7 +318,6 @@
       </section>
     </div>
 
-    <!-- Facilities preview -->
     <section>
       <div class="mb-2 flex items-center gap-1.5">
         <span class="inline-block h-2 w-2 rounded-full bg-slate-500" />

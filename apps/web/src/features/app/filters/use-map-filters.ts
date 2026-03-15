@@ -96,8 +96,6 @@ export function useMapFilters(): UseMapFiltersResult {
   const parcelFilter = shallowRef<MapExpression | null>(null);
   const parcelViewportFacets = shallowRef<ParcelsViewportFacets | null>(null);
   const transmissionFilter = shallowRef<MapExpression | null>(null);
-
-  // Accumulate unique values from features — never shrink, only grow
   const knownProviders = shallowRef<ReadonlySet<string>>(new Set());
   const knownMarkets = shallowRef<ReadonlySet<string>>(new Set());
 
@@ -118,8 +116,6 @@ export function useMapFilters(): UseMapFiltersResult {
   const availableMarkets = computed(() =>
     [...knownMarkets.value].sort((a, b) => a.localeCompare(b))
   );
-
-  // Fetch dcH market names from the API on initialization
   async function loadMarkets(): Promise<void> {
     try {
       const response = await apiRequestJson(
@@ -139,8 +135,8 @@ export function useMapFilters(): UseMapFiltersResult {
       if (names.size > 0) {
         knownMarkets.value = names;
       }
-    } catch {
-      // Markets API unavailable — fall back to feature-derived labels
+    } catch (_) {
+      _;
     }
   }
 
@@ -260,8 +256,6 @@ export function useMapFilters(): UseMapFiltersResult {
         nextProviders.add(providerName);
         providersChanged = true;
       }
-
-      // Derive market label from city + state (best available proxy)
       if (city && featureState) {
         const marketLabel = `${city}, ${featureState}`;
         if (!nextMarkets.has(marketLabel)) {

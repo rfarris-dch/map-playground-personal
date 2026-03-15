@@ -21,7 +21,6 @@ export interface MetricRow {
   readonly value: string;
 }
 
-// Donut chart helpers — use OKLCH shades derived from the colocation/hyperscale tokens
 const COLO_SHADES = [
   "oklch(0.62 0.14 250)",
   "oklch(0.76 0.10 250)",

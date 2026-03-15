@@ -7,6 +7,7 @@ import type {
 export interface UseMapOverlaysShortcutsOptions {
   readonly clearSelectionGeometry: () => void;
   readonly clearSketchMeasure: () => void;
+  readonly dismissAllToolPanels: () => void;
   readonly finishSketchMeasureArea: () => void;
   readonly isSketchMeasurePanelOpen: ComputedRef<boolean>;
   readonly quickViewDisabledReason: ComputedRef<string | null>;

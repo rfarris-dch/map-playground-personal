@@ -11,18 +11,13 @@ import type {
   BoundaryFacetSelectionState,
   PerspectiveStatusState,
 } from "@/features/app/core/app-shell.types";
+import type { FacilitiesFilterPredicate } from "@/features/app/filters/map-filters.types";
 import type {
   MarketBoundaryControllerState,
   MarketBoundaryHoverByLayerState,
 } from "@/features/app/market-boundary/app-shell-market-boundary.types";
-import type { FacilitiesFilterPredicate } from "@/features/app/filters/map-filters.types";
 import type { BasemapLayerVisibilityController } from "@/features/basemap/basemap.types";
 import type { BoundaryHoverState } from "@/features/boundaries/boundaries.types";
-import type {
-  MarketBoundaryColorMode,
-  MarketBoundaryFacetOption,
-  MarketBoundaryHoverState,
-} from "@/features/market-boundaries/market-boundaries.types";
 import type {
   FacilitiesLayerController,
   SelectedFacilityRef,
@@ -39,6 +34,11 @@ import type {
   LayerRuntimeController,
   LayerRuntimeSnapshot,
 } from "@/features/layers/layer-runtime.types";
+import type {
+  MarketBoundaryColorMode,
+  MarketBoundaryFacetOption,
+  MarketBoundaryHoverState,
+} from "@/features/market-boundaries/market-boundaries.types";
 import type {
   ParcelsLayerController,
   ParcelsStatus,

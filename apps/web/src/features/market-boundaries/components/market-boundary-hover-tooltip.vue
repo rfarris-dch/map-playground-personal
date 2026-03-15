@@ -41,22 +41,15 @@
       top: `${props.hover.screenPoint[1] - 12}px`,
     }"
   >
-    <p class="text-xs font-semibold text-foreground/85">
-      {{ props.hover.regionName }}
-    </p>
-    <p
-      v-if="props.hover.parentRegionName"
-      class="text-xs text-muted-foreground"
-    >
+    <p class="text-xs font-semibold text-foreground/85">{{ props.hover.regionName }}</p>
+    <p v-if="props.hover.parentRegionName" class="text-xs text-muted-foreground">
       {{ props.hover.parentRegionName }}
     </p>
     <div class="mt-1 grid gap-0.5 text-xs text-muted-foreground">
       <p v-if="props.hover.commissionedPowerMw !== null">
         Power: {{ formatMegawatts(props.hover.commissionedPowerMw) }}
       </p>
-      <p v-if="props.hover.vacancy !== null">
-        Vacancy: {{ formatPercent(props.hover.vacancy) }}
-      </p>
+      <p v-if="props.hover.vacancy !== null">Vacancy: {{ formatPercent(props.hover.vacancy) }}</p>
       <p v-if="props.hover.absorption !== null">
         Absorption: {{ formatAbsorption(props.hover.absorption) }}
       </p>

@@ -40,7 +40,6 @@
     aria-label="Scanner"
   >
     <div class="flex flex-col gap-4 p-4">
-      <!-- Header -->
       <header>
         <div class="mb-2 flex items-start justify-between">
           <div class="flex items-baseline gap-2">
@@ -59,7 +58,6 @@
           </div>
         </div>
 
-        <!-- Tabs -->
         <nav
           class="flex items-end gap-1 border-b border-border"
           role="tablist"
@@ -80,7 +78,6 @@
         </nav>
       </header>
 
-      <!-- Error -->
       <p
         v-if="props.parcelsErrorMessage"
         class="rounded border border-[var(--error)]/20 bg-[var(--error)]/5 px-3 py-2 text-xs text-[var(--error)]"
@@ -88,7 +85,6 @@
         {{ props.parcelsErrorMessage }}
       </p>
 
-      <!-- Empty state -->
       <section
         v-if="!hasResults"
         class="flex-1 rounded border border-dashed border-border px-4 py-6 text-center text-xs text-muted-foreground"
@@ -96,16 +92,13 @@
         {{ props.emptyMessage ?? "No facilities or parcels in this viewport." }}
       </section>
 
-      <!-- ═══ OVERVIEW TAB ═══ -->
       <section
         v-else-if="activeTab === 'overview'"
         role="tabpanel"
         aria-label="Overview"
         class="flex flex-col gap-4 overflow-auto"
       >
-        <!-- Colocation + Hyperscale side by side -->
         <div class="flex gap-6">
-          <!-- Colocation -->
           <div class="flex flex-col gap-3">
             <div>
               <div class="text-sm font-semibold text-colocation">Colocation</div>
@@ -155,7 +148,6 @@
             </div>
           </div>
 
-          <!-- Hyperscale -->
           <div class="flex flex-col gap-3">
             <div>
               <div class="text-sm font-semibold text-hyperscale">Hyperscale</div>
@@ -206,7 +198,6 @@
           </div>
         </div>
 
-        <!-- Top Companies -->
         <div>
           <button
             type="button"
@@ -222,7 +213,6 @@
           </button>
 
           <div v-if="topCompaniesExpanded" class="mt-3 flex gap-6">
-            <!-- Top Providers -->
             <div class="flex-1">
               <div class="mb-2 text-xs font-semibold text-muted-foreground">Top Providers</div>
               <div class="flex flex-col gap-2">
@@ -240,7 +230,6 @@
               </div>
             </div>
 
-            <!-- Top Users -->
             <div class="flex-1">
               <div class="mb-2 text-xs font-semibold text-muted-foreground">Top Users</div>
               <div class="flex flex-col gap-2">
@@ -261,7 +250,6 @@
         </div>
       </section>
 
-      <!-- ═══ COLOCATION TAB ═══ -->
       <section
         v-else-if="activeTab === 'colocation'"
         role="tabpanel"
@@ -291,7 +279,6 @@
         </div>
       </section>
 
-      <!-- ═══ HYPERSCALE TAB ═══ -->
       <section
         v-else-if="activeTab === 'hyperscale'"
         role="tabpanel"
@@ -321,9 +308,7 @@
         </div>
       </section>
 
-      <!-- ═══ FACILITIES TAB ═══ -->
       <section v-else role="tabpanel" aria-label="Facilities" class="flex-1 overflow-auto">
-        <!-- Table header -->
         <div
           class="grid grid-cols-[1fr_70px_52px_40px_40px] gap-x-2 border-b border-border pb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap"
         >
@@ -366,7 +351,6 @@
         </button>
       </section>
 
-      <!-- Footer buttons -->
       <footer class="flex items-center gap-2">
         <Button
           variant="glass-active"

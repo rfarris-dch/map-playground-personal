@@ -23,6 +23,7 @@ export interface UseMapOverlaysArgs {
   readonly clearSelectionGeometry: () => void;
   readonly clearSketchMeasure: () => void;
   readonly colocationViewportFeatures: ShallowRef<FacilitiesFeatureCollection["features"]>;
+  readonly dismissAllToolPanels: () => void;
   readonly expectedParcelsIngestionRunId: ShallowRef<string | null>;
   readonly facilitiesStatus: ShallowRef<PerspectiveStatusState>;
   readonly finishSketchMeasureArea: () => void;

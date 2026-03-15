@@ -81,7 +81,6 @@
     class="map-glass-elevated pointer-events-auto absolute bottom-10 left-[420px] z-20 flex items-center gap-2 rounded-lg px-3 py-1.5"
     aria-label="Sketch and measure tools"
   >
-    <!-- Tool buttons -->
     <button
       v-for="tool in tools"
       :key="tool.label"
@@ -95,7 +94,6 @@
 
     <div class="h-4 w-px bg-border" />
 
-    <!-- Measurements -->
     <span class="text-xs tabular-nums text-muted-foreground">
       {{ formatDistance(props.state.distanceKm) }}
       · {{ formatArea(props.state.areaSqKm) }}
@@ -103,7 +101,6 @@
 
     <div class="h-4 w-px bg-border" />
 
-    <!-- Actions -->
     <button
       type="button"
       class="rounded px-2 py-1 text-xs font-medium text-primary hover:bg-muted disabled:text-muted-foreground/40"
@@ -128,7 +125,6 @@
       Clear
     </button>
 
-    <!-- Helper -->
     <span class="text-xs text-muted-foreground">{{ helperText }}</span>
   </aside>
 </template>

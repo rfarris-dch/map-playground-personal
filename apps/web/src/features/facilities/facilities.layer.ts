@@ -135,7 +135,6 @@ export function mountFacilitiesLayer(
     const sw = source.width;
     const sh = source.height;
 
-    // Fit within square, preserving aspect ratio, centered
     const scale = Math.min(LOGO_SIZE / sw, LOGO_SIZE / sh);
     const dw = Math.round(sw * scale);
     const dh = Math.round(sh * scale);
@@ -804,8 +803,8 @@ export function mountFacilitiesLayer(
     scheduleRefresh();
   };
 
-  const ignoreBestEffortAsyncError = (): void => {
-    // Best-effort async map work should not interrupt interaction flows.
+  const ignoreBestEffortAsyncError = (_: unknown): void => {
+    _;
   };
 
   const zoomToCluster = (clusterId: number, _center: [number, number]): void => {
@@ -1182,7 +1181,6 @@ export function mountFacilitiesLayer(
         clearClusterMarkers();
       }
     } catch {
-      // If rebuild fails, try to recover
       clearClusterMarkers();
       ensureFacilitiesLayers();
     }

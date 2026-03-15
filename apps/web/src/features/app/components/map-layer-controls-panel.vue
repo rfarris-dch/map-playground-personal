@@ -56,7 +56,6 @@
 </script>
 
 <template>
-  <!-- Collapsed sidebar -->
   <nav
     v-if="!props.isOpen"
     class="pointer-events-auto absolute left-0 top-0 z-30 flex h-full flex-col items-start border-r border-border bg-card px-2 py-4 font-sans"
@@ -91,7 +90,6 @@
     </button>
   </nav>
 
-  <!-- Expanded sidebar -->
   <Transition
     enter-active-class="transition-transform duration-200 ease-out"
     enter-from-class="-translate-x-full"
@@ -169,7 +167,6 @@
               >
             </div>
 
-            <!-- Fiber Routes (expandable) -->
             <div class="flex h-10 items-center bg-card px-2 transition-colors hover:bg-background">
               <div class="flex w-full items-center justify-between">
                 <button
@@ -217,9 +214,7 @@
               </div>
             </div>
 
-            <!-- Fiber sub-rows -->
             <div v-if="fiberExpanded" class="flex flex-col pl-4">
-              <!-- Metro -->
               <div
                 class="flex h-10 items-center bg-card px-2 transition-colors hover:bg-background"
               >
@@ -247,7 +242,6 @@
                 </div>
               </div>
 
-              <!-- Metro source layers -->
               <p
                 v-if="props.fiberSourceLayerOptions.metro.length === 0 && props.visibleFiberLayers.metro"
                 class="py-3 text-center text-xs text-muted-foreground animate-pulse"
@@ -307,7 +301,6 @@
                 </label>
               </div>
 
-              <!-- Longhaul -->
               <div
                 class="flex h-10 items-center bg-card px-2 transition-colors hover:bg-background"
               >
@@ -335,7 +328,6 @@
                 </div>
               </div>
 
-              <!-- Longhaul source layers -->
               <p
                 v-if="props.fiberSourceLayerOptions.longhaul.length === 0 && props.visibleFiberLayers.longhaul"
                 class="py-3 text-center text-xs text-muted-foreground animate-pulse"

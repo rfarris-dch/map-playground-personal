@@ -267,13 +267,11 @@
                   {{ facility.providerName }}
                 </td>
                 <td class="px-1.5 py-1 text-right font-medium tabular-nums">
-                  {{
-                    formatMegawatts(
+                  {{ formatMegawatts(
                       facility.commissionedPowerMw +
                         facility.underConstructionPowerMw +
                         facility.plannedPowerMw
-                    )
-                  }}
+                    ) }}
                 </td>
               </tr>
             </tbody>

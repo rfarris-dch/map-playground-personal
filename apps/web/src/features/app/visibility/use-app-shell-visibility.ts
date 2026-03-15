@@ -1,5 +1,6 @@
 import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
 import { shallowRef } from "vue";
+import type { MarketBoundaryVisibilityState } from "@/features/app/components/map-layer-controls-panel.types";
 import {
   FLOOD_100_LAYER_ID,
   FLOOD_500_LAYER_ID,
@@ -44,7 +45,6 @@ import {
 import type { BasemapLayerId, BasemapVisibilityState } from "@/features/basemap/basemap.types";
 import type { BoundaryLayerId } from "@/features/boundaries/boundaries.types";
 import type { MarketBoundaryLayerId } from "@/features/market-boundaries/market-boundaries.types";
-import type { MarketBoundaryVisibilityState } from "@/features/app/components/map-layer-controls-panel.types";
 import type { PowerLayerId, PowerVisibilityState } from "@/features/power/power.types";
 
 export function useAppShellVisibility(options: UseAppShellVisibilityOptions) {

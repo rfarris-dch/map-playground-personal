@@ -24,11 +24,11 @@ const POWER_HEAT_STOPS: readonly MarketBoundaryHeatStop[] = [
 const VACANCY_HEAT_STOPS: readonly MarketBoundaryHeatStop[] = [
   { value: 0, color: "#dcfce7" },
   { value: 0.05, color: "#86efac" },
-  { value: 0.10, color: "#4ade80" },
+  { value: 0.1, color: "#4ade80" },
   { value: 0.15, color: "#fde047" },
-  { value: 0.20, color: "#fb923c" },
+  { value: 0.2, color: "#fb923c" },
   { value: 0.25, color: "#f87171" },
-  { value: 0.30, color: "#dc2626" },
+  { value: 0.3, color: "#dc2626" },
 ];
 
 const ABSORPTION_HEAT_STOPS: readonly MarketBoundaryHeatStop[] = [
@@ -53,7 +53,9 @@ export function marketBoundaryLayerIds(): MarketBoundaryLayerId[] {
   return ["market", "submarket"];
 }
 
-export function marketBoundaryHeatStops(colorMode: MarketBoundaryColorMode): readonly MarketBoundaryHeatStop[] {
+export function marketBoundaryHeatStops(
+  colorMode: MarketBoundaryColorMode
+): readonly MarketBoundaryHeatStop[] {
   if (colorMode === "vacancy") {
     return VACANCY_HEAT_STOPS;
   }
@@ -113,7 +115,9 @@ function propertyKeyForColorMode(colorMode: MarketBoundaryColorMode): string {
   return "commissionedPowerMw";
 }
 
-function heatStopsForColorMode(colorMode: MarketBoundaryColorMode): readonly MarketBoundaryHeatStop[] {
+function heatStopsForColorMode(
+  colorMode: MarketBoundaryColorMode
+): readonly MarketBoundaryHeatStop[] {
   if (colorMode === "vacancy") {
     return VACANCY_HEAT_STOPS;
   }
@@ -125,18 +129,17 @@ function heatStopsForColorMode(colorMode: MarketBoundaryColorMode): readonly Mar
   return POWER_HEAT_STOPS;
 }
 
-export function marketBoundaryFillColorExpression(colorMode: MarketBoundaryColorMode): MapExpression {
+export function marketBoundaryFillColorExpression(
+  colorMode: MarketBoundaryColorMode
+): MapExpression {
   const key = propertyKeyForColorMode(colorMode);
   const stops = heatStopsForColorMode(colorMode);
-  return [
-    "interpolate",
-    ["linear"],
-    ["coalesce", ["get", key], 0],
-    ...toInterpolationStops(stops),
-  ];
+  return ["interpolate", ["linear"], ["coalesce", ["get", key], 0], ...toInterpolationStops(stops)];
 }
 
-export function marketBoundaryOutlineColorExpression(colorMode: MarketBoundaryColorMode): MapExpression {
+export function marketBoundaryOutlineColorExpression(
+  colorMode: MarketBoundaryColorMode
+): MapExpression {
   const key = propertyKeyForColorMode(colorMode);
   const stops = heatStopsForColorMode(colorMode);
   const outlineStops: Array<number | string> = [];
@@ -144,12 +147,7 @@ export function marketBoundaryOutlineColorExpression(colorMode: MarketBoundaryCo
     outlineStops.push(stop.value, stop.color);
   }
 
-  return [
-    "interpolate",
-    ["linear"],
-    ["coalesce", ["get", key], 0],
-    ...outlineStops,
-  ];
+  return ["interpolate", ["linear"], ["coalesce", ["get", key], 0], ...outlineStops];
 }
 
 export function marketBoundaryFillOpacity(layerId: MarketBoundaryLayerId): number {

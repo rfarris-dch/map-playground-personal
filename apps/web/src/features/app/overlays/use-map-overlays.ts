@@ -36,6 +36,7 @@ export function useMapOverlays(args: UseMapOverlaysArgs) {
   const overlayShortcuts = useMapOverlaysShortcuts({
     clearSelectionGeometry: args.clearSelectionGeometry,
     clearSketchMeasure: args.clearSketchMeasure,
+    dismissAllToolPanels: args.dismissAllToolPanels,
     finishSketchMeasureArea: args.finishSketchMeasureArea,
     isSketchMeasurePanelOpen: args.isSketchMeasurePanelOpen,
     quickViewDisabledReason,

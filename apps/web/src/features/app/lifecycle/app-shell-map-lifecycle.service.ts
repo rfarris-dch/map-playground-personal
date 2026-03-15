@@ -5,11 +5,6 @@ import {
   resetBoundaryRuntime,
 } from "@/features/app/boundary/app-shell-boundary-runtime.service";
 import {
-  destroyMarketBoundaryRuntime,
-  initializeMarketBoundaryRuntime,
-  resetMarketBoundaryRuntime,
-} from "@/features/app/market-boundary/app-shell-market-boundary-runtime.service";
-import {
   type AppShellMapSetup,
   initializeAppShellMapEffect,
 } from "@/features/app/lifecycle/app-shell-map.service";
@@ -18,6 +13,11 @@ import {
   initializeMapLayerRuntime,
 } from "@/features/app/lifecycle/app-shell-map-layer-runtime.service";
 import type { UseAppShellMapLifecycleOptions } from "@/features/app/lifecycle/use-app-shell-map-lifecycle.types";
+import {
+  destroyMarketBoundaryRuntime,
+  initializeMarketBoundaryRuntime,
+  resetMarketBoundaryRuntime,
+} from "@/features/app/market-boundary/app-shell-market-boundary-runtime.service";
 import { createLayerRuntime } from "@/features/layers/layer-runtime.service";
 
 export async function initializeMapLifecycleRuntime(

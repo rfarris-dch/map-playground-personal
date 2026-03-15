@@ -61,10 +61,6 @@ export function useMapLayerControlsPanelState(
   const hyperscaleViewMode = ref<MapNavViewModeId>("clusters");
   const fiberExpanded = ref(false);
 
-  /* ------------------------------------------------------------------ */
-  /*  Filter panel option arrays                                         */
-  /* ------------------------------------------------------------------ */
-
   const powerTypeOptions: readonly FilterOption[] = [
     { id: "commissioned", label: "Commissioned/Owned" },
     { id: "available", label: "Available (Colo Only)" },
@@ -106,10 +102,6 @@ export function useMapLayerControlsPanelState(
   const parcelDatasetOptions: readonly FilterOption[] = [{ id: "", label: "All Datasets" }];
   const parcelStyleOptions: readonly FilterOption[] = [{ id: "", label: "All Sizes" }];
   const parcelDavOptions: readonly FilterOption[] = [{ id: "", label: "Any %" }];
-
-  /* ------------------------------------------------------------------ */
-  /*  Computed filter state                                              */
-  /* ------------------------------------------------------------------ */
 
   const zoningTypeOptions = computed<readonly FilterOption[]>(() => {
     const facets = mapFilters?.parcelViewportFacets.value;
@@ -169,10 +161,6 @@ export function useMapLayerControlsPanelState(
     () => props.visibleFiberLayers.longhaul || props.visibleFiberLayers.metro
   );
 
-  /* ------------------------------------------------------------------ */
-  /*  Color targets                                                      */
-  /* ------------------------------------------------------------------ */
-
   const colorTargets = [
     { id: "water", label: "Water" },
     { id: "road", label: "Roads" },
@@ -191,10 +179,6 @@ export function useMapLayerControlsPanelState(
     "#f03b20",
     "#bd0026",
   ] as const;
-
-  /* ------------------------------------------------------------------ */
-  /*  Actions                                                            */
-  /* ------------------------------------------------------------------ */
 
   function togglePanel(): void {
     emit("toggle-panel");
@@ -305,7 +289,6 @@ export function useMapLayerControlsPanelState(
     fiberExpanded,
     fiberRoutesVisible,
 
-    // Filter options
     powerTypeOptions,
     statusOptions,
     voltageOptions,
@@ -322,11 +305,9 @@ export function useMapLayerControlsPanelState(
     activeVoltages,
     parcelDropdowns,
 
-    // Color
     colorTargets,
     layerColors,
 
-    // Actions
     togglePanel,
     openAs,
     togglePerspectiveVisibility,

@@ -12,21 +12,17 @@ import type {
   BoundaryFacetSelectionState,
   PerspectiveStatusState,
 } from "@/features/app/core/app-shell.types";
-import type { EnvironmentalStressController } from "@/features/app/lifecycle/use-app-shell-map-lifecycle.types";
-import type { BasemapLayerVisibilityController } from "@/features/basemap/basemap.types";
-import type { BoundaryHoverState } from "@/features/boundaries/boundaries.types";
 import type {
-  MarketBoundaryControllerState,
-  MarketBoundaryHoverByLayerState,
-} from "@/features/app/market-boundary/app-shell-market-boundary.types";
-import type {
+  EnvironmentalStressController,
   MarketBoundaryFacetOptionsState,
   MarketBoundaryFacetSelectionState,
 } from "@/features/app/lifecycle/use-app-shell-map-lifecycle.types";
 import type {
-  MarketBoundaryColorMode,
-  MarketBoundaryHoverState,
-} from "@/features/market-boundaries/market-boundaries.types";
+  MarketBoundaryControllerState,
+  MarketBoundaryHoverByLayerState,
+} from "@/features/app/market-boundary/app-shell-market-boundary.types";
+import type { BasemapLayerVisibilityController } from "@/features/basemap/basemap.types";
+import type { BoundaryHoverState } from "@/features/boundaries/boundaries.types";
 import type { FacilitiesLayerController } from "@/features/facilities/facilities.types";
 import type {
   FacilitiesHoverController,
@@ -40,6 +36,10 @@ import type {
   LayerRuntimeController,
   LayerRuntimeSnapshot,
 } from "@/features/layers/layer-runtime.types";
+import type {
+  MarketBoundaryColorMode,
+  MarketBoundaryHoverState,
+} from "@/features/market-boundaries/market-boundaries.types";
 import type { ParcelsLayerController, ParcelsStatus } from "@/features/parcels/parcels.types";
 import type { PowerLayerMountResult } from "@/features/power/power.layer.types";
 import type { PowerHoverController, PowerHoverState } from "@/features/power/power-hover.types";
@@ -83,12 +83,12 @@ export interface UseAppShellStateResult {
   readonly layerRuntime: ShallowRef<LayerRuntimeController | null>;
   readonly layerRuntimeSnapshot: ShallowRef<LayerRuntimeSnapshot | null>;
   readonly map: ShallowRef<IMap | null>;
+  readonly mapContainer: Readonly<ShallowRef<HTMLDivElement | null>>;
   readonly marketBoundaryColorMode: ShallowRef<MarketBoundaryColorMode>;
   readonly marketBoundaryControllers: ShallowRef<MarketBoundaryControllerState>;
   readonly marketBoundaryFacetOptions: ShallowRef<MarketBoundaryFacetOptionsState>;
   readonly marketBoundaryFacetSelection: ShallowRef<MarketBoundaryFacetSelectionState>;
   readonly marketBoundaryHoverByLayer: ShallowRef<MarketBoundaryHoverByLayerState>;
-  readonly mapContainer: Readonly<ShallowRef<HTMLDivElement | null>>;
   readonly parcelsController: ShallowRef<ParcelsLayerController | null>;
   readonly parcelsStatus: ShallowRef<ParcelsStatus>;
   readonly powerHoverController: ShallowRef<PowerHoverController | null>;

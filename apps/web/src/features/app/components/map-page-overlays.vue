@@ -3,11 +3,11 @@
   import MapStatusBar from "@/features/app/components/map-status-bar.vue";
   import { useMapShellContext } from "@/features/app/core/map-shell-context";
   import BoundaryHoverTooltip from "@/features/boundaries/components/boundary-hover-tooltip.vue";
-  import MarketBoundaryHoverTooltip from "@/features/market-boundaries/components/market-boundary-hover-tooltip.vue";
   import FacilityClusterHoverTooltip from "@/features/facilities/components/facility-cluster-hover-tooltip.vue";
   import FacilityHoverTooltip from "@/features/facilities/components/facility-hover-tooltip.vue";
   import FacilityDetailDrawer from "@/features/facilities/facility-detail/components/facility-detail-drawer.vue";
   import FiberLocatorHoverTooltip from "@/features/fiber-locator/components/fiber-locator-hover-tooltip.vue";
+  import MarketBoundaryHoverTooltip from "@/features/market-boundaries/components/market-boundary-hover-tooltip.vue";
   import ParcelDetailDrawer from "@/features/parcels/parcel-detail/components/parcel-detail-drawer.vue";
   import PowerHoverTooltip from "@/features/power/components/power-hover-tooltip.vue";
   import QuickViewOverlay from "@/features/quick-view/components/quick-view-overlay.vue";

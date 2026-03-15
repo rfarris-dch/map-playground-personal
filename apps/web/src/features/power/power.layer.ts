@@ -233,8 +233,8 @@ function createSubController(map: IMap, layerId: PowerLayerId): PowerLayerVisibi
       currentFilter = filter;
       applyFilter();
     },
-    destroy(): void {
-      // No-op — parent owns source/layers
+    destroy() {
+      return undefined;
     },
   };
 }

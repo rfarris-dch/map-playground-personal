@@ -71,6 +71,7 @@ export function useAppShellRuntime(
     parcelsStatus: state.parcelsStatus,
     clearSelectionGeometry: state.clearSelectionGeometry,
     clearSketchMeasure: state.clearSketchMeasure,
+    dismissAllToolPanels: state.dismissAllToolPanels,
     finishSketchMeasureArea: state.finishSketchMeasureArea,
     isSketchMeasurePanelOpen: state.isSketchMeasurePanelOpen,
     setSketchMeasureMode: state.setSketchMeasureMode,

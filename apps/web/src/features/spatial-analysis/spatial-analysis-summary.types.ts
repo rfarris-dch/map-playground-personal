@@ -11,11 +11,6 @@ import type {
 } from "@map-migration/http-contracts/spatial-analysis-summary-http";
 import type { SpatialAnalysisPanelSummary } from "@/features/spatial-analysis/components/spatial-analysis-panel.types";
 
-// ---------------------------------------------------------------------------
-// Local model types — decoupled from API response shapes.
-// The service layer maps API responses into these types.
-// ---------------------------------------------------------------------------
-
 export type SpatialAnalysisCoverageModel = SpatialAnalysisSummaryCoverage;
 export type SpatialAnalysisMetaModel = SpatialAnalysisSummaryResponse["meta"];
 export type SpatialAnalysisPolicyEntryModel = SpatialAnalysisPolicyEntry;
@@ -27,8 +22,6 @@ export type SpatialAnalysisAreaModel = Omit<SpatialAnalysisArea, "countyIds"> & 
 export type SpatialAnalysisRequestModel = Omit<SpatialAnalysisSummaryRequest, "perspectives"> & {
   readonly perspectives: readonly SpatialAnalysisSummaryRequest["perspectives"][number][];
 };
-
-// ---------------------------------------------------------------------------
 
 export interface SpatialAnalysisCountyIntelligenceModel {
   readonly requestedCountyIds: readonly string[];

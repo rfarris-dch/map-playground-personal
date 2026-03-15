@@ -153,7 +153,9 @@
         <div class="space-y-1">
           <Badge variant="secondary">Colocation</Badge>
           <CardTitle>Colocation Facilities</CardTitle>
-          <CardDescription>All colocation facilities with sortable columns and filtering.</CardDescription>
+          <CardDescription
+            >All colocation facilities with sortable columns and filtering.</CardDescription
+          >
         </div>
       </CardHeader>
       <CardContent class="flex min-h-0 flex-1 flex-col gap-3">

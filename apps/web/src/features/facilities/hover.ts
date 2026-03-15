@@ -284,8 +284,8 @@ export function mountFacilitiesHover(
           aggregateClusterLeaves(leaves, clusterSummary, args.screenPoint)
         );
       })
-      .catch(() => {
-        // Ignore transient cluster leaf fetch failures.
+      .catch((_) => {
+        _;
       });
 
     return true;

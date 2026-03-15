@@ -27,12 +27,12 @@ export interface ClusterProviderSummary {
 }
 
 export interface ClusterFacilityRow {
-  readonly facilityName: string;
-  readonly providerName: string;
   readonly commissionedPowerMw: number;
-  readonly underConstructionPowerMw: number;
+  readonly facilityName: string;
   readonly plannedPowerMw: number;
+  readonly providerName: string;
   readonly statusLabel: string | null;
+  readonly underConstructionPowerMw: number;
 }
 
 export interface FacilityClusterHoverState extends FacilityClusterSummary {

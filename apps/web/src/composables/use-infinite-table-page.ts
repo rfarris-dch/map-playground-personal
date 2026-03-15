@@ -4,10 +4,6 @@ import type { SortingState } from "@tanstack/vue-table";
 import { type ComputedRef, computed, type Ref, shallowRef, useTemplateRef } from "vue";
 import { useInfiniteScroll } from "@/features/table/use-infinite-scroll";
 
-/**
- * Shared shape that all table response types conform to.
- * Each response must have `rows` and a `pagination` block.
- */
 interface TablePageResponse<TRow> {
   readonly pagination: {
     readonly page: number;
@@ -19,16 +15,9 @@ interface TablePageResponse<TRow> {
 }
 
 export interface UseInfiniteTablePageOptions<TSort extends string, TRow, TExtra = object> {
-  /** Default sort direction. Defaults to `false` (ascending). */
   readonly defaultSortDesc?: boolean;
-  /** Default column id used for sorting when no explicit sort is active. */
   readonly defaultSortId: TSort;
-  /** Optional extra params merged into every fetch request. */
   readonly extraParams?: TExtra;
-  /**
-   * Fetches a single page. Receives the current page number, resolved sort
-   * params, and an abort signal.
-   */
   readonly fetchPage: (
     request: TExtra & {
       readonly page: number;
@@ -38,21 +27,10 @@ export interface UseInfiniteTablePageOptions<TSort extends string, TRow, TExtra 
       readonly sortOrder: "asc" | "desc";
     }
   ) => Promise<ApiResult<TablePageResponse<TRow>>>;
-  /** Template ref name for the load sentinel element. */
   readonly loadSentinelRefName: string;
-  /** Number of rows per page. Defaults to 100. */
   readonly pageSize?: number;
-  /**
-   * Vue query key. Should include any reactive values that, when changed,
-   * should cause the query to refetch from the first page.
-   */
   readonly queryKey: ComputedRef<unknown[]>;
-  /** Template ref name for the scroll container element. */
   readonly scrollContainerRefName: string;
-  /**
-   * Map from column id to the sort-by value accepted by the API.
-   * Only columns listed here are sortable server-side.
-   */
   readonly sortByColumnId: Record<string, TSort>;
 }
 

@@ -15,16 +15,10 @@
   function handleToggleSketchMeasurePanel(): void {
     const activating = !shell.isSketchMeasurePanelOpen.value;
     if (activating) {
-      if (shell.scannerActive.value) {
-        shell.setScannerActive(false);
-      }
-      if (shell.selectionGeometry.value !== null) {
-        shell.clearSelectionGeometry();
-      }
-      if (shell.sketchMeasureState.value.mode === "off") {
-        shell.setSketchMeasureMode("area");
-        shell.setSketchMeasureAreaShape("freeform");
-      }
+      shell.setScannerActive(false);
+      shell.dismissAllToolPanels();
+      shell.setSketchMeasureMode("area");
+      shell.setSketchMeasureAreaShape("freeform");
     } else {
       shell.clearSketchMeasure();
     }

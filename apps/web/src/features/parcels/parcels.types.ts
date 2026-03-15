@@ -10,10 +10,6 @@ export interface SelectedParcelRef {
   readonly parcelId: string;
 }
 
-/**
- * Narrows a {@link SelectedParcelRef} to a {@link ParcelSnapshotId} when the
- * ingestion-run id is present.  Returns `null` when the run id is missing.
- */
 export function toParcelSnapshotId(ref: SelectedParcelRef): ParcelSnapshotId | null {
   return typeof ref.expectedIngestionRunId === "string" && ref.expectedIngestionRunId.length > 0
     ? { parcelId: ref.parcelId, ingestionRunId: ref.expectedIngestionRunId }

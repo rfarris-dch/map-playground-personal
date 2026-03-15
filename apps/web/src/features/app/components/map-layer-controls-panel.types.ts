@@ -29,8 +29,6 @@ export interface MapLayerControlsPanelProps {
   readonly boundaryFacetOptions: BoundaryFacetOptionsState;
   readonly boundaryFacetSelection: BoundaryFacetSelectionState;
   readonly boundaryVisibility: BoundaryVisibilityState;
-  readonly marketBoundaryColorMode: MarketBoundaryColorMode;
-  readonly marketBoundaryVisibility: MarketBoundaryVisibilityState;
   readonly colocationStatusText: string;
   readonly fiberSourceLayerOptions: FiberSourceLayerOptionsState;
   readonly fiberStatusText: string;
@@ -39,6 +37,8 @@ export interface MapLayerControlsPanelProps {
   readonly hydroBasinsVisible: boolean;
   readonly hyperscaleStatusText: string;
   readonly isOpen: boolean;
+  readonly marketBoundaryColorMode: MarketBoundaryColorMode;
+  readonly marketBoundaryVisibility: MarketBoundaryVisibilityState;
   readonly parcelsStatusText: string;
   readonly parcelsVisible: boolean;
   readonly powerVisibility: PowerVisibilityState;
@@ -65,9 +65,9 @@ export interface MapLayerControlsPanelEmits {
   "update:fiber-layer-visibility": [lineId: FiberLocatorLineId, visible: boolean];
   "update:flood-layer-visible": [layerId: keyof FloodVisibilityState, visible: boolean];
   "update:gas-pipeline-visible": [visible: boolean];
+  "update:hydro-basins-visible": [visible: boolean];
   "update:market-boundary-color-mode": [colorMode: MarketBoundaryColorMode];
   "update:market-boundary-visible": [layerId: MarketBoundaryLayerId, visible: boolean];
-  "update:hydro-basins-visible": [visible: boolean];
   "update:parcels-visible": [visible: boolean];
   "update:perspective-view-mode": [perspective: FacilityPerspective, mode: FacilitiesViewMode];
   "update:perspective-visibility": [perspective: FacilityPerspective, visible: boolean];

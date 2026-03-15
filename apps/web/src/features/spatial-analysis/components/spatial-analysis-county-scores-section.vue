@@ -104,7 +104,6 @@
     </div>
 
     <div v-else-if="hasCountySummary" class="space-y-4">
-      <!-- Summary counters — flat, no card wrappers -->
       <div class="grid gap-x-4 gap-y-2 text-xs sm:grid-cols-2 xl:grid-cols-5">
         <div>
           <div class="uppercase tracking-wide text-muted-foreground">Selected Counties</div>
@@ -130,7 +129,6 @@
         </div>
       </div>
 
-      <!-- County rows -->
       <div v-if="hasRows" class="space-y-6">
         <div
           v-for="row in rows"
@@ -160,7 +158,6 @@
             </div>
           </div>
 
-          <!-- Key scores — flat row -->
           <div class="grid gap-x-4 gap-y-2 text-xs sm:grid-cols-2 xl:grid-cols-4">
             <div class="rounded-sm bg-background px-2 py-1.5">
               <div class="uppercase tracking-wide text-muted-foreground">Pressure Index</div>
@@ -188,7 +185,6 @@
             </div>
           </div>
 
-          <!-- Narrative -->
           <div class="text-xs">
             <div class="uppercase tracking-wide text-muted-foreground">Narrative</div>
             <p class="mt-1 mb-0 text-foreground/70">
@@ -196,7 +192,6 @@
             </p>
           </div>
 
-          <!-- Score breakdown — flat row -->
           <dl class="grid gap-x-4 gap-y-2 text-xs sm:grid-cols-2 xl:grid-cols-4">
             <div class="rounded-sm bg-background px-2 py-1.5">
               <dt class="text-muted-foreground">Demand Pressure</dt>
@@ -224,7 +219,6 @@
             </div>
           </dl>
 
-          <!-- Detail sections — flat, no card wrappers -->
           <dl class="grid gap-6 text-xs lg:grid-cols-3">
             <div>
               <dt class="uppercase tracking-wide text-muted-foreground">Demand</dt>
@@ -258,7 +252,6 @@
             </div>
           </dl>
 
-          <!-- Drivers, Deferred, Changes -->
           <div
             v-if="row.topDrivers.length > 0 || row.deferredReasonCodes.length > 0 || visibleChanges(row).length > 0"
             class="grid gap-6 text-xs lg:grid-cols-3"

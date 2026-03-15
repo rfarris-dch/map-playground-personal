@@ -1,10 +1,10 @@
+import type { UseAppShellMapLifecycleOptions } from "@/features/app/lifecycle/use-app-shell-map-lifecycle.types";
 import {
   initialMarketBoundaryControllerState,
   initialMarketBoundaryHoverByLayerState,
   resolveMarketBoundaryHoverState,
   withMarketBoundaryController,
 } from "@/features/app/market-boundary/app-shell-market-boundary.service";
-import type { UseAppShellMapLifecycleOptions } from "@/features/app/lifecycle/use-app-shell-map-lifecycle.types";
 import { mountMarketBoundaryLayer } from "@/features/market-boundaries/market-boundaries.layer";
 import {
   marketBoundaryLayerIds,

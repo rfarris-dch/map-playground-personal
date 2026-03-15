@@ -7,17 +7,6 @@ import type {
 } from "./map-filters.types";
 import { FACILITY_STATUS_TO_SEMANTIC } from "./map-filters.types";
 
-/**
- * Build a predicate that filters facility features based on the current filter state.
- * Returns null if no filters are active (show everything).
- */
-/**
- * Map power-type filter IDs to the property checks they represent.
- * "commissioned" → commissionedPowerMw > 0
- * "available" → availablePowerMw > 0
- * "under-construction" → underConstructionPowerMw > 0
- * "planned" → plannedPowerMw > 0
- */
 function matchesPowerType(feature: FacilitiesFeature, powerTypes: ReadonlySet<string>): boolean {
   for (const pt of powerTypes) {
     if (pt === "commissioned" && (feature.properties.commissionedPowerMw ?? 0) > 0) {
@@ -69,17 +58,10 @@ export function buildFacilitiesFilterPredicate(
       return false;
     }
 
-    // Note: Market filtering requires spatial join (facility → market boundary)
-    // which is done at the API/query level, not as a client-side predicate.
-
     return true;
   };
 }
 
-/**
- * Build a Mapbox GL filter expression for transmission line voltage.
- * Returns null if no filter is active (show everything).
- */
 export function buildTransmissionVoltageFilter(state: MapFiltersState): MapExpression | null {
   if (state.transmissionMinVoltage === null) {
     return null;
@@ -88,10 +70,6 @@ export function buildTransmissionVoltageFilter(state: MapFiltersState): MapExpre
   return [">=", ["to-number", ["coalesce", ["get", "voltage"], 0]], state.transmissionMinVoltage];
 }
 
-/**
- * Build a Mapbox GL filter expression for parcel layers based on zoning type, flood zone, and acreage.
- * Returns null if no filters are active (show everything).
- */
 export function buildParcelFilter(state: MapFiltersState): MapExpression | null {
   const conditions: MapExpression[] = [];
   const zoningTypeCondition = buildParcelZoningTypeFilter(state.zoningTypes);
@@ -207,9 +185,6 @@ function parseAcreRange(value: string): { min: number | null; max: number | null
   return ranges[value] ?? null;
 }
 
-/**
- * Resolve which CommissionedSemantic values are allowed by a set of status filter IDs.
- */
 export function resolveAllowedSemantics(
   statuses: ReadonlySet<FacilityStatusFilterId>
 ): Set<string> {

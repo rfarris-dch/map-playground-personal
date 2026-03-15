@@ -56,7 +56,6 @@
 
         <dt class="text-xs text-muted-foreground">GEOID</dt>
         <dd class="m-0 text-sm">{{ props.detail.response.feature.properties.geoid ?? "n/a" }}</dd>
-
       </dl>
 
       <section class="mb-3 border-t border-border/50 pt-3">

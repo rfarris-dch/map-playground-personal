@@ -7,10 +7,6 @@
   import AccordionTrigger from "@/components/ui/accordion/accordion-trigger.vue";
   import Checkbox from "@/components/ui/checkbox/checkbox.vue";
 
-  /* ------------------------------------------------------------------ */
-  /*  Types                                                              */
-  /* ------------------------------------------------------------------ */
-
   export interface FilterOption {
     readonly id: string;
     readonly label: string;
@@ -34,42 +30,20 @@
     readonly activeVoltages: ReadonlySet<string>;
     readonly activeZoningTypes: ReadonlySet<string>;
 
-    /** Parcels — Flood Zone */
     readonly floodZoneOptions: readonly FilterOption[];
-
-    /** Infrastructure — Natural Gas Lines Capacity (BWh) */
     readonly gasCapacityOptions: readonly FilterOption[];
-
-    /** Infrastructure — Natural Gas Lines Status */
     readonly gasStatusOptions: readonly FilterOption[];
-
-    /** Interconnectivity Hub */
     readonly interconnectivityHub: boolean;
-
-    /** Markets */
     readonly marketOptions: readonly FilterOption[];
-
-    /** Parcels — Dropdowns */
     readonly parcelDatasetOptions: readonly FilterOption[];
     readonly parcelDavOptions: readonly FilterOption[];
     readonly parcelDropdowns: ParcelDropdownState;
     readonly parcelStyleOptions: readonly FilterOption[];
-    /** Power Type (MW) */
     readonly powerTypeOptions: readonly FilterOption[];
-
-    /** Providers */
     readonly providerOptions: readonly FilterOption[];
-
-    /** Status */
     readonly statusOptions: readonly FilterOption[];
-
-    /** Users */
     readonly userOptions: readonly FilterOption[];
-
-    /** Infrastructure — Transmission Lines Voltage (kV) */
     readonly voltageOptions: readonly FilterOption[];
-
-    /** Parcels — Zoning Type */
     readonly zoningTypeOptions: readonly FilterOption[];
   }
 
@@ -99,10 +73,6 @@
   const props = defineProps<AppFilterPanelProps>();
   const emit = defineEmits<AppFilterPanelEmits>();
 
-  /* ------------------------------------------------------------------ */
-  /*  Search state for searchable sections                               */
-  /* ------------------------------------------------------------------ */
-
   const marketSearch = ref("");
   const providerSearch = ref("");
   const userSearch = ref("");
@@ -121,10 +91,6 @@
     return options.filter((o) => o.label.toLowerCase().includes(q));
   }
 
-  /* ------------------------------------------------------------------ */
-  /*  Accordion open state — all collapsed by default                    */
-  /* ------------------------------------------------------------------ */
-
   const openSections = ref<string[]>([]);
 
   const openInfraSections = ref<string[]>([]);
@@ -135,9 +101,6 @@
 <template>
   <div class="flex flex-col bg-card font-sans">
     <Accordion v-model="openSections" type="multiple" class="flex flex-col">
-      <!-- ============================================================ -->
-      <!-- Power Type (MW)                                               -->
-      <!-- ============================================================ -->
       <AccordionItem value="power-type" class="border-b border-border">
         <AccordionTrigger
           class="flex h-8 items-center justify-between px-3 text-[length:var(--size-2)] font-[number:var(--weight-3)] uppercase tracking-wide text-muted-foreground hover:no-underline"
@@ -164,9 +127,6 @@
         </AccordionContent>
       </AccordionItem>
 
-      <!-- ============================================================ -->
-      <!-- Status                                                        -->
-      <!-- ============================================================ -->
       <AccordionItem value="status" class="border-b border-border">
         <AccordionTrigger
           class="flex h-8 items-center justify-between px-3 text-[length:var(--size-2)] font-[number:var(--weight-3)] uppercase tracking-wide text-muted-foreground hover:no-underline"
@@ -193,9 +153,6 @@
         </AccordionContent>
       </AccordionItem>
 
-      <!-- ============================================================ -->
-      <!-- Markets (searchable)                                          -->
-      <!-- ============================================================ -->
       <AccordionItem value="markets" class="border-b border-border">
         <AccordionTrigger
           class="flex h-8 items-center justify-between px-3 text-[length:var(--size-2)] font-[number:var(--weight-3)] uppercase tracking-wide text-muted-foreground hover:no-underline"
@@ -241,9 +198,6 @@
         </AccordionContent>
       </AccordionItem>
 
-      <!-- ============================================================ -->
-      <!-- Providers (searchable)                                        -->
-      <!-- ============================================================ -->
       <AccordionItem value="providers" class="border-b border-border">
         <AccordionTrigger
           class="flex h-8 items-center justify-between px-3 text-[length:var(--size-2)] font-[number:var(--weight-3)] uppercase tracking-wide text-muted-foreground hover:no-underline"
@@ -289,9 +243,6 @@
         </AccordionContent>
       </AccordionItem>
 
-      <!-- ============================================================ -->
-      <!-- Users (searchable)                                            -->
-      <!-- ============================================================ -->
       <AccordionItem value="users" class="border-b border-border">
         <AccordionTrigger
           class="flex h-8 items-center justify-between px-3 text-[length:var(--size-2)] font-[number:var(--weight-3)] uppercase tracking-wide text-muted-foreground hover:no-underline"
@@ -338,9 +289,6 @@
       </AccordionItem>
     </Accordion>
 
-    <!-- ============================================================ -->
-    <!-- Interconnectivity Hub (toggle, not accordion)                  -->
-    <!-- ============================================================ -->
     <div class="flex items-center justify-between border-b border-border px-3 py-2">
       <span
         class="text-[length:var(--size-2)] font-[number:var(--weight-3)] uppercase tracking-wide text-muted-foreground"
@@ -362,9 +310,6 @@
       </button>
     </div>
 
-    <!-- ============================================================ -->
-    <!-- Infrastructure                                                 -->
-    <!-- ============================================================ -->
     <Accordion v-model="openSections" type="multiple">
       <AccordionItem value="infrastructure" class="border-b border-border">
         <AccordionTrigger
@@ -374,7 +319,6 @@
         </AccordionTrigger>
         <AccordionContent>
           <Accordion v-model="openInfraSections" type="multiple" class="flex flex-col">
-            <!-- Transmission Lines Voltage (kV) -->
             <AccordionItem value="voltage" class="border-b-0">
               <AccordionTrigger
                 class="flex h-7 items-center justify-between px-3 pl-5 text-[length:var(--size-2)] font-[number:var(--weight-2)] text-foreground/70 hover:no-underline"
@@ -401,7 +345,6 @@
               </AccordionContent>
             </AccordionItem>
 
-            <!-- Natural Gas Lines Capacity (BWh) -->
             <AccordionItem value="gas-capacity" class="border-b-0">
               <AccordionTrigger
                 class="flex h-7 items-center justify-between px-3 pl-5 text-[length:var(--size-2)] font-[number:var(--weight-2)] text-foreground/70 hover:no-underline"
@@ -428,7 +371,6 @@
               </AccordionContent>
             </AccordionItem>
 
-            <!-- Natural Gas Lines Status -->
             <AccordionItem value="gas-status" class="border-b-0">
               <AccordionTrigger
                 class="flex h-7 items-center justify-between px-3 pl-5 text-[length:var(--size-2)] font-[number:var(--weight-2)] text-foreground/70 hover:no-underline"
@@ -458,9 +400,6 @@
         </AccordionContent>
       </AccordionItem>
 
-      <!-- ============================================================ -->
-      <!-- Parcels                                                       -->
-      <!-- ============================================================ -->
       <AccordionItem value="parcels" class="border-b border-border">
         <AccordionTrigger
           class="flex h-8 items-center justify-between px-3 text-[length:var(--size-2)] font-[number:var(--weight-3)] uppercase tracking-wide text-muted-foreground hover:no-underline"
@@ -469,7 +408,6 @@
         </AccordionTrigger>
         <AccordionContent>
           <div class="flex flex-col gap-[var(--space-2)] px-3 pb-2">
-            <!-- Parcel Dataset -->
             <div class="flex flex-col gap-1">
               <span
                 class="text-[length:var(--size-2)] font-[number:var(--weight-2)] leading-none text-foreground/70"
@@ -486,7 +424,6 @@
               </select>
             </div>
 
-            <!-- Parcel Style (Acres) -->
             <div class="flex flex-col gap-1">
               <span
                 class="text-[length:var(--size-2)] font-[number:var(--weight-2)] leading-none text-foreground/70"
@@ -503,7 +440,6 @@
               </select>
             </div>
 
-            <!-- DAV % -->
             <div class="flex flex-col gap-1">
               <span
                 class="text-[length:var(--size-2)] font-[number:var(--weight-2)] leading-none text-foreground/70"
@@ -520,7 +456,6 @@
               </select>
             </div>
 
-            <!-- Zoning Type & Flood Zone sub-accordions -->
             <Accordion v-model="openParcelSections" type="multiple" class="flex flex-col">
               <AccordionItem value="zoning-type" class="border-b-0">
                 <AccordionTrigger

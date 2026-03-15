@@ -30,7 +30,9 @@ function isPointerDragging(event: { readonly buttons?: number }): boolean {
   return typeof event.buttons === "number" && event.buttons > 0;
 }
 
-function catalogLayerIdForLevel(layerId: "market" | "submarket"): "markets.market" | "markets.submarket" {
+function catalogLayerIdForLevel(
+  layerId: "market" | "submarket"
+): "markets.market" | "markets.submarket" {
   return layerId === "market" ? "markets.market" : "markets.submarket";
 }
 
@@ -100,11 +102,15 @@ export function mountMarketBoundaryLayer(
   }
 
   function applyColorMode(): void {
-    if (!state.ready || !map.hasLayer(fillLayerId)) {
+    if (!(state.ready && map.hasLayer(fillLayerId))) {
       return;
     }
 
-    map.setPaintProperty(fillLayerId, "fill-color", marketBoundaryFillColorExpression(state.colorMode));
+    map.setPaintProperty(
+      fillLayerId,
+      "fill-color",
+      marketBoundaryFillColorExpression(state.colorMode)
+    );
     map.setPaintProperty(outlineLayerId, "line-color", [
       "case",
       ["boolean", ["feature-state", "hover"], false],

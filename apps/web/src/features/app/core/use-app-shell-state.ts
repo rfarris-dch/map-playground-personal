@@ -11,18 +11,6 @@ import type {
   BoundaryHoverByLayerState,
 } from "@/features/app/boundary/app-shell-boundary.types";
 import {
-  initialMarketBoundaryControllerState,
-  initialMarketBoundaryHoverByLayerState,
-} from "@/features/app/market-boundary/app-shell-market-boundary.service";
-import type {
-  MarketBoundaryControllerState,
-  MarketBoundaryHoverByLayerState,
-} from "@/features/app/market-boundary/app-shell-market-boundary.types";
-import {
-  initialMarketBoundaryFacetOptionsState,
-  initialMarketBoundaryFacetSelectionState,
-} from "@/features/app/market-boundary/app-shell-market-boundary-runtime.service";
-import {
   initialActiveToolPanel,
   initialBoundaryFacetOptionsState,
   initialBoundaryFacetSelectionState,
@@ -36,18 +24,25 @@ import type {
   BoundaryFacetSelectionState,
   PerspectiveStatusState,
 } from "@/features/app/core/app-shell.types";
-import type { EnvironmentalStressController } from "@/features/app/lifecycle/use-app-shell-map-lifecycle.types";
-import type { BasemapLayerVisibilityController } from "@/features/basemap/basemap.types";
-import type { BoundaryHoverState } from "@/features/boundaries/boundaries.types";
 import type {
-  MarketBoundaryColorMode,
-  MarketBoundaryFacetOption,
-  MarketBoundaryHoverState,
-} from "@/features/market-boundaries/market-boundaries.types";
-import type {
+  EnvironmentalStressController,
   MarketBoundaryFacetOptionsState,
   MarketBoundaryFacetSelectionState,
 } from "@/features/app/lifecycle/use-app-shell-map-lifecycle.types";
+import {
+  initialMarketBoundaryControllerState,
+  initialMarketBoundaryHoverByLayerState,
+} from "@/features/app/market-boundary/app-shell-market-boundary.service";
+import type {
+  MarketBoundaryControllerState,
+  MarketBoundaryHoverByLayerState,
+} from "@/features/app/market-boundary/app-shell-market-boundary.types";
+import {
+  initialMarketBoundaryFacetOptionsState,
+  initialMarketBoundaryFacetSelectionState,
+} from "@/features/app/market-boundary/app-shell-market-boundary-runtime.service";
+import type { BasemapLayerVisibilityController } from "@/features/basemap/basemap.types";
+import type { BoundaryHoverState } from "@/features/boundaries/boundaries.types";
 import type { FacilitiesLayerController } from "@/features/facilities/facilities.types";
 import type {
   FacilitiesHoverController,
@@ -61,6 +56,10 @@ import type {
   LayerRuntimeController,
   LayerRuntimeSnapshot,
 } from "@/features/layers/layer-runtime.types";
+import type {
+  MarketBoundaryColorMode,
+  MarketBoundaryHoverState,
+} from "@/features/market-boundaries/market-boundaries.types";
 import type { ParcelsLayerController, ParcelsStatus } from "@/features/parcels/parcels.types";
 import type { PowerLayerMountResult } from "@/features/power/power.layer.types";
 import type { PowerHoverController, PowerHoverState } from "@/features/power/power-hover.types";
@@ -156,6 +155,15 @@ export function useAppShellState(): UseAppShellStateResult {
 
   function togglePanel(panel: "layers" | "selection" | "sketch-measure"): void {
     activeToolPanel.value = activeToolPanel.value === panel ? null : panel;
+  }
+
+  function dismissAllToolPanels(): void {
+    if (activeToolPanel.value !== null) {
+      activeToolPanel.value = null;
+    }
+    if (sketchMeasureState.value.mode !== "off") {
+      clearSketchMeasure();
+    }
   }
 
   function setSketchMeasureMode(mode: SketchMeasureMode): void {
@@ -266,6 +274,7 @@ export function useAppShellState(): UseAppShellStateResult {
     setSketchMeasureAreaShape,
     finishSketchMeasureArea,
     clearSketchMeasure,
+    dismissAllToolPanels,
     useCompletedSketchAsSelection,
     clearSelectionGeometry,
     toggleLayerPanel,

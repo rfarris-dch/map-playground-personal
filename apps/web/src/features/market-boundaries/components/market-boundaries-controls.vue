@@ -61,7 +61,10 @@
   const marketSearchQuery = shallowRef<string>("");
   const submarketSearchQuery = shallowRef<string>("");
 
-  const colorModeOptions: readonly { readonly label: string; readonly value: MarketBoundaryColorMode }[] = [
+  const colorModeOptions: readonly {
+    readonly label: string;
+    readonly value: MarketBoundaryColorMode;
+  }[] = [
     { label: "Commissioned Power", value: "power" },
     { label: "Vacancy Rate", value: "vacancy" },
     { label: "Absorption", value: "absorption" },
@@ -137,7 +140,9 @@
 
     return options.filter((option) => {
       const label = formatFacetLabel(option).toLowerCase();
-      return label.includes(normalizedQuery) || option.regionId.toLowerCase().includes(normalizedQuery);
+      return (
+        label.includes(normalizedQuery) || option.regionId.toLowerCase().includes(normalizedQuery)
+      );
     });
   }
 
@@ -179,7 +184,10 @@
     submarketSearchQuery.value = nextValue;
   }
 
-  function applySelection(level: MarketBoundaryLayerId, nextSelectedSet: ReadonlySet<string>): void {
+  function applySelection(
+    level: MarketBoundaryLayerId,
+    nextSelectedSet: ReadonlySet<string>
+  ): void {
     const options = facetOptionsFor(level);
     if (options.length === 0) {
       emitSelectedRegionIds(level, []);
@@ -211,7 +219,11 @@
     emitVisibility(level, asBoolean(checked));
   }
 
-  function onToggleFacet(level: MarketBoundaryLayerId, regionId: string, checked: CheckboxState): void {
+  function onToggleFacet(
+    level: MarketBoundaryLayerId,
+    regionId: string,
+    checked: CheckboxState
+  ): void {
     const options = facetOptionsFor(level);
     const currentSelection = selectedRegionIdsFor(level);
     const nextSelectedSet = new Set<string>(
@@ -303,7 +315,10 @@
       description: "Submarket Voronoi boundaries",
       visible: props.submarketVisible,
       options: props.submarketFacetOptions,
-      selectedRegionIds: toSelectedIdSet(props.submarketFacetOptions, props.submarketSelectedRegionIds),
+      selectedRegionIds: toSelectedIdSet(
+        props.submarketFacetOptions,
+        props.submarketSelectedRegionIds
+      ),
       filteredOptions: filterFacetOptions(props.submarketFacetOptions, submarketSearchQuery.value),
       searchQuery: submarketSearchQuery.value,
       searchPlaceholder: "Search submarkets",

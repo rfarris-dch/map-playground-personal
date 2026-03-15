@@ -36,9 +36,7 @@
     <header class="space-y-2">
       <Badge>Facilities</Badge>
       <h1 class="text-2xl font-semibold tracking-tight">Facilities</h1>
-      <p class="text-sm text-muted-foreground">
-        Browse data center facilities by type.
-      </p>
+      <p class="text-sm text-muted-foreground">Browse data center facilities by type.</p>
     </header>
 
     <Tabs :model-value="activeTab" @update:model-value="setFacilityTab">

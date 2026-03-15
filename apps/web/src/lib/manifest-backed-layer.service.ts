@@ -125,7 +125,6 @@ export function mountManifestBackedLayerBootstrap(
     state.ready = true;
 
     if (wasReady && state.sourceInitialized) {
-      // Style was reloaded — source/layers are gone. Reset so re-init can run.
       state.sourceInitialized = false;
       state.sourceInitializationPromise = null;
     }
