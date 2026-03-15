@@ -162,6 +162,7 @@ export function useAppShellState(): UseAppShellStateResult {
       activeToolPanel.value = null;
     }
     if (sketchMeasureState.value.mode !== "off") {
+      setSketchMeasureMode("off");
       clearSketchMeasure();
     }
   }
