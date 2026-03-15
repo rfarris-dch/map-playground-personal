@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import MapNavIcon from "@/components/icons/map-nav-icon.vue";
+  import Switch from "@/components/ui/switch/switch.vue";
   import AppFilterPanel from "@/features/app/components/app-filter-panel.vue";
   import type {
     MapLayerControlsPanelEmits,
@@ -199,18 +199,11 @@
                   >
                 </button>
 
-                <button
-                  type="button"
-                  class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm transition-colors hover:bg-background focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
+                <Switch
+                  :checked="fiberRoutesVisible"
                   :aria-label="`${fiberRoutesVisible ? 'Hide' : 'Show'} Fiber Routes`"
-                  @click="toggleFiberRoutes"
-                >
-                  <MapNavIcon
-                    name="eye"
-                    class="h-4 w-4"
-                    :class="fiberRoutesVisible ? 'text-foreground/75' : 'text-muted-foreground'"
-                  />
-                </button>
+                  @update:checked="toggleFiberRoutes"
+                />
               </div>
             </div>
 

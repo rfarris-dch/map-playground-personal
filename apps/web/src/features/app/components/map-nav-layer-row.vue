@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { computed } from "vue";
-  import MapNavIcon from "@/components/icons/map-nav-icon.vue";
+  import Switch from "@/components/ui/switch/switch.vue";
 
   interface MapNavLayerRowProps {
     readonly actionable?: boolean;
@@ -18,9 +18,6 @@
 
   const emit = defineEmits<MapNavLayerRowEmits>();
 
-  const eyeColorClass = computed(() =>
-    props.visible ? "text-foreground/75" : "text-muted-foreground"
-  );
   const rowStateClass = computed(() =>
     props.visible ? "text-foreground/85" : "text-foreground/70"
   );
@@ -47,19 +44,12 @@
         >
       </div>
 
-      <button
+      <Switch
         v-if="props.actionable"
-        type="button"
-        class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm transition-colors hover:bg-background focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
+        :checked="props.visible"
         :aria-label="`${props.visible ? 'Hide' : 'Show'} ${props.label}`"
-        @click="handleToggle"
-      >
-        <MapNavIcon name="eye" class="h-4 w-4" :class="eyeColorClass" />
-      </button>
-
-      <span v-else class="flex size-6 items-center justify-center" aria-hidden="true">
-        <MapNavIcon name="eye" class="h-4 w-4 text-foreground/70" />
-      </span>
+        @update:checked="handleToggle"
+      />
     </div>
   </div>
 </template>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { computed } from "vue";
+  import Switch from "@/components/ui/switch/switch.vue";
 
   interface VisibilityToggleRowProps {
     readonly checked: boolean;
@@ -22,28 +23,14 @@
   const textClass = computed(() =>
     props.checked ? "text-foreground/70" : "text-muted-foreground"
   );
-
-  function onChange(event: Event): void {
-    const target = event.target;
-    if (!(target instanceof HTMLInputElement)) {
-      return;
-    }
-
-    emit("update:checked", target.checked);
-  }
 </script>
 
 <template>
-  <label
-    class="group flex min-h-[44px] cursor-pointer items-start gap-2 rounded-sm border px-3 py-2 transition-colors focus-within:ring-2 focus-within:ring-primary/40 focus-within:outline-none"
+  <div
+    class="group flex min-h-[44px] cursor-pointer items-start gap-2 rounded-sm border px-3 py-2 transition-colors"
     :class="surfaceClass"
+    @click="emit('update:checked', !props.checked)"
   >
-    <input
-      class="h-4 w-4 shrink-0 rounded-sm border border-border accent-muted-foreground"
-      type="checkbox"
-      :checked="props.checked"
-      @change="onChange"
-    >
     <div class="min-w-0 flex-1">
       <div class="flex items-center gap-2">
         <span class="h-2 w-2 rounded-full" :class="props.dotClass" aria-hidden="true" />
@@ -56,5 +43,11 @@
       </p>
       <slot name="details" :text-class="textClass" />
     </div>
-  </label>
+    <Switch
+      :checked="props.checked"
+      class="mt-0.5 shrink-0"
+      @click.stop
+      @update:checked="emit('update:checked', $event)"
+    />
+  </div>
 </template>
