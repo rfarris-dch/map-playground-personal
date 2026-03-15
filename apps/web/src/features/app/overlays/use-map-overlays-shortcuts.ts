@@ -36,6 +36,12 @@ export function useMapOverlaysShortcuts(options: UseMapOverlaysShortcutsOptions)
       return;
     }
 
+    const activating = !quickViewActive.value;
+    if (activating) {
+      options.dismissAllToolPanels();
+      options.clearSelectionGeometry();
+      setScannerActive(false);
+    }
     setQuickViewActive(!quickViewActive.value);
   }
 
@@ -48,6 +54,7 @@ export function useMapOverlaysShortcuts(options: UseMapOverlaysShortcutsOptions)
     if (activating) {
       options.dismissAllToolPanels();
       options.clearSelectionGeometry();
+      setQuickViewActive(false);
     }
     setScannerActive(!scannerActive.value);
   }

@@ -16,6 +16,7 @@
     const activating = !shell.isSketchMeasurePanelOpen.value;
     if (activating) {
       shell.setScannerActive(false);
+      shell.setQuickViewActive(false);
       shell.dismissAllToolPanels();
       shell.setSketchMeasureMode("area");
       shell.setSketchMeasureAreaShape("freeform");
