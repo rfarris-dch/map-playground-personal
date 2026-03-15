@@ -5,7 +5,6 @@
   import BoundaryHoverTooltip from "@/features/boundaries/components/boundary-hover-tooltip.vue";
   import FacilityClusterHoverTooltip from "@/features/facilities/components/facility-cluster-hover-tooltip.vue";
   import FacilityHoverTooltip from "@/features/facilities/components/facility-hover-tooltip.vue";
-  import FacilityDetailDrawer from "@/features/facilities/facility-detail/components/facility-detail-drawer.vue";
   import FiberLocatorHoverTooltip from "@/features/fiber-locator/components/fiber-locator-hover-tooltip.vue";
   import MarketBoundaryHoverTooltip from "@/features/market-boundaries/components/market-boundary-hover-tooltip.vue";
   import ParcelDetailDrawer from "@/features/parcels/parcel-detail/components/parcel-detail-drawer.vue";
@@ -15,9 +14,6 @@
 
   const shell = useMapShellContext();
 
-  const facilityDetail = computed(() => shell.facilityDetailQuery.data.value ?? null);
-  const isFacilityDetailLoading = computed(() => shell.facilityDetailQuery.isLoading.value);
-  const isFacilityDetailError = computed(() => shell.facilityDetailQuery.isError.value);
   const parcelDetail = computed(() => shell.parcelDetailQuery.data.value ?? null);
   const isParcelDetailLoading = computed(() => shell.parcelDetailQuery.isLoading.value);
   const isParcelDetailError = computed(() => shell.parcelDetailQuery.isError.value);
@@ -44,14 +40,14 @@
     @close="shell.setScannerActive(false)"
     @export="shell.exportScannerSelection"
     @open-dashboard="shell.openScannerDashboard"
-    @select-facility="shell.selectFacilityFromAnalysis"
+    @select-facility="shell.navigateToFacilityDetail"
   />
 
   <MapStatusBar :overlay-status-message="shell.overlayStatusMessage.value" />
 
   <FacilityHoverTooltip
     :hover-state="shell.hoveredFacility.value"
-    @select="(facilityId, perspective) => shell.selectFacilityFromAnalysis({ facilityId, perspective: perspective as 'colocation' | 'hyperscale' })"
+    @select="(facilityId, perspective) => shell.navigateToFacilityDetail({ facilityId, perspective: perspective as 'colocation' | 'hyperscale' })"
   />
   <FacilityClusterHoverTooltip
     :hover-state="shell.hoveredFacilityCluster.value"
@@ -61,14 +57,6 @@
   <MarketBoundaryHoverTooltip :hover="shell.hoveredMarketBoundary.value" />
   <FiberLocatorHoverTooltip :hover-state="shell.hoveredFiber.value" />
   <PowerHoverTooltip :hover-state="shell.hoveredPower.value" />
-
-  <FacilityDetailDrawer
-    :selected-facility="shell.selectedFacility.value"
-    :detail="facilityDetail"
-    :is-loading="isFacilityDetailLoading"
-    :is-error="isFacilityDetailError"
-    @close="shell.clearSelectedFacility"
-  />
 
   <ParcelDetailDrawer
     :selected-parcel="shell.selectedParcel.value"

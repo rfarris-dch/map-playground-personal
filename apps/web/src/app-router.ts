@@ -59,6 +59,22 @@ const appRoutes: readonly RouteRecordRaw[] = [
     },
   },
   {
+    path: "/facilities/:perspective/:facilityId",
+    name: "facility-detail",
+    component: () => import("@/pages/facility-detail-page.vue"),
+    meta: {
+      navigationId: "facilities",
+    },
+  },
+  {
+    path: "/providers/:providerId",
+    name: "provider-detail",
+    component: () => import("@/pages/provider-detail-page.vue"),
+    meta: {
+      navigationId: "providers",
+    },
+  },
+  {
     path: "/facilities",
     name: "facilities",
     component: FacilitiesPage,

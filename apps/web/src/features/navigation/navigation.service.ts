@@ -5,9 +5,11 @@ import type {
   AppNavigationItem,
   CompanyDashboardRouteParams,
   CompanyMapRouteParams,
+  FacilityDetailRouteParams,
   FacilityNavigationItem,
   MarketDashboardRouteParams,
   MarketMapRouteParams,
+  ProviderDetailRouteParams,
 } from "@/features/navigation/navigation.types";
 
 export const appNavigationItems: readonly AppNavigationItem[] = [
@@ -108,4 +110,27 @@ export function buildCompanyDashboardRoute(
     `/companies/${encodeURIComponent(params.companyKind)}/${encodeURIComponent(params.companySlug)}/dashboard`,
     context
   );
+}
+
+export function buildFacilityDetailPageRoute(
+  params: FacilityDetailRouteParams
+): RouteLocationRaw {
+  return {
+    name: "facility-detail",
+    params: {
+      facilityId: params.facilityId,
+      perspective: params.perspective,
+    },
+  };
+}
+
+export function buildProviderDetailPageRoute(
+  params: ProviderDetailRouteParams
+): RouteLocationRaw {
+  return {
+    name: "provider-detail",
+    params: {
+      providerId: params.providerId,
+    },
+  };
 }

@@ -31,3 +31,12 @@ export interface CompanyDashboardRouteParams {
 export interface MarketDashboardRouteParams {
   readonly marketSlug: string;
 }
+
+export interface FacilityDetailRouteParams {
+  readonly facilityId: string;
+  readonly perspective: string;
+}
+
+export interface ProviderDetailRouteParams {
+  readonly providerId: string;
+}

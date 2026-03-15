@@ -1,9 +1,12 @@
 <script setup lang="ts">
+  import { ArrowRight } from "lucide-vue-next";
   import { computed } from "vue";
+  import { RouterLink } from "vue-router";
   import EntityDetailDrawerShell from "@/components/map/entity-detail-drawer-shell.vue";
   import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";
   import { formatNullableMw } from "@/features/facilities/facility-detail/detail.service";
   import type { FacilityDetailPayload } from "@/features/facilities/facility-detail/detail.types";
+  import { buildFacilityDetailPageRoute } from "@/features/navigation/navigation.service";
 
   interface FacilityDetailDrawerProps {
     readonly detail: FacilityDetailPayload | null;
@@ -82,5 +85,14 @@
         {{ formatNullableMw(props.detail.response.feature.properties.plannedPowerMw) }}
       </dd>
     </dl>
+
+    <RouterLink
+      v-if="detailProperties"
+      :to="buildFacilityDetailPageRoute({ facilityId: detailProperties.facilityId, perspective: detailProperties.perspective })"
+      class="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+    >
+      View full details
+      <ArrowRight class="h-3 w-3" />
+    </RouterLink>
   </EntityDetailDrawerShell>
 </template>

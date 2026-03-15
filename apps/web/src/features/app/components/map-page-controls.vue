@@ -112,6 +112,6 @@
     @clear="shell.clearSelectionGeometry"
     @export="shell.exportSelection"
     @open-dashboard="shell.openSelectionDashboard"
-    @select-facility="shell.selectFacilityFromAnalysis"
+    @select-facility="shell.navigateToFacilityDetail"
   />
 </template>

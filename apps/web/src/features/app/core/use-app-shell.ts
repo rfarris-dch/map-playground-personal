@@ -1,6 +1,8 @@
 import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
 import { computed, shallowRef } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";
+import { buildFacilityDetailPageRoute } from "@/features/navigation/navigation.service";
 import {
   FLOOD_100_LAYER_ID,
   FLOOD_500_LAYER_ID,
@@ -55,6 +57,20 @@ export function useAppShell() {
   const router = useRouter();
   const initialMapContext = readMapContextTransferFromRoute({ route });
   const currentSurface = computed(() => inferMapContextSurfaceFromRoute(route) ?? "global-map");
+
+  function navigateToFacilityDetail(facility: SelectedFacilityRef): void {
+    router.push(
+      buildFacilityDetailPageRoute({
+        facilityId: facility.facilityId,
+        perspective: facility.perspective,
+      })
+    );
+  }
+
+  function resetMapToDefault(): void {
+    router.replace({ path: "/map" });
+  }
+
   const runtime = useAppShellRuntime({
     initialViewport: initialMapContext?.viewport,
   });
@@ -338,6 +354,8 @@ export function useAppShell() {
     clearSelection: state.clearSelectionGeometry,
     clearSelectionGeometry: state.clearSelectionGeometry,
     clearSelectedFacility: selection.clearSelectedFacility,
+    navigateToFacilityDetail,
+    resetMapToDefault,
     selectFacilityFromAnalysis: selection.selectFacilityFromAnalysis,
     clearSelectedParcel: selection.clearSelectedParcel,
     setQuickViewActive: mapOverlays.setQuickViewActive,
