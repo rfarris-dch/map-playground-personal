@@ -267,6 +267,7 @@ export function useAppShell() {
     boundaryFacetOptions: state.boundaryFacetOptions,
     boundaryFacetSelection: state.boundaryFacetSelection,
     visiblePerspectives: visibility.visiblePerspectives,
+    facilitiesStatus: state.facilitiesStatus,
     colocationStatusText: status.colocationStatusText,
     hyperscaleStatusText: status.hyperscaleStatusText,
     floodVisibility: visibility.floodVisibility,

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-  import { computed } from "vue";
+  import { computed, ref, watch } from "vue";
+  import MapLoadingBar from "@/features/app/components/map-loading-bar.vue";
   import MapStatusBar from "@/features/app/components/map-status-bar.vue";
   import { useMapShellContext } from "@/features/app/core/map-shell-context";
   import BoundaryHoverTooltip from "@/features/boundaries/components/boundary-hover-tooltip.vue";
@@ -17,6 +18,24 @@
   const parcelDetail = computed(() => shell.parcelDetailQuery.data.value ?? null);
   const isParcelDetailLoading = computed(() => shell.parcelDetailQuery.isLoading.value);
   const isParcelDetailError = computed(() => shell.parcelDetailQuery.isError.value);
+
+  const hasReceivedInitialData = ref(false);
+  const isInitialLoading = computed(
+    () => !hasReceivedInitialData.value && shell.map.value !== null
+  );
+
+  watch(
+    () => shell.facilitiesStatus.value,
+    (status) => {
+      if (hasReceivedInitialData.value) {
+        return;
+      }
+      if (status.colocation.state === "ok" || status.hyperscale.state === "ok") {
+        hasReceivedInitialData.value = true;
+      }
+    },
+    { immediate: true }
+  );
 </script>
 
 <template>
@@ -43,6 +62,7 @@
     @select-facility="shell.navigateToFacilityDetail"
   />
 
+  <MapLoadingBar :active="isInitialLoading" />
   <MapStatusBar :overlay-status-message="shell.overlayStatusMessage.value" />
 
   <FacilityHoverTooltip
