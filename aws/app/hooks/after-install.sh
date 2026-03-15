@@ -7,7 +7,7 @@ env_file="/etc/map-app/map-api.env"
 nginx_conf_source="${deploy_root}/aws/app/nginx/map-app.conf"
 nginx_conf_target="/etc/nginx/conf.d/map-app.conf"
 required_api_port="3001"
-required_bun_version="1.2.22"
+required_bun_version="1.3.6"
 required_fiber_locator_source_mode="external-xyz"
 service_source="${deploy_root}/aws/app/systemd/map-api.service"
 service_target="/etc/systemd/system/map-api.service"
@@ -29,14 +29,15 @@ if ! id -u deploy >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! command -v bun >/dev/null 2>&1; then
-  echo "[deploy] bun is required on the EC2 host" >&2
-  exit 1
-fi
-
-if [[ "$(bun --version)" != "${required_bun_version}" ]]; then
-  echo "[deploy] expected bun ${required_bun_version} but found $(bun --version)" >&2
-  exit 1
+current_bun_version="$(su -s /bin/sh deploy -c "PATH='${deploy_runtime_path}' bun --version" 2>/dev/null || echo "none")"
+if [[ "${current_bun_version}" != "${required_bun_version}" ]]; then
+  echo "[deploy] upgrading bun for deploy user from ${current_bun_version} to ${required_bun_version}" >&2
+  su -s /bin/sh deploy -c "curl -fsSL https://bun.sh/install | bash -s -- 'bun-v${required_bun_version}'"
+  current_bun_version="$(su -s /bin/sh deploy -c "PATH='${deploy_runtime_path}' bun --version" 2>/dev/null || echo "none")"
+  if [[ "${current_bun_version}" != "${required_bun_version}" ]]; then
+    echo "[deploy] bun upgrade failed for deploy user, got ${current_bun_version}" >&2
+    exit 1
+  fi
 fi
 
 if ! command -v nginx >/dev/null 2>&1; then
@@ -75,11 +76,6 @@ install -m 0644 "${nginx_conf_source}" "${nginx_conf_target}"
 
 find "${deploy_root}/scripts" -type f -name '*.sh' -exec chmod 755 {} +
 chown -R deploy:deploy "${deploy_root}"
-
-if ! su -s /bin/sh deploy -c "PATH='${deploy_runtime_path}' bun --version" >/dev/null 2>&1; then
-  echo "[deploy] bun must be available to the deploy user on the systemd runtime PATH" >&2
-  exit 1
-fi
 
 if ! su -s /bin/sh deploy -c "cd '${deploy_root}' && PATH='${deploy_runtime_path}' bun install --frozen-lockfile"; then
   echo "[deploy] bun install failed inside the staged artifact tree" >&2

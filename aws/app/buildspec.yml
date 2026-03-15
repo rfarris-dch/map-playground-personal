@@ -2,7 +2,7 @@ version: 0.2
 
 env:
   variables:
-    BUN_VERSION: 1.2.22
+    BUN_VERSION: 1.3.6
 
 phases:
   install:
