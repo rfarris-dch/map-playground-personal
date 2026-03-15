@@ -5,6 +5,8 @@ export interface LayerOrderInvariants {
   flood500BelowParcelOutlines: readonly [string, string];
   hydroLabelsBelowFacilityPoints: readonly [string, string];
   hydroLinesBelowParcelOutlines: readonly [string, string];
+  marketBoundaryBelowColocation: readonly [string, string];
   modelsBelowFacilityPoints: readonly [string, string];
   parcelOutlinesAboveChoropleth: readonly [string, string];
+  submarketBoundaryBelowColocation: readonly [string, string];
 }

@@ -74,6 +74,11 @@ function createApiRuntimeConfig(
     "FIBER_LOCATOR_SOURCE_MODE",
     ApiDefaults.fiberLocatorSourceMode
   );
+  const marketBoundariesSourceMode = readSourceMode(
+    env,
+    "MARKET_BOUNDARIES_SOURCE_MODE",
+    ApiDefaults.marketBoundariesSourceMode
+  );
   const marketsSourceMode = readSourceMode(
     env,
     "MARKETS_SOURCE_MODE",
@@ -84,6 +89,7 @@ function createApiRuntimeConfig(
   assertPostgisServingMode("BOUNDARIES_SOURCE_MODE", boundariesSourceMode);
   assertPostgisServingMode("COUNTY_INTELLIGENCE_SOURCE_MODE", countyIntelligenceSourceMode);
   assertPostgisServingMode("FACILITIES_SOURCE_MODE", facilitiesSourceMode);
+  assertPostgisServingMode("MARKET_BOUNDARIES_SOURCE_MODE", marketBoundariesSourceMode);
   assertPostgisServingMode("MARKETS_SOURCE_MODE", marketsSourceMode);
   assertPostgisServingMode("PARCELS_SOURCE_MODE", parcelsSourceMode);
   assertExternalXyzServingMode("FIBER_LOCATOR_SOURCE_MODE", fiberLocatorSourceMode);
@@ -98,6 +104,7 @@ function createApiRuntimeConfig(
     }),
     facilitiesSourceMode,
     fiberLocatorSourceMode,
+    marketBoundariesSourceMode,
     marketsSourceMode,
     parcelsSourceMode,
   });

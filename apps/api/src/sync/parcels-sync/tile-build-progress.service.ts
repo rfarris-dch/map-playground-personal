@@ -46,7 +46,7 @@ function readFileTailUtf8(path: string, maxBytes: number): string | null {
       try {
         closeSync(descriptor);
       } catch {
-        // Ignore close failures on ephemeral files.
+        /* ignored */
       }
     }
   }
@@ -269,8 +269,6 @@ function parseLatestTileBuildProgress(logTail: string): {
     stageHint = "convert";
   }
 
-  // If the newest signal in the log tail is "Read ... features", prefer derived progress.
-  // This prevents stale trailing percentages from a prior build attempt from masking fresh restart progress.
   if (stageHint === "build" && latestReadMatchIndex > latestPercentMatchIndex) {
     latestPercent = null;
   }
@@ -342,7 +340,6 @@ function deriveTileBuildWorkProgress(
   const readUnitsRaw = hasReadFeatures ? Math.floor(buildProgress.readFeatures ?? 0) : 0;
   let readUnits = Math.max(0, Math.min(effectiveFeatureTotal, readUnitsRaw));
   if (stage === "write" && !hasReadFeatures) {
-    // Once write progress is present, the read pass is complete even if tail parsing no longer sees "Read ..." lines.
     readUnits = effectiveFeatureTotal;
   }
 
@@ -548,7 +545,6 @@ function appendReadProgressPart(
     Number.isFinite(buildProgress.percent) &&
     hasEffectiveFeatureTotal
   ) {
-    // In write phase, older read counters may roll out of log tail; expose read completion explicitly.
     parts.push(`read=${String(effectiveFeatureTotal)}/${String(effectiveFeatureTotal)}`);
   }
 }

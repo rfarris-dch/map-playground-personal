@@ -1,9 +1,3 @@
-/**
- * Shared CTE that aggregates commissioned power per county
- * from both colo (facility_site) and hyperscale sites.
- *
- * Used by boundary-power queries and any future facilities-level rollups.
- */
 export const FACILITY_POWER_CTE = `
 WITH facility_power AS (
   SELECT

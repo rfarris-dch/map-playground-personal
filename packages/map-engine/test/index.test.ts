@@ -22,13 +22,13 @@ class MapMock {
   }
 
   addControl(): void {
-    /* noop */
+    /* stub */
   }
   addLayer(): void {
-    /* noop */
+    /* stub */
   }
   addSource(): void {
-    /* noop */
+    /* stub */
   }
   getBounds() {
     return {
@@ -79,10 +79,10 @@ class MapMock {
     return true;
   }
   off(): void {
-    /* noop */
+    /* stub */
   }
   on(): void {
-    /* noop */
+    /* stub */
   }
   project() {
     return {
@@ -97,19 +97,19 @@ class MapMock {
     this.removed = true;
   }
   removeControl(): void {
-    /* noop */
+    /* stub */
   }
   removeLayer(): void {
-    /* noop */
+    /* stub */
   }
   removeSource(): void {
-    /* noop */
+    /* stub */
   }
   setFeatureState(): void {
-    /* noop */
+    /* stub */
   }
   setLayoutProperty(): void {
-    /* noop */
+    /* stub */
   }
   setProjection(projection: unknown): void {
     this.projection = projection;
@@ -135,10 +135,10 @@ class MapMock {
     }
   }
   setStyle(): void {
-    /* noop */
+    /* stub */
   }
   setTerrain(): void {
-    /* noop */
+    /* stub */
   }
 }
 
@@ -148,7 +148,7 @@ class MarkerMock {
   }
 
   remove(): void {
-    /* noop */
+    /* stub */
   }
 
   setLngLat(): this {

@@ -62,6 +62,10 @@
       "types": "./dist/map-context-transfer.d.ts",
       "default": "./dist/map-context-transfer.js"
     },
+    "./market-boundaries-http": {
+      "types": "./dist/market-boundaries-http.d.ts",
+      "default": "./dist/market-boundaries-http.js"
+    },
     "./markets-selection-http": {
       "types": "./dist/markets-selection-http.d.ts",
       "default": "./dist/markets-selection-http.js"

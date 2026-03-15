@@ -19,6 +19,8 @@ export type FacilitiesCatalogLayerId = Extract<
 
 export type HydroBasinsCatalogLayerId = Extract<LayerId, "environmental.hydro-basins">;
 
+export type MarketBoundaryCatalogLayerId = Extract<LayerId, "markets.market" | "markets.submarket">;
+
 export type PowerCatalogLayerId = Extract<
   LayerId,
   "power.transmission" | "power.substations" | "power.plants"
@@ -43,6 +45,11 @@ export interface FacilitiesStyleLayerIds {
   readonly clusterCountLayerId: string;
   readonly clusterLayerId: string;
   readonly pointLayerId: string;
+}
+
+export interface MarketBoundaryStyleLayerIds {
+  readonly fillLayerId: string;
+  readonly outlineLayerId: string;
 }
 
 export interface HydroBasinsStyleLayerIds {

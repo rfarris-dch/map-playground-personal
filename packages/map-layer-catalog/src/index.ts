@@ -13,6 +13,8 @@ export const LAYER_IDS = defineLayerIds([
   "facilities.colocation",
   "facilities.hyperscale",
   "infrastructure.gas-pipelines",
+  "markets.market",
+  "markets.submarket",
   "power.transmission",
   "power.substations",
   "power.plants",
@@ -45,11 +47,11 @@ export type LayerGroup =
   | "facilities"
   | "infrastructure"
   | "environmental"
+  | "markets"
   | "parcels"
   | "models";
 
 export const DEFAULT_LAYER_CATALOG: LayerCatalog = {
-  // Boundary layers are cataloged for governance, but feature layers are independently toggleable.
   county: {
     id: "county",
     group: "boundaries",
@@ -148,6 +150,28 @@ export const DEFAULT_LAYER_CATALOG: LayerCatalog = {
     defaultVisible: true,
     dependencies: [],
     budgetWeight: 2,
+  },
+  "markets.market": {
+    id: "markets.market",
+    group: "markets",
+    sourceId: "markets.market.source",
+    sourceType: "geojson",
+    zoomMin: 0,
+    zoomMax: 22,
+    defaultVisible: false,
+    dependencies: [],
+    budgetWeight: 1,
+  },
+  "markets.submarket": {
+    id: "markets.submarket",
+    group: "markets",
+    sourceId: "markets.submarket.source",
+    sourceType: "geojson",
+    zoomMin: 0,
+    zoomMax: 22,
+    defaultVisible: false,
+    dependencies: [],
+    budgetWeight: 1,
   },
   "infrastructure.gas-pipelines": {
     id: "infrastructure.gas-pipelines",

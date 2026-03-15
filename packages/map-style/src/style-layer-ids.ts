@@ -6,6 +6,8 @@ import type {
   FloodCatalogLayerId,
   FloodStyleLayerIds,
   HydroBasinsStyleLayerIds,
+  MarketBoundaryCatalogLayerId,
+  MarketBoundaryStyleLayerIds,
   ParcelsStyleLayerIds,
   PowerCatalogLayerId,
   StaticCatalogLayerId,
@@ -60,6 +62,15 @@ export function getHydroBasinsStyleLayerIds(): HydroBasinsStyleLayerIds {
   };
 }
 
+export function getMarketBoundaryStyleLayerIds(
+  layerId: MarketBoundaryCatalogLayerId
+): MarketBoundaryStyleLayerIds {
+  return {
+    fillLayerId: `${layerId}.fill`,
+    outlineLayerId: layerId,
+  };
+}
+
 export function getPowerStyleLayerIds(layerId: PowerCatalogLayerId): readonly string[] {
   if (layerId === "power.transmission") {
     return ["power.transmission"];
@@ -107,6 +118,11 @@ export function getCatalogStyleLayerIds(layerId: StaticCatalogLayerId): readonly
     layerId === "power.plants"
   ) {
     return getPowerStyleLayerIds(layerId);
+  }
+
+  if (layerId === "markets.market" || layerId === "markets.submarket") {
+    const marketLayers = getMarketBoundaryStyleLayerIds(layerId);
+    return [marketLayers.fillLayerId, marketLayers.outlineLayerId];
   }
 
   if (layerId === "environmental.water-features") {

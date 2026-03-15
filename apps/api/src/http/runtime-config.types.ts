@@ -7,6 +7,7 @@ export interface ApiRuntimeConfig {
   readonly dataVersion: string;
   readonly facilitiesSourceMode: SourceMode;
   readonly fiberLocatorSourceMode: SourceMode;
+  readonly marketBoundariesSourceMode: SourceMode;
   readonly marketsSourceMode: SourceMode;
   readonly parcelsSourceMode: SourceMode;
 }

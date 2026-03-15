@@ -135,15 +135,15 @@ export function lineWidthStops(layerId: MarketBoundaryLayerId): {
 } {
   if (layerId === "market") {
     return {
-      lowZoom: 1.4,
-      midZoom: 1.9,
-      highZoom: 2.5,
+      lowZoom: 2.0,
+      midZoom: 2.8,
+      highZoom: 3.5,
     };
   }
 
   return {
-    lowZoom: 0.85,
-    midZoom: 1.15,
-    highZoom: 1.6,
+    lowZoom: 1.4,
+    midZoom: 2.0,
+    highZoom: 2.8,
   };
 }

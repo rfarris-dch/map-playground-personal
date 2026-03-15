@@ -6,6 +6,8 @@ import type {
   FloodCatalogLayerId,
   FloodStyleLayerIds,
   HydroBasinsStyleLayerIds,
+  MarketBoundaryCatalogLayerId,
+  MarketBoundaryStyleLayerIds,
   ParcelsStyleLayerIds,
   PowerCatalogLayerId,
   StaticCatalogLayerId,
@@ -18,6 +20,7 @@ import {
   getFacilitiesStyleLayerIds as readFacilitiesStyleLayerIds,
   getFloodStyleLayerIds as readFloodStyleLayerIds,
   getHydroBasinsStyleLayerIds as readHydroBasinsStyleLayerIds,
+  getMarketBoundaryStyleLayerIds as readMarketBoundaryStyleLayerIds,
   getParcelsStyleLayerIds as readParcelsStyleLayerIds,
   getPowerStyleLayerIds as readPowerStyleLayerIds,
 } from "./style-layer-ids";
@@ -30,6 +33,8 @@ export type {
   FloodCatalogLayerId,
   FloodStyleLayerIds,
   HydroBasinsStyleLayerIds,
+  MarketBoundaryCatalogLayerId,
+  MarketBoundaryStyleLayerIds,
   ParcelsStyleLayerIds,
   PowerCatalogLayerId,
   StaticCatalogLayerId,
@@ -53,6 +58,12 @@ export function getFacilitiesStyleLayerIds(
 
 export function getHydroBasinsStyleLayerIds(): HydroBasinsStyleLayerIds {
   return readHydroBasinsStyleLayerIds();
+}
+
+export function getMarketBoundaryStyleLayerIds(
+  layerId: MarketBoundaryCatalogLayerId
+): MarketBoundaryStyleLayerIds {
+  return readMarketBoundaryStyleLayerIds(layerId);
 }
 
 export function getParcelsStyleLayerIds(): ParcelsStyleLayerIds {

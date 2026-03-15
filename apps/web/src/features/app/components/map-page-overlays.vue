@@ -49,7 +49,10 @@
 
   <MapStatusBar :overlay-status-message="shell.overlayStatusMessage.value" />
 
-  <FacilityHoverTooltip :hover-state="shell.hoveredFacility.value" />
+  <FacilityHoverTooltip
+    :hover-state="shell.hoveredFacility.value"
+    @select="(facilityId, perspective) => shell.selectFacilityFromAnalysis({ facilityId, perspective: perspective as 'colocation' | 'hyperscale' })"
+  />
   <FacilityClusterHoverTooltip
     :hover-state="shell.hoveredFacilityCluster.value"
     @zoom-to-cluster="shell.zoomToCluster"

@@ -57,8 +57,8 @@ export function useMapLayerControlsPanelState(
   const mapFilters = inject(MAP_FILTERS_KEY);
 
   const activeTab = ref<PanelTab>("layers");
-  const colocationViewMode = ref<MapNavViewModeId>("clusters");
-  const hyperscaleViewMode = ref<MapNavViewModeId>("clusters");
+  const colocationViewMode = ref<MapNavViewModeId>("icons");
+  const hyperscaleViewMode = ref<MapNavViewModeId>("icons");
   const fiberExpanded = ref(false);
 
   const powerTypeOptions: readonly FilterOption[] = [

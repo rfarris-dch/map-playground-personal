@@ -87,8 +87,8 @@ function savePersistedHistory(
 ): void {
   try {
     window.localStorage.setItem(buildPipelineHistoryStorageKey(dataset), JSON.stringify(history));
-  } catch {
-    // Ignore storage failures; live polling continues without persistence.
+  } catch (_error) {
+    /* ignored */
   }
 }
 

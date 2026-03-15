@@ -32,11 +32,6 @@ export interface SupervisorRequestMetadata {
   readonly requestId: string;
 }
 
-/**
- * A FiberRef that carries request metadata into child fibers for the
- * runtime supervisor. This replaces the brittle `unsafeMap.get("ApiRequestContext")`
- * string-key lookup with an explicit, type-safe propagation mechanism.
- */
 export const SupervisorRequestMetadataRef: FiberRef.FiberRef<SupervisorRequestMetadata | null> =
   FiberRef.unsafeMake<SupervisorRequestMetadata | null>(null);
 

@@ -211,7 +211,7 @@ export function mountFacilitiesLayer(
     lastFetchKey: null,
     requestSequence: 0,
     selectedFeatureId: null,
-    viewMode: "clusters" as FacilitiesViewMode,
+    viewMode: "icons",
     visible: true,
   };
 

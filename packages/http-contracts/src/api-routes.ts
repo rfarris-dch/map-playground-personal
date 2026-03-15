@@ -4,6 +4,7 @@ import { formatBboxParam } from "@map-migration/geo-kernel/geometry";
 import { z } from "zod";
 import type { SourceMode } from "./api-response-meta.js";
 import type { BoundaryPowerLevel } from "./boundaries-http.js";
+import type { MarketBoundaryLevel } from "./market-boundaries-http.js";
 import type { ParcelGeometryMode, ParcelProfile } from "./parcels-http.js";
 import { isPipelineDataset, type PipelineDataset } from "./pipeline-http.js";
 import type {
@@ -63,6 +64,7 @@ export interface ApiRoutesTable {
   readonly fiberLocatorVectorTile: string;
   readonly health: string;
   readonly healthAlias: string;
+  readonly marketBoundaries: string;
   readonly markets: string;
   readonly marketsSelection: string;
   readonly parcels: string;
@@ -83,6 +85,7 @@ export interface ApiDefaultsTable {
   readonly dataVersion: string;
   readonly facilitiesSourceMode: SourceMode;
   readonly fiberLocatorSourceMode: SourceMode;
+  readonly marketBoundariesSourceMode: SourceMode;
   readonly marketsSourceMode: SourceMode;
   readonly parcelsSourceMode: SourceMode;
 }
@@ -121,6 +124,7 @@ export const ApiRoutes = Object.freeze<ApiRoutesTable>({
   facilities: "/api/geo/facilities",
   facilitiesSelection: "/api/geo/facilities/selection",
   facilitiesTable: "/api/geo/facilities/table",
+  marketBoundaries: "/api/geo/market-boundaries",
   markets: "/api/geo/markets",
   marketsSelection: "/api/geo/markets/selection",
   providers: "/api/geo/providers",
@@ -188,6 +192,12 @@ export function buildBoundaryPowerRoute(level: BoundaryPowerLevel): string {
   const params = new URLSearchParams();
   params.set("level", level);
   return `${ApiRoutes.boundariesPower}?${params.toString()}`;
+}
+
+export function buildMarketBoundariesRoute(level: MarketBoundaryLevel): string {
+  const params = new URLSearchParams();
+  params.set("level", level);
+  return `${ApiRoutes.marketBoundaries}?${params.toString()}`;
 }
 
 export function buildCountyScoresRoute(args: CountyScoresRouteArgs): string {
@@ -327,6 +337,7 @@ export const ApiDefaults = Object.freeze<ApiDefaultsTable>({
   dataVersion: "dev",
   facilitiesSourceMode: "postgis",
   fiberLocatorSourceMode: "external-xyz",
+  marketBoundariesSourceMode: "postgis",
   marketsSourceMode: "postgis",
   parcelsSourceMode: "postgis",
 });

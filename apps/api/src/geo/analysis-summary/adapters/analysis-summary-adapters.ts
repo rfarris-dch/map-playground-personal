@@ -376,8 +376,8 @@ export function createAnalysisSummaryPorts(): AnalysisSummaryPorts {
       let statusRow: CountyScoresStatusRow | undefined;
       try {
         statusRow = await getSharedStatusRow();
-      } catch {
-        // intentional
+      } catch (_error) {
+        /* ignored */
       }
       return queryCountyScores({
         countyIds: args.countyIds,
@@ -389,8 +389,8 @@ export function createAnalysisSummaryPorts(): AnalysisSummaryPorts {
       let statusRow: CountyScoresStatusRow | undefined;
       try {
         statusRow = await getSharedStatusRow();
-      } catch {
-        // intentional
+      } catch (_error) {
+        /* ignored */
       }
       return queryCountyScoresStatus({ statusSnapshot: statusRow });
     },

@@ -79,8 +79,8 @@ function signalListeningPids(pids: readonly number[], signal: NodeJS.Signals): v
 
     try {
       process.kill(pid, signal);
-    } catch {
-      // Ignore pids that have already exited between discovery and kill.
+    } catch (_error) {
+      /* ignored */
     }
   }
 }

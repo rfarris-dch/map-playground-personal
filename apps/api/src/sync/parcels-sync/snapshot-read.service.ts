@@ -258,8 +258,6 @@ function readJsonFile(path: string): unknown | null {
 
     return JSON.parse(raw);
   } catch {
-    // Snapshot files can be missing or transiently malformed while an external sync process updates them.
-    // The status endpoint should fail soft and keep serving the last known in-memory state.
     return null;
   }
 }

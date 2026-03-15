@@ -31,11 +31,6 @@ function ingestionRunMismatch(
   return expectedIngestionRunId !== actualIngestionRunId.trim();
 }
 
-/**
- * Throws an `ApiRouteError` if the expected ingestion run ID does not match
- * the actual ingestion run ID. No-op when there are zero records or when the
- * IDs match (or when no expected ID was supplied).
- */
 export function throwIfIngestionRunConflict(
   expectedIngestionRunId: string | null,
   actualIngestionRunId: string | undefined,

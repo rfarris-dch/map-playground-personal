@@ -256,7 +256,6 @@ export function fetchFiberLocatorTile(
 
   let inFlightSnapshotPromise = getInFlightTileSnapshot(cacheKey);
   if (typeof inFlightSnapshotPromise === "undefined") {
-    // Keep the shared upstream fetch independent from any single caller's abort signal.
     inFlightSnapshotPromise = fetchFiberLocatorTileFromUpstream(config, args)
       .then((snapshot) => {
         if (snapshot.status >= 200 && snapshot.status < 300) {

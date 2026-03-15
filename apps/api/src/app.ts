@@ -20,6 +20,7 @@ import { registerBoundariesRoute } from "@/geo/boundaries/boundaries.route";
 import { registerCountyIntelligenceRoute } from "@/geo/county-intelligence/county-intelligence.route";
 import { registerFacilitiesRoute } from "@/geo/facilities/facilities.route";
 import { registerFiberLocatorRoute } from "@/geo/fiber-locator/fiber-locator.route";
+import { registerMarketBoundariesRoute } from "@/geo/market-boundaries/market-boundaries.route";
 import { registerMarketsRoute } from "@/geo/markets/markets.route";
 import { registerParcelsRoute } from "@/geo/parcels/parcels.route";
 import { registerProvidersRoute } from "@/geo/providers/providers.route";
@@ -210,6 +211,7 @@ export function createApiApp(options: CreateApiAppOptions = {}): Hono {
   registerParcelsRoute(app);
   registerBoundariesRoute(app);
   registerCountyIntelligenceRoute(app);
+  registerMarketBoundariesRoute(app);
   registerMarketsRoute(app);
   registerProvidersRoute(app);
   registerTilesRoute(app);

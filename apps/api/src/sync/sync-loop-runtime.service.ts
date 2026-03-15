@@ -48,7 +48,7 @@ export async function terminateManagedSyncProcess(
   try {
     activeChild.kill("SIGTERM");
   } catch {
-    // Ignore termination errors and continue waiting for process exit.
+    /* ignored */
   }
 
   const exitedAfterTerminate = await Promise.race([
@@ -62,7 +62,7 @@ export async function terminateManagedSyncProcess(
   try {
     activeChild.kill("SIGKILL");
   } catch {
-    // Ignore forced termination errors and continue waiting for process exit.
+    /* ignored */
   }
 
   await Promise.race([activeChild.exited, waitForDelay(SYNC_STOP_WAIT_TIMEOUT_MS)]);

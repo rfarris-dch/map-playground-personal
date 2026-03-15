@@ -2,6 +2,7 @@ import {
   getFacilitiesStyleLayerIds,
   getFloodStyleLayerIds,
   getHydroBasinsStyleLayerIds,
+  getMarketBoundaryStyleLayerIds,
   getParcelsStyleLayerIds,
 } from "../style-layer-ids";
 import type { LayerOrderInvariants } from "./layer-order.types";
@@ -35,6 +36,14 @@ export const LAYER_ORDER_INVARIANTS: LayerOrderInvariants = {
     getParcelsStyleLayerIds().outlineLayerId,
   ],
   parcelOutlinesAboveChoropleth: ["analytics.friction", getParcelsStyleLayerIds().outlineLayerId],
+  marketBoundaryBelowColocation: [
+    getMarketBoundaryStyleLayerIds("markets.market").fillLayerId,
+    getFacilitiesStyleLayerIds("facilities.colocation").pointLayerId,
+  ],
+  submarketBoundaryBelowColocation: [
+    getMarketBoundaryStyleLayerIds("markets.submarket").fillLayerId,
+    getFacilitiesStyleLayerIds("facilities.colocation").pointLayerId,
+  ],
   modelsBelowFacilityPoints: [
     "models.facilities",
     getFacilitiesStyleLayerIds("facilities.colocation").pointLayerId,

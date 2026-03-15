@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed } from "vue";
+  import { computed, shallowRef, watch } from "vue";
   import MapTooltipShell from "@/components/map/map-tooltip-shell.vue";
   import type { FacilityHoverState } from "@/features/facilities/hover.types";
   import { formatMegawatts } from "@/lib/power-format.service";
@@ -13,8 +13,60 @@
     readonly value: string;
   }
 
+  const emit = defineEmits<{
+    select: [facilityId: string, perspective: string];
+  }>();
+
   const props = defineProps<FacilityHoverTooltipProps>();
-  const displayState = computed(() => props.hoverState);
+
+  const pinnedState = shallowRef<FacilityHoverState | null>(null);
+  const isMouseInTooltip = shallowRef(false);
+  let dismissTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const displayState = computed(() => pinnedState.value ?? props.hoverState);
+
+  watch(
+    () => props.hoverState,
+    (next) => {
+      if (next !== null) {
+        if (dismissTimer !== null) {
+          clearTimeout(dismissTimer);
+          dismissTimer = null;
+        }
+        pinnedState.value = next;
+      } else if (!isMouseInTooltip.value) {
+        dismissTimer = setTimeout(() => {
+          pinnedState.value = null;
+          dismissTimer = null;
+        }, 120);
+      }
+    }
+  );
+
+  function onTooltipEnter(): void {
+    isMouseInTooltip.value = true;
+    if (dismissTimer !== null) {
+      clearTimeout(dismissTimer);
+      dismissTimer = null;
+    }
+  }
+
+  function onTooltipLeave(): void {
+    isMouseInTooltip.value = false;
+    if (props.hoverState === null) {
+      pinnedState.value = null;
+    }
+  }
+
+  function onSelectFacility(): void {
+    const state = displayState.value;
+    if (state === null) {
+      return;
+    }
+
+    emit("select", state.facilityId, state.perspective);
+    pinnedState.value = null;
+  }
 
   const accentBgClass = computed(() =>
     displayState.value?.perspective === "hyperscale" ? "bg-hyperscale" : "bg-colocation"
@@ -73,11 +125,13 @@
     ariaLabel="Facility hover details"
     :screen-point="displayState?.screenPoint ?? null"
     :show="displayState !== null"
-    :surface-class="`pointer-events-none absolute z-30 rounded-sm border p-0.5 ${accentBorderClass}`"
+    :surface-class="`pointer-events-auto absolute z-30 rounded-sm border p-0.5 ${accentBorderClass}`"
   >
     <div
       v-if="displayState !== null"
       class="flex w-[min(190px,calc(100vw-2rem))] flex-col gap-2 rounded-sm bg-card p-2 shadow-sm"
+      @mouseenter="onTooltipEnter"
+      @mouseleave="onTooltipLeave"
     >
       <div class="flex items-center justify-between gap-1">
         <div class="flex items-center gap-1 overflow-hidden leading-none">
@@ -86,16 +140,17 @@
           </span>
           <span class="flex-shrink-0 text-xs text-muted-foreground">{{ statusText }}</span>
         </div>
-        <svg
-          width="12"
-          height="12"
-          viewBox="0 0 12 12"
-          class="flex-shrink-0 opacity-40"
-          aria-hidden="true"
+        <button
+          type="button"
+          class="flex-shrink-0 opacity-40 hover:opacity-80"
+          aria-label="Dismiss tooltip"
+          @click="pinnedState = null"
         >
-          <line x1="3.5" y1="3.5" x2="8.5" y2="8.5" stroke="currentColor" stroke-width="1.2" />
-          <line x1="8.5" y1="3.5" x2="3.5" y2="8.5" stroke="currentColor" stroke-width="1.2" />
-        </svg>
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+            <line x1="3.5" y1="3.5" x2="8.5" y2="8.5" stroke="currentColor" stroke-width="1.2" />
+            <line x1="8.5" y1="3.5" x2="3.5" y2="8.5" stroke="currentColor" stroke-width="1.2" />
+          </svg>
+        </button>
       </div>
 
       <div class="flex flex-col gap-0 text-xs leading-[1.4] text-muted-foreground">
@@ -115,7 +170,12 @@
         </div>
       </div>
 
-      <div class="flex items-center gap-0.5" :class="accentTextClass">
+      <button
+        type="button"
+        class="flex items-center gap-0.5 hover:underline"
+        :class="accentTextClass"
+        @click="onSelectFacility"
+      >
         <span class="text-xs">View Details</span>
         <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
           <path
@@ -127,7 +187,7 @@
             stroke-linejoin="round"
           />
         </svg>
-      </div>
+      </button>
     </div>
   </MapTooltipShell>
 </template>

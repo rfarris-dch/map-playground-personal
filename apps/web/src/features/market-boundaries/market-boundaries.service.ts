@@ -129,6 +129,47 @@ function heatStopsForColorMode(
   return POWER_HEAT_STOPS;
 }
 
+const SUBMARKET_CATEGORY_COLORS: readonly string[] = [
+  "#6366f1", // indigo
+  "#ec4899", // pink
+  "#f59e0b", // amber
+  "#10b981", // emerald
+  "#3b82f6", // blue
+  "#ef4444", // red
+  "#8b5cf6", // violet
+  "#14b8a6", // teal
+  "#f97316", // orange
+  "#06b6d4", // cyan
+  "#84cc16", // lime
+  "#e879f9", // fuchsia
+  "#a855f7", // purple
+  "#22d3ee", // sky
+  "#facc15", // yellow
+  "#fb7185", // rose
+  "#34d399", // emerald-light
+  "#818cf8", // indigo-light
+  "#fbbf24", // amber-light
+  "#38bdf8", // sky-light
+  "#c084fc", // purple-light
+  "#2dd4bf", // teal-light
+  "#fb923c", // orange-light
+  "#a3e635", // lime-light
+  "#f472b6", // pink-light
+];
+
+export function buildSubmarketCategoryColorExpression(
+  features: readonly { properties: { regionId: string } }[]
+): MapExpression {
+  const regionIds = [...new Set(features.map((f) => f.properties.regionId))].sort();
+
+  const cases: Array<string | MapExpression> = [];
+  for (const [index, regionId] of regionIds.entries()) {
+    cases.push(regionId, SUBMARKET_CATEGORY_COLORS[index % SUBMARKET_CATEGORY_COLORS.length]);
+  }
+
+  return ["match", ["get", "regionId"], ...cases, "#94a3b8"];
+}
+
 export function marketBoundaryFillColorExpression(
   colorMode: MarketBoundaryColorMode
 ): MapExpression {
@@ -152,8 +193,8 @@ export function marketBoundaryOutlineColorExpression(
 
 export function marketBoundaryFillOpacity(layerId: MarketBoundaryLayerId): number {
   if (layerId === "market") {
-    return 0.18;
+    return 0.65;
   }
 
-  return 0.25;
+  return 0.7;
 }

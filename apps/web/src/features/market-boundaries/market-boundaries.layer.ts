@@ -1,9 +1,10 @@
 import { runEffectPromise } from "@map-migration/core-runtime/effect";
-import type { IMap, MapPointerEvent } from "@map-migration/map-engine";
+import type { IMap, LngLatBounds, MapClickEvent, MapPointerEvent } from "@map-migration/map-engine";
 import { getMarketBoundaryStyleLayerIds } from "@map-migration/map-style";
 import { Effect, Either } from "effect";
 import { fetchMarketBoundariesEffect } from "@/features/market-boundaries/api";
 import {
+  buildSubmarketCategoryColorExpression,
   emptyMarketBoundarySourceData,
   marketBoundaryFillColorExpression,
   marketBoundaryFillOpacity,
@@ -101,21 +102,33 @@ export function mountMarketBoundaryLayer(
     setLayersVisible(state.visible);
   }
 
+  function resolveFillColor(): unknown {
+    if (layerId === "submarket" && state.allFeatures.length > 0) {
+      return buildSubmarketCategoryColorExpression(state.allFeatures);
+    }
+
+    return marketBoundaryFillColorExpression(state.colorMode);
+  }
+
+  function resolveOutlineColor(): unknown {
+    if (layerId === "submarket" && state.allFeatures.length > 0) {
+      return buildSubmarketCategoryColorExpression(state.allFeatures);
+    }
+
+    return marketBoundaryOutlineColorExpression(state.colorMode);
+  }
+
   function applyColorMode(): void {
     if (!(state.ready && map.hasLayer(fillLayerId))) {
       return;
     }
 
-    map.setPaintProperty(
-      fillLayerId,
-      "fill-color",
-      marketBoundaryFillColorExpression(state.colorMode)
-    );
+    map.setPaintProperty(fillLayerId, "fill-color", resolveFillColor());
     map.setPaintProperty(outlineLayerId, "line-color", [
       "case",
       ["boolean", ["feature-state", "hover"], false],
       "#0f172a",
-      marketBoundaryOutlineColorExpression(state.colorMode),
+      resolveOutlineColor(),
     ]);
   }
 
@@ -139,7 +152,7 @@ export function mountMarketBoundaryLayer(
           type: "fill",
           source: sourceId,
           paint: {
-            "fill-color": marketBoundaryFillColorExpression(state.colorMode),
+            "fill-color": resolveFillColor(),
             "fill-opacity": [
               "case",
               ["boolean", ["feature-state", "hover"], false],
@@ -164,7 +177,7 @@ export function mountMarketBoundaryLayer(
               "case",
               ["boolean", ["feature-state", "hover"], false],
               "#0f172a",
-              marketBoundaryOutlineColorExpression(state.colorMode),
+              resolveOutlineColor(),
             ],
             "line-opacity": ["case", ["boolean", ["feature-state", "hover"], false], 1, 0.9],
             "line-width": [
@@ -210,6 +223,7 @@ export function mountMarketBoundaryLayer(
     clearHover();
     state.allFeatures = result.right.data.features;
     applySourceData();
+    applyColorMode();
     options.onFacetOptionsChange?.(layerId, toFacetOptions(state.allFeatures));
     state.dataLoaded = true;
   }
@@ -258,6 +272,108 @@ export function mountMarketBoundaryLayer(
     hoverController.clear();
   }
 
+  function computeFeatureBounds(feature: { geometry: unknown }): LngLatBounds | null {
+    const geom = feature.geometry;
+    if (typeof geom !== "object" || geom === null) {
+      return null;
+    }
+
+    const coords = flattenCoordinates(geom);
+    if (coords.length === 0) {
+      return null;
+    }
+
+    let west = Infinity;
+    let south = Infinity;
+    let east = -Infinity;
+    let north = -Infinity;
+
+    for (const [lng, lat] of coords) {
+      if (lng < west) west = lng;
+      if (lng > east) east = lng;
+      if (lat < south) south = lat;
+      if (lat > north) north = lat;
+    }
+
+    if (!Number.isFinite(west) || !Number.isFinite(south)) {
+      return null;
+    }
+
+    return { west, south, east, north };
+  }
+
+  function flattenCoordinates(geom: unknown): Array<[number, number]> {
+    if (typeof geom !== "object" || geom === null) {
+      return [];
+    }
+
+    const coordinates = Reflect.get(geom, "coordinates");
+    if (!Array.isArray(coordinates)) {
+      // Handle GeometryCollection or Multi types
+      const geometries = Reflect.get(geom, "geometries");
+      if (Array.isArray(geometries)) {
+        return geometries.flatMap((g: unknown) => flattenCoordinates(g));
+      }
+
+      return [];
+    }
+
+    const result: Array<[number, number]> = [];
+    collectCoords(coordinates, result);
+    return result;
+  }
+
+  function collectCoords(arr: unknown[], result: Array<[number, number]>): void {
+    if (arr.length >= 2 && typeof arr[0] === "number" && typeof arr[1] === "number") {
+      result.push([arr[0], arr[1]]);
+      return;
+    }
+
+    for (const item of arr) {
+      if (Array.isArray(item)) {
+        collectCoords(item, result);
+      }
+    }
+  }
+
+  function onClickFill(event: MapClickEvent): void {
+    if (!(state.ready && state.visible && map.hasLayer(fillLayerId))) {
+      return;
+    }
+
+    const features = map.queryRenderedFeatures(event.point, {
+      layers: [fillLayerId],
+    });
+
+    if (features.length === 0) {
+      return;
+    }
+
+    const clickedFeature = features[0];
+    const regionId = clickedFeature.id;
+    if (typeof regionId !== "string" && typeof regionId !== "number") {
+      return;
+    }
+
+    // Find the full feature from allFeatures to get the complete geometry
+    const fullFeature = state.allFeatures.find((f) => f.id === String(regionId));
+    if (fullFeature === undefined) {
+      return;
+    }
+
+    const bounds = computeFeatureBounds(fullFeature);
+    if (bounds === null) {
+      return;
+    }
+
+    map.setViewport({
+      type: "bounds",
+      bounds,
+      padding: 80,
+      animate: true,
+    });
+  }
+
   function onLoad(): void {
     state.ready = true;
     ensureLayer();
@@ -272,6 +388,7 @@ export function mountMarketBoundaryLayer(
   }
 
   map.on("load", onLoad);
+  map.onClick(onClickFill);
 
   return {
     clearHover,
@@ -317,6 +434,7 @@ export function mountMarketBoundaryLayer(
     destroy(): void {
       state.requestSequence += 1;
       map.off("load", onLoad);
+      map.offClick(onClickFill);
       clearHover();
       hoverController.destroy();
       if (map.hasLayer(fillLayerId)) {

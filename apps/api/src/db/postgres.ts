@@ -29,7 +29,7 @@ interface ResolvedRunQueryOptions {
 }
 
 function noop(): void {
-  // Intentionally empty.
+  /* ignored */
 }
 
 function sanitizeTimeoutMs(value: number, fallback: number): number {
