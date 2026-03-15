@@ -40,9 +40,6 @@
       </header>
 
       <dl class="m-0 grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-xs leading-tight">
-        <dt class="text-muted-foreground">Region ID</dt>
-        <dd class="m-0 font-mono">{{ displayState.regionId }}</dd>
-
         <template v-if="displayState.parentRegionName !== null">
           <dt class="text-muted-foreground">Parent</dt>
           <dd class="m-0 break-words">{{ displayState.parentRegionName }}</dd>

@@ -29,12 +29,6 @@
       </header>
 
       <dl class="m-0 grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-xs leading-tight">
-        <dt class="text-muted-foreground">Source Layer</dt>
-        <dd class="m-0 break-words font-mono">{{ displayState.sourceLayerName }}</dd>
-
-        <dt class="text-muted-foreground">Feature</dt>
-        <dd class="m-0 font-mono">{{ displayState.featureId }}</dd>
-
         <template v-if="displayState.segmentName !== null">
           <dt class="text-muted-foreground">Segment</dt>
           <dd class="m-0 break-words">{{ displayState.segmentName }}</dd>

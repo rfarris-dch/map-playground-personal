@@ -51,25 +51,12 @@
   >
     <template v-if="props.detail !== null">
       <dl class="mb-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-2">
-        <dt class="text-xs text-muted-foreground">Request</dt>
-        <dd class="m-0 text-sm font-mono">{{ props.detail.requestId }}</dd>
-
-        <dt class="text-xs text-muted-foreground">Data version</dt>
-        <dd class="m-0 text-sm font-mono">{{ props.detail.response.meta.dataVersion }}</dd>
-
-        <dt class="text-xs text-muted-foreground">Source mode</dt>
-        <dd class="m-0 text-sm font-mono">{{ props.detail.response.meta.sourceMode }}</dd>
-
         <dt class="text-xs text-muted-foreground">State</dt>
         <dd class="m-0 text-sm">{{ props.detail.response.feature.properties.state2 ?? "n/a" }}</dd>
 
         <dt class="text-xs text-muted-foreground">GEOID</dt>
         <dd class="m-0 text-sm">{{ props.detail.response.feature.properties.geoid ?? "n/a" }}</dd>
 
-        <dt class="text-xs text-muted-foreground">Ingestion run</dt>
-        <dd class="m-0 text-sm font-mono">
-          {{ props.detail.response.feature.lineage.ingestionRunId ?? "n/a" }}
-        </dd>
       </dl>
 
       <section class="mb-3 border-t border-border/50 pt-3">

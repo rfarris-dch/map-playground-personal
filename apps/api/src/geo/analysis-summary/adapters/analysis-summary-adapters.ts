@@ -306,9 +306,6 @@ function resolveParcelPolicyWarningImpl(args: {
 }
 
 export function createAnalysisSummaryPorts(): AnalysisSummaryPorts {
-  // Lazily cached county scores status row, shared between
-  // queryCountyScoresStatus() and queryCountyScores() to avoid
-  // duplicate getCountyScoresStatusSnapshot() calls.
   let statusRowPromise: Promise<CountyScoresStatusRow> | null = null;
   function getSharedStatusRow(): Promise<CountyScoresStatusRow> {
     if (statusRowPromise === null) {
@@ -380,7 +377,7 @@ export function createAnalysisSummaryPorts(): AnalysisSummaryPorts {
       try {
         statusRow = await getSharedStatusRow();
       } catch {
-        // Falls back to internal fetch inside queryCountyScores
+        // intentional
       }
       return queryCountyScores({
         countyIds: args.countyIds,
@@ -393,7 +390,7 @@ export function createAnalysisSummaryPorts(): AnalysisSummaryPorts {
       try {
         statusRow = await getSharedStatusRow();
       } catch {
-        // queryCountyScoresStatus will fetch internally as fallback
+        // intentional
       }
       return queryCountyScoresStatus({ statusSnapshot: statusRow });
     },

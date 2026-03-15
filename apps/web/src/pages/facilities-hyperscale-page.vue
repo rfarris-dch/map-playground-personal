@@ -160,7 +160,7 @@
         <div class="space-y-1">
           <Badge variant="secondary">Hyperscale</Badge>
           <CardTitle>Hyperscale Facilities</CardTitle>
-          <CardDescription>Infinite scroll over `serve.hyperscale_site`.</CardDescription>
+          <CardDescription>All hyperscale facilities with sortable columns and filtering.</CardDescription>
         </div>
       </CardHeader>
       <CardContent class="flex min-h-0 flex-1 flex-col gap-3">

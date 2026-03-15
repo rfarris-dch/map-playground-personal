@@ -134,7 +134,7 @@
       <Badge>Markets</Badge>
       <h1 class="text-xl font-semibold tracking-tight">Markets</h1>
       <p class="text-sm text-muted-foreground">
-        Live table from Postgres (`market_current.markets`, `search_page = true`).
+        Browse all data center markets with absorption and vacancy data.
       </p>
     </header>
 
@@ -150,7 +150,7 @@
     <Card class="flex min-h-0 flex-1 flex-col">
       <CardHeader>
         <CardTitle>Market Table</CardTitle>
-        <CardDescription>Infinite scroll over paginated API responses.</CardDescription>
+        <CardDescription>All markets with sortable columns and filtering.</CardDescription>
       </CardHeader>
       <CardContent class="flex min-h-0 flex-1 flex-col gap-3">
         <div

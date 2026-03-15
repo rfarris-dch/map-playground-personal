@@ -295,7 +295,7 @@
                   />
                   <span
                     class="min-w-0 flex-1 truncate text-xs leading-none"
-                    :class="isFiberSourceLayerSelected('metro', layer.layerName) ? 'text-foreground/70' : 'text-foreground/70'"
+                    :class="isFiberSourceLayerSelected('metro', layer.layerName) ? 'text-foreground' : 'text-foreground/70'"
                     >{{ layer.label }}</span
                   >
                   <input
@@ -383,7 +383,7 @@
                   />
                   <span
                     class="min-w-0 flex-1 truncate text-xs leading-none"
-                    :class="isFiberSourceLayerSelected('longhaul', layer.layerName) ? 'text-foreground/70' : 'text-foreground/70'"
+                    :class="isFiberSourceLayerSelected('longhaul', layer.layerName) ? 'text-foreground' : 'text-foreground/70'"
                     >{{ layer.label }}</span
                   >
                   <input

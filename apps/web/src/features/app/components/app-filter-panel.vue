@@ -122,22 +122,14 @@
   }
 
   /* ------------------------------------------------------------------ */
-  /*  Accordion open state — all open by default                         */
+  /*  Accordion open state — all collapsed by default                    */
   /* ------------------------------------------------------------------ */
 
-  const openSections = ref<string[]>([
-    "power-type",
-    "status",
-    "markets",
-    "providers",
-    "users",
-    "infrastructure",
-    "parcels",
-  ]);
+  const openSections = ref<string[]>([]);
 
-  const openInfraSections = ref<string[]>(["voltage", "gas-capacity", "gas-status"]);
+  const openInfraSections = ref<string[]>([]);
 
-  const openParcelSections = ref<string[]>(["zoning-type", "flood-zone"]);
+  const openParcelSections = ref<string[]>([]);
 </script>
 
 <template>

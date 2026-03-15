@@ -22,7 +22,7 @@
     ariaLabel="Parcels layer"
     :embedded="props.embedded"
     title="Parcels"
-    subtitle="PMTiles draw layer"
+    subtitle="Parcel boundaries"
   >
     <VisibilityToggleRow
       :checked="props.visible"

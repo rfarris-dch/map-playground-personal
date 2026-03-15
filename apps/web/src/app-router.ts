@@ -4,6 +4,7 @@ import FacilitiesHyperscalePage from "@/pages/facilities-hyperscale-page.vue";
 import FacilitiesPage from "@/pages/facilities-page.vue";
 import MapPage from "@/pages/map-page.vue";
 import MarketsPage from "@/pages/markets-page.vue";
+import NotFoundPage from "@/pages/not-found-page.vue";
 import ProvidersPage from "@/pages/providers-page.vue";
 import SpatialAnalysisDashboardPage from "@/pages/spatial-analysis-dashboard-page.vue";
 
@@ -85,6 +86,11 @@ const appRoutes: readonly RouteRecordRaw[] = [
         },
       },
     ],
+  },
+  {
+    path: "/:pathMatch(.*)*",
+    name: "not-found",
+    component: NotFoundPage,
   },
 ];
 

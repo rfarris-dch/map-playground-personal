@@ -43,9 +43,6 @@
     @close="emit('close')"
   >
     <dl v-if="props.detail !== null" class="m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-2">
-      <dt class="text-xs text-muted-foreground">Request</dt>
-      <dd class="m-0 text-sm font-mono">{{ props.detail.requestId }}</dd>
-
       <dt class="text-xs text-muted-foreground">Facility</dt>
       <dd class="m-0 text-sm">{{ facilityName }}</dd>
 
@@ -55,7 +52,7 @@
       <dt class="text-xs text-muted-foreground">County FIPS</dt>
       <dd class="m-0 text-sm">{{ props.detail.response.feature.properties.countyFips }}</dd>
 
-      <dt class="text-xs text-muted-foreground">Semantic</dt>
+      <dt class="text-xs text-muted-foreground">Status</dt>
       <dd class="m-0 text-sm">
         {{ props.detail.response.feature.properties.commissionedSemantic }}
       </dd>

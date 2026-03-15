@@ -149,8 +149,7 @@
       <Badge>Providers</Badge>
       <h1 class="text-xl font-semibold tracking-tight">Providers</h1>
       <p class="text-sm text-muted-foreground">
-        Live provider rollup from `serve.facility_site`, `serve.hyperscale_site`, and
-        `facility_current.providers`.
+        Explore data center providers, their capabilities, and facility counts.
       </p>
     </header>
 
@@ -166,7 +165,7 @@
     <Card class="flex min-h-0 flex-1 flex-col">
       <CardHeader>
         <CardTitle>Provider Table</CardTitle>
-        <CardDescription>Infinite scroll over paginated API responses.</CardDescription>
+        <CardDescription>All providers with sortable columns and filtering.</CardDescription>
       </CardHeader>
       <CardContent class="flex min-h-0 flex-1 flex-col gap-3">
         <div

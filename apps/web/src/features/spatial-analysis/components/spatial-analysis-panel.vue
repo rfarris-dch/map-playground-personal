@@ -242,7 +242,7 @@
               <div class="flex items-center justify-between gap-2">
                 <dt class="text-muted-foreground">Selection Area</dt>
                 <dd class="m-0 font-medium text-foreground/70">
-                  {{ panelSummary.marketSelection?.selectionAreaSqKm.toFixed(1) ?? "0.0" }}
+                  {{ panelSummary.marketSelection?.selectionAreaSqKm?.toFixed(1) ?? "0.0" }}
                   sq km
                 </dd>
               </div>
@@ -303,18 +303,6 @@
               <div class="flex items-center justify-between gap-2">
                 <dt class="text-muted-foreground">Counties</dt>
                 <dd class="m-0 font-medium text-foreground/70">{{ parcelOverview.countyCount }}</dd>
-              </div>
-              <div class="flex items-center justify-between gap-2">
-                <dt class="text-muted-foreground">Truncated</dt>
-                <dd class="m-0 font-medium text-foreground/70">
-                  {{ panelSummary.parcelSelection.truncated ? "Yes" : "No" }}
-                </dd>
-              </div>
-              <div class="flex items-center justify-between gap-2 sm:col-span-2">
-                <dt class="text-muted-foreground">Next Cursor</dt>
-                <dd class="m-0 max-w-[18rem] truncate text-xs text-foreground/70">
-                  {{ panelSummary.parcelSelection.nextCursor ?? "-" }}
-                </dd>
               </div>
             </dl>
 

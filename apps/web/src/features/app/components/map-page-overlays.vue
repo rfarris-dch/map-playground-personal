@@ -34,7 +34,7 @@
 
   <ScannerPanel
     v-if="shell.isScannerVisible.value"
-    :county-ids="shell.scannerAnalysisSummary.value.area.countyIds"
+    :county-ids="shell.scannerAnalysisSummary.value?.area?.countyIds"
     :summary="shell.scannerAnalysisSummary.value"
     :is-filtered="shell.scannerIsFiltered.value"
     :is-parcels-loading="shell.isScannerParcelsLoading.value"

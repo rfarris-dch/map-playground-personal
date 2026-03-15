@@ -6,6 +6,7 @@ import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts/
 import type {
   IMap,
   IMapMarker,
+  LngLatBounds,
   MapClickEvent,
   MapRenderedFeature,
 } from "@map-migration/map-engine";
@@ -67,6 +68,36 @@ function getCanvasContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
 interface ClusterMarkerEntry {
   readonly marker: IMapMarker;
   readonly signature: string;
+}
+
+function computePointFeatureBounds(features: readonly MapRenderedFeature[]): LngLatBounds | null {
+  let west = 180;
+  let east = -180;
+  let south = 90;
+  let north = -90;
+
+  for (const feature of features) {
+    if (feature.geometry.type !== "Point") {
+      continue;
+    }
+
+    const lng = feature.geometry.coordinates[0] as number;
+    const lat = feature.geometry.coordinates[1] as number;
+    if (lng < west) {
+      west = lng;
+    }
+    if (lng > east) {
+      east = lng;
+    }
+    if (lat < south) {
+      south = lat;
+    }
+    if (lat > north) {
+      north = lat;
+    }
+  }
+
+  return west <= east ? { west, south, east, north } : null;
 }
 
 export function mountFacilitiesLayer(
@@ -777,14 +808,19 @@ export function mountFacilitiesLayer(
     // Best-effort async map work should not interrupt interaction flows.
   };
 
-  const zoomToCluster = (clusterId: number, center: [number, number]): void => {
+  const zoomToCluster = (clusterId: number, _center: [number, number]): void => {
     map
-      .getClusterExpansionZoom(sourceId, clusterId)
-      .then((zoom) => {
+      .getClusterLeaves(sourceId, clusterId, 200)
+      .then((leaves) => {
+        const bounds = computePointFeatureBounds(leaves);
+        if (bounds === null) {
+          return;
+        }
+
         map.setViewport({
-          type: "center",
-          center,
-          zoom: Math.min(zoom, 18),
+          type: "bounds",
+          bounds,
+          padding: 80,
           animate: true,
         });
       })
@@ -848,10 +884,7 @@ export function mountFacilitiesLayer(
     }
 
     const currentZoom = map.getZoom();
-    const targetZoom = Math.max(currentZoom, 17);
-    if (targetZoom <= currentZoom + 0.5) {
-      return;
-    }
+    const targetZoom = Math.max(currentZoom, 14);
 
     map.setViewport({
       type: "center",

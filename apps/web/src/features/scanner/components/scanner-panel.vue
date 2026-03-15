@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { ArrowRight, ChevronDown, Download, Minus, X } from "lucide-vue-next";
+  import { ArrowRight, ChevronDown, Download, X } from "lucide-vue-next";
   import Button from "@/components/ui/button/button.vue";
   import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";
   import { formatScannerPowerMw } from "@/features/scanner/scanner.service";
@@ -44,18 +44,10 @@
       <header>
         <div class="mb-2 flex items-start justify-between">
           <div class="flex items-baseline gap-2">
-            <span class="text-sm font-semibold text-foreground/85">Spotlight</span>
+            <span class="text-sm font-semibold text-foreground/85">Scanner</span>
             <span class="text-xs text-muted-foreground">{{ headerSubtitle }}</span>
           </div>
           <div class="flex items-center gap-1">
-            <button
-              type="button"
-              aria-label="Minimize"
-              class="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded text-border focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none hover:bg-muted hover:text-foreground/70"
-              @click="emit('close')"
-            >
-              <Minus class="size-3.5" />
-            </button>
             <button
               type="button"
               aria-label="Close"

@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { computed } from "vue";
   import { useRoute } from "vue-router";
+  import ErrorBoundary from "@/components/error-boundary.vue";
   import Separator from "@/components/ui/separator/separator.vue";
   import { appNavigationItems } from "@/features/navigation/navigation.service";
   import type { AppNavigationId } from "@/features/navigation/navigation.types";
@@ -57,9 +58,11 @@
     </header>
 
     <main class="min-h-0 flex-1">
-      <RouterView v-slot="{ Component }">
-        <component :is="Component" :key="routerViewKey" />
-      </RouterView>
+      <ErrorBoundary>
+        <RouterView v-slot="{ Component }">
+          <component :is="Component" :key="routerViewKey" />
+        </RouterView>
+      </ErrorBoundary>
     </main>
   </div>
 </template>
