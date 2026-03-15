@@ -59,7 +59,7 @@ phases:
   post_build:
     commands:
       - rm -rf artifact
-      - mkdir -p artifact/apps/api/dist artifact/apps/web/dist artifact/apps/docs artifact/apps/pipeline-monitor artifact/packages artifact/aws/app
+      - mkdir -p artifact/apps/api/dist artifact/apps/web/dist artifact/apps/pipeline-monitor artifact/packages artifact/aws/app
       - cp package.json bun.lock turbo.json artifact/
       - cp apps/api/package.json apps/api/.env.example artifact/apps/api/
       - rsync -a apps/api/dist/ artifact/apps/api/dist/
@@ -84,11 +84,10 @@ phases:
         MAP_TILE_ENVIRONMENTAL_HYDRO_BASINS_MANIFEST_URL=${VITE_ENVIRONMENTAL_HYDRO_BASINS_MANIFEST_URL}
         EOF
         fi
-      - cp apps/docs/package.json artifact/apps/docs/
       - cp apps/pipeline-monitor/package.json artifact/apps/pipeline-monitor/
       - |
         set -eu
-        for package in bench contracts core-runtime fixtures geo-sql geo-tiles map-engine map-layer-catalog map-style ops; do
+        for package in core-runtime geo-kernel geo-sql geo-tiles http-contracts map-engine map-layer-catalog map-style ops; do
           mkdir -p "artifact/packages/${package}"
           cp "packages/${package}/package.json" "artifact/packages/${package}/"
           if [ ! -d "packages/${package}/dist" ]; then
