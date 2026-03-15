@@ -5,6 +5,6 @@
 <template>
   <ComingSoonPlaceholder
     title="Infrastructure"
-    description="Building details, fire suppression, ceiling height, floor load capacity, and data center hall specifications will appear here."
+    description="Building details, fire suppression, ceiling height, floor load capacity, and data center hall specifications are on the way."
   />
 </template>

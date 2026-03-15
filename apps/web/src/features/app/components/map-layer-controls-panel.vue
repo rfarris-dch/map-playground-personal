@@ -466,7 +466,7 @@
               <select
                 class="flex-1 rounded-sm border border-border bg-card px-2 py-1 text-xs text-muted-foreground shadow-sm"
                 :value="props.marketBoundaryColorMode"
-                @change="($event.target instanceof HTMLSelectElement) && emit('update:market-boundary-color-mode', ($event.target as HTMLSelectElement).value as 'power' | 'vacancy' | 'absorption')"
+                @change="emit('update:market-boundary-color-mode', ($event.target as unknown as HTMLSelectElement).value as 'power' | 'vacancy' | 'absorption')"
               >
                 <option value="power">Commissioned Power</option>
                 <option value="vacancy">Vacancy Rate</option>

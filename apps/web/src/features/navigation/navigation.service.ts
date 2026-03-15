@@ -112,9 +112,7 @@ export function buildCompanyDashboardRoute(
   );
 }
 
-export function buildFacilityDetailPageRoute(
-  params: FacilityDetailRouteParams
-): RouteLocationRaw {
+export function buildFacilityDetailPageRoute(params: FacilityDetailRouteParams): RouteLocationRaw {
   return {
     name: "facility-detail",
     params: {
@@ -124,9 +122,7 @@ export function buildFacilityDetailPageRoute(
   };
 }
 
-export function buildProviderDetailPageRoute(
-  params: ProviderDetailRouteParams
-): RouteLocationRaw {
+export function buildProviderDetailPageRoute(params: ProviderDetailRouteParams): RouteLocationRaw {
   return {
     name: "provider-detail",
     params: {

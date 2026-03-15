@@ -70,6 +70,7 @@ export function mapFacilitiesTableRows(
     facilityId: String(row.facility_id),
     facilityName: readRequiredText(row.facility_name, "facility_name"),
     providerId: readNullableText(row.provider_id),
+    providerName: readNullableText(row.provider_name),
     stateAbbrev: readNullableText(row.state_abbrev),
     commissionedSemantic: readCommissionedSemantic(row.commissioned_semantic),
     leaseOrOwn: readLeaseOrOwn(row.lease_or_own),

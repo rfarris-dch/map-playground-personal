@@ -9,6 +9,7 @@
     readonly label: string;
     readonly value: string | number;
     readonly icon?: Component;
+    readonly iconClass?: string;
     readonly description?: string;
   }>();
 </script>
@@ -17,7 +18,12 @@
   <Card>
     <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
       <CardTitle class="min-w-0 truncate text-sm font-medium">{{ label }}</CardTitle>
-      <component :is="icon" v-if="icon" class="h-4 w-4 text-muted-foreground" />
+      <component
+        :is="icon"
+        v-if="icon"
+        class="h-4 w-4"
+        :class="iconClass ?? 'text-muted-foreground'"
+      />
     </CardHeader>
     <CardContent>
       <div class="truncate text-2xl font-bold" :title="String(value)">{{ value }}</div>

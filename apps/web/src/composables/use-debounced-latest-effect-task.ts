@@ -20,13 +20,8 @@ interface DebouncedLatestEffectTask {
 export function useDebouncedLatestEffectTask(
   options: UseDebouncedLatestEffectTaskOptions
 ): DebouncedLatestEffectTask {
-  const runner = createDebouncedLatestRunner({
-    debounceMs: options.debounceMs,
-    onUnexpectedError(error) {
-      options.onUnexpectedError?.(error);
-    },
-    runtime: options.runtime,
-  });
+  const { onClear: _, onDispose: __, ...runnerOptions } = options;
+  const runner = createDebouncedLatestRunner(runnerOptions);
 
   const task: DebouncedLatestEffectTask = {
     async clear(): Promise<void> {

@@ -16,10 +16,8 @@ export interface DebouncedLatestRunner extends LatestRunner {}
 export function createDebouncedLatestRunner(
   options: DebouncedLatestRunnerOptions
 ): DebouncedLatestRunner {
-  const latestRunner = createLatestRunner({
-    onUnexpectedError: options.onUnexpectedError,
-    runtime: options.runtime,
-  });
+  const { debounceMs: _, ...runnerOptions } = options;
+  const latestRunner = createLatestRunner(runnerOptions);
 
   return {
     dispose: () => latestRunner.dispose(),

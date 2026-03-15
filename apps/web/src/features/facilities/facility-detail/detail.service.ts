@@ -16,7 +16,7 @@ export function unwrapFacilityDetailResult(result: FacilityDetailResult): Facili
 
 export function formatNullableMw(value: number | null): string {
   if (value === null) {
-    return "n/a";
+    return "--";
   }
 
   return `${value.toLocaleString()} MW`;

@@ -2,7 +2,7 @@
   import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
   import type { PointGeometry } from "@map-migration/geo-kernel/geometry";
   import type { FacilitiesDetailResponse } from "@map-migration/http-contracts/facilities-http";
-  import { ref } from "vue";
+  import { computed, ref } from "vue";
   import { RouterLink } from "vue-router";
   import DetailPageHeader from "@/components/detail/detail-page-header.vue";
   import Badge from "@/components/ui/badge/badge.vue";
@@ -24,7 +24,7 @@
 
   type DetailProperties = FacilitiesDetailResponse["feature"]["properties"];
 
-  defineProps<{
+  const props = defineProps<{
     readonly facilityId: string | null;
     readonly perspective: FacilityPerspective | null;
     readonly detail: FacilityDetailPayload | null;
@@ -36,6 +36,18 @@
   }>();
 
   const activeTab = ref("overview");
+
+  const perspectiveColors = computed(() => {
+    if (props.perspective === null) {
+      return { eyebrow: "text-muted-foreground", icon: "text-muted-foreground", accent: "" };
+    }
+    const isHyperscale = props.perspective === "hyperscale";
+    return {
+      eyebrow: isHyperscale ? "text-hyperscale" : "text-colocation",
+      icon: isHyperscale ? "text-hyper-500" : "text-colo-500",
+      accent: isHyperscale ? "border-l-2 border-l-hyper-400" : "border-l-2 border-l-colo-400",
+    };
+  });
 
   const tabs = [
     { value: "overview", label: "Overview" },
@@ -57,6 +69,7 @@
     <DetailPageHeader
       :title="facilityName"
       :eyebrow="perspective ? `${perspective} facility` : 'Facility'"
+      :eyebrow-class="perspectiveColors.eyebrow"
     >
       <template #breadcrumbs>
         <span class="flex min-w-0 items-center">
@@ -108,7 +121,9 @@
     </div>
 
     <div v-else-if="isError" class="py-8 text-center" role="alert">
-      <p class="text-sm text-muted-foreground">Failed to load facility detail.</p>
+      <p class="text-sm text-muted-foreground">
+        Something went wrong loading this facility. Check your connection and try again.
+      </p>
       <button
         type="button"
         class="mt-2 text-sm font-medium text-primary hover:underline"
@@ -127,7 +142,12 @@
         </TabsList>
 
         <TabsContent value="overview">
-          <FacilityOverviewTab :properties="properties" :geometry="geometry" />
+          <FacilityOverviewTab
+            :properties="properties"
+            :geometry="geometry"
+            :icon-class="perspectiveColors.icon"
+            :accent-class="perspectiveColors.accent"
+          />
         </TabsContent>
 
         <TabsContent value="infrastructure"> <FacilityInfrastructureTab /> </TabsContent>

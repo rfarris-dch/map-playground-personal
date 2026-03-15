@@ -6,6 +6,7 @@
   defineProps<{
     readonly title: string;
     readonly eyebrow?: string;
+    readonly eyebrowClass?: string;
   }>();
 
   const router = useRouter();
@@ -34,7 +35,8 @@
       <div class="min-w-0 flex-1">
         <p
           v-if="eyebrow"
-          class="truncate text-xs font-medium uppercase tracking-wider text-muted-foreground"
+          class="truncate text-xs font-medium uppercase tracking-wider"
+          :class="eyebrowClass ?? 'text-muted-foreground'"
         >
           {{ eyebrow }}
         </p>

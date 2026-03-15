@@ -515,6 +515,17 @@ class MapLibreEngine implements IMap {
     this.map.on("mouseout", wrappedHandler);
   }
 
+  onStyleImageMissing(handler: (id: string) => void): void {
+    this.map.on("styleimagemissing", (e) => {
+      handler(e.id);
+    });
+  }
+
+  offStyleImageMissing(_handler: (id: string) => void): void {
+    // MapLibre doesn't support targeted removal of styleimagemissing listeners easily.
+    // This is a no-op; callers should only register once.
+  }
+
   offPointerLeave(handler: () => void): void {
     const wrappedHandler = this.pointerLeaveHandlers.get(handler);
     if (!wrappedHandler) {

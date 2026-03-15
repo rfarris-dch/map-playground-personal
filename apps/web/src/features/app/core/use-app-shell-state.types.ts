@@ -62,6 +62,7 @@ export interface UseAppShellStateResult {
   readonly clearSelectionGeometry: () => void;
   readonly clearSketchMeasure: () => void;
   readonly colocationViewportFeatures: ShallowRef<FacilitiesFeatureCollection["features"]>;
+  readonly dismissAllToolPanels: () => void;
   readonly disposeMapRuntime: ShallowRef<(() => Promise<void>) | null>;
   readonly environmentalStressController: ShallowRef<EnvironmentalStressController | null>;
   readonly facilitiesControllers: ShallowRef<readonly FacilitiesLayerController[]>;

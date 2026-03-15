@@ -27,6 +27,19 @@
   --color-enterprise: var(--enterprise);
   --color-enterprise-foreground: var(--enterprise-foreground);
 
+  --color-colo-100: var(--colo-100);
+  --color-colo-200: var(--colo-200);
+  --color-colo-300: var(--colo-300);
+  --color-colo-400: var(--colo-400);
+  --color-colo-500: var(--colo-500);
+  --color-colo-600: var(--colo-600);
+  --color-hyper-100: var(--hyper-100);
+  --color-hyper-200: var(--hyper-200);
+  --color-hyper-300: var(--hyper-300);
+  --color-hyper-400: var(--hyper-400);
+  --color-hyper-500: var(--hyper-500);
+  --color-hyper-600: var(--hyper-600);
+
   --color-error: var(--error);
   --color-success: var(--success);
   --color-info: var(--info);

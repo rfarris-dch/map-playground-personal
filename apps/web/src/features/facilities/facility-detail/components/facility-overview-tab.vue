@@ -1,11 +1,11 @@
 <script setup lang="ts">
-  import type { FacilitiesDetailResponse } from "@map-migration/http-contracts/facilities-http";
   import type { PointGeometry } from "@map-migration/geo-kernel/geometry";
+  import type { FacilitiesDetailResponse } from "@map-migration/http-contracts/facilities-http";
+  import { Building2, HardHat, Ruler, Zap } from "lucide-vue-next";
   import { computed } from "vue";
-  import { Zap, HardHat, Building2, Ruler } from "lucide-vue-next";
-  import DetailMetricCard from "@/components/detail/detail-metric-card.vue";
-  import DetailCard from "@/components/detail/detail-card.vue";
   import type { DetailField } from "@/components/detail/detail-card.vue";
+  import DetailCard from "@/components/detail/detail-card.vue";
+  import DetailMetricCard from "@/components/detail/detail-metric-card.vue";
   import { formatNullableMw } from "@/features/facilities/facility-detail/detail.service";
 
   type DetailProperties = FacilitiesDetailResponse["feature"]["properties"];
@@ -13,17 +13,19 @@
   const props = defineProps<{
     readonly properties: DetailProperties;
     readonly geometry: PointGeometry | null;
+    readonly iconClass?: string;
+    readonly accentClass?: string;
   }>();
 
   function formatSqft(value: number | null): string {
     if (value === null) {
-      return "n/a";
+      return "--";
     }
     if (value >= 1_000_000) {
       return `${(value / 1_000_000).toFixed(1)}M sq ft`;
     }
-    if (value >= 1_000) {
-      return `${(value / 1_000).toFixed(0)}K sq ft`;
+    if (value >= 1000) {
+      return `${(value / 1000).toFixed(0)}K sq ft`;
     }
     return `${value.toLocaleString()} sq ft`;
   }
@@ -39,14 +41,14 @@
 
   const generalInfoFields = computed<readonly DetailField[]>(() => [
     { label: "Provider", value: props.properties.providerName },
-    { label: "Perspective", value: props.properties.perspective },
+    { label: "Type", value: props.properties.perspective },
     { label: "Address", value: props.properties.address },
     { label: "City", value: props.properties.city },
     { label: "State", value: props.properties.state },
-    { label: "State Abbrev", value: props.properties.stateAbbrev },
+    { label: "State Code", value: props.properties.stateAbbrev },
     { label: "County FIPS", value: props.properties.countyFips },
     { label: "Status", value: props.properties.commissionedSemantic },
-    { label: "Lease / Own", value: props.properties.leaseOrOwn },
+    { label: "Ownership", value: props.properties.leaseOrOwn },
     {
       label: "Latitude",
       value: props.geometry ? String(props.geometry.coordinates[1].toFixed(6)) : null,
@@ -65,25 +67,33 @@
         label="Commissioned Power"
         :value="formatNullableMw(properties.commissionedPowerMw)"
         :icon="Zap"
+        :icon-class="iconClass"
       />
       <DetailMetricCard
         label="Available Power"
         :value="formatNullableMw(properties.availablePowerMw)"
         :icon="Zap"
+        :icon-class="iconClass"
         v-bind="availablePercent !== null ? { description: availablePercent } : {}"
       />
       <DetailMetricCard
         label="Under Construction"
         :value="formatNullableMw(properties.underConstructionPowerMw)"
         :icon="HardHat"
+        :icon-class="iconClass"
       />
       <DetailMetricCard
         label="Square Footage"
         :value="formatSqft(properties.squareFootage)"
         :icon="Building2"
+        :icon-class="iconClass"
       />
     </div>
 
-    <DetailCard title="General Information" :fields="generalInfoFields" />
+    <DetailCard
+      title="General Information"
+      :fields="generalInfoFields"
+      :accent-class="accentClass"
+    />
   </div>
 </template>

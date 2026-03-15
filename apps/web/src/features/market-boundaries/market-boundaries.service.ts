@@ -162,12 +162,17 @@ export function buildSubmarketCategoryColorExpression(
 ): MapExpression {
   const regionIds = [...new Set(features.map((f) => f.properties.regionId))].sort();
 
-  const cases: Array<string | MapExpression> = [];
-  for (const [index, regionId] of regionIds.entries()) {
-    cases.push(regionId, SUBMARKET_CATEGORY_COLORS[index % SUBMARKET_CATEGORY_COLORS.length]);
+  if (regionIds.length === 0) {
+    return "#94a3b8" as unknown as MapExpression;
   }
 
-  return ["match", ["get", "regionId"], ...cases, "#94a3b8"];
+  const cases: string[] = [];
+  for (const [index, regionId] of regionIds.entries()) {
+    const color = SUBMARKET_CATEGORY_COLORS[index % SUBMARKET_CATEGORY_COLORS.length] ?? "#94a3b8";
+    cases.push(regionId, color);
+  }
+
+  return ["match", ["get", "regionId"], ...cases, "#94a3b8"] as unknown as MapExpression;
 }
 
 export function marketBoundaryFillColorExpression(

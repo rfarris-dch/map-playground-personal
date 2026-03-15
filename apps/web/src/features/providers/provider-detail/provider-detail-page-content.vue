@@ -35,7 +35,7 @@
   <section
     class="mx-auto flex h-full min-h-0 w-full max-w-[1400px] flex-col gap-4 overflow-y-auto px-4 py-4"
   >
-    <DetailPageHeader :title="providerName" eyebrow="Provider">
+    <DetailPageHeader :title="providerName" eyebrow="Provider" eyebrow-class="text-primary">
       <template #breadcrumbs>
         <span class="flex min-w-0 items-center">
           <RouterLink to="/providers" class="shrink-0 hover:text-foreground">Providers</RouterLink>
@@ -67,7 +67,9 @@
     </div>
 
     <div v-else-if="isError" class="py-8 text-center" role="alert">
-      <p class="text-sm text-muted-foreground">Failed to load provider detail.</p>
+      <p class="text-sm text-muted-foreground">
+        Something went wrong loading this provider. Check your connection and try again.
+      </p>
       <button
         type="button"
         class="mt-2 text-sm font-medium text-primary hover:underline"
@@ -78,7 +80,7 @@
     </div>
 
     <p v-else-if="provider === null && !isLoading" class="py-8 text-sm text-muted-foreground">
-      Provider not found.
+      This provider doesn't exist or may have been removed.
     </p>
 
     <template v-else-if="provider">

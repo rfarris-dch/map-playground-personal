@@ -152,6 +152,7 @@ export const FacilityTableRowSchema = z.object({
   facilityId: z.string(),
   facilityName: z.string(),
   providerId: z.string().nullable(),
+  providerName: z.string().nullable(),
   stateAbbrev: z.string().nullable(),
   commissionedSemantic: CommissionedSemanticSchema,
   leaseOrOwn: LeaseOrOwnSchema.nullable(),

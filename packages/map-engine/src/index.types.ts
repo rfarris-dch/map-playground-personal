@@ -62,6 +62,8 @@ export interface IMap {
   offPointerLeave(handler: () => void): void;
   offPointerMove(handler: (event: MapPointerEvent) => void): void;
   on(event: "load" | "moveend", handler: () => void): void;
+  onStyleImageMissing(handler: (id: string) => void): void;
+  offStyleImageMissing(handler: (id: string) => void): void;
   onClick(handler: (event: MapClickEvent) => void): void;
   onPointerLeave(handler: () => void): void;
   onPointerMove(handler: (event: MapPointerEvent) => void): void;

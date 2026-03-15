@@ -230,6 +230,14 @@ export class FakeMap implements IMap {
     this.pointerMoveHandlers.delete(handler);
   }
 
+  onStyleImageMissing(_handler: (id: string) => void): void {
+    /* stub */
+  }
+
+  offStyleImageMissing(_handler: (id: string) => void): void {
+    /* stub */
+  }
+
   on(event: "load" | "moveend", handler: () => void): void {
     this.eventHandlers[event].add(handler);
   }

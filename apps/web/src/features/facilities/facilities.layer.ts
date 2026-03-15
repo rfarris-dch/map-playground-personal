@@ -126,6 +126,22 @@ export function mountFacilitiesLayer(
   const clusterMarkers = new Map<number, ClusterMarkerEntry>();
 
   const LOGO_SIZE = 128;
+  const logoPrefix = "logo-";
+
+  const handleStyleImageMissing = (id: string): void => {
+    if (!id.startsWith(logoPrefix) || map.hasImage(id)) {
+      return;
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = 1;
+    canvas.height = 1;
+    const ctx = canvas.getContext("2d");
+    if (ctx !== null) {
+      map.addImage(id, ctx.getImageData(0, 0, 1, 1));
+    }
+  };
+
+  map.onStyleImageMissing(handleStyleImageMissing);
 
   const normalizeLogoImage = (source: ImageBitmap | HTMLImageElement | ImageData): ImageData => {
     const canvas = document.createElement("canvas");

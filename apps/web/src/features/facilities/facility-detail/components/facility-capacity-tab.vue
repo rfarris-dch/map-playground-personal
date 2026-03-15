@@ -1,10 +1,10 @@
 <script setup lang="ts">
   import type { FacilitiesDetailResponse } from "@map-migration/http-contracts/facilities-http";
+  import { Building2, HardHat, Ruler, Zap } from "lucide-vue-next";
   import { computed } from "vue";
-  import { Zap, HardHat, Ruler, Building2 } from "lucide-vue-next";
-  import DetailMetricCard from "@/components/detail/detail-metric-card.vue";
-  import DetailCard from "@/components/detail/detail-card.vue";
   import type { DetailField } from "@/components/detail/detail-card.vue";
+  import DetailCard from "@/components/detail/detail-card.vue";
+  import DetailMetricCard from "@/components/detail/detail-metric-card.vue";
   import { formatNullableMw } from "@/features/facilities/facility-detail/detail.service";
 
   type DetailProperties = FacilitiesDetailResponse["feature"]["properties"];
@@ -23,7 +23,10 @@
   const capacityFields = computed<readonly DetailField[]>(() => [
     { label: "Commissioned Power", value: formatNullableMw(props.properties.commissionedPowerMw) },
     { label: "Available Power", value: formatNullableMw(props.properties.availablePowerMw) },
-    { label: "Under Construction", value: formatNullableMw(props.properties.underConstructionPowerMw) },
+    {
+      label: "Under Construction",
+      value: formatNullableMw(props.properties.underConstructionPowerMw),
+    },
     { label: "Planned Power", value: formatNullableMw(props.properties.plannedPowerMw) },
     { label: "Square Footage", value: formatSqft(props.properties.squareFootage) },
   ]);

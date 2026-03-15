@@ -102,7 +102,7 @@ export function mountMarketBoundaryLayer(
     setLayersVisible(state.visible);
   }
 
-  function resolveFillColor(): unknown {
+  function resolveFillColor(): MapExpression {
     if (layerId === "submarket" && state.allFeatures.length > 0) {
       return buildSubmarketCategoryColorExpression(state.allFeatures);
     }
@@ -110,7 +110,7 @@ export function mountMarketBoundaryLayer(
     return marketBoundaryFillColorExpression(state.colorMode);
   }
 
-  function resolveOutlineColor(): unknown {
+  function resolveOutlineColor(): MapExpression {
     if (layerId === "submarket" && state.allFeatures.length > 0) {
       return buildSubmarketCategoryColorExpression(state.allFeatures);
     }
@@ -272,6 +272,34 @@ export function mountMarketBoundaryLayer(
     hoverController.clear();
   }
 
+  function accumulateCoordBounds(coords: [number, number][]): LngLatBounds | null {
+    let west = Number.POSITIVE_INFINITY;
+    let south = Number.POSITIVE_INFINITY;
+    let east = Number.NEGATIVE_INFINITY;
+    let north = Number.NEGATIVE_INFINITY;
+
+    for (const [lng, lat] of coords) {
+      if (lng < west) {
+        west = lng;
+      }
+      if (lng > east) {
+        east = lng;
+      }
+      if (lat < south) {
+        south = lat;
+      }
+      if (lat > north) {
+        north = lat;
+      }
+    }
+
+    if (!(Number.isFinite(west) && Number.isFinite(south))) {
+      return null;
+    }
+
+    return { west, south, east, north };
+  }
+
   function computeFeatureBounds(feature: { geometry: unknown }): LngLatBounds | null {
     const geom = feature.geometry;
     if (typeof geom !== "object" || geom === null) {
@@ -283,26 +311,10 @@ export function mountMarketBoundaryLayer(
       return null;
     }
 
-    let west = Infinity;
-    let south = Infinity;
-    let east = -Infinity;
-    let north = -Infinity;
-
-    for (const [lng, lat] of coords) {
-      if (lng < west) west = lng;
-      if (lng > east) east = lng;
-      if (lat < south) south = lat;
-      if (lat > north) north = lat;
-    }
-
-    if (!Number.isFinite(west) || !Number.isFinite(south)) {
-      return null;
-    }
-
-    return { west, south, east, north };
+    return accumulateCoordBounds(coords);
   }
 
-  function flattenCoordinates(geom: unknown): Array<[number, number]> {
+  function flattenCoordinates(geom: unknown): [number, number][] {
     if (typeof geom !== "object" || geom === null) {
       return [];
     }
@@ -318,12 +330,12 @@ export function mountMarketBoundaryLayer(
       return [];
     }
 
-    const result: Array<[number, number]> = [];
+    const result: [number, number][] = [];
     collectCoords(coordinates, result);
     return result;
   }
 
-  function collectCoords(arr: unknown[], result: Array<[number, number]>): void {
+  function collectCoords(arr: unknown[], result: [number, number][]): void {
     if (arr.length >= 2 && typeof arr[0] === "number" && typeof arr[1] === "number") {
       result.push([arr[0], arr[1]]);
       return;
@@ -349,7 +361,10 @@ export function mountMarketBoundaryLayer(
       return;
     }
 
-    const clickedFeature = features[0];
+    const clickedFeature = features[0] as (typeof features)[number] | undefined;
+    if (clickedFeature === undefined) {
+      return;
+    }
     const regionId = clickedFeature.id;
     if (typeof regionId !== "string" && typeof regionId !== "number") {
       return;

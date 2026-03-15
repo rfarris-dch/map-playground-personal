@@ -5,6 +5,6 @@
 <template>
   <ComingSoonPlaceholder
     title="Satellite View"
-    description="Construction phase tracking, before/after satellite imagery comparison, and capture timelines will appear here."
+    description="Construction phase tracking, before/after satellite imagery comparison, and capture timelines are on the way."
   />
 </template>

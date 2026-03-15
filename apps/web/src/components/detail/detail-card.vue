@@ -12,6 +12,7 @@
   defineProps<{
     readonly title: string;
     readonly fields: readonly DetailField[];
+    readonly accentClass?: string;
   }>();
 
   function formatValue(value: string | number | null): string {
@@ -23,7 +24,7 @@
 </script>
 
 <template>
-  <Card>
+  <Card :class="accentClass">
     <CardHeader> <CardTitle>{{ title }}</CardTitle> </CardHeader>
     <CardContent>
       <p v-if="fields.length === 0" class="text-sm text-muted-foreground">No data available.</p>

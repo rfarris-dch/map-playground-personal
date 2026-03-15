@@ -17,7 +17,7 @@
     ].filter((value) => value !== null);
 
     if (capabilities.length === 0) {
-      return "None";
+      return "--";
     }
 
     return capabilities.join(", ");
@@ -40,16 +40,32 @@
         label="Listings"
         :value="provider.listingCount != null ? provider.listingCount.toLocaleString() : '--'"
         :icon="Building2"
+        icon-class="text-primary"
       />
-      <DetailMetricCard label="Category" :value="provider.category ?? '--'" :icon="Zap" />
+      <DetailMetricCard
+        label="Category"
+        :value="provider.category ?? '--'"
+        :icon="Zap"
+        icon-class="text-primary"
+      />
       <DetailMetricCard
         label="Location"
         :value="[provider.state, provider.country].filter(Boolean).join(', ') || '--'"
         :icon="MapPin"
+        icon-class="text-primary"
       />
-      <DetailMetricCard label="Capabilities" :value="formatCapabilities(provider)" :icon="Globe" />
+      <DetailMetricCard
+        label="Capabilities"
+        :value="formatCapabilities(provider)"
+        :icon="Globe"
+        icon-class="text-primary"
+      />
     </div>
 
-    <DetailCard title="Company Profile" :fields="profileFields" />
+    <DetailCard
+      title="Company Profile"
+      :fields="profileFields"
+      accent-class="border-l-2 border-l-primary"
+    />
   </div>
 </template>

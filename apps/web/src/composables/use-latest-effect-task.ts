@@ -17,12 +17,8 @@ interface LatestEffectTask {
 }
 
 export function useLatestEffectTask(options: UseLatestEffectTaskOptions = {}): LatestEffectTask {
-  const runner = createLatestRunner({
-    onUnexpectedError(error) {
-      options.onUnexpectedError?.(error);
-    },
-    runtime: options.runtime,
-  });
+  const { onClear: _, onDispose: __, ...runnerOptions } = options;
+  const runner = createLatestRunner(runnerOptions);
 
   const task: LatestEffectTask = {
     async clear(): Promise<void> {

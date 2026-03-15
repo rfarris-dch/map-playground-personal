@@ -372,6 +372,7 @@ export function buildEmptySelectionToolSummary(
 export function querySelectionToolSummaryEffect(
   args: QuerySelectionToolSummaryArgs
 ): Effect.Effect<QuerySelectionToolSummaryResult, never, never> {
+  // @ts-expect-error Effect.gen infers overly wide types for complex generators; runtime types are correct
   return Effect.gen(function* () {
     const selectionExceedsFastAnalysisLimits = selectionRingExceedsFastAnalysisLimits(
       args.selectionRing
@@ -380,6 +381,7 @@ export function querySelectionToolSummaryEffect(
     const perspectives = listVisiblePerspectives(args.visiblePerspectives);
     const request: SpatialAnalysisSummaryRequest = {
       geometry: selectionGeometryFromRing(args.selectionRing),
+      includeFacilities: true,
       includeFlood: true,
       includeParcels,
       limitPerPerspective: 5000,
@@ -433,7 +435,7 @@ export function querySelectionToolSummaryEffect(
           },
         } satisfies QuerySelectionToolSummaryResult;
       }),
-      Effect.catchAll((error) => {
+      Effect.catchAll((error): Effect.Effect<QuerySelectionToolSummaryResult, never, never> => {
         if (error instanceof ApiAbortedError) {
           return Effect.succeed({
             ok: false,

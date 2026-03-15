@@ -126,18 +126,25 @@ export function listFacilitiesTableRows(query: FacilitiesTableQuery): Promise<Fa
     return runQuery<FacilityTableRow>(
       `
 SELECT
-  hyperscale_id AS facility_id,
-  facility_name,
-  provider_id,
-  state_abbrev,
-  commissioned_semantic,
-  lease_or_own,
-  commissioned_power_mw,
-  planned_power_mw,
-  under_construction_power_mw,
+  facility.hyperscale_id AS facility_id,
+  facility.facility_name,
+  facility.provider_id,
+  COALESCE(
+    NULLIF(BTRIM(provider.provider_name), ''),
+    NULLIF(INITCAP(REPLACE(facility.provider_slug, '-', ' ')), ''),
+    facility.provider_id
+  ) AS provider_name,
+  facility.state_abbrev,
+  facility.commissioned_semantic,
+  facility.lease_or_own,
+  facility.commissioned_power_mw,
+  facility.planned_power_mw,
+  facility.under_construction_power_mw,
   NULL::numeric AS available_power_mw,
-  freshness_ts AS updated_at
-FROM serve.hyperscale_site
+  facility.freshness_ts AS updated_at
+FROM serve.hyperscale_site AS facility
+LEFT JOIN facility_current.providers AS provider
+  ON provider.provider_id = facility.provider_id
 ORDER BY ${sortColumn} ${sortDirection} NULLS LAST, facility_name ASC, facility_id ASC
 LIMIT $1
 OFFSET $2;
@@ -149,18 +156,25 @@ OFFSET $2;
   return runQuery<FacilityTableRow>(
     `
 SELECT
-  facility_id,
-  facility_name,
-  provider_id,
-  state_abbrev,
-  commissioned_semantic,
+  facility.facility_id,
+  facility.facility_name,
+  facility.provider_id,
+  COALESCE(
+    NULLIF(BTRIM(provider.provider_name), ''),
+    NULLIF(INITCAP(REPLACE(facility.provider_slug, '-', ' ')), ''),
+    facility.provider_id
+  ) AS provider_name,
+  facility.state_abbrev,
+  facility.commissioned_semantic,
   NULL::text AS lease_or_own,
-  commissioned_power_mw,
-  planned_power_mw,
-  under_construction_power_mw,
-  available_power_mw,
-  freshness_ts AS updated_at
-FROM serve.facility_site
+  facility.commissioned_power_mw,
+  facility.planned_power_mw,
+  facility.under_construction_power_mw,
+  facility.available_power_mw,
+  facility.freshness_ts AS updated_at
+FROM serve.facility_site AS facility
+LEFT JOIN facility_current.providers AS provider
+  ON provider.provider_id = facility.provider_id
 ORDER BY ${sortColumn} ${sortDirection} NULLS LAST, facility_name ASC, facility_id ASC
 LIMIT $1
 OFFSET $2;

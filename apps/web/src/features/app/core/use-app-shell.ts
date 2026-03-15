@@ -1,8 +1,6 @@
 import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
 import { computed, shallowRef } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";
-import { buildFacilityDetailPageRoute } from "@/features/navigation/navigation.service";
 import {
   FLOOD_100_LAYER_ID,
   FLOOD_500_LAYER_ID,
@@ -11,13 +9,17 @@ import {
 import { exportMapView } from "@/features/app/map-export/map-export.service";
 import type { MapViewExportFormat } from "@/features/app/map-export/map-export.types";
 import { useCountyScores } from "@/features/county-intelligence/use-county-intelligence";
-import type { FacilitiesViewMode } from "@/features/facilities/facilities.types";
+import type {
+  FacilitiesViewMode,
+  SelectedFacilityRef,
+} from "@/features/facilities/facilities.types";
 import type { LayerRuntimeSnapshot } from "@/features/layers/layer-runtime.types";
 import {
   buildMapContextTransferFromAppShell,
   inferMapContextSurfaceFromRoute,
   readMapContextTransferFromRoute,
 } from "@/features/map-context-transfer/map-context-transfer.service";
+import { buildFacilityDetailPageRoute } from "@/features/navigation/navigation.service";
 import { executeOpenDashboard } from "@/features/spatial-analysis/commands/open-dashboard.command";
 import { buildScannerSpatialAnalysisSummary } from "@/features/spatial-analysis/spatial-analysis-summary.service";
 import type { BoundaryFacetSelectionState } from "./app-shell.types";

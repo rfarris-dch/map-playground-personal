@@ -40,6 +40,14 @@ function createLifecycleOptions(fakeMap: FakeMap): UseAppShellMapLifecycleOption
       destroy: noop,
       initialize: noop,
     },
+    filters: {
+      facilitiesPredicate: shallowRef(null),
+      onCachedFeaturesUpdate: noop,
+      onParcelViewportFacets: noop,
+      parcelFilter: shallowRef(null),
+      parcelViewportFacets: shallowRef(null),
+      transmissionFilter: shallowRef(null),
+    },
     layers: {
       boundaryControllers: shallowRef({
         country: {
@@ -63,6 +71,10 @@ function createLifecycleOptions(fakeMap: FakeMap): UseAppShellMapLifecycleOption
       floodLayersController: shallowRef(null),
       gasPipelineController: shallowRef(null),
       hydroBasinsController: shallowRef(null),
+      marketBoundaryControllers: shallowRef({
+        market: null,
+        submarket: null,
+      }),
       parcelsController: shallowRef({
         clearSelection: noop,
         destroy() {
@@ -141,12 +153,26 @@ function createLifecycleOptions(fakeMap: FakeMap): UseAppShellMapLifecycleOption
       hoveredBoundary: shallowRef(null),
       hoveredFacility: shallowRef(null),
       hoveredFacilityCluster: shallowRef(null),
+      hoveredMarketBoundary: shallowRef(null),
       hoveredPower: shallowRef(null),
       hyperscaleViewportFeatures: shallowRef([]),
       layerRuntimeSnapshot: shallowRef({
         effectiveVisibility: {},
         stressBlocked: {},
         userVisibility: {},
+      }),
+      marketBoundaryColorMode: shallowRef("power" as const),
+      marketBoundaryFacetOptions: shallowRef({
+        market: [],
+        submarket: [],
+      }),
+      marketBoundaryFacetSelection: shallowRef({
+        market: null,
+        submarket: null,
+      }),
+      marketBoundaryHoverByLayer: shallowRef({
+        market: null,
+        submarket: null,
       }),
       parcelsStatus: shallowRef({
         state: "idle",

@@ -10,6 +10,7 @@ export interface FacilityTableRow {
   readonly lease_or_own: string | null | undefined;
   readonly planned_power_mw: number | string | null | undefined;
   readonly provider_id: string | null | undefined;
+  readonly provider_name: string | null | undefined;
   readonly state_abbrev: string | null | undefined;
   readonly under_construction_power_mw: number | string | null | undefined;
   readonly updated_at: Date | string | null | undefined;

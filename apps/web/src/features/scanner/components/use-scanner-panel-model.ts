@@ -49,7 +49,10 @@ function donutSegments(commissioned: number, uc: number, planned: number, isColo
 export function useScannerPanelModel(
   props: ScannerPanelProps,
   emit: {
-    (e: "close" | "export" | "open-dashboard"): void;
+    // biome-ignore lint/style/useUnifiedTypeSignatures: Vue defineEmits produces per-event overloads
+    (e: "close"): void;
+    (e: "export"): void;
+    (e: "open-dashboard"): void;
     (e: "select-facility", facility: SelectedFacilityRef): void;
   }
 ) {

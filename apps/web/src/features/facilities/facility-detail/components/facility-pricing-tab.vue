@@ -5,6 +5,6 @@
 <template>
   <ComingSoonPlaceholder
     title="Pricing"
-    description="DCH pricing estimates, confidence scoring, market average comparisons, and pricing gauge visualizations will appear here."
+    description="Pricing estimates, confidence scoring, market comparisons, and pricing gauge visualizations are on the way."
   />
 </template>
