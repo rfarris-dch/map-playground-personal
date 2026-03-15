@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import MapNavIcon from "@/components/icons/map-nav-icon.vue";
   import Switch from "@/components/ui/switch/switch.vue";
   import AppFilterPanel from "@/features/app/components/app-filter-panel.vue";
   import type {
@@ -105,16 +106,25 @@
     >
       <div class="flex h-full flex-col">
         <header class="flex h-10 items-center justify-between bg-card px-2">
-          <div class="flex items-center gap-2">
-            <span class="flex size-6 items-center justify-center text-foreground/85">
-              <MapNavIcon
-                :name="activeTab === 'layers' ? 'layers' : 'filter'"
-                :class="activeTab === 'layers' ? 'h-[14px] w-4' : 'h-[14px] w-[14px]'"
-              />
-            </span>
-            <span class="text-sm font-medium leading-none text-foreground/85">
-              {{ activeTab === 'layers' ? 'Layers' : 'Filters' }}
-            </span>
+          <div class="flex items-center gap-1">
+            <button
+              type="button"
+              class="flex items-center gap-1.5 rounded-sm px-2 py-1 text-sm font-medium leading-none transition-colors"
+              :class="activeTab === 'layers' ? 'text-foreground/85' : 'text-muted-foreground hover:text-foreground/70'"
+              @click="activeTab = 'layers'"
+            >
+              <MapNavIcon name="layers" class="h-[14px] w-4" />
+              Layers
+            </button>
+            <button
+              type="button"
+              class="flex items-center gap-1.5 rounded-sm px-2 py-1 text-sm font-medium leading-none transition-colors"
+              :class="activeTab === 'filters' ? 'text-foreground/85' : 'text-muted-foreground hover:text-foreground/70'"
+              @click="activeTab = 'filters'"
+            >
+              <MapNavIcon name="filter" class="h-[14px] w-[14px]" />
+              Filters
+            </button>
           </div>
 
           <button
@@ -140,6 +150,12 @@
               :visible="props.visiblePerspectives.colocation"
               @toggle="togglePerspectiveVisibility('colocation')"
             />
+            <p
+              v-if="props.colocationStatusText && props.visiblePerspectives.colocation"
+              class="px-3 py-1 text-xs text-muted-foreground"
+            >
+              {{ props.colocationStatusText }}
+            </p>
             <MapNavViewModes
               :active-mode="colocationViewMode"
               @update:active-mode="setColocationViewMode"
@@ -150,6 +166,12 @@
               :visible="props.visiblePerspectives.hyperscale"
               @toggle="togglePerspectiveVisibility('hyperscale')"
             />
+            <p
+              v-if="props.hyperscaleStatusText && props.visiblePerspectives.hyperscale"
+              class="px-3 py-1 text-xs text-muted-foreground"
+            >
+              {{ props.hyperscaleStatusText }}
+            </p>
             <MapNavViewModes
               :active-mode="hyperscaleViewMode"
               @update:active-mode="setHyperscaleViewMode"
@@ -206,6 +228,12 @@
                 />
               </div>
             </div>
+            <p
+              v-if="props.fiberStatusText && fiberRoutesVisible"
+              class="px-3 py-1 text-xs text-muted-foreground"
+            >
+              {{ props.fiberStatusText }}
+            </p>
 
             <div v-if="fiberExpanded" class="flex flex-col pl-4">
               <div
@@ -405,6 +433,12 @@
               :visible="props.parcelsVisible"
               @toggle="toggleParcels"
             />
+            <p
+              v-if="props.parcelsStatusText && props.parcelsVisible"
+              class="px-3 py-1 text-xs text-muted-foreground"
+            >
+              {{ props.parcelsStatusText }}
+            </p>
           </section>
 
           <div class="my-0 h-px w-full bg-border" />
@@ -419,16 +453,34 @@
               :visible="props.floodVisibility.flood100"
               @toggle="emit('update:flood-layer-visible', 'flood100', !props.floodVisibility.flood100)"
             />
+            <p
+              v-if="props.showFlood100ZoomHint && props.floodVisibility.flood100"
+              class="px-3 py-1 text-xs text-muted-foreground"
+            >
+              Zoom in to view flood zones
+            </p>
             <MapNavLayerRow
               label="Flood Zones (500yr)"
               :visible="props.floodVisibility.flood500"
               @toggle="emit('update:flood-layer-visible', 'flood500', !props.floodVisibility.flood500)"
             />
+            <p
+              v-if="props.showFlood500ZoomHint && props.floodVisibility.flood500"
+              class="px-3 py-1 text-xs text-muted-foreground"
+            >
+              Zoom in to view flood zones
+            </p>
             <MapNavLayerRow
               label="Hydro Basins"
               :visible="props.hydroBasinsVisible"
               @toggle="emit('update:hydro-basins-visible', !props.hydroBasinsVisible)"
             />
+            <p
+              v-if="props.showHydroBasinsZoomHint && props.hydroBasinsVisible"
+              class="px-3 py-1 text-xs text-muted-foreground"
+            >
+              Zoom in to view hydro basins
+            </p>
             <MapNavLayerRow
               label="Water Features"
               :visible="props.waterVisible"

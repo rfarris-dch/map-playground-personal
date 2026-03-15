@@ -40,6 +40,10 @@ function buildEventToneFromPhase(phase: PipelineLiveSample["phase"]): PipelineLi
 }
 
 function buildRequestFailureMessage(error: PipelineFetchFailure): string {
+  if (error.reason === "unexpected") {
+    return `Internal error: ${error.message}`;
+  }
+
   if (typeof error.status === "number") {
     return `Request failed (${String(error.status)}): ${error.message}`;
   }

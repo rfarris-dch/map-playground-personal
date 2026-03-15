@@ -17,6 +17,7 @@
   const emit = defineEmits<{
     clear: [];
     export: [];
+    hide: [];
     "open-dashboard": [];
     "select-facility": [facility: SelectedFacilityRef];
   }>();
@@ -111,6 +112,7 @@
     facilities-power-heading="Comm/Own (MW)"
     facilities-perspective-display="dot"
     perspective-power-label="Commissioned"
+    @hide="emit('hide')"
     @dismiss="emit('clear')"
     @export="emit('export')"
     @open-dashboard="emit('open-dashboard')"

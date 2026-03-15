@@ -63,7 +63,7 @@ export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
     contextToken.value = readMapContextTransferTokenFromQuery(nextQuery) ?? null;
     lastWrittenQuerySignature.value = nextSignature;
 
-    return replaceTask.run(
+    return replaceTask.start(
       Effect.sync(() => {
         if (typeof window === "undefined") {
           return;

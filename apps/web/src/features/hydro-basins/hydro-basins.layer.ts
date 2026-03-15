@@ -1,5 +1,6 @@
 import { createPmtilesSourceUrl, type TilePublishManifest } from "@map-migration/geo-tiles";
 import { getCatalogStyleLayerIds, getHydroBasinsStyleLayerIds } from "@map-migration/map-style";
+import { initialLayerStatus, type LayerStatus } from "@/features/layers/layer-runtime.types";
 import { resolveEnvironmentalHydroBasinsManifestPath } from "@/features/tiles/tile-manifest-config.service";
 import { mountManifestBackedLayerBootstrap } from "@/lib/manifest-backed-layer.service";
 import type {
@@ -27,12 +28,14 @@ const UPPER_BOUND_LAYER_ANCHORS: readonly string[] = [
 ];
 
 interface HydroBasinsState {
+  status: LayerStatus;
   stressMode: HydroBasinsStressMode;
   visible: boolean;
 }
 
 function initialState(): HydroBasinsState {
   return {
+    status: initialLayerStatus(),
     stressMode: "normal",
     visible: false,
   };
@@ -200,14 +203,18 @@ export function mountHydroBasinsLayer(
     },
     manifestPath,
     map: options.map,
+
     onInitializationError(error: unknown) {
-      console.error("[hydro-basins] source initialization failed", error);
+      const reason = error instanceof Error ? error.message : "initialization failed";
+      state.status = { state: "error", reason };
     },
     onInitialized() {
+      state.status = { state: "ready" };
       applyVisibility();
     },
     onReady(readyBootstrap) {
       if (state.visible) {
+        state.status = { state: "loading" };
         readyBootstrap.initializeSource().catch(() => {
           return;
         });
@@ -222,9 +229,13 @@ export function mountHydroBasinsLayer(
   });
 
   return {
+    get status(): LayerStatus {
+      return state.status;
+    },
     setVisible(visible: boolean): void {
       state.visible = visible;
-      if (visible) {
+      if (visible && state.status.state !== "loading") {
+        state.status = { state: "loading" };
         bootstrap.initializeSource().catch(() => {
           return;
         });

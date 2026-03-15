@@ -8,10 +8,12 @@ export interface PipelineStatusPayload {
   readonly response: PipelineStatusResponse;
 }
 
-export type PipelineFetchFailureReason = "aborted" | "http" | "network" | "schema";
+export type PipelineFetchFailureReason = "aborted" | "http" | "network" | "schema" | "unexpected";
 
 export interface PipelineFetchFailure {
   readonly details?: unknown;
+  /** Developer-only diagnostics (stack traces, error objects). Not shown to users. */
+  readonly diagnostics?: unknown;
   readonly message: string;
   readonly reason: PipelineFetchFailureReason;
   readonly requestId: string;

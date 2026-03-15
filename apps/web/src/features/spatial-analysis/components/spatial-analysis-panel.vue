@@ -13,6 +13,7 @@
   const props = defineProps<SpatialAnalysisPanelProps>();
 
   const emit = defineEmits<{
+    hide: [];
     "open-dashboard": [];
     dismiss: [];
     export: [];
@@ -73,9 +74,9 @@
 
       <button
         type="button"
-        :aria-label="props.dismissLabel"
+        aria-label="Hide panel"
         class="inline-flex h-6 w-6 items-center justify-center rounded-sm border border-border bg-card text-muted-foreground shadow-xs transition-colors hover:border-border hover:bg-background hover:text-foreground/70"
-        @click="emit('dismiss')"
+        @click="emit('hide')"
       >
         <X class="h-4 w-4" />
       </button>
@@ -369,7 +370,7 @@
         <Download class="h-3.5 w-3.5" />
         {{ props.exportLabel }}
       </Button>
-      <Button variant="glass" @click="emit('dismiss')"> {{ props.dismissLabel }} </Button>
+      <Button variant="destructive" size="sm" @click="emit('dismiss')"> {{ props.dismissLabel }} </Button>
     </footer>
   </aside>
 </template>

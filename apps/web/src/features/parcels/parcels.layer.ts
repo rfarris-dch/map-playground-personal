@@ -601,6 +601,12 @@ export function mountParcelsLayer(
       clearHover();
       clearSelection();
 
+      bootstrap.destroy();
+      state.ready = false;
+      state.sourceInitialized = false;
+      state.sourceInitializationPromise = null;
+      state.manifest = null;
+
       stressGovernor.destroy();
 
       map.off("moveend", onMoveEnd);

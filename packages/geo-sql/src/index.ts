@@ -38,7 +38,7 @@ const QUERY_SPECS: Record<QueryName, RegisteredQuerySpec> = {
   facilities_bbox_colocation: {
     name: "facilities_bbox_colocation",
     endpointClass: "feature-collection",
-    maxRows: 5000,
+    maxRows: 50000,
     sql: `
 WITH bounds AS (
   SELECT ST_Transform(ST_MakeEnvelope($1, $2, $3, $4, 4326), 3857) AS bbox_3857
@@ -61,7 +61,6 @@ candidates AS (
   WHERE facility.geom_3857 && bounds.bbox_3857
     AND ST_Intersects(facility.geom_3857, bounds.bbox_3857)
     AND facility.provider_id IS NOT NULL
-  LIMIT $5
 )
 SELECT
   c.facility_id,
@@ -93,7 +92,7 @@ LEFT JOIN facility_current.providers AS provider
   facilities_bbox_hyperscale: {
     name: "facilities_bbox_hyperscale",
     endpointClass: "feature-collection",
-    maxRows: 5000,
+    maxRows: 50000,
     sql: `
 WITH bounds AS (
   SELECT ST_Transform(ST_MakeEnvelope($1, $2, $3, $4, 4326), 3857) AS bbox_3857
@@ -116,7 +115,6 @@ candidates AS (
   WHERE facility.geom_3857 && bounds.bbox_3857
     AND ST_Intersects(facility.geom_3857, bounds.bbox_3857)
     AND facility.provider_id IS NOT NULL
-  LIMIT $5
 )
 SELECT
   c.hyperscale_id AS facility_id,
@@ -148,7 +146,7 @@ LEFT JOIN facility_current.providers AS provider
   facilities_polygon_colocation: {
     name: "facilities_polygon_colocation",
     endpointClass: "feature-collection",
-    maxRows: 5000,
+    maxRows: 50000,
     sql: `
 WITH aoi AS (
   SELECT ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON($1), 4326), 3857) AS geom_3857
@@ -171,7 +169,6 @@ candidates AS (
   WHERE facility.geom_3857 && aoi.geom_3857
     AND ST_Intersects(facility.geom_3857, aoi.geom_3857)
     AND facility.provider_id IS NOT NULL
-  LIMIT $2
 )
 SELECT
   c.facility_id,
@@ -203,7 +200,7 @@ LEFT JOIN facility_current.providers AS provider
   facilities_polygon_hyperscale: {
     name: "facilities_polygon_hyperscale",
     endpointClass: "feature-collection",
-    maxRows: 5000,
+    maxRows: 50000,
     sql: `
 WITH aoi AS (
   SELECT ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON($1), 4326), 3857) AS geom_3857
@@ -226,7 +223,6 @@ candidates AS (
   WHERE facility.geom_3857 && aoi.geom_3857
     AND ST_Intersects(facility.geom_3857, aoi.geom_3857)
     AND facility.provider_id IS NOT NULL
-  LIMIT $2
 )
 SELECT
   c.hyperscale_id AS facility_id,
@@ -443,7 +439,7 @@ export function buildFacilitiesBboxQuery(query: FacilitiesBboxSqlQueryArgs): Par
 
   return {
     sql: spec.sql,
-    params: [query.west, query.south, query.east, query.north, query.limit],
+    params: [query.west, query.south, query.east, query.north],
   };
 }
 
@@ -452,7 +448,7 @@ export function buildFacilitiesPolygonQuery(query: FacilitiesPolygonSqlQueryArgs
 
   return {
     sql: spec.sql,
-    params: [query.geometryGeoJson, query.limit],
+    params: [query.geometryGeoJson],
   };
 }
 

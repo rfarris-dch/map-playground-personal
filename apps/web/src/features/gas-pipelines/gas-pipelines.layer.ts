@@ -1,5 +1,6 @@
 import { createPmtilesSourceUrl } from "@map-migration/geo-tiles";
 import type { IMap, MapExpression } from "@map-migration/map-engine";
+import { initialLayerStatus, type LayerStatus } from "@/features/layers/layer-runtime.types";
 import { mountManifestBackedLayerBootstrap } from "@/lib/manifest-backed-layer.service";
 import type { GasPipelineLayerController } from "./gas-pipelines.types";
 
@@ -10,6 +11,7 @@ const LINE_LAYER_ID = "gas-pipelines.lines";
 
 interface GasPipelineLayerState {
   currentFilter: MapExpression | null;
+  status: LayerStatus;
   visible: boolean;
 }
 
@@ -66,6 +68,7 @@ export function mountGasPipelineLayer(map: IMap): GasPipelineLayerController {
   const manifestPath = resolveManifestPath();
   const state: GasPipelineLayerState = {
     currentFilter: null,
+    status: initialLayerStatus(),
     visible: false,
   };
 
@@ -96,10 +99,13 @@ export function mountGasPipelineLayer(map: IMap): GasPipelineLayerController {
     },
     manifestPath,
     map,
+
     onInitializationError(error: unknown) {
-      console.error("[gas-pipelines] init failed", error);
+      const reason = error instanceof Error ? error.message : "initialization failed";
+      state.status = { state: "error", reason };
     },
     onInitialized() {
+      state.status = { state: "ready" };
       applyVisibility();
       applyFilter();
     },
@@ -108,6 +114,7 @@ export function mountGasPipelineLayer(map: IMap): GasPipelineLayerController {
         return;
       }
 
+      state.status = { state: "loading" };
       readyBootstrap.initializeSource().catch(() => {
         return;
       });
@@ -117,9 +124,13 @@ export function mountGasPipelineLayer(map: IMap): GasPipelineLayerController {
   });
 
   return {
+    get status(): LayerStatus {
+      return state.status;
+    },
     setVisible(nextVisible: boolean): void {
       state.visible = nextVisible;
-      if (state.visible) {
+      if (state.visible && state.status.state !== "loading") {
+        state.status = { state: "loading" };
         bootstrap.initializeSource().catch(() => {
           return;
         });

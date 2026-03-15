@@ -36,6 +36,12 @@ function buildErrorEnvelope(args: ErrorEnvelopeArgs): ApiErrorResponse {
     },
   };
 
+  if (typeof args.category === "string") {
+    candidate.error.category = args.category;
+  }
+  if (typeof args.subtype === "string") {
+    candidate.error.subtype = args.subtype;
+  }
   if (typeof args.details !== "undefined") {
     candidate.error.details = args.details;
   }

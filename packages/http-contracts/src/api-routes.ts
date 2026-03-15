@@ -135,7 +135,7 @@ export const ApiRoutes = Object.freeze<ApiRoutesTable>({
 
 export const ApiQueryDefaults = Object.freeze<ApiQueryDefaultsTable>({
   facilities: {
-    bboxLimit: 2000,
+    bboxLimit: 50000,
     perspective: "colocation",
   },
   parcelDetail: {
@@ -197,6 +197,7 @@ export function buildBoundaryPowerRoute(level: BoundaryPowerLevel): string {
 export function buildMarketBoundariesRoute(level: MarketBoundaryLevel): string {
   const params = new URLSearchParams();
   params.set("level", level);
+  params.set("v", "4");
   return `${ApiRoutes.marketBoundaries}?${params.toString()}`;
 }
 

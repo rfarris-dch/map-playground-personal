@@ -3,21 +3,27 @@ import { createBrowserEffectRuntime } from "@map-migration/core-runtime/browser"
 import type { Effect } from "effect";
 import { Cause, Exit } from "effect";
 
+interface ActiveFiberHandle {
+  completion: Promise<void>;
+  fiber: BrowserEffectFiber<unknown, unknown>;
+}
+
 interface LatestRunnerState {
-  activeFiber: BrowserEffectFiber<unknown, unknown> | null;
+  activeFiberHandle: ActiveFiberHandle | null;
   disposed: boolean;
   operation: Promise<void>;
 }
 
 export interface LatestRunnerOptions {
-  readonly onUnexpectedError?: (error: unknown) => void;
-  readonly runtime?: BrowserEffectRuntime;
+  readonly onUnexpectedError?: ((error: unknown) => void) | undefined;
+  readonly runtime?: BrowserEffectRuntime | undefined;
 }
 
 export interface LatestRunner {
   dispose(): Promise<void>;
   interrupt(): Promise<void>;
   run(program: Effect.Effect<void, unknown, never>): Promise<void>;
+  start(program: Effect.Effect<void, unknown, never>): Promise<void>;
 }
 
 const defaultRuntime = createBrowserEffectRuntime();
@@ -26,7 +32,7 @@ export function createLatestRunner(options: LatestRunnerOptions = {}): LatestRun
   const runtime = options.runtime ?? defaultRuntime;
 
   const state: LatestRunnerState = {
-    activeFiber: null,
+    activeFiberHandle: null,
     disposed: false,
     operation: Promise.resolve(),
   };
@@ -39,39 +45,59 @@ export function createLatestRunner(options: LatestRunnerOptions = {}): LatestRun
     options.onUnexpectedError?.(Cause.squash(exit.cause));
   }
 
-  function observeFiber(fiber: BrowserEffectFiber<unknown, unknown>): void {
-    runtime
+  function createFiberHandle(fiber: BrowserEffectFiber<unknown, unknown>): ActiveFiberHandle {
+    const completion = runtime
       .awaitFiber(fiber)
       .then((exit) => {
-        if (state.activeFiber === fiber) {
-          state.activeFiber = null;
+        if (state.activeFiberHandle?.fiber === fiber) {
+          state.activeFiberHandle = null;
         }
 
         reportUnexpectedFailure(exit);
       })
       .catch((error: unknown) => {
-        if (state.activeFiber === fiber) {
-          state.activeFiber = null;
+        if (state.activeFiberHandle?.fiber === fiber) {
+          state.activeFiberHandle = null;
         }
 
         options.onUnexpectedError?.(error);
       });
+
+    return { fiber, completion };
   }
 
   async function interruptActiveFiber(): Promise<void> {
-    const activeFiber = state.activeFiber;
-    if (activeFiber === null) {
+    const handle = state.activeFiberHandle;
+    if (handle === null) {
       return;
     }
 
-    state.activeFiber = null;
-    await runtime.interruptFiber(activeFiber);
+    state.activeFiberHandle = null;
+    await runtime.interruptFiber(handle.fiber);
   }
 
   function enqueue(operation: () => Promise<void>): Promise<void> {
     const nextOperation = state.operation.then(operation, operation);
     state.operation = nextOperation.catch(() => undefined);
     return nextOperation;
+  }
+
+  async function forkProgram(
+    program: Effect.Effect<void, unknown, never>
+  ): Promise<ActiveFiberHandle | null> {
+    if (state.disposed) {
+      return null;
+    }
+
+    await interruptActiveFiber();
+    if (state.disposed) {
+      return null;
+    }
+
+    const fiber = runtime.runFork(program);
+    const handle = createFiberHandle(fiber);
+    state.activeFiberHandle = handle;
+    return handle;
   }
 
   return {
@@ -88,18 +114,15 @@ export function createLatestRunner(options: LatestRunnerOptions = {}): LatestRun
     },
     run(program): Promise<void> {
       return enqueue(async () => {
-        if (state.disposed) {
-          return;
+        const handle = await forkProgram(program);
+        if (handle !== null) {
+          await handle.completion;
         }
-
-        await interruptActiveFiber();
-        if (state.disposed) {
-          return;
-        }
-
-        const fiber = runtime.runFork(program);
-        state.activeFiber = fiber;
-        observeFiber(fiber);
+      });
+    },
+    start(program): Promise<void> {
+      return enqueue(async () => {
+        await forkProgram(program);
       });
     },
   };

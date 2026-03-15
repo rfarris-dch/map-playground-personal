@@ -92,6 +92,7 @@
   }
 
   const openSections = ref<string[]>([]);
+  const openBottomSections = ref<string[]>([]);
 
   const openInfraSections = ref<string[]>([]);
 
@@ -188,10 +189,16 @@
                 >
               </label>
               <p
-                v-if="filteredMarkets.length === 0"
+                v-if="filteredMarkets.length === 0 && marketSearch.length > 0"
                 class="py-1 text-[length:var(--size-2)] italic text-muted-foreground"
               >
                 No markets match "{{ marketSearch }}"
+              </p>
+              <p
+                v-else-if="filteredMarkets.length === 0"
+                class="py-1 text-[length:var(--size-2)] italic text-muted-foreground"
+              >
+                Zoom in to load markets
               </p>
             </div>
           </div>
@@ -233,17 +240,23 @@
                 >
               </label>
               <p
-                v-if="filteredProviders.length === 0"
+                v-if="filteredProviders.length === 0 && providerSearch.length > 0"
                 class="py-1 text-[length:var(--size-2)] italic text-muted-foreground"
               >
                 No providers match "{{ providerSearch }}"
+              </p>
+              <p
+                v-else-if="filteredProviders.length === 0"
+                class="py-1 text-[length:var(--size-2)] italic text-muted-foreground"
+              >
+                Zoom in to load providers
               </p>
             </div>
           </div>
         </AccordionContent>
       </AccordionItem>
 
-      <AccordionItem value="users" class="border-b border-border">
+      <AccordionItem v-if="props.userOptions.length > 0" value="users" class="border-b border-border">
         <AccordionTrigger
           class="flex h-8 items-center justify-between px-3 text-[length:var(--size-2)] font-[number:var(--weight-3)] uppercase tracking-wide text-muted-foreground hover:no-underline"
         >
@@ -310,7 +323,7 @@
       </button>
     </div>
 
-    <Accordion v-model="openSections" type="multiple">
+    <Accordion v-model="openBottomSections" type="multiple">
       <AccordionItem value="infrastructure" class="border-b border-border">
         <AccordionTrigger
           class="flex h-8 items-center justify-between px-3 text-[length:var(--size-2)] font-[number:var(--weight-3)] uppercase tracking-wide text-muted-foreground hover:no-underline"
@@ -332,10 +345,13 @@
                     :key="opt.id"
                     class="flex cursor-pointer items-center gap-2 py-1 transition-colors hover:bg-background"
                   >
-                    <Checkbox
+                    <input
+                      type="radio"
+                      name="transmission-voltage"
+                      class="h-3.5 w-3.5 accent-primary"
                       :checked="props.activeVoltages.has(opt.id)"
-                      @update:checked="emit('toggle:voltage', opt.id)"
-                    />
+                      @change="emit('toggle:voltage', opt.id)"
+                    >
                     <span
                       class="text-[length:var(--size-2)] font-[number:var(--weight-1)] leading-none text-muted-foreground"
                       >{{ opt.label }}</span

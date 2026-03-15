@@ -259,7 +259,7 @@ function readSatelliteMaxZoom(): number {
   return normalizedValue;
 }
 
-function findBuildingSourceId(map: IMap, profile: BasemapProfile): string {
+function findBuildingSourceId(map: IMap, profile: BasemapProfile): string | null {
   const style = map.getStyle();
   const layers = style.layers ?? [];
 
@@ -274,9 +274,7 @@ function findBuildingSourceId(map: IMap, profile: BasemapProfile): string {
     }
   }
 
-  throw new Error(
-    `[basemap] Missing "${profile.buildingSourceLayer}" source-layer in style "${style.name ?? "unnamed"}".`
-  );
+  return null;
 }
 
 function findFirstLabelLayerId(map: IMap): string | undefined {
@@ -588,7 +586,10 @@ function suppressMissingSpriteShieldLayers(map: IMap): void {
 
 function ensureLandmarkLayers(map: IMap): void {
   if (!map.hasSource(OPENMAPTILES_SOURCE_ID)) {
-    throw new Error(`[basemap] Missing "${OPENMAPTILES_SOURCE_ID}" vector source for landmarks.`);
+    console.warn(
+      `[basemap] Missing "${OPENMAPTILES_SOURCE_ID}" vector source; landmarks unavailable.`
+    );
+    return;
   }
 
   const beforeId = findFirstLabelLayerId(map);
@@ -986,16 +987,41 @@ export function mountBasemapLayerVisibility(
   }
 
   const onLoad = (): void => {
-    syncProjection();
-    suppressMissingSpriteShieldLayers(map);
-    ensureSatelliteLayer(map);
-    ensureTerrainSource(map);
-    ensureTerrainHillshadeLayer(map);
-    ensureLandmarkLayers(map);
-    ensureStateBoundaryVisible(map);
-    ensureStateLabels(map);
-    const buildingSourceId = findBuildingSourceId(map, profile);
-    add3DBuildings(map, profile, buildingSourceId);
+    try {
+      syncProjection();
+      suppressMissingSpriteShieldLayers(map);
+      ensureSatelliteLayer(map);
+      ensureTerrainSource(map);
+      ensureTerrainHillshadeLayer(map);
+    } catch (coreError: unknown) {
+      console.error("[basemap] failed during core layer setup in onLoad", coreError);
+      return;
+    }
+
+    try {
+      ensureLandmarkLayers(map);
+    } catch (landmarkError: unknown) {
+      console.warn("[basemap] landmarks unavailable", landmarkError);
+    }
+
+    try {
+      ensureStateBoundaryVisible(map);
+      ensureStateLabels(map);
+    } catch (boundaryError: unknown) {
+      console.warn("[basemap] state boundaries/labels unavailable", boundaryError);
+    }
+
+    try {
+      const buildingSourceId = findBuildingSourceId(map, profile);
+      if (buildingSourceId !== null) {
+        add3DBuildings(map, profile, buildingSourceId);
+      } else {
+        console.warn("[basemap] building source not found; 3D buildings unavailable");
+      }
+    } catch (buildingError: unknown) {
+      console.warn("[basemap] 3D buildings unavailable", buildingError);
+    }
+
     groups = collectBasemapLayerGroups(map, profile);
     applyBasemapVisibility({
       map,
@@ -1016,16 +1042,23 @@ export function mountBasemapLayerVisibility(
 
       const nextProfile = resolveBasemapProfile(visibility);
       if (nextProfile.id !== profile.id) {
-        profile = nextProfile;
-        groups = null;
-        loadBasemapStyle(profile.styleUrl)
+        const previousProfile = profile;
+        const previousGroups = groups;
+        const previousVisibility = withBasemapLayerVisibility(visibility, layerId, !nextVisible);
+
+        loadBasemapStyle(nextProfile.styleUrl)
           .then((style) => {
+            profile = nextProfile;
+            groups = null;
             map.setStyle(style);
+            syncProjection();
           })
           .catch((error: unknown) => {
-            console.error("[basemap] failed to switch basemap style", error);
+            console.error("[basemap] failed to switch basemap style, reverting", error);
+            profile = previousProfile;
+            groups = previousGroups;
+            visibility = previousVisibility;
           });
-        syncProjection();
         return;
       }
 

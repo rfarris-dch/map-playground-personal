@@ -1,5 +1,5 @@
 import type { IMap } from "@map-migration/map-engine";
-import type { LayerVisibilityController } from "@/features/layers/layer-runtime.types";
+import type { LayerStatus, LayerVisibilityController } from "@/features/layers/layer-runtime.types";
 
 export type FloodLayerId = "flood-100" | "flood-500";
 
@@ -13,6 +13,7 @@ export interface FloodLayerMountResult {
     readonly flood500: FloodLayerVisibilityController;
   }>;
   destroy(): void;
+  readonly status: LayerStatus;
 }
 
 export interface MountFloodLayersOptions {

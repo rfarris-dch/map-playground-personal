@@ -11,7 +11,7 @@ import type { FacilitiesStatus } from "@/features/facilities/facilities.types";
 import { mountFacilitiesHover } from "@/features/facilities/hover";
 
 const FACILITIES_LAYER_MIN_ZOOM = 2.5;
-const FACILITIES_LAYER_LIMIT = 1000;
+const FACILITIES_LAYER_LIMIT = 50000;
 const FACILITIES_LAYER_DEBOUNCE_MS = 350;
 
 function setPerspectiveStatus(

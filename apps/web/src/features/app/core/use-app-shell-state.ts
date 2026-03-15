@@ -25,9 +25,12 @@ import type {
   PerspectiveStatusState,
 } from "@/features/app/core/app-shell.types";
 import type {
+  BoundaryFetchErrorState,
   EnvironmentalStressController,
+  MapInitStatus,
   MarketBoundaryFacetOptionsState,
   MarketBoundaryFacetSelectionState,
+  MarketBoundaryFetchErrorState,
 } from "@/features/app/lifecycle/use-app-shell-map-lifecycle.types";
 import {
   initialMarketBoundaryControllerState,
@@ -77,6 +80,7 @@ import type { UseAppShellStateResult } from "./use-app-shell-state.types";
 export function useAppShellState(): UseAppShellStateResult {
   const mapContainer = useTemplateRef<HTMLDivElement>("map-container");
   const map = shallowRef<IMap | null>(null);
+  const mapInitStatus = shallowRef<MapInitStatus>({ phase: "initializing", errorReason: null });
   const hoveredFacility = shallowRef<FacilityHoverState | null>(null);
   const hoveredFacilityCluster = shallowRef<FacilityClusterHoverState | null>(null);
   const hoveredBoundary = shallowRef<BoundaryHoverState | null>(null);
@@ -98,6 +102,10 @@ export function useAppShellState(): UseAppShellStateResult {
   const marketBoundaryFacetSelection = shallowRef<MarketBoundaryFacetSelectionState>(
     initialMarketBoundaryFacetSelectionState()
   );
+  const marketBoundaryFetchError = shallowRef<MarketBoundaryFetchErrorState>({
+    market: false,
+    submarket: false,
+  });
   const marketBoundaryColorMode = shallowRef<MarketBoundaryColorMode>("power");
   const facilitiesControllers = shallowRef<readonly FacilitiesLayerController[]>([]);
   const floodLayersController = shallowRef<FloodLayerMountResult | null>(null);
@@ -122,6 +130,11 @@ export function useAppShellState(): UseAppShellStateResult {
   const boundaryFacetSelection = shallowRef<BoundaryFacetSelectionState>(
     initialBoundaryFacetSelectionState()
   );
+  const boundaryFetchError = shallowRef<BoundaryFetchErrorState>({
+    county: false,
+    state: false,
+    country: false,
+  });
   const sketchMeasureState = shallowRef<SketchMeasureState>(initialSketchMeasureState());
   const selectionGeometry = shallowRef<SketchAreaGeometry | null>(null);
   const colocationViewportFeatures = shallowRef<FacilitiesFeatureCollection["features"]>([]);
@@ -232,6 +245,7 @@ export function useAppShellState(): UseAppShellStateResult {
     activeToolPanel,
     mapContainer,
     map,
+    mapInitStatus,
     hoveredFacility,
     hoveredFacilityCluster,
     hoveredBoundary,
@@ -243,6 +257,7 @@ export function useAppShellState(): UseAppShellStateResult {
     hoveredMarketBoundary,
     marketBoundaryFacetOptions,
     marketBoundaryFacetSelection,
+    marketBoundaryFetchError,
     marketBoundaryColorMode,
     facilitiesControllers,
     floodLayersController,
@@ -262,6 +277,7 @@ export function useAppShellState(): UseAppShellStateResult {
     parcelsStatus,
     boundaryFacetOptions,
     boundaryFacetSelection,
+    boundaryFetchError,
     sketchMeasureState,
     selectionGeometry,
     colocationViewportFeatures,

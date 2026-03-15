@@ -18,6 +18,7 @@ export interface MapSelectionToolsProps {
 export interface MapSelectionToolsEmits {
   "clear-selection": [];
   export: [];
+  hide: [];
   "open-dashboard": [];
   "select-facility": [facility: SelectedFacilityRef];
 }

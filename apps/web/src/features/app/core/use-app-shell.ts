@@ -254,6 +254,8 @@ export function useAppShell() {
     mapFilters,
     mapContainer: state.mapContainer,
     map: state.map,
+    mapInitStatus: state.mapInitStatus,
+    retryMapInitialization: mapLifecycle.retryMapInitialization,
     selectedFacility: selection.selectedFacility,
     selectedParcel: selection.selectedParcel,
     hoveredFacility: state.hoveredFacility,

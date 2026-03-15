@@ -9,6 +9,7 @@ import {
 } from "@map-migration/map-engine";
 import { createMapScoped, registerPmtilesProtocolScoped } from "@map-migration/map-engine/effect";
 import { Effect, type Scope } from "effect";
+import type { MapInitErrorReason } from "@/features/app/lifecycle/use-app-shell-map-lifecycle.types";
 import {
   defaultBasemapStyleUrl,
   loadBasemapStyle,
@@ -17,6 +18,48 @@ import {
 import type { BasemapLayerVisibilityController } from "@/features/basemap/basemap.types";
 
 const DEFAULT_MAP_MAX_PITCH = 85;
+
+export class AppShellMapInitError {
+  readonly _tag = "AppShellMapInitError";
+  readonly reason: MapInitErrorReason;
+  readonly cause: unknown;
+
+  constructor(reason: MapInitErrorReason, cause: unknown) {
+    this.reason = reason;
+    this.cause = cause;
+  }
+}
+
+function classifyMapInitError(error: unknown): MapInitErrorReason {
+  if (!(error instanceof Error)) {
+    return "unknown";
+  }
+
+  const message = error.message.toLowerCase();
+  const causeMessage = error.cause instanceof Error ? error.cause.message.toLowerCase() : "";
+
+  if (
+    message.includes("failed to load") ||
+    message.includes("style") ||
+    causeMessage.includes("fetch") ||
+    causeMessage.includes("networkerror") ||
+    causeMessage.includes("failed to fetch")
+  ) {
+    return "style-fetch";
+  }
+
+  if (
+    message.includes("webgl") ||
+    message.includes("failed to initialize") ||
+    message.includes("canvas") ||
+    message.includes("gl context") ||
+    causeMessage.includes("webgl")
+  ) {
+    return "webgl";
+  }
+
+  return "init";
+}
 
 export interface AppShellMapSetup {
   readonly basemapLayerController: BasemapLayerVisibilityController;
@@ -141,15 +184,14 @@ export function createAppShellMapInitializer(
 ): (
   container: HTMLDivElement,
   options?: AppShellMapInitializeOptions
-) => Effect.Effect<AppShellMapSetup, never, Scope.Scope> {
+) => Effect.Effect<AppShellMapSetup, AppShellMapInitError, Scope.Scope> {
   return (container, options = {}) =>
     Effect.gen(function* () {
       yield* dependencies.registerPmtilesProtocolScoped();
       const basemapStyle = yield* Effect.tryPromise({
         try: () => dependencies.loadBasemapStyle(dependencies.defaultBasemapStyleUrl()),
-        catch: (error) =>
-          new Error("[basemap] failed to load initial basemap style", { cause: error }),
-      }).pipe(Effect.orDie);
+        catch: (error) => new AppShellMapInitError("style-fetch", error),
+      });
 
       const initialBearing = resolveInitialMapBearing(options.initialViewport);
       const initialPitch = resolveInitialMapPitch(options.initialViewport);
@@ -164,11 +206,13 @@ export function createAppShellMapInitializer(
         projection: { type: "mercator" },
       };
 
-      const map = yield* dependencies.createMapScoped(
-        dependencies.createMapLibreAdapter(),
-        container,
-        mapCreateOptions
-      );
+      const map = yield* dependencies
+        .createMapScoped(dependencies.createMapLibreAdapter(), container, mapCreateOptions)
+        .pipe(
+          Effect.catchAllDefect((defect) =>
+            Effect.fail(new AppShellMapInitError(classifyMapInitError(defect), defect))
+          )
+        );
 
       yield* mountMapControlsScoped(map, dependencies);
       const basemapLayerController = yield* mountBasemapLayerVisibilityScoped(map, dependencies);

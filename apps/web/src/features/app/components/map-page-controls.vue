@@ -20,8 +20,6 @@
       shell.dismissAllToolPanels();
       shell.setSketchMeasureMode("area");
       shell.setSketchMeasureAreaShape("freeform");
-    } else {
-      shell.clearSketchMeasure();
     }
 
     shell.toggleSketchMeasurePanel();
@@ -109,6 +107,7 @@
     :selection-summary="shell.selectionSummary.value"
     :selection-error="shell.selectionError.value"
     :is-loading="shell.isSelectionLoading.value"
+    @hide="shell.toggleSelectionPanel"
     @clear="shell.clearSelectionGeometry"
     @export="shell.exportSelection"
     @open-dashboard="shell.openSelectionDashboard"

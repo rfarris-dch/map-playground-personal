@@ -14,6 +14,7 @@ interface LatestEffectTask {
   clear(): Promise<void>;
   dispose(): Promise<void>;
   run(program: Effect.Effect<void, unknown, never>): Promise<void>;
+  start(program: Effect.Effect<void, unknown, never>): Promise<void>;
 }
 
 export function useLatestEffectTask(options: UseLatestEffectTaskOptions = {}): LatestEffectTask {
@@ -37,6 +38,9 @@ export function useLatestEffectTask(options: UseLatestEffectTaskOptions = {}): L
     },
     run(program) {
       return runner.run(program);
+    },
+    start(program) {
+      return runner.start(program);
     },
   };
 

@@ -1,5 +1,15 @@
 import type { LayerCatalog, LayerId } from "@map-migration/map-layer-catalog";
 
+export type LayerStatus =
+  | { readonly state: "idle" }
+  | { readonly state: "loading" }
+  | { readonly state: "ready" }
+  | { readonly state: "error"; readonly reason: string };
+
+export function initialLayerStatus(): LayerStatus {
+  return { state: "idle" };
+}
+
 export interface LayerVisibilityController {
   destroy(): void;
   setVisible(visible: boolean): void;

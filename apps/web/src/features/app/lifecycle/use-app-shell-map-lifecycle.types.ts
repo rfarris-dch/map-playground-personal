@@ -52,6 +52,13 @@ import type {
 } from "@/features/sketch-measure/sketch-measure.types";
 import type { WaterLayerVisibilityController } from "@/features/water/water.types";
 
+export type MapInitErrorReason = "style-fetch" | "webgl" | "init" | "unknown";
+
+export interface MapInitStatus {
+  readonly errorReason: MapInitErrorReason | null;
+  readonly phase: "initializing" | "ready" | "error";
+}
+
 export interface AppShellFiberLifecycleController {
   clearFiberHover(): void;
   destroy(map: IMap | null): void;
@@ -73,6 +80,7 @@ export interface AppShellMapLifecycleRuntimeRefs {
   readonly layerRuntime: ShallowRef<LayerRuntimeController | null>;
   readonly map: ShallowRef<IMap | null>;
   readonly mapContainer: Readonly<ShallowRef<HTMLDivElement | null>>;
+  readonly mapInitStatus: ShallowRef<MapInitStatus>;
 }
 
 export interface AppShellMapLifecycleLayerRefs {
@@ -101,9 +109,21 @@ export interface MarketBoundaryFacetSelectionState {
   readonly submarket: readonly string[] | null;
 }
 
+export interface BoundaryFetchErrorState {
+  readonly country: boolean;
+  readonly county: boolean;
+  readonly state: boolean;
+}
+
+export interface MarketBoundaryFetchErrorState {
+  readonly market: boolean;
+  readonly submarket: boolean;
+}
+
 export interface AppShellMapLifecycleStateRefs {
   readonly boundaryFacetOptions: ShallowRef<BoundaryFacetOptionsState>;
   readonly boundaryFacetSelection: ShallowRef<BoundaryFacetSelectionState>;
+  readonly boundaryFetchError: ShallowRef<BoundaryFetchErrorState>;
   readonly boundaryHoverByLayer: ShallowRef<BoundaryHoverByLayerState>;
   readonly colocationViewportFeatures: ShallowRef<FacilitiesFeatureCollection["features"]>;
   readonly facilitiesStatus: ShallowRef<PerspectiveStatusState>;
@@ -117,6 +137,7 @@ export interface AppShellMapLifecycleStateRefs {
   readonly marketBoundaryColorMode: ShallowRef<MarketBoundaryColorMode>;
   readonly marketBoundaryFacetOptions: ShallowRef<MarketBoundaryFacetOptionsState>;
   readonly marketBoundaryFacetSelection: ShallowRef<MarketBoundaryFacetSelectionState>;
+  readonly marketBoundaryFetchError: ShallowRef<MarketBoundaryFetchErrorState>;
   readonly marketBoundaryHoverByLayer: ShallowRef<MarketBoundaryHoverByLayerState>;
   readonly parcelsStatus: ShallowRef<ParcelsStatus>;
   readonly selectedFacility: ShallowRef<SelectedFacilityRef | null>;

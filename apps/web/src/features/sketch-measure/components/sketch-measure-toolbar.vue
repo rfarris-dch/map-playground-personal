@@ -32,7 +32,7 @@
       return "Sketch complete";
     }
     if (props.state.areaShape === "freeform") {
-      return "Click points, Enter to close";
+      return "Click points, click first point to close";
     }
     return "Click to anchor, click to finalize";
   });
@@ -78,7 +78,7 @@
 
 <template>
   <aside
-    class="map-glass-elevated pointer-events-auto absolute bottom-10 left-[420px] z-20 flex items-center gap-2 rounded-lg px-3 py-1.5"
+    class="map-glass-elevated pointer-events-auto absolute bottom-10 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-lg px-3 py-1.5"
     aria-label="Sketch and measure tools"
   >
     <button

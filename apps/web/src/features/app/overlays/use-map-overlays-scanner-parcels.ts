@@ -322,7 +322,7 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
       return;
     }
 
-    scannerParcelsTask.run(refreshScannerParcelsEffect()).catch((error: unknown) => {
+    scannerParcelsTask.start(refreshScannerParcelsEffect()).catch((error: unknown) => {
       logScannerParcelsError("schedule", error);
     });
   }

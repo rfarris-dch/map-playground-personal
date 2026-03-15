@@ -372,7 +372,6 @@ export function buildEmptySelectionToolSummary(
 export function querySelectionToolSummaryEffect(
   args: QuerySelectionToolSummaryArgs
 ): Effect.Effect<QuerySelectionToolSummaryResult, never, never> {
-  // @ts-expect-error Effect.gen infers overly wide types for complex generators; runtime types are correct
   return Effect.gen(function* () {
     const selectionExceedsFastAnalysisLimits = selectionRingExceedsFastAnalysisLimits(
       args.selectionRing

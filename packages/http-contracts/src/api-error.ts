@@ -1,8 +1,10 @@
 import { z } from "zod";
 
 export const ApiErrorSchema = z.object({
+  category: z.string().min(1).optional(),
   code: z.string().min(1),
   message: z.string().min(1),
+  subtype: z.string().min(1).optional(),
   details: z.unknown().optional(),
 });
 

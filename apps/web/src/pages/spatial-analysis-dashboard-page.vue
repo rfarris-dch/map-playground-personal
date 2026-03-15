@@ -3,6 +3,7 @@
   import { computed, shallowRef } from "vue";
   import { useRouter } from "vue-router";
   import Button from "@/components/ui/button/button.vue";
+  import { buildMapContextTransferQuery } from "@/features/map-context-transfer/map-context-transfer.service";
   import { formatMeasurePowerMw } from "@/features/measure/measure-analysis.service";
   import { formatScannerPowerMw } from "@/features/scanner/scanner.service";
   import SpatialAnalysisCountyScoresSection from "@/features/spatial-analysis/components/spatial-analysis-county-scores-section.vue";
@@ -94,6 +95,13 @@
     return state.summary.summary.marketSelection?.matchCount ?? 0;
   });
   const hasMarkets = computed(() => selectionMarketCount.value > 0);
+  const matchedMarkets = computed(() => {
+    const state = dashboardState.value;
+    if (state === null || state.source !== "selection") {
+      return [];
+    }
+    return state.summary.summary.marketSelection?.markets ?? [];
+  });
   const hasCountySelections = computed(() => selectedCountyIds.value.length > 0);
   const hasCountyTab = computed(() => hasCountySelections.value || stateHasCountyIntelligence());
   const hasAnyResults = computed(
@@ -123,7 +131,12 @@
   });
 
   function goBackToMap(): void {
-    router.push({ name: "map" });
+    const ctx = dashboardState.value?.mapContext;
+    if (ctx) {
+      router.push({ name: "map", query: buildMapContextTransferQuery(ctx) });
+    } else {
+      router.push({ name: "map" });
+    }
   }
 
   function clearSavedDashboard(): void {
@@ -265,6 +278,38 @@
               :format-power="formatPower"
             />
 
+            <article v-if="hasMarkets" class="rounded-xl border border-border/70 bg-background/70 p-4">
+              <div class="mb-2 flex items-center gap-2">
+                <span class="inline-block h-2.5 w-2.5 rounded-full bg-violet-500" />
+                <h2 class="m-0 text-sm font-semibold">Markets</h2>
+              </div>
+              <dl class="grid grid-cols-[1fr_auto] gap-x-3 gap-y-2 text-sm">
+                <dt class="text-muted-foreground">Market Matches</dt>
+                <dd class="m-0 font-medium">{{ selectionMarketCount }}</dd>
+                <dt class="text-muted-foreground">Primary Market</dt>
+                <dd class="m-0 font-medium">
+                  {{ dashboardSummary.marketSelection?.primaryMarket?.name ?? "-" }}
+                </dd>
+              </dl>
+              <div v-if="matchedMarkets.length > 0" class="mt-3 space-y-1.5">
+                <div
+                  v-for="market in matchedMarkets"
+                  :key="market.marketId"
+                  class="border-t border-border/60 pt-1.5 text-sm"
+                >
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="truncate font-medium">{{ market.name }}</span>
+                    <span class="text-muted-foreground">
+                      {{ market.marketOverlapPercent > 0 ? `${(market.marketOverlapPercent * 100).toFixed(1)}%` : "-" }}
+                    </span>
+                  </div>
+                  <div class="truncate text-xs text-muted-foreground">
+                    {{ [market.region, market.state, market.country].filter(Boolean).join(" · ") || "No metadata" }}
+                  </div>
+                </div>
+              </div>
+            </article>
+
             <article class="rounded-xl border border-border/70 bg-background/70 p-4">
               <div class="mb-2 flex items-center gap-2">
                 <span class="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500" />
@@ -303,7 +348,7 @@
             :lease-semantic="!isSelectionDashboard"
             :perspective-display="isSelectionDashboard ? 'dot' : 'badge'"
             :show-coordinates="!isSelectionDashboard"
-            :selectable="false"
+            :interactive="false"
           />
         </section>
 

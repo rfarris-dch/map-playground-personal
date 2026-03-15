@@ -89,6 +89,7 @@
     <Button
       size="sm"
       :variant="props.scannerActive ? 'glass-active' : 'glass'"
+      :disabled="!props.scannerActive && props.overlaysBlockedReason !== null"
       :title="props.overlaysBlockedReason ?? undefined"
       @click="emit('toggle-scanner')"
     >

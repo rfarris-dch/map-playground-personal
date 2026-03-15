@@ -336,8 +336,8 @@
             />
             <span class="truncate text-foreground/85">{{ facility.facilityName }}</span>
           </span>
-          <span class="truncate text-right text-muted-foreground">
-            {{ facility.providerName?.split(" ")[0] ?? "—" }}
+          <span class="truncate text-right text-muted-foreground" :title="facility.providerName ?? undefined">
+            {{ facility.providerName ?? "—" }}
           </span>
           <span class="text-right text-muted-foreground">
             {{ facility.commissionedPowerMw !== null ? facility.commissionedPowerMw.toFixed(1) : "—" }}

@@ -1,5 +1,6 @@
 import { ApiRoutes } from "@map-migration/http-contracts/api-routes";
 import type { IMap } from "@map-migration/map-engine";
+import { initialLayerStatus, type LayerStatus } from "@/features/layers/layer-runtime.types";
 import type { WaterLayerVisibilityController } from "@/features/water/water.types";
 import { mountLayerVisibilityController } from "@/lib/layer-visibility-controller.service";
 import type { MountWaterLayerVisibilityOptions } from "./water.layer.types";
@@ -41,6 +42,8 @@ function ensureWaterLayer(map: IMap, styleLayerId: string): void {
 export function mountWaterLayerVisibility(
   options: MountWaterLayerVisibilityOptions
 ): WaterLayerVisibilityController {
+  const statusState: { value: LayerStatus } = { value: initialLayerStatus() };
+
   function applyVisibility(): void {
     if (!options.map.hasLayer(options.styleLayerId)) {
       return;
@@ -67,7 +70,15 @@ export function mountWaterLayerVisibility(
       }
     },
     ensureReady() {
-      ensureWaterLayer(options.map, options.styleLayerId);
+      statusState.value = { state: "loading" };
+      try {
+        ensureWaterLayer(options.map, options.styleLayerId);
+        statusState.value = { state: "ready" };
+      } catch (error: unknown) {
+        const reason = error instanceof Error ? error.message : "failed to initialize water layer";
+        statusState.value = { state: "error", reason };
+        throw error;
+      }
     },
     map: options.map,
     startWhenStyleReady: true,
@@ -75,6 +86,9 @@ export function mountWaterLayerVisibility(
 
   return {
     layerId: options.layerId,
+    get status(): LayerStatus {
+      return statusState.value;
+    },
     setVisible(nextVisible: boolean): void {
       controller.setVisible(nextVisible);
     },

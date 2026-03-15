@@ -259,21 +259,33 @@ export function useSpatialAnalysisPanelState(props: SpatialAnalysisPanelProps) {
     return "Pending";
   }
 
+  function firstValidTab(): SpatialAnalysisPanelTab {
+    if (hasFacilities.value) return "facilities";
+    if (hasCountyScores.value) return "counties";
+    if (hasParcels.value) return "parcels";
+    return "overview";
+  }
+
   watch(
-    [hasAnyResults, hasParcels],
-    ([nextHasAnyResults, nextHasParcels]) => {
+    [hasAnyResults, hasFacilities, hasParcels, hasCountyScores],
+    ([nextHasAnyResults]) => {
       if (!nextHasAnyResults) {
         activeTab.value = "overview";
         return;
       }
 
-      if (!nextHasParcels && activeTab.value === "parcels") {
-        activeTab.value = "overview";
+      if (!hasFacilities.value && activeTab.value === "facilities") {
+        activeTab.value = firstValidTab();
+        return;
+      }
+
+      if (!hasParcels.value && activeTab.value === "parcels") {
+        activeTab.value = firstValidTab();
         return;
       }
 
       if (!hasCountyScores.value && activeTab.value === "counties") {
-        activeTab.value = "overview";
+        activeTab.value = firstValidTab();
       }
     },
     {

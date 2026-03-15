@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { computed, ref, watch } from "vue";
+  import MapInitErrorOverlay from "@/features/app/components/map-init-error-overlay.vue";
   import MapLoadingBar from "@/features/app/components/map-loading-bar.vue";
   import MapStatusBar from "@/features/app/components/map-status-bar.vue";
   import { useMapShellContext } from "@/features/app/core/map-shell-context";
@@ -23,6 +24,14 @@
   const isInitialLoading = computed(
     () => !hasReceivedInitialData.value && shell.map.value !== null
   );
+
+  const mapInitStatus = computed(() => shell.mapInitStatus.value);
+  const isMapInitError = computed(() => mapInitStatus.value.phase === "error");
+  const isRetrying = computed(() => mapInitStatus.value.phase === "initializing");
+
+  function handleRetry(): void {
+    shell.retryMapInitialization();
+  }
 
   watch(
     () => shell.facilitiesStatus.value,
@@ -60,6 +69,13 @@
     @export="shell.exportScannerSelection"
     @open-dashboard="shell.openScannerDashboard"
     @select-facility="shell.navigateToFacilityDetail"
+  />
+
+  <MapInitErrorOverlay
+    v-if="isMapInitError && mapInitStatus.errorReason !== null"
+    :error-reason="mapInitStatus.errorReason"
+    :retrying="isRetrying"
+    @retry="handleRetry"
   />
 
   <MapLoadingBar :active="isInitialLoading" />

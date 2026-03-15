@@ -125,8 +125,10 @@ export function useAppShellRuntime(
       layerRuntime: state.layerRuntime,
       map: state.map,
       mapContainer: state.mapContainer,
+      mapInitStatus: state.mapInitStatus,
     },
     state: {
+      boundaryFetchError: state.boundaryFetchError,
       boundaryFacetOptions: state.boundaryFacetOptions,
       boundaryFacetSelection: state.boundaryFacetSelection,
       boundaryHoverByLayer: state.boundaryHoverByLayer,
@@ -138,6 +140,7 @@ export function useAppShellRuntime(
       hoveredMarketBoundary: state.hoveredMarketBoundary,
       hoveredPower: state.hoveredPower,
       marketBoundaryColorMode: state.marketBoundaryColorMode,
+      marketBoundaryFetchError: state.marketBoundaryFetchError,
       marketBoundaryFacetOptions: state.marketBoundaryFacetOptions,
       marketBoundaryFacetSelection: state.marketBoundaryFacetSelection,
       marketBoundaryHoverByLayer: state.marketBoundaryHoverByLayer,

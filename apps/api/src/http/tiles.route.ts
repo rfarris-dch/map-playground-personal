@@ -1,14 +1,33 @@
+import {
+  fetchResponseEffect,
+  isRequestEffectError,
+  runEffectPromise,
+} from "@map-migration/core-runtime/effect";
 import { ApiHeaders, ApiRoutes } from "@map-migration/http-contracts/api-routes";
 import {
   UsgsWaterTileContentTypeSchema,
   UsgsWaterTilePathSchema,
 } from "@map-migration/http-contracts/tiles-http";
+import { Effect } from "effect";
 import type { Env, Hono } from "hono";
 import { toDebugDetails } from "@/http/api-response";
 import { fromApiRequest, routeError, runEffectRoute } from "@/http/effect-route";
+import { upstreamError, upstreamStatusError } from "@/http/route-error-taxonomy.service";
+import { validationRouteError } from "@/http/validation-error.service";
 
 const USGS_WATER_TILE_URL =
   "https://basemap.nationalmap.gov/arcgis/rest/services/USGSHydroCached/MapServer/tile";
+
+const USGS_TILE_TIMEOUT_MS = 12_000;
+const USGS_TILE_MAX_ATTEMPTS = 3;
+
+function shouldRetryUpstreamResponse(response: Response): boolean {
+  return response.status === 408 || response.status === 429 || response.status >= 500;
+}
+
+function retryDelayMs(attempt: number): number {
+  return 250 * 2 ** Math.max(0, attempt);
+}
 
 function looksLikePng(bytes: Uint8Array): boolean {
   return (
@@ -60,6 +79,49 @@ function createTileResponse(args: {
   });
 }
 
+async function fetchUpstreamTile(
+  upstreamUrl: string,
+  signal: AbortSignal | undefined
+): Promise<Response> {
+  try {
+    return await runEffectPromise(
+      fetchResponseEffect({
+        init: {
+          method: "GET",
+          ...(signal ? { signal } : {}),
+        },
+        maxAttempts: USGS_TILE_MAX_ATTEMPTS,
+        retryDelayMs,
+        shouldRetryError: (error) =>
+          error._tag === "RequestNetworkError" ||
+          (error._tag === "RequestAbortedError" && signal?.aborted !== true),
+        shouldRetryResponse: shouldRetryUpstreamResponse,
+        timeoutMs: USGS_TILE_TIMEOUT_MS,
+        url: upstreamUrl,
+      }).pipe(Effect.map(({ response }) => response)),
+      signal
+    );
+  } catch (error: unknown) {
+    if (isRequestEffectError(error)) {
+      throw routeError(
+        error._tag === "RequestAbortedError"
+          ? {
+              httpStatus: 504,
+              code: "USGS_WATER_TILE_TIMEOUT",
+              message: "USGS water tile upstream timed out",
+            }
+          : {
+              httpStatus: 502,
+              code: "USGS_WATER_TILE_NETWORK_ERROR",
+              message: "USGS water tile upstream network error",
+              details: toDebugDetails(error.cause),
+            }
+      );
+    }
+    throw error;
+  }
+}
+
 export function registerTilesRoute<E extends Env>(app: Hono<E>): void {
   app.get(`${ApiRoutes.usgsWaterTile}/:z/:x/:y`, (c) =>
     runEffectRoute(
@@ -71,37 +133,33 @@ export function registerTilesRoute<E extends Env>(app: Hono<E>): void {
           y: honoContext.req.param("y"),
         });
         if (!request.success) {
-          throw routeError({
-            httpStatus: 400,
+          throw validationRouteError({
             code: "INVALID_TILE_COORDINATES",
             message: "invalid usgs water tile path params",
-            details: toDebugDetails(request.error),
+            zodError: request.error,
           });
         }
 
         const upstreamUrl = `${USGS_WATER_TILE_URL}/${request.data.z}/${request.data.y}/${request.data.x}`;
-        const upstreamResponse = await fetch(upstreamUrl, { signal });
+        const upstreamResponse = await fetchUpstreamTile(upstreamUrl, signal);
 
         if (!upstreamResponse.ok) {
-          throw routeError({
-            httpStatus: 502,
-            code: "USGS_WATER_TILE_UPSTREAM_ERROR",
-            message: "USGS water tile upstream returned an error",
-            details: {
-              upstreamStatus: upstreamResponse.status,
-            },
-          });
+          throw upstreamStatusError(
+            "usgs_water_tile",
+            "USGS water tile upstream returned an error",
+            upstreamResponse.status
+          );
         }
 
         const bytes = new Uint8Array(await upstreamResponse.arrayBuffer());
         const contentType = imageContentType(bytes);
         const contentTypeResult = UsgsWaterTileContentTypeSchema.safeParse(contentType);
         if (!contentTypeResult.success) {
-          throw routeError({
-            httpStatus: 502,
-            code: "USGS_WATER_TILE_INVALID_IMAGE",
-            message: "USGS water tile upstream returned an unsupported image payload",
-          });
+          throw upstreamError(
+            "usgs_water_tile_payload",
+            "USGS water tile upstream returned an unsupported image payload",
+            {}
+          );
         }
 
         return createTileResponse({

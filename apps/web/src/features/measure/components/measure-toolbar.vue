@@ -37,7 +37,7 @@
     }
 
     if (props.state.mode === "distance") {
-      return "Click the map to add path vertices. Press Esc to cancel.";
+      return "Click the map to add path vertices.";
     }
 
     if (props.outputMode === "image") {
@@ -50,18 +50,18 @@
       }
 
       if (props.state.areaShape === "freeform") {
-        return "Click points, then click the first point or press Enter to close.";
+        return "Click points, then click the first point to close.";
       }
 
       return "Click once to anchor and again to finalize the shape.";
     }
 
     if (props.state.isSelectionComplete) {
-      return "Selection complete. Review the analysis panel or press Esc to clear.";
+      return "Selection complete. Review the analysis panel or click Clear to reset.";
     }
 
     if (props.state.areaShape === "freeform") {
-      return "Click points, then click the first point or press Enter to close.";
+      return "Click points, then click the first point to close.";
     }
 
     return "Click once to anchor and again to finalize the shape.";

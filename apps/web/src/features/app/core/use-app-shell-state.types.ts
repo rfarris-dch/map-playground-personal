@@ -13,9 +13,12 @@ import type {
   PerspectiveStatusState,
 } from "@/features/app/core/app-shell.types";
 import type {
+  BoundaryFetchErrorState,
   EnvironmentalStressController,
+  MapInitStatus,
   MarketBoundaryFacetOptionsState,
   MarketBoundaryFacetSelectionState,
+  MarketBoundaryFetchErrorState,
 } from "@/features/app/lifecycle/use-app-shell-map-lifecycle.types";
 import type {
   MarketBoundaryControllerState,
@@ -58,6 +61,7 @@ export interface UseAppShellStateResult {
   readonly boundaryControllers: ShallowRef<BoundaryControllerState>;
   readonly boundaryFacetOptions: ShallowRef<BoundaryFacetOptionsState>;
   readonly boundaryFacetSelection: ShallowRef<BoundaryFacetSelectionState>;
+  readonly boundaryFetchError: ShallowRef<BoundaryFetchErrorState>;
   readonly boundaryHoverByLayer: ShallowRef<BoundaryHoverByLayerState>;
   readonly clearSelectionGeometry: () => void;
   readonly clearSketchMeasure: () => void;
@@ -85,10 +89,12 @@ export interface UseAppShellStateResult {
   readonly layerRuntimeSnapshot: ShallowRef<LayerRuntimeSnapshot | null>;
   readonly map: ShallowRef<IMap | null>;
   readonly mapContainer: Readonly<ShallowRef<HTMLDivElement | null>>;
+  readonly mapInitStatus: ShallowRef<MapInitStatus>;
   readonly marketBoundaryColorMode: ShallowRef<MarketBoundaryColorMode>;
   readonly marketBoundaryControllers: ShallowRef<MarketBoundaryControllerState>;
   readonly marketBoundaryFacetOptions: ShallowRef<MarketBoundaryFacetOptionsState>;
   readonly marketBoundaryFacetSelection: ShallowRef<MarketBoundaryFacetSelectionState>;
+  readonly marketBoundaryFetchError: ShallowRef<MarketBoundaryFetchErrorState>;
   readonly marketBoundaryHoverByLayer: ShallowRef<MarketBoundaryHoverByLayerState>;
   readonly parcelsController: ShallowRef<ParcelsLayerController | null>;
   readonly parcelsStatus: ShallowRef<ParcelsStatus>;

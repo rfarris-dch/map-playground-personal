@@ -1253,6 +1253,7 @@ export function mountFacilitiesLayer(
       map.off("load", onLoad);
       map.off("moveend", onMoveEnd);
       map.offClick(onClick);
+      map.offStyleImageMissing(handleStyleImageMissing);
     },
   };
 }

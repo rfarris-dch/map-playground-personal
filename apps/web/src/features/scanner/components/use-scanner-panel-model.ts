@@ -78,14 +78,18 @@ export function useScannerPanelModel(
     () =>
       analysisSummary.value.totalCount > 0 ||
       analysisSummary.value.parcelSelection.count > 0 ||
-      countyCount.value > 0
+      countyCount.value > 0 ||
+      marketCount.value > 0
   );
 
   const topFacilities = computed(() => analysisSummary.value.facilities.slice(0, 15));
   const facilitiesTabDisabled = computed(() => topFacilities.value.length === 0);
   const dashboardDisabled = computed(
     () =>
-      analysisSummary.value.totalCount === 0 && analysisSummary.value.parcelSelection.count === 0
+      analysisSummary.value.totalCount === 0 &&
+      analysisSummary.value.parcelSelection.count === 0 &&
+      marketCount.value === 0 &&
+      countyCount.value === 0
   );
   const exportDisabled = computed(() => analysisSummary.value.totalCount === 0);
 
@@ -134,15 +138,15 @@ export function useScannerPanelModel(
     },
     {
       label: "Planned Power (MW)",
-      value: formatScannerPowerMw(analysisSummary.value.colocation.pipelinePowerMw),
+      value: formatScannerPowerMw(analysisSummary.value.colocation.plannedPowerMw),
     },
     {
       label: "Under Construction Power (MW)",
-      value: `${analysisSummary.value.colocation.underConstructionCount}`,
+      value: formatScannerPowerMw(analysisSummary.value.colocation.underConstructionPowerMw),
     },
     {
       label: "Available Power (MW)",
-      value: "\u2014",
+      value: formatScannerPowerMw(analysisSummary.value.colocation.availablePowerMw),
     },
     {
       label: "Facility Count",
@@ -165,15 +169,15 @@ export function useScannerPanelModel(
     },
     {
       label: "Planned Power (MW)",
-      value: formatScannerPowerMw(analysisSummary.value.hyperscale.pipelinePowerMw),
+      value: formatScannerPowerMw(analysisSummary.value.hyperscale.plannedPowerMw),
     },
     {
       label: "Under Construction Power (MW)",
-      value: `${analysisSummary.value.hyperscale.underConstructionCount}`,
+      value: formatScannerPowerMw(analysisSummary.value.hyperscale.underConstructionPowerMw),
     },
     {
       label: "Available Power (MW)",
-      value: "\u2014",
+      value: formatScannerPowerMw(analysisSummary.value.hyperscale.availablePowerMw),
     },
     {
       label: "Facility Count",

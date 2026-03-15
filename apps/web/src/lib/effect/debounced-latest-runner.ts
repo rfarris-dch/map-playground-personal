@@ -25,5 +25,8 @@ export function createDebouncedLatestRunner(
     run(program) {
       return latestRunner.run(Effect.sleep(options.debounceMs).pipe(Effect.zipRight(program)));
     },
+    start(program) {
+      return latestRunner.start(Effect.sleep(options.debounceMs).pipe(Effect.zipRight(program)));
+    },
   };
 }

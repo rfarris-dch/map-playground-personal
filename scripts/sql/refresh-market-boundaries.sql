@@ -11,8 +11,7 @@ BEGIN
   END IF;
 END $$;
 
-TRUNCATE TABLE market_current.market_boundaries;
-TRUNCATE TABLE market_current.markets;
+TRUNCATE TABLE market_current.market_boundaries, market_current.submarket_points, market_current.markets;
 
 WITH searchable_markets AS (
   SELECT
@@ -20,8 +19,7 @@ WITH searchable_markets AS (
     market.name,
     market.center
   FROM market_source.markets AS market
-  WHERE market.search_page
-    AND market.market_id IS NOT NULL
+  WHERE market.market_id IS NOT NULL
 ),
 county_markets AS (
   SELECT DISTINCT
@@ -40,7 +38,7 @@ county_unions AS (
   FROM county_markets AS county_market
   GROUP BY county_market.market_id
 ),
-point_sources AS (
+facility_points AS (
   SELECT
     submarket.market_id,
     submarket.geom
@@ -69,20 +67,33 @@ point_sources AS (
   INNER JOIN searchable_markets AS market
     ON LOWER(BTRIM(point.market)) = LOWER(BTRIM(market.name))
   WHERE point.geom IS NOT NULL
+),
+markets_with_facilities AS (
+  SELECT DISTINCT market_id FROM facility_points
+),
+point_sources AS (
+  SELECT market_id, geom FROM facility_points
   UNION ALL
   SELECT
     market.market_id,
     market.center AS geom
   FROM searchable_markets AS market
+  INNER JOIN markets_with_facilities AS mwf
+    ON mwf.market_id = market.market_id
   WHERE market.center IS NOT NULL
+),
+deduplicated_points AS (
+  SELECT DISTINCT ON (market_id, ST_X(geom), ST_Y(geom))
+    market_id, geom
+  FROM point_sources
 ),
 point_groups AS (
   SELECT
-    point_source.market_id,
+    dp.market_id,
     COUNT(*) AS point_count,
-    ST_Collect(point_source.geom) AS collected_geom
-  FROM point_sources AS point_source
-  GROUP BY point_source.market_id
+    ST_Collect(dp.geom) AS collected_geom
+  FROM deduplicated_points AS dp
+  GROUP BY dp.market_id
 ),
 point_hulls AS (
   SELECT
@@ -90,14 +101,20 @@ point_hulls AS (
     CASE
       WHEN point_group.point_count >= 5 THEN ST_Transform(
         ST_Buffer(
-          ST_Transform(ST_ConcaveHull(point_group.collected_geom, 0.75, true), 3857),
+          ST_Transform(
+            safe_concave_hull(point_group.collected_geom, 0.75, true),
+            3857
+          ),
           15000
         ),
         4326
       )
       WHEN point_group.point_count >= 3 THEN ST_Transform(
         ST_Buffer(
-          ST_Transform(ST_ConcaveHull(point_group.collected_geom, 0.90, true), 3857),
+          ST_Transform(
+            safe_concave_hull(point_group.collected_geom, 0.90, true),
+            3857
+          ),
           20000
         ),
         4326
@@ -119,25 +136,107 @@ point_hulls AS (
   LEFT JOIN point_groups AS point_group
     ON point_group.market_id = market.market_id
 ),
-final_boundaries AS (
+-- Small buffers around each market's own facility points (5km) to ensure coverage
+facility_point_buffers AS (
+  SELECT
+    fp.market_id,
+    ST_Union(ST_Buffer(fp.geom::geography, 5000)::geometry) AS buffer_geom
+  FROM facility_points fp
+  GROUP BY fp.market_id
+),
+-- Markets that have county-union boundaries, augmented with facility point buffers for outliers
+county_boundaries AS (
   SELECT
     market.market_id,
     ST_Multi(
       ST_CollectionExtract(
-        ST_MakeValid(COALESCE(county_union.geom, point_hull.geom)),
+        ST_MakeValid(
+          ST_WrapX(
+            ST_Union(
+              county_union.geom,
+              COALESCE(fpb.buffer_geom, 'GEOMETRYCOLLECTION EMPTY'::geometry)
+            ),
+            -180, 360
+          )
+        ),
         3
       )
     ) AS geom,
-    CASE
-      WHEN county_union.geom IS NOT NULL THEN 'county-union-v1'
-      WHEN point_hull.geom IS NOT NULL THEN 'point-derived-v1'
-      ELSE NULL
-    END AS source_version
+    'county-union-v1' AS source_version
   FROM searchable_markets AS market
+  INNER JOIN county_unions AS county_union
+    ON county_union.market_id = market.market_id
+  LEFT JOIN facility_point_buffers fpb ON fpb.market_id = market.market_id
+),
+-- Markets that need point-derived boundaries with Voronoi mutual exclusion
+point_derived_markets AS (
+  SELECT
+    market.market_id,
+    point_hull.geom AS hull_geom,
+    ST_Centroid(point_hull.geom) AS centroid
+  FROM searchable_markets AS market
+  INNER JOIN point_hulls AS point_hull
+    ON point_hull.market_id = market.market_id
   LEFT JOIN county_unions AS county_union
     ON county_union.market_id = market.market_id
-  LEFT JOIN point_hulls AS point_hull
-    ON point_hull.market_id = market.market_id
+  WHERE county_union.geom IS NULL
+    AND point_hull.geom IS NOT NULL
+    AND NOT ST_IsEmpty(point_hull.geom)
+),
+-- Generate Voronoi cells from all point-derived market centroids
+voronoi_input AS (
+  SELECT ST_Collect(centroid) AS all_centroids FROM point_derived_markets
+),
+voronoi_cells AS (
+  SELECT (ST_Dump(ST_VoronoiPolygons(all_centroids, 0.0))).geom AS cell_geom
+  FROM voronoi_input
+  WHERE all_centroids IS NOT NULL
+),
+-- Match each Voronoi cell to its market by centroid containment
+matched_voronoi AS (
+  SELECT
+    pdm.market_id,
+    pdm.hull_geom,
+    vc.cell_geom
+  FROM point_derived_markets pdm
+  JOIN voronoi_cells vc ON ST_Contains(vc.cell_geom, pdm.centroid)
+),
+-- Combine all county-union geometries into one shape to subtract from point-derived
+all_county_geom AS (
+  SELECT ST_UnaryUnion(ST_Collect(geom)) AS geom FROM county_boundaries
+),
+-- Clip hull to Voronoi cell and subtract county-union areas, then union facility buffers back
+point_boundaries AS (
+  SELECT
+    mv.market_id,
+    ST_Multi(
+      ST_CollectionExtract(
+        ST_MakeValid(
+          ST_WrapX(
+            ST_Union(
+              CASE
+                WHEN acg.geom IS NOT NULL AND ST_Intersects(ST_Intersection(mv.hull_geom, mv.cell_geom), acg.geom)
+                THEN ST_Difference(ST_Intersection(mv.hull_geom, mv.cell_geom), acg.geom)
+                ELSE ST_Intersection(mv.hull_geom, mv.cell_geom)
+              END,
+              COALESCE(fpb.buffer_geom, 'GEOMETRYCOLLECTION EMPTY'::geometry)
+            ),
+            -180, 360
+          )
+        ),
+        3
+      )
+    ) AS geom,
+    'point-derived-v2' AS source_version
+  FROM matched_voronoi mv
+  LEFT JOIN all_county_geom acg ON true
+  LEFT JOIN facility_point_buffers fpb ON fpb.market_id = mv.market_id
+),
+final_boundaries AS (
+  SELECT market_id, geom, source_version FROM county_boundaries
+  UNION ALL
+  SELECT market_id, geom, source_version FROM point_boundaries
+  WHERE geom IS NOT NULL AND NOT ST_IsEmpty(geom)
 )
 INSERT INTO market_current.market_boundaries (
   market_id,
@@ -270,10 +369,25 @@ LEFT JOIN latest_yearly_absorption AS yearly
   ON yearly.market_id = market.market_id
 LEFT JOIN dominant_state AS state_by_market
   ON state_by_market.market_id = market.market_id
-WHERE market.search_page
-  AND market.market_id IS NOT NULL;
+WHERE market.market_id IS NOT NULL;
+
+INSERT INTO market_current.submarket_points (submarket_id, name, market_id, center)
+SELECT
+  sp.id::text AS submarket_id,
+  sp.name,
+  m.market_id,
+  sp.geom AS center
+FROM spatial.submarket_points sp
+JOIN market_current.markets m ON LOWER(BTRIM(sp.market)) = LOWER(BTRIM(m.name))
+WHERE sp.geom IS NOT NULL
+  AND sp.id IS NOT NULL
+  AND sp.name IS NOT NULL
+ON CONFLICT (submarket_id) DO NOTHING;
 
 ANALYZE market_current.market_boundaries;
 ANALYZE market_current.markets;
+ANALYZE market_current.submarket_points;
 
 COMMIT;
+
+REFRESH MATERIALIZED VIEW market_current.submarket_boundaries;

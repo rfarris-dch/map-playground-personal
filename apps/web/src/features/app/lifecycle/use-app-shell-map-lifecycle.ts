@@ -15,6 +15,16 @@ export function useAppShellMapLifecycle(options: UseAppShellMapLifecycleOptions)
     applyBoundarySelectedRegionIds(options, boundaryId, selectedRegionIds);
   }
 
+  async function retryMapInitialization(): Promise<void> {
+    const currentStatus = options.runtime.mapInitStatus.value;
+    if (currentStatus.phase !== "error") {
+      return;
+    }
+
+    await destroyMapLifecycleRuntime(options);
+    await initializeMapLifecycleRuntime(options);
+  }
+
   watch(
     () => options.state.sketchMeasureState.value.mode,
     (mode) => {
@@ -45,17 +55,18 @@ export function useAppShellMapLifecycle(options: UseAppShellMapLifecycleOptions)
 
   onMounted(() => {
     initializeMapLifecycleRuntime(options).catch((error: unknown) => {
-      console.error("Map initialization failed", error);
+      console.error("[map] lifecycle initialization failed unexpectedly", error);
     });
   });
 
   onBeforeUnmount(() => {
     destroyMapLifecycleRuntime(options).catch((error: unknown) => {
-      console.error("Map teardown failed", error);
+      console.error("[map] lifecycle teardown failed", error);
     });
   });
 
   return {
+    retryMapInitialization,
     setBoundarySelectedRegionIds,
   };
 }

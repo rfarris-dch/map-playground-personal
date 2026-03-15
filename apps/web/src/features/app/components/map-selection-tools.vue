@@ -18,6 +18,7 @@
     :summary="props.selectionSummary"
     :error-message="props.selectionError"
     :is-loading="props.isLoading"
+    @hide="emit('hide')"
     @clear="emit('clear-selection')"
     @export="emit('export')"
     @open-dashboard="emit('open-dashboard')"

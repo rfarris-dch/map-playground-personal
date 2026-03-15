@@ -1,5 +1,11 @@
 import { runEffectPromise } from "@map-migration/core-runtime/effect";
-import type { IMap, LngLatBounds, MapClickEvent, MapPointerEvent } from "@map-migration/map-engine";
+import type {
+  IMap,
+  LngLatBounds,
+  MapClickEvent,
+  MapExpression,
+  MapPointerEvent,
+} from "@map-migration/map-engine";
 import { getMarketBoundaryStyleLayerIds } from "@map-migration/map-style";
 import { Effect, Either } from "effect";
 import { fetchMarketBoundariesEffect } from "@/features/market-boundaries/api";

@@ -1,10 +1,14 @@
-import { startBrowserScopedEffect } from "@map-migration/core-runtime/browser";
+import {
+  type ScopedEffectHandle,
+  startBrowserScopedEffect,
+} from "@map-migration/core-runtime/browser";
 import {
   destroyBoundaryRuntime,
   initializeBoundaryRuntime,
   resetBoundaryRuntime,
 } from "@/features/app/boundary/app-shell-boundary-runtime.service";
 import {
+  AppShellMapInitError,
   type AppShellMapSetup,
   initializeAppShellMapEffect,
 } from "@/features/app/lifecycle/app-shell-map.service";
@@ -28,11 +32,22 @@ export async function initializeMapLifecycleRuntime(
     return;
   }
 
-  const mapSetup = await startBrowserScopedEffect<AppShellMapSetup, never>(
-    initializeAppShellMapEffect(container, {
-      initialViewport: options.initialViewport,
-    })
-  );
+  options.runtime.mapInitStatus.value = { phase: "initializing", errorReason: null };
+
+  let mapSetup: ScopedEffectHandle<AppShellMapSetup>;
+  try {
+    mapSetup = await startBrowserScopedEffect<AppShellMapSetup, AppShellMapInitError>(
+      initializeAppShellMapEffect(container, {
+        initialViewport: options.initialViewport,
+      })
+    );
+  } catch (error: unknown) {
+    const reason = error instanceof AppShellMapInitError ? error.reason : "unknown";
+    console.error("[map] initialization failed", { reason, error });
+    options.runtime.mapInitStatus.value = { phase: "error", errorReason: reason };
+    return;
+  }
+
   options.runtime.disposeMapRuntime.value = mapSetup.dispose;
   options.runtime.map.value = mapSetup.value.map;
   options.runtime.layerRuntime.value = createLayerRuntime(mapSetup.value.map, {
@@ -47,6 +62,8 @@ export async function initializeMapLifecycleRuntime(
   initializeMarketBoundaryRuntime(options);
   initializeMapLayerRuntime(options);
   options.visibility.syncRuntimeVisibility();
+
+  options.runtime.mapInitStatus.value = { phase: "ready", errorReason: null };
 }
 
 export function resetMapLifecycleInteractions(options: UseAppShellMapLifecycleOptions): void {

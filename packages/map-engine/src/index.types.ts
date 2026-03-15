@@ -59,11 +59,13 @@ export interface IMap {
   loadImage(url: string): Promise<ImageBitmap | HTMLImageElement | ImageData>;
   off(event: "load" | "moveend", handler: () => void): void;
   offClick(handler: (event: MapClickEvent) => void): void;
+  offError(handler: MapErrorHandler): void;
   offPointerLeave(handler: () => void): void;
   offPointerMove(handler: (event: MapPointerEvent) => void): void;
   offStyleImageMissing(handler: (id: string) => void): void;
   on(event: "load" | "moveend", handler: () => void): void;
   onClick(handler: (event: MapClickEvent) => void): void;
+  onError(handler: MapErrorHandler): void;
   onPointerLeave(handler: () => void): void;
   onPointerMove(handler: (event: MapPointerEvent) => void): void;
   onStyleImageMissing(handler: (id: string) => void): void;
@@ -142,6 +144,15 @@ export interface ScaleControlOptions {
   readonly maxWidth?: number;
   readonly unit?: "imperial" | "metric" | "nautical";
 }
+
+export interface MapLifecycleError {
+  /** The underlying error thrown by the callback. */
+  readonly error: unknown;
+  /** The lifecycle event during which the error occurred (e.g. "load", "moveend"). */
+  readonly event: string;
+}
+
+export type MapErrorHandler = (lifecycleError: MapLifecycleError) => void;
 
 export interface IMapMarker {
   remove(): void;

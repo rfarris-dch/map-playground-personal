@@ -1,6 +1,7 @@
 import { createPmtilesSourceUrl, type TilePublishManifest } from "@map-migration/geo-tiles";
 import type { IMap } from "@map-migration/map-engine";
 import { getCatalogStyleLayerIds, getFloodStyleLayerIds } from "@map-migration/map-style";
+import { initialLayerStatus, type LayerStatus } from "@/features/layers/layer-runtime.types";
 import { resolveEnvironmentalFloodManifestPath } from "@/features/tiles/tile-manifest-config.service";
 import { mountManifestBackedLayerBootstrap } from "@/lib/manifest-backed-layer.service";
 import type {
@@ -27,12 +28,14 @@ const UPPER_BOUND_LAYER_ANCHORS: readonly string[] = [
 interface FloodLayerState {
   flood100Visible: boolean;
   flood500Visible: boolean;
+  status: LayerStatus;
 }
 
 function initialState(): FloodLayerState {
   return {
     flood100Visible: false,
     flood500Visible: false,
+    status: initialLayerStatus(),
   };
 }
 
@@ -137,14 +140,18 @@ export function mountFloodLayers(options: MountFloodLayersOptions): FloodLayerMo
     },
     manifestPath,
     map: options.map,
+
     onInitializationError(error: unknown) {
-      console.error("[flood] source initialization failed", error);
+      const reason = error instanceof Error ? error.message : "initialization failed";
+      state.status = { state: "error", reason };
     },
     onInitialized() {
+      state.status = { state: "ready" };
       applyVisibility();
     },
     onReady(readyBootstrap) {
       if (state.flood100Visible || state.flood500Visible) {
+        state.status = { state: "loading" };
         readyBootstrap.initializeSource().catch(() => {
           return;
         });
@@ -162,7 +169,8 @@ export function mountFloodLayers(options: MountFloodLayersOptions): FloodLayerMo
     layerId: "flood-100",
     setVisible(visible: boolean): void {
       state.flood100Visible = visible;
-      if (visible && bootstrap.isReady()) {
+      if (visible && bootstrap.isReady() && state.status.state !== "loading") {
+        state.status = { state: "loading" };
         bootstrap.initializeSource().catch(() => {
           return;
         });
@@ -179,7 +187,8 @@ export function mountFloodLayers(options: MountFloodLayersOptions): FloodLayerMo
     layerId: "flood-500",
     setVisible(visible: boolean): void {
       state.flood500Visible = visible;
-      if (visible && bootstrap.isReady()) {
+      if (visible && bootstrap.isReady() && state.status.state !== "loading") {
+        state.status = { state: "loading" };
         bootstrap.initializeSource().catch(() => {
           return;
         });
@@ -193,6 +202,9 @@ export function mountFloodLayers(options: MountFloodLayersOptions): FloodLayerMo
   };
 
   return {
+    get status(): LayerStatus {
+      return state.status;
+    },
     controllers: {
       flood100: flood100Controller,
       flood500: flood500Controller,

@@ -286,10 +286,15 @@ function startServerEffect(): Effect.Effect<void, Error> {
       importMetaHot.data.previousShutdownPromise = undefined;
     }
     yield* assertStartupPostgresReadyEffect();
-    yield* Effect.try({
-      try: () => readFiberLocatorConfig(),
-      catch: (error) => (error instanceof Error ? error : new Error(String(error))),
-    });
+    try {
+      readFiberLocatorConfig();
+    } catch (configError) {
+      console.warn(
+        `[api] fiber-locator config unavailable; routes will return 503 until configured (${
+          configError instanceof Error ? configError.message : String(configError)
+        })`
+      );
+    }
     yield* forceClearPortBeforeStartEffect(port);
     yield* Effect.sync(() => {
       if (effectDevToolsConnection !== null) {

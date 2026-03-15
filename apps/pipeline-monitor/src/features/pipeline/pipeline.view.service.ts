@@ -114,19 +114,20 @@ async function interruptCurrentRefresh(
 
 function applyUnexpectedRefreshFailure(
   completedAt: string,
-  details: unknown,
+  diagnostics: unknown,
   error: PipelineStatusController["error"],
   events: PipelineStatusController["events"],
   consecutiveFailures: PipelineStatusController["consecutiveFailures"],
   lastFailedRefreshAt: PipelineStatusController["lastFailedRefreshAt"]
 ): void {
   const unexpectedFailure: PipelineFetchFailure = {
-    reason: "network",
+    reason: "unexpected",
     requestId: "pipeline-ui-internal",
-    message: "Refresh execution failed",
-    details,
+    message: "An unexpected internal error occurred",
+    diagnostics,
   };
 
+  console.error("[pipeline-monitor] unexpected refresh defect", diagnostics);
   error.value = unexpectedFailure;
   consecutiveFailures.value += 1;
   lastFailedRefreshAt.value = completedAt;
@@ -300,11 +301,12 @@ export function createPipelineStatusController(
     hasStarted = true;
     startHeartbeat(pollingState, deps, clockNowMs);
     refreshNow().catch((refreshError) => {
+      console.error("[pipeline-monitor] unexpected initial refresh defect", refreshError);
       error.value = {
-        reason: "network",
+        reason: "unexpected",
         requestId: "pipeline-ui-internal",
-        message: "Initial refresh failed",
-        details: refreshError,
+        message: "An unexpected error occurred during initial refresh",
+        diagnostics: refreshError,
       };
       const capturedAt = new Date(deps.now()).toISOString();
       events.value = appendPipelineLiveEvents(events.value, [
@@ -312,7 +314,7 @@ export function createPipelineStatusController(
           capturedAt,
           requestId: "pipeline-ui-internal",
           tone: "critical",
-          message: "Initial refresh failed",
+          message: "An unexpected error occurred during initial refresh",
         },
       ]);
       isLoading.value = false;

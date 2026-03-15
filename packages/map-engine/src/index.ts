@@ -24,8 +24,10 @@ import type {
   MapControl,
   MapControlPosition,
   MapCreateOptions,
+  MapErrorHandler,
   MapExpression,
   MapLayerSpecification,
+  MapLifecycleError,
   MapPointerEvent,
   MapPointLike,
   MapProjectionSpecification,
@@ -54,8 +56,10 @@ export type {
   MapControl,
   MapControlPosition,
   MapCreateOptions,
+  MapErrorHandler,
   MapExpression,
   MapLayerSpecification,
+  MapLifecycleError,
   MapPointerEvent,
   MapPointLike,
   MapProjectionSpecification,
@@ -142,6 +146,8 @@ class MapLibreEngine implements IMap {
     (event: MapClickEvent) => void,
     (event: MapMouseEvent) => void
   >;
+  private readonly errorHandlers: Set<MapErrorHandler>;
+  private readonly guardedHandlers: Map<() => void, () => void>;
   private readonly initialMoveEndHandlers: Map<() => void, () => void>;
   private preferredProjection: MapProjectionSpecification | null;
   private projectionLoadHandler: (() => void) | null;
@@ -150,14 +156,21 @@ class MapLibreEngine implements IMap {
     (event: MapPointerEvent) => void,
     (event: MapMouseEvent) => void
   >;
+  private readonly styleImageMissingHandlers: Map<
+    (id: string) => void,
+    (event: { readonly id: string }) => void
+  >;
   private readonly map: MapLibreMap;
 
   constructor(map: MapLibreMap) {
     this.map = map;
     this.clickHandlers = new Map();
+    this.errorHandlers = new Set();
+    this.guardedHandlers = new Map();
     this.initialMoveEndHandlers = new Map();
     this.pointerMoveHandlers = new Map();
     this.pointerLeaveHandlers = new Map();
+    this.styleImageMissingHandlers = new Map();
     this.preferredProjection = null;
     this.projectionLoadHandler = null;
   }
@@ -413,19 +426,68 @@ class MapLibreEngine implements IMap {
     this.map.setPaintProperty(layerId, name, value);
   }
 
+  onError(handler: MapErrorHandler): void {
+    this.errorHandlers.add(handler);
+  }
+
+  offError(handler: MapErrorHandler): void {
+    this.errorHandlers.delete(handler);
+  }
+
+  private emitError(lifecycleError: MapLifecycleError): void {
+    if (this.errorHandlers.size === 0) {
+      console.error(
+        `[map-engine] Unhandled lifecycle error during "${lifecycleError.event}" callback.`,
+        lifecycleError.error
+      );
+      return;
+    }
+
+    for (const errorHandler of this.errorHandlers) {
+      try {
+        errorHandler(lifecycleError);
+      } catch (handlerError: unknown) {
+        console.error(
+          "[map-engine] Error handler threw while processing a lifecycle error.",
+          handlerError
+        );
+      }
+    }
+  }
+
+  private guardCallback(event: string, handler: () => void): () => void {
+    const existing = this.guardedHandlers.get(handler);
+    if (typeof existing === "function") {
+      return existing;
+    }
+
+    const guarded = (): void => {
+      try {
+        handler();
+      } catch (error: unknown) {
+        this.emitError({ event, error });
+      }
+    };
+
+    this.guardedHandlers.set(handler, guarded);
+    return guarded;
+  }
+
   on(event: "load" | "moveend", handler: () => void): void {
+    const guarded = this.guardCallback(event, handler);
+
     if (event === "load") {
       if (this.map.isStyleLoaded()) {
-        queueMicrotask(handler);
+        queueMicrotask(guarded);
       }
 
-      this.map.on("style.load", handler);
+      this.map.on("style.load", guarded);
       return;
     }
 
     if (event === "moveend") {
       if (this.map.isStyleLoaded()) {
-        queueMicrotask(handler);
+        queueMicrotask(guarded);
       } else {
         const initialMoveEndHandler = (): void => {
           this.map.off("style.load", initialMoveEndHandler);
@@ -435,7 +497,7 @@ class MapLibreEngine implements IMap {
             this.initialMoveEndHandlers.delete(handler);
           }
 
-          queueMicrotask(handler);
+          queueMicrotask(guarded);
         };
 
         this.initialMoveEndHandlers.set(handler, initialMoveEndHandler);
@@ -443,12 +505,16 @@ class MapLibreEngine implements IMap {
       }
     }
 
-    this.map.on(event, handler);
+    this.map.on(event, guarded);
   }
 
   off(event: "load" | "moveend", handler: () => void): void {
+    const guarded = this.guardedHandlers.get(handler);
+    const effectiveHandler = typeof guarded === "function" ? guarded : handler;
+
     if (event === "load") {
-      this.map.off("style.load", handler);
+      this.map.off("style.load", effectiveHandler);
+      this.guardedHandlers.delete(handler);
       return;
     }
 
@@ -460,7 +526,8 @@ class MapLibreEngine implements IMap {
       }
     }
 
-    this.map.off(event, handler);
+    this.map.off(event, effectiveHandler);
+    this.guardedHandlers.delete(handler);
   }
 
   onClick(handler: (event: MapClickEvent) => void): void {
@@ -523,14 +590,26 @@ class MapLibreEngine implements IMap {
   }
 
   onStyleImageMissing(handler: (id: string) => void): void {
-    this.map.on("styleimagemissing", (e) => {
+    if (this.styleImageMissingHandlers.has(handler)) {
+      return;
+    }
+
+    const wrappedHandler = (e: { readonly id: string }): void => {
       handler(e.id);
-    });
+    };
+
+    this.styleImageMissingHandlers.set(handler, wrappedHandler);
+    this.map.on("styleimagemissing", wrappedHandler);
   }
 
-  offStyleImageMissing(_handler: (id: string) => void): void {
-    // MapLibre doesn't support targeted removal of styleimagemissing listeners easily.
-    // This is a no-op; callers should only register once.
+  offStyleImageMissing(handler: (id: string) => void): void {
+    const wrappedHandler = this.styleImageMissingHandlers.get(handler);
+    if (!wrappedHandler) {
+      return;
+    }
+
+    this.map.off("styleimagemissing", wrappedHandler);
+    this.styleImageMissingHandlers.delete(handler);
   }
 
   offPointerLeave(handler: () => void): void {
@@ -593,8 +672,11 @@ class MapLibreEngine implements IMap {
     }
     this.initialMoveEndHandlers.clear();
     this.clickHandlers.clear();
+    this.errorHandlers.clear();
+    this.guardedHandlers.clear();
     this.pointerMoveHandlers.clear();
     this.pointerLeaveHandlers.clear();
+    this.styleImageMissingHandlers.clear();
     this.map.remove();
   }
 

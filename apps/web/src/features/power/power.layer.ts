@@ -1,5 +1,6 @@
 import type { IMap, MapExpression } from "@map-migration/map-engine";
 import { getPowerStyleLayerIds, type PowerCatalogLayerId } from "@map-migration/map-style";
+import { initialLayerStatus, type LayerStatus } from "@/features/layers/layer-runtime.types";
 import type { PowerLayerId, PowerLayerVisibilityController } from "@/features/power/power.types";
 import type { PowerLayerMountResult } from "./power.layer.types";
 
@@ -241,9 +242,18 @@ function createSubController(map: IMap, layerId: PowerLayerId): PowerLayerVisibi
 
 export function mountPowerLayers(options: { map: IMap }): PowerLayerMountResult {
   const { map } = options;
+  const statusState: { value: LayerStatus } = { value: initialLayerStatus() };
 
   const onLoad = (): void => {
-    ensurePowerLayers(map);
+    statusState.value = { state: "loading" };
+    try {
+      ensurePowerLayers(map);
+      statusState.value = { state: "ready" };
+    } catch (error: unknown) {
+      const reason = error instanceof Error ? error.message : "failed to initialize power layers";
+      statusState.value = { state: "error", reason };
+      throw error;
+    }
   };
 
   map.on("load", onLoad);
@@ -256,6 +266,9 @@ export function mountPowerLayers(options: { map: IMap }): PowerLayerMountResult 
   const plants = createSubController(map, "plants");
 
   return {
+    get status(): LayerStatus {
+      return statusState.value;
+    },
     controllers: {
       transmission,
       substations,

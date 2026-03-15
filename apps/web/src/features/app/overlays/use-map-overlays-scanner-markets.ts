@@ -137,7 +137,7 @@ export function useMapOverlaysScannerMarkets(
       return;
     }
 
-    scannerMarketsTask.run(refreshScannerMarketsEffect()).catch((error: unknown) => {
+    scannerMarketsTask.start(refreshScannerMarketsEffect()).catch((error: unknown) => {
       logScannerMarketsError("schedule", error);
     });
   }
