@@ -1,10 +1,10 @@
 <script setup lang="ts">
   import type { ProviderTableRow } from "@map-migration/http-contracts/table-contracts";
+  import { Building2, Globe, MapPin, Zap } from "lucide-vue-next";
   import { computed } from "vue";
-  import { Building2, MapPin, Zap, Globe } from "lucide-vue-next";
-  import DetailMetricCard from "@/components/detail/detail-metric-card.vue";
-  import DetailCard from "@/components/detail/detail-card.vue";
   import type { DetailField } from "@/components/detail/detail-card.vue";
+  import DetailCard from "@/components/detail/detail-card.vue";
+  import DetailMetricCard from "@/components/detail/detail-metric-card.vue";
 
   const props = defineProps<{
     readonly provider: ProviderTableRow;
@@ -38,24 +38,16 @@
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <DetailMetricCard
         label="Listings"
-        :value="provider.listingCount?.toLocaleString() ?? '--'"
+        :value="provider.listingCount != null ? provider.listingCount.toLocaleString() : '--'"
         :icon="Building2"
       />
-      <DetailMetricCard
-        label="Category"
-        :value="provider.category ?? '--'"
-        :icon="Zap"
-      />
+      <DetailMetricCard label="Category" :value="provider.category ?? '--'" :icon="Zap" />
       <DetailMetricCard
         label="Location"
         :value="[provider.state, provider.country].filter(Boolean).join(', ') || '--'"
         :icon="MapPin"
       />
-      <DetailMetricCard
-        label="Capabilities"
-        :value="formatCapabilities(provider)"
-        :icon="Globe"
-      />
+      <DetailMetricCard label="Capabilities" :value="formatCapabilities(provider)" :icon="Globe" />
     </div>
 
     <DetailCard title="Company Profile" :fields="profileFields" />

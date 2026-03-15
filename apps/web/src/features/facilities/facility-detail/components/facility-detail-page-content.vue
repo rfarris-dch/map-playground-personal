@@ -59,15 +59,19 @@
       :eyebrow="perspective ? `${perspective} facility` : 'Facility'"
     >
       <template #breadcrumbs>
-        <RouterLink to="/facilities" class="hover:text-foreground">Facilities</RouterLink>
-        <span class="mx-1">/</span>
-        <span v-if="perspective" class="capitalize">{{ perspective }}</span>
-        <span class="mx-1">/</span>
-        <span class="text-foreground">{{ facilityName }}</span>
+        <span class="flex min-w-0 items-center">
+          <RouterLink to="/facilities" class="shrink-0 hover:text-foreground"
+            >Facilities</RouterLink
+          >
+          <span class="mx-1 shrink-0">/</span>
+          <span v-if="perspective" class="shrink-0 capitalize">{{ perspective }}</span>
+          <span class="mx-1 shrink-0">/</span>
+          <span class="truncate text-foreground">{{ facilityName }}</span>
+        </span>
       </template>
 
       <template v-if="properties" #subtitle>
-        <p class="text-sm text-muted-foreground">
+        <p class="truncate text-sm text-muted-foreground">
           <template v-if="properties.address">{{ properties.address }}, </template>
           <template v-if="properties.city">{{ properties.city }}, </template>
           <template v-if="properties.state">{{ properties.state }}</template>
@@ -103,13 +107,20 @@
       <p class="text-xs text-muted-foreground">Loading facility detail...</p>
     </div>
 
-    <p v-else-if="isError" class="py-8 text-sm text-muted-foreground">
-      Failed to load facility detail. Please go back and try again.
-    </p>
+    <div v-else-if="isError" class="py-8 text-center" role="alert">
+      <p class="text-sm text-muted-foreground">Failed to load facility detail.</p>
+      <button
+        type="button"
+        class="mt-2 text-sm font-medium text-primary hover:underline"
+        @click="$router.back()"
+      >
+        Go back
+      </button>
+    </div>
 
     <template v-else-if="properties">
       <Tabs v-model="activeTab">
-        <TabsList class="flex-wrap">
+        <TabsList class="flex-wrap overflow-x-auto">
           <TabsTrigger v-for="tab in tabs" :key="tab.value" :value="tab.value">
             {{ tab.label }}
           </TabsTrigger>

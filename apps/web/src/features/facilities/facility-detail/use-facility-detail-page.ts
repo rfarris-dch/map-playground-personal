@@ -1,5 +1,5 @@
-import { parseFacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
 import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
+import { parseFacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
 import { useQuery } from "@tanstack/vue-query";
 import { computed } from "vue";
 import { useRoute } from "vue-router";
@@ -27,7 +27,9 @@ export function useFacilityDetailPage() {
     queryKey: computed(() => ["facility-detail-page", perspective.value, facilityId.value]),
     queryFn: async ({ signal }) => {
       if (perspective.value === null || facilityId.value === null) {
-        throw new Error("facility id and perspective are required");
+        throw new Error(
+          `Missing required params: ${perspective.value === null ? "perspective" : ""}${perspective.value === null && facilityId.value === null ? " and " : ""}${facilityId.value === null ? "facility id" : ""}`
+        );
       }
 
       return unwrapFacilityDetailResult(

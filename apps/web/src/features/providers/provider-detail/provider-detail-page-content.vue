@@ -2,16 +2,16 @@
   import type { ProviderTableRow } from "@map-migration/http-contracts/table-contracts";
   import { ref } from "vue";
   import { RouterLink } from "vue-router";
+  import DetailPageHeader from "@/components/detail/detail-page-header.vue";
   import Badge from "@/components/ui/badge/badge.vue";
   import Tabs from "@/components/ui/tabs/tabs.vue";
   import TabsContent from "@/components/ui/tabs/tabs-content.vue";
   import TabsList from "@/components/ui/tabs/tabs-list.vue";
   import TabsTrigger from "@/components/ui/tabs/tabs-trigger.vue";
-  import DetailPageHeader from "@/components/detail/detail-page-header.vue";
-  import ProviderOverviewTab from "./provider-overview-tab.vue";
+  import ProviderCapacityTab from "./provider-capacity-tab.vue";
   import ProviderFacilitiesTab from "./provider-facilities-tab.vue";
   import ProviderMapTab from "./provider-map-tab.vue";
-  import ProviderCapacityTab from "./provider-capacity-tab.vue";
+  import ProviderOverviewTab from "./provider-overview-tab.vue";
 
   defineProps<{
     readonly providerId: string | null;
@@ -32,18 +32,21 @@
 </script>
 
 <template>
-  <section class="mx-auto flex h-full min-h-0 w-full max-w-[1400px] flex-col gap-4 overflow-y-auto px-4 py-4">
+  <section
+    class="mx-auto flex h-full min-h-0 w-full max-w-[1400px] flex-col gap-4 overflow-y-auto px-4 py-4"
+  >
     <DetailPageHeader :title="providerName" eyebrow="Provider">
       <template #breadcrumbs>
-        <RouterLink to="/providers" class="hover:text-foreground">Providers</RouterLink>
-        <span class="mx-1">/</span>
-        <span class="text-foreground">{{ providerName }}</span>
+        <span class="flex min-w-0 items-center">
+          <RouterLink to="/providers" class="shrink-0 hover:text-foreground">Providers</RouterLink>
+          <span class="mx-1 shrink-0">/</span>
+          <span class="truncate text-foreground">{{ providerName }}</span>
+        </span>
       </template>
 
       <template v-if="provider" #subtitle>
-        <p class="text-sm text-muted-foreground">
-          <template v-if="provider.country">{{ provider.country }}</template>
-          <template v-if="provider.state">, {{ provider.state }}</template>
+        <p class="truncate text-sm text-muted-foreground">
+          {{ [provider.country, provider.state].filter(Boolean).join(', ') || '--' }}
         </p>
       </template>
 
@@ -63,9 +66,16 @@
       <p class="text-xs text-muted-foreground">Loading provider detail...</p>
     </div>
 
-    <p v-else-if="isError" class="py-8 text-sm text-muted-foreground">
-      Failed to load provider detail. Please go back and try again.
-    </p>
+    <div v-else-if="isError" class="py-8 text-center" role="alert">
+      <p class="text-sm text-muted-foreground">Failed to load provider detail.</p>
+      <button
+        type="button"
+        class="mt-2 text-sm font-medium text-primary hover:underline"
+        @click="$router.back()"
+      >
+        Go back
+      </button>
+    </div>
 
     <p v-else-if="provider === null && !isLoading" class="py-8 text-sm text-muted-foreground">
       Provider not found.
@@ -79,21 +89,13 @@
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview">
-          <ProviderOverviewTab :provider="provider" />
-        </TabsContent>
+        <TabsContent value="overview"> <ProviderOverviewTab :provider="provider" /> </TabsContent>
 
-        <TabsContent value="facilities">
-          <ProviderFacilitiesTab />
-        </TabsContent>
+        <TabsContent value="facilities"> <ProviderFacilitiesTab /> </TabsContent>
 
-        <TabsContent value="map">
-          <ProviderMapTab />
-        </TabsContent>
+        <TabsContent value="map"> <ProviderMapTab /> </TabsContent>
 
-        <TabsContent value="capacity">
-          <ProviderCapacityTab />
-        </TabsContent>
+        <TabsContent value="capacity"> <ProviderCapacityTab /> </TabsContent>
       </Tabs>
     </template>
   </section>

@@ -32,14 +32,15 @@
       </Button>
 
       <div class="min-w-0 flex-1">
-        <p v-if="eyebrow" class="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        <p
+          v-if="eyebrow"
+          class="truncate text-xs font-medium uppercase tracking-wider text-muted-foreground"
+        >
           {{ eyebrow }}
         </p>
-        <h1 class="text-2xl font-bold tracking-tight">{{ title }}</h1>
+        <h1 class="truncate text-2xl font-bold tracking-tight" :title="title">{{ title }}</h1>
 
-        <div v-if="$slots.subtitle" class="mt-1">
-          <slot name="subtitle" />
-        </div>
+        <div v-if="$slots.subtitle" class="mt-1"><slot name="subtitle" /></div>
       </div>
 
       <div v-if="$slots.actions" class="flex shrink-0 items-center gap-2">

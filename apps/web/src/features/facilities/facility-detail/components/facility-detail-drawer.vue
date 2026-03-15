@@ -45,19 +45,24 @@
     error-message="Facility detail failed to load. Try selecting the facility again."
     @close="emit('close')"
   >
-    <dl v-if="props.detail !== null" class="m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-2">
+    <dl
+      v-if="props.detail !== null"
+      class="m-0 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-2"
+    >
       <dt class="text-xs text-muted-foreground">Facility</dt>
-      <dd class="m-0 text-sm">{{ facilityName }}</dd>
+      <dd class="m-0 truncate text-sm" :title="facilityName">{{ facilityName }}</dd>
 
       <dt class="text-xs text-muted-foreground">Provider</dt>
-      <dd class="m-0 text-sm">{{ providerName }}</dd>
+      <dd class="m-0 truncate text-sm" :title="providerName">{{ providerName }}</dd>
 
       <dt class="text-xs text-muted-foreground">County FIPS</dt>
-      <dd class="m-0 text-sm">{{ props.detail.response.feature.properties.countyFips }}</dd>
+      <dd class="m-0 text-sm">
+        {{ props.detail.response.feature.properties.countyFips ?? 'n/a' }}
+      </dd>
 
       <dt class="text-xs text-muted-foreground">Status</dt>
       <dd class="m-0 text-sm">
-        {{ props.detail.response.feature.properties.commissionedSemantic }}
+        {{ props.detail.response.feature.properties.commissionedSemantic ?? 'n/a' }}
       </dd>
 
       <dt class="text-xs text-muted-foreground">Lease / Own</dt>

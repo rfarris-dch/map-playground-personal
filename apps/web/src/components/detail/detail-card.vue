@@ -24,14 +24,15 @@
 
 <template>
   <Card>
-    <CardHeader>
-      <CardTitle>{{ title }}</CardTitle>
-    </CardHeader>
+    <CardHeader> <CardTitle>{{ title }}</CardTitle> </CardHeader>
     <CardContent>
-      <dl class="m-0 grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
-        <div v-for="field in fields" :key="field.label">
-          <dt class="text-xs font-medium text-muted-foreground">{{ field.label }}</dt>
-          <dd class="m-0 mt-0.5 text-sm">{{ formatValue(field.value) }}</dd>
+      <p v-if="fields.length === 0" class="text-sm text-muted-foreground">No data available.</p>
+      <dl v-else class="m-0 grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div v-for="(field, index) in fields" :key="`${field.label}-${index}`">
+          <dt class="truncate text-xs font-medium text-muted-foreground">{{ field.label }}</dt>
+          <dd class="m-0 mt-0.5 truncate text-sm" :title="formatValue(field.value)">
+            {{ formatValue(field.value) }}
+          </dd>
         </div>
       </dl>
     </CardContent>

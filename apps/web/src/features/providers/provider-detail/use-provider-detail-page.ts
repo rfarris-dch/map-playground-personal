@@ -16,9 +16,10 @@ export function useProviderDetailPage() {
     queryKey: computed(() => ["provider-detail-page", providerId.value]),
     queryFn: async ({ signal: _signal }) => {
       if (providerId.value === null) {
-        throw new Error("provider id is required");
+        throw new Error("provider id is required to load detail");
       }
 
+      const id = providerId.value;
       const result = await fetchProvidersTable({
         page: 1,
         pageSize: 5000,
@@ -27,10 +28,10 @@ export function useProviderDetailPage() {
       });
 
       if (!result.ok) {
-        throw new Error(`provider table fetch failed (${result.reason})`);
+        throw new Error(`Failed to load provider data: ${result.reason}`);
       }
 
-      const match = result.data.rows.find((row) => row.providerId === providerId.value);
+      const match = result.data.rows.find((row) => row.providerId === id);
       return match ?? null;
     },
     enabled: computed(() => providerId.value !== null),
