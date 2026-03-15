@@ -128,8 +128,10 @@ export function mountFacilitiesLayer(
   const LOGO_SIZE = 128;
   const logoPrefix = "logo-";
 
+  const replacingImages = new Set<string>();
+
   const handleStyleImageMissing = (id: string): void => {
-    if (!id.startsWith(logoPrefix) || map.hasImage(id)) {
+    if (!id.startsWith(logoPrefix) || map.hasImage(id) || replacingImages.has(id)) {
       return;
     }
     const canvas = document.createElement("canvas");
@@ -200,14 +202,17 @@ export function mountFacilitiesLayer(
     await Promise.allSettled(
       batch.map(async ({ providerId, url }) => {
         try {
-          if (map.hasImage(`logo-${providerId}`)) {
-            loadedLogos.add(providerId);
+          if (loadedLogos.has(providerId)) {
             return;
           }
           const raw = await map.loadImage(url);
           const normalized = normalizeLogoImage(raw);
-          if (!map.hasImage(`logo-${providerId}`)) {
-            map.addImage(`logo-${providerId}`, normalized);
+          const imageId = `logo-${providerId}`;
+          replacingImages.add(imageId);
+          try {
+            map.replaceImage(imageId, normalized);
+          } finally {
+            replacingImages.delete(imageId);
           }
           loadedLogos.add(providerId);
         } catch {

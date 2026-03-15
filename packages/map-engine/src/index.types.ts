@@ -61,12 +61,12 @@ export interface IMap {
   offClick(handler: (event: MapClickEvent) => void): void;
   offPointerLeave(handler: () => void): void;
   offPointerMove(handler: (event: MapPointerEvent) => void): void;
-  on(event: "load" | "moveend", handler: () => void): void;
-  onStyleImageMissing(handler: (id: string) => void): void;
   offStyleImageMissing(handler: (id: string) => void): void;
+  on(event: "load" | "moveend", handler: () => void): void;
   onClick(handler: (event: MapClickEvent) => void): void;
   onPointerLeave(handler: () => void): void;
   onPointerMove(handler: (event: MapPointerEvent) => void): void;
+  onStyleImageMissing(handler: (id: string) => void): void;
   project(lngLat: LngLat): [number, number];
   queryRenderedFeatures(
     target: MapPointLike | [MapPointLike, MapPointLike],
@@ -75,6 +75,7 @@ export interface IMap {
   removeControl(control: MapControl): void;
   removeLayer(layerId: string): void;
   removeSource(sourceId: string): void;
+  replaceImage(id: string, image: ImageBitmap | HTMLImageElement | ImageData): void;
   setFeatureState(target: FeatureStateTarget, state: Record<string, unknown>): void;
   setGeoJSONSourceData(sourceId: string, data: unknown): void;
   setLayerFilter(layerId: string, filter: MapExpression | null): void;

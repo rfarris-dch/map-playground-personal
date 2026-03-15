@@ -20,19 +20,32 @@ export function useProviderDetailPage() {
       }
 
       const id = providerId.value;
-      const result = await fetchProvidersTable({
-        page: 1,
-        pageSize: 5000,
-        sortBy: "name",
-        sortOrder: "asc",
-      });
+      const maxPageSize = 500;
+      let page = 1;
 
-      if (!result.ok) {
-        throw new Error(`Failed to load provider data: ${result.reason}`);
+      while (true) {
+        const result = await fetchProvidersTable({
+          page,
+          pageSize: maxPageSize,
+          sortBy: "name",
+          sortOrder: "asc",
+        });
+
+        if (!result.ok) {
+          throw new Error(`Failed to load provider data: ${result.reason}`);
+        }
+
+        const match = result.data.rows.find((row) => row.providerId === id);
+        if (match) {
+          return match;
+        }
+
+        if (page >= result.data.pagination.totalPages) {
+          return null;
+        }
+
+        page += 1;
       }
-
-      const match = result.data.rows.find((row) => row.providerId === id);
-      return match ?? null;
     },
     enabled: computed(() => providerId.value !== null),
   });

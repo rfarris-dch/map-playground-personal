@@ -170,6 +170,13 @@ class MapLibreEngine implements IMap {
     this.map.addImage(id, image);
   }
 
+  replaceImage(id: string, image: ImageBitmap | HTMLImageElement | ImageData): void {
+    if (typeof this.map.getImage(id) !== "undefined") {
+      this.map.removeImage(id);
+    }
+    this.map.addImage(id, image);
+  }
+
   addSource(id: string, spec: MapSourceSpecification): void {
     this.map.addSource(id, spec);
   }

@@ -27,10 +27,10 @@
   watch(
     () => shell.facilitiesStatus.value,
     (status) => {
-      if (hasReceivedInitialData.value) {
+      if (hasReceivedInitialData.value || status === undefined) {
         return;
       }
-      if (status.colocation.state === "ok" || status.hyperscale.state === "ok") {
+      if (status.colocation?.state === "ok" || status.hyperscale?.state === "ok") {
         hasReceivedInitialData.value = true;
       }
     },
