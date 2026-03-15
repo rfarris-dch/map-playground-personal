@@ -453,6 +453,38 @@
 
           <div class="my-0 h-px w-full bg-border" />
 
+          <section class="flex flex-col">
+            <div class="flex h-7 items-center bg-card px-2">
+              <span class="text-xs font-normal leading-none text-foreground/70">MARKETS</span>
+            </div>
+
+            <MapNavLayerRow
+              label="Market Boundaries"
+              :visible="props.marketBoundaryVisibility.market"
+              @toggle="emit('update:market-boundary-visible', 'market', !props.marketBoundaryVisibility.market)"
+            />
+            <MapNavLayerRow
+              label="Submarket Boundaries"
+              :visible="props.marketBoundaryVisibility.submarket"
+              @toggle="emit('update:market-boundary-visible', 'submarket', !props.marketBoundaryVisibility.submarket)"
+            />
+
+            <div class="flex items-center gap-2 px-3 py-1.5">
+              <span class="text-xs text-muted-foreground">Color by</span>
+              <select
+                class="flex-1 rounded-sm border border-border bg-card px-2 py-1 text-xs text-muted-foreground shadow-sm"
+                :value="props.marketBoundaryColorMode"
+                @change="($event.target instanceof HTMLSelectElement) && emit('update:market-boundary-color-mode', ($event.target as HTMLSelectElement).value as 'power' | 'vacancy' | 'absorption')"
+              >
+                <option value="power">Commissioned Power</option>
+                <option value="vacancy">Vacancy Rate</option>
+                <option value="absorption">Absorption</option>
+              </select>
+            </div>
+          </section>
+
+          <div class="my-0 h-px w-full bg-border" />
+
           <section class="flex flex-col pb-4">
             <div class="flex h-7 items-center bg-card px-2">
               <span class="text-xs font-normal leading-none text-foreground/70">BASEMAP</span>

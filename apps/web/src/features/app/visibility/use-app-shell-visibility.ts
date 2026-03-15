@@ -43,6 +43,8 @@ import {
 } from "@/features/basemap/basemap.service";
 import type { BasemapLayerId, BasemapVisibilityState } from "@/features/basemap/basemap.types";
 import type { BoundaryLayerId } from "@/features/boundaries/boundaries.types";
+import type { MarketBoundaryLayerId } from "@/features/market-boundaries/market-boundaries.types";
+import type { MarketBoundaryVisibilityState } from "@/features/app/components/map-layer-controls-panel.types";
 import type { PowerLayerId, PowerVisibilityState } from "@/features/power/power.types";
 
 export function useAppShellVisibility(options: UseAppShellVisibilityOptions) {
@@ -56,6 +58,10 @@ export function useAppShellVisibility(options: UseAppShellVisibilityOptions) {
   const visiblePerspectives = shallowRef<PerspectiveVisibilityState>(
     buildInitialPerspectiveVisibilityState()
   );
+  const marketBoundaryVisibility = shallowRef<MarketBoundaryVisibilityState>({
+    market: false,
+    submarket: false,
+  });
   const gasPipelineVisible = shallowRef<boolean>(false);
   const hydroBasinsVisible = shallowRef<boolean>(buildInitialHydroBasinsVisible());
   const parcelsVisible = shallowRef<boolean>(buildInitialParcelsVisible());
@@ -173,6 +179,15 @@ export function useAppShellVisibility(options: UseAppShellVisibilityOptions) {
     options.clearPowerHover();
   }
 
+  function setMarketBoundaryVisible(layerId: MarketBoundaryLayerId, visible: boolean): void {
+    marketBoundaryVisibility.value = {
+      ...marketBoundaryVisibility.value,
+      [layerId]: visible,
+    };
+    const catalogId = layerId === "market" ? "markets.market" : "markets.submarket";
+    options.layerRuntime.value?.setUserVisible(catalogId, visible);
+  }
+
   function setBoundaryVisible(boundaryId: BoundaryLayerId, visible: boolean): void {
     boundaryVisibility.value = withBoundaryVisibility({
       boundaryId,
@@ -210,7 +225,9 @@ export function useAppShellVisibility(options: UseAppShellVisibilityOptions) {
     setHydroBasinsVisible,
     setPowerLayerVisible,
     gasPipelineVisible,
+    marketBoundaryVisibility,
     setGasPipelineVisible,
+    setMarketBoundaryVisible,
     setWaterVisible,
     setBoundaryVisible,
   };

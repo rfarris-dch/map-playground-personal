@@ -26,7 +26,17 @@ export interface ClusterProviderSummary {
   readonly totalPowerMw: number;
 }
 
+export interface ClusterFacilityRow {
+  readonly facilityName: string;
+  readonly providerName: string;
+  readonly commissionedPowerMw: number;
+  readonly underConstructionPowerMw: number;
+  readonly plannedPowerMw: number;
+  readonly statusLabel: string | null;
+}
+
 export interface FacilityClusterHoverState extends FacilityClusterSummary {
+  readonly facilities: readonly ClusterFacilityRow[];
   readonly screenPoint: readonly [number, number];
   readonly topProviders: readonly ClusterProviderSummary[];
 }

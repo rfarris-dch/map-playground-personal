@@ -69,10 +69,13 @@ export function useAppShellRuntime(
     colocationViewportFeatures: state.colocationViewportFeatures,
     hyperscaleViewportFeatures: state.hyperscaleViewportFeatures,
     parcelsStatus: state.parcelsStatus,
+    clearSelectionGeometry: state.clearSelectionGeometry,
     clearSketchMeasure: state.clearSketchMeasure,
     finishSketchMeasureArea: state.finishSketchMeasureArea,
+    isSketchMeasurePanelOpen: state.isSketchMeasurePanelOpen,
     setSketchMeasureMode: state.setSketchMeasureMode,
     sketchMeasureState: state.sketchMeasureState,
+    toggleSketchMeasurePanel: state.toggleSketchMeasurePanel,
   });
 
   const selectionAnalysis = useAppShellSelectionAnalysis({
@@ -102,6 +105,7 @@ export function useAppShellRuntime(
     initialViewport: options.initialViewport,
     layers: {
       boundaryControllers: state.boundaryControllers,
+      marketBoundaryControllers: state.marketBoundaryControllers,
       environmentalStressController: state.environmentalStressController,
       facilitiesControllers: state.facilitiesControllers,
       facilitiesHoverController: state.facilitiesHoverController,
@@ -130,7 +134,12 @@ export function useAppShellRuntime(
       hoveredBoundary: state.hoveredBoundary,
       hoveredFacility: state.hoveredFacility,
       hoveredFacilityCluster: state.hoveredFacilityCluster,
+      hoveredMarketBoundary: state.hoveredMarketBoundary,
       hoveredPower: state.hoveredPower,
+      marketBoundaryColorMode: state.marketBoundaryColorMode,
+      marketBoundaryFacetOptions: state.marketBoundaryFacetOptions,
+      marketBoundaryFacetSelection: state.marketBoundaryFacetSelection,
+      marketBoundaryHoverByLayer: state.marketBoundaryHoverByLayer,
       hyperscaleViewportFeatures: state.hyperscaleViewportFeatures,
       layerRuntimeSnapshot: state.layerRuntimeSnapshot,
       parcelsStatus: state.parcelsStatus,

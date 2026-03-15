@@ -5,6 +5,11 @@ import {
   resetBoundaryRuntime,
 } from "@/features/app/boundary/app-shell-boundary-runtime.service";
 import {
+  destroyMarketBoundaryRuntime,
+  initializeMarketBoundaryRuntime,
+  resetMarketBoundaryRuntime,
+} from "@/features/app/market-boundary/app-shell-market-boundary-runtime.service";
+import {
   type AppShellMapSetup,
   initializeAppShellMapEffect,
 } from "@/features/app/lifecycle/app-shell-map.service";
@@ -39,6 +44,7 @@ export async function initializeMapLifecycleRuntime(
   options.visibility.applyBasemapVisibility();
 
   initializeBoundaryRuntime(options);
+  initializeMarketBoundaryRuntime(options);
   initializeMapLayerRuntime(options);
   options.visibility.syncRuntimeVisibility();
 }
@@ -50,6 +56,7 @@ export function resetMapLifecycleInteractions(options: UseAppShellMapLifecycleOp
   options.state.hoveredFacility.value = null;
   options.state.hoveredFacilityCluster.value = null;
   resetBoundaryRuntime(options);
+  resetMarketBoundaryRuntime(options);
   options.layers.powerHoverController.value?.clear();
   options.state.hoveredPower.value = null;
   options.fiber.clearFiberHover();
@@ -61,6 +68,7 @@ export async function destroyMapLifecycleRuntime(
   options.runtime.basemapLayerController.value = null;
 
   destroyMapLayerRuntime(options);
+  destroyMarketBoundaryRuntime(options);
   destroyBoundaryRuntime(options);
 
   options.runtime.layerRuntime.value?.destroy();

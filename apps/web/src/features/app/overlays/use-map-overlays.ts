@@ -34,11 +34,14 @@ export function useMapOverlays(args: UseMapOverlaysArgs) {
     })
   );
   const overlayShortcuts = useMapOverlaysShortcuts({
+    clearSelectionGeometry: args.clearSelectionGeometry,
     clearSketchMeasure: args.clearSketchMeasure,
     finishSketchMeasureArea: args.finishSketchMeasureArea,
+    isSketchMeasurePanelOpen: args.isSketchMeasurePanelOpen,
     quickViewDisabledReason,
     setSketchMeasureMode: args.setSketchMeasureMode,
     sketchMeasureState: args.sketchMeasureState,
+    toggleSketchMeasurePanel: args.toggleSketchMeasurePanel,
   });
   const scannerParcels = useMapOverlaysScannerParcels({
     colocationViewportFeatures: args.colocationViewportFeatures,

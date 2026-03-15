@@ -11,6 +11,18 @@ import type {
   BoundaryHoverByLayerState,
 } from "@/features/app/boundary/app-shell-boundary.types";
 import {
+  initialMarketBoundaryControllerState,
+  initialMarketBoundaryHoverByLayerState,
+} from "@/features/app/market-boundary/app-shell-market-boundary.service";
+import type {
+  MarketBoundaryControllerState,
+  MarketBoundaryHoverByLayerState,
+} from "@/features/app/market-boundary/app-shell-market-boundary.types";
+import {
+  initialMarketBoundaryFacetOptionsState,
+  initialMarketBoundaryFacetSelectionState,
+} from "@/features/app/market-boundary/app-shell-market-boundary-runtime.service";
+import {
   initialActiveToolPanel,
   initialBoundaryFacetOptionsState,
   initialBoundaryFacetSelectionState,
@@ -27,6 +39,15 @@ import type {
 import type { EnvironmentalStressController } from "@/features/app/lifecycle/use-app-shell-map-lifecycle.types";
 import type { BasemapLayerVisibilityController } from "@/features/basemap/basemap.types";
 import type { BoundaryHoverState } from "@/features/boundaries/boundaries.types";
+import type {
+  MarketBoundaryColorMode,
+  MarketBoundaryFacetOption,
+  MarketBoundaryHoverState,
+} from "@/features/market-boundaries/market-boundaries.types";
+import type {
+  MarketBoundaryFacetOptionsState,
+  MarketBoundaryFacetSelectionState,
+} from "@/features/app/lifecycle/use-app-shell-map-lifecycle.types";
 import type { FacilitiesLayerController } from "@/features/facilities/facilities.types";
 import type {
   FacilitiesHoverController,
@@ -65,6 +86,20 @@ export function useAppShellState(): UseAppShellStateResult {
   );
   const hoveredPower = shallowRef<PowerHoverState | null>(null);
   const boundaryControllers = shallowRef<BoundaryControllerState>(initialBoundaryControllerState());
+  const marketBoundaryControllers = shallowRef<MarketBoundaryControllerState>(
+    initialMarketBoundaryControllerState()
+  );
+  const marketBoundaryHoverByLayer = shallowRef<MarketBoundaryHoverByLayerState>(
+    initialMarketBoundaryHoverByLayerState()
+  );
+  const hoveredMarketBoundary = shallowRef<MarketBoundaryHoverState | null>(null);
+  const marketBoundaryFacetOptions = shallowRef<MarketBoundaryFacetOptionsState>(
+    initialMarketBoundaryFacetOptionsState()
+  );
+  const marketBoundaryFacetSelection = shallowRef<MarketBoundaryFacetSelectionState>(
+    initialMarketBoundaryFacetSelectionState()
+  );
+  const marketBoundaryColorMode = shallowRef<MarketBoundaryColorMode>("power");
   const facilitiesControllers = shallowRef<readonly FacilitiesLayerController[]>([]);
   const floodLayersController = shallowRef<FloodLayerMountResult | null>(null);
   const gasPipelineController = shallowRef<GasPipelineLayerController | null>(null);
@@ -162,6 +197,7 @@ export function useAppShellState(): UseAppShellStateResult {
 
   function clearSelectionGeometry(): void {
     selectionGeometry.value = null;
+    clearSketchMeasure();
     if (activeToolPanel.value === "selection") {
       activeToolPanel.value = null;
     }
@@ -193,6 +229,12 @@ export function useAppShellState(): UseAppShellStateResult {
     boundaryHoverByLayer,
     hoveredPower,
     boundaryControllers,
+    marketBoundaryControllers,
+    marketBoundaryHoverByLayer,
+    hoveredMarketBoundary,
+    marketBoundaryFacetOptions,
+    marketBoundaryFacetSelection,
+    marketBoundaryColorMode,
     facilitiesControllers,
     floodLayersController,
     gasPipelineController,

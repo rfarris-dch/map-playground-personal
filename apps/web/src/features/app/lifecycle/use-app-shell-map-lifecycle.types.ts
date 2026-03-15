@@ -11,9 +11,18 @@ import type {
   BoundaryFacetSelectionState,
   PerspectiveStatusState,
 } from "@/features/app/core/app-shell.types";
+import type {
+  MarketBoundaryControllerState,
+  MarketBoundaryHoverByLayerState,
+} from "@/features/app/market-boundary/app-shell-market-boundary.types";
 import type { FacilitiesFilterPredicate } from "@/features/app/filters/map-filters.types";
 import type { BasemapLayerVisibilityController } from "@/features/basemap/basemap.types";
 import type { BoundaryHoverState } from "@/features/boundaries/boundaries.types";
+import type {
+  MarketBoundaryColorMode,
+  MarketBoundaryFacetOption,
+  MarketBoundaryHoverState,
+} from "@/features/market-boundaries/market-boundaries.types";
 import type {
   FacilitiesLayerController,
   SelectedFacilityRef,
@@ -74,11 +83,22 @@ export interface AppShellMapLifecycleLayerRefs {
   readonly floodLayersController: ShallowRef<FloodLayerMountResult | null>;
   readonly gasPipelineController: ShallowRef<GasPipelineLayerController | null>;
   readonly hydroBasinsController: ShallowRef<HydroBasinsVisibilityController | null>;
+  readonly marketBoundaryControllers: ShallowRef<MarketBoundaryControllerState>;
   readonly parcelsController: ShallowRef<ParcelsLayerController | null>;
   readonly powerHoverController: ShallowRef<PowerHoverController | null>;
   readonly powerLayersController: ShallowRef<PowerLayerMountResult | null>;
   readonly sketchMeasureController: ShallowRef<SketchMeasureLayerController | null>;
   readonly waterController: ShallowRef<WaterLayerVisibilityController | null>;
+}
+
+export interface MarketBoundaryFacetOptionsState {
+  readonly market: readonly MarketBoundaryFacetOption[];
+  readonly submarket: readonly MarketBoundaryFacetOption[];
+}
+
+export interface MarketBoundaryFacetSelectionState {
+  readonly market: readonly string[] | null;
+  readonly submarket: readonly string[] | null;
 }
 
 export interface AppShellMapLifecycleStateRefs {
@@ -90,9 +110,14 @@ export interface AppShellMapLifecycleStateRefs {
   readonly hoveredBoundary: ShallowRef<BoundaryHoverState | null>;
   readonly hoveredFacility: ShallowRef<FacilityHoverState | null>;
   readonly hoveredFacilityCluster: ShallowRef<FacilityClusterHoverState | null>;
+  readonly hoveredMarketBoundary: ShallowRef<MarketBoundaryHoverState | null>;
   readonly hoveredPower: ShallowRef<PowerHoverState | null>;
   readonly hyperscaleViewportFeatures: ShallowRef<FacilitiesFeatureCollection["features"]>;
   readonly layerRuntimeSnapshot: ShallowRef<LayerRuntimeSnapshot | null>;
+  readonly marketBoundaryColorMode: ShallowRef<MarketBoundaryColorMode>;
+  readonly marketBoundaryFacetOptions: ShallowRef<MarketBoundaryFacetOptionsState>;
+  readonly marketBoundaryFacetSelection: ShallowRef<MarketBoundaryFacetSelectionState>;
+  readonly marketBoundaryHoverByLayer: ShallowRef<MarketBoundaryHoverByLayerState>;
   readonly parcelsStatus: ShallowRef<ParcelsStatus>;
   readonly selectedFacility: ShallowRef<SelectedFacilityRef | null>;
   readonly selectedParcel: ShallowRef<SelectedParcelRef | null>;

@@ -13,13 +13,24 @@ import type { BasemapLayerId, BasemapVisibilityState } from "@/features/basemap/
 import type { BoundaryLayerId } from "@/features/boundaries/boundaries.types";
 import type { FacilitiesViewMode } from "@/features/facilities/facilities.types";
 import type { FiberLocatorLineId } from "@/features/fiber-locator/fiber-locator.types";
+import type {
+  MarketBoundaryColorMode,
+  MarketBoundaryLayerId,
+} from "@/features/market-boundaries/market-boundaries.types";
 import type { PowerLayerId, PowerVisibilityState } from "@/features/power/power.types";
+
+export interface MarketBoundaryVisibilityState {
+  readonly market: boolean;
+  readonly submarket: boolean;
+}
 
 export interface MapLayerControlsPanelProps {
   readonly basemapVisibility: BasemapVisibilityState;
   readonly boundaryFacetOptions: BoundaryFacetOptionsState;
   readonly boundaryFacetSelection: BoundaryFacetSelectionState;
   readonly boundaryVisibility: BoundaryVisibilityState;
+  readonly marketBoundaryColorMode: MarketBoundaryColorMode;
+  readonly marketBoundaryVisibility: MarketBoundaryVisibilityState;
   readonly colocationStatusText: string;
   readonly fiberSourceLayerOptions: FiberSourceLayerOptionsState;
   readonly fiberStatusText: string;
@@ -54,6 +65,8 @@ export interface MapLayerControlsPanelEmits {
   "update:fiber-layer-visibility": [lineId: FiberLocatorLineId, visible: boolean];
   "update:flood-layer-visible": [layerId: keyof FloodVisibilityState, visible: boolean];
   "update:gas-pipeline-visible": [visible: boolean];
+  "update:market-boundary-color-mode": [colorMode: MarketBoundaryColorMode];
+  "update:market-boundary-visible": [layerId: MarketBoundaryLayerId, visible: boolean];
   "update:hydro-basins-visible": [visible: boolean];
   "update:parcels-visible": [visible: boolean];
   "update:perspective-view-mode": [perspective: FacilityPerspective, mode: FacilitiesViewMode];

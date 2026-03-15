@@ -243,6 +243,44 @@
         </div>
       </div>
 
+      <div v-if="tooltipState.facilities.length > 0" class="flex flex-col gap-1">
+        <span class="text-[11px] font-semibold text-muted-foreground">Facilities</span>
+        <div class="max-h-[160px] overflow-y-auto rounded-sm border border-border/60">
+          <table class="w-full text-[11px]">
+            <thead>
+              <tr class="border-b border-border/40 bg-background/70">
+                <th class="px-1.5 py-1 text-left font-medium text-muted-foreground">Name</th>
+                <th class="px-1.5 py-1 text-left font-medium text-muted-foreground">Provider</th>
+                <th class="px-1.5 py-1 text-right font-medium text-muted-foreground">MW</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="(facility, index) in tooltipState.facilities"
+                :key="index"
+                class="border-b border-border/20 last:border-b-0"
+              >
+                <td class="max-w-[100px] truncate px-1.5 py-1" :class="accentTextClass">
+                  {{ facility.facilityName }}
+                </td>
+                <td class="max-w-[80px] truncate px-1.5 py-1 text-muted-foreground">
+                  {{ facility.providerName }}
+                </td>
+                <td class="px-1.5 py-1 text-right font-medium tabular-nums">
+                  {{
+                    formatMegawatts(
+                      facility.commissionedPowerMw +
+                        facility.underConstructionPowerMw +
+                        facility.plannedPowerMw
+                    )
+                  }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <button
         type="button"
         class="flex items-center justify-between rounded-sm border border-border/60 bg-background/70 px-2.5 py-1.5 text-left transition-colors hover:border-border hover:bg-background"

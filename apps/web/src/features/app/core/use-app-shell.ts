@@ -241,6 +241,7 @@ export function useAppShell() {
     hoveredFacility: state.hoveredFacility,
     hoveredFacilityCluster: state.hoveredFacilityCluster,
     hoveredBoundary: state.hoveredBoundary,
+    hoveredMarketBoundary: state.hoveredMarketBoundary,
     hoveredFiber: fiber.hoveredFiber,
     hoveredPower: state.hoveredPower,
     basemapVisibility: visibility.basemapVisibility,
@@ -256,10 +257,14 @@ export function useAppShell() {
     hydroBasinsVisible: visibility.hydroBasinsVisible,
     showHydroBasinsZoomHint,
     gasPipelineVisible: visibility.gasPipelineVisible,
+    marketBoundaryVisibility: visibility.marketBoundaryVisibility,
     parcelsVisible: visibility.parcelsVisible,
     parcelsStatusText: status.parcelsStatusText,
     powerVisibility: visibility.powerVisibility,
     waterVisible: visibility.waterVisible,
+    marketBoundaryColorMode: state.marketBoundaryColorMode,
+    marketBoundaryFacetOptions: state.marketBoundaryFacetOptions,
+    marketBoundaryFacetSelection: state.marketBoundaryFacetSelection,
     visibleFiberLayers: fiber.visibleFiberLayers,
     fiberStatusText: fiber.fiberStatusText,
     fiberSourceLayerOptions: fiber.fiberSourceLayerOptions,
@@ -307,6 +312,12 @@ export function useAppShell() {
     setParcelsVisible: visibility.setParcelsVisible,
     setGasPipelineVisible: visibility.setGasPipelineVisible,
     setPowerLayerVisible: visibility.setPowerLayerVisible,
+    setMarketBoundaryVisible: visibility.setMarketBoundaryVisible,
+    setMarketBoundaryColorMode(colorMode: import("@/features/market-boundaries/market-boundaries.types").MarketBoundaryColorMode): void {
+      state.marketBoundaryColorMode.value = colorMode;
+      state.marketBoundaryControllers.value.market?.setColorMode(colorMode);
+      state.marketBoundaryControllers.value.submarket?.setColorMode(colorMode);
+    },
     setWaterVisible: visibility.setWaterVisible,
     setFiberLayerVisibility: fiber.setFiberLayerVisibility,
     setFiberSourceLayerVisible: fiber.setFiberSourceLayerVisible,

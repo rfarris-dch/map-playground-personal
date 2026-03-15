@@ -13,9 +13,20 @@
   );
 
   function handleToggleSketchMeasurePanel(): void {
-    if (!shell.isSketchMeasurePanelOpen.value && shell.sketchMeasureState.value.mode === "off") {
-      shell.setSketchMeasureMode("area");
-      shell.setSketchMeasureAreaShape("freeform");
+    const activating = !shell.isSketchMeasurePanelOpen.value;
+    if (activating) {
+      if (shell.scannerActive.value) {
+        shell.setScannerActive(false);
+      }
+      if (shell.selectionGeometry.value !== null) {
+        shell.clearSelectionGeometry();
+      }
+      if (shell.sketchMeasureState.value.mode === "off") {
+        shell.setSketchMeasureMode("area");
+        shell.setSketchMeasureAreaShape("freeform");
+      }
+    } else {
+      shell.clearSketchMeasure();
     }
 
     shell.toggleSketchMeasurePanel();
@@ -41,6 +52,8 @@
     :hydro-basins-visible="shell.hydroBasinsVisible.value"
     :show-hydro-basins-zoom-hint="shell.showHydroBasinsZoomHint.value"
     :gas-pipeline-visible="shell.gasPipelineVisible.value"
+    :market-boundary-color-mode="shell.marketBoundaryColorMode.value"
+    :market-boundary-visibility="shell.marketBoundaryVisibility.value"
     :water-visible="shell.waterVisible.value"
     :visible-fiber-layers="shell.visibleFiberLayers.value"
     :fiber-status-text="shell.fiberStatusText.value"
@@ -54,6 +67,8 @@
     @update:perspective-visibility="shell.setPerspectiveVisibility"
     @update:parcels-visible="shell.setParcelsVisible"
     @update:gas-pipeline-visible="shell.setGasPipelineVisible"
+    @update:market-boundary-visible="shell.setMarketBoundaryVisible"
+    @update:market-boundary-color-mode="shell.setMarketBoundaryColorMode"
     @update:water-visible="shell.setWaterVisible"
     @update:flood-layer-visible="shell.setFloodLayerVisible"
     @update:hydro-basins-visible="shell.setHydroBasinsVisible"

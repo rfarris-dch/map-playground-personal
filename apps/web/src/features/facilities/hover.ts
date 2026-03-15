@@ -10,6 +10,7 @@ import type { IMap, MapPointerEvent, MapRenderedFeature } from "@map-migration/m
 import { createFacilityClusterSummary } from "@/features/facilities/facilities-cluster.service";
 import type { FacilityClusterSummary } from "@/features/facilities/facilities-cluster.types";
 import type {
+  ClusterFacilityRow,
   ClusterProviderSummary,
   FacilitiesHoverController,
   FacilitiesHoverOptions,
@@ -110,6 +111,7 @@ function aggregateClusterLeaves(
   screenPoint: readonly [number, number]
 ): FacilityClusterHoverState {
   const providerPowerMap = new Map<string, number>();
+  const facilities: ClusterFacilityRow[] = [];
 
   for (const leaf of leaves) {
     const commissioned = readNullableNumberProperty(leaf.properties, "commissionedPowerMw") ?? 0;
@@ -117,9 +119,28 @@ function aggregateClusterLeaves(
     const planned = readNullableNumberProperty(leaf.properties, "plannedPowerMw") ?? 0;
 
     const providerName = readStringProperty(leaf.properties, "providerName") ?? "Unknown";
+    const facilityName = readStringProperty(leaf.properties, "facilityName") ?? "Unknown facility";
+    const statusLabel = readStringProperty(leaf.properties, "statusLabel");
     const facilityTotal = commissioned + uc + planned;
     providerPowerMap.set(providerName, (providerPowerMap.get(providerName) ?? 0) + facilityTotal);
+
+    facilities.push({
+      facilityName,
+      providerName,
+      commissionedPowerMw: commissioned,
+      underConstructionPowerMw: uc,
+      plannedPowerMw: planned,
+      statusLabel,
+    });
   }
+
+  facilities.sort(
+    (a, b) =>
+      b.commissionedPowerMw +
+      b.underConstructionPowerMw +
+      b.plannedPowerMw -
+      (a.commissionedPowerMw + a.underConstructionPowerMw + a.plannedPowerMw)
+  );
 
   const topProviders: ClusterProviderSummary[] = Array.from(providerPowerMap.entries())
     .map(([name, totalPowerMw]) => ({ name, totalPowerMw }))
@@ -128,6 +149,7 @@ function aggregateClusterLeaves(
 
   return {
     ...clusterSummary,
+    facilities,
     topProviders,
     screenPoint,
   };

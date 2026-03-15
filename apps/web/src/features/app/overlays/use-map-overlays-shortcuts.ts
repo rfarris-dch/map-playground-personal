@@ -44,6 +44,16 @@ export function useMapOverlaysShortcuts(options: UseMapOverlaysShortcutsOptions)
   }
 
   function toggleScanner(): void {
+    const activating = !scannerActive.value;
+    if (activating) {
+      if (options.sketchMeasureState.value.mode !== "off") {
+        options.clearSketchMeasure();
+      }
+      if (options.isSketchMeasurePanelOpen.value) {
+        options.toggleSketchMeasurePanel();
+      }
+      options.clearSelectionGeometry();
+    }
     setScannerActive(!scannerActive.value);
   }
 
