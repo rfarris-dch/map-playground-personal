@@ -12,30 +12,44 @@ const CONNECTION_CLOSED_RE = /connection closed/i;
 const POSTGRES_READY_QUERY = "select 1 as db_ready";
 const MAX_CONCURRENT_QUERIES = parsePositiveIntFlag(process.env.API_DB_MAX_CONCURRENT_QUERIES, 8);
 
-let activeQueries = 0;
-const queryQueue: Array<() => void> = [];
+interface QuerySlotLimiter {
+  readonly acquire: () => Promise<void>;
+  readonly release: () => void;
+}
 
-function acquireQuerySlot(): Promise<void> {
-  if (activeQueries < MAX_CONCURRENT_QUERIES) {
-    activeQueries++;
-    return Promise.resolve();
-  }
-  return new Promise<void>((resolve) => {
-    queryQueue.push(() => {
+export function createQuerySlotLimiter(maxConcurrentQueries: number): QuerySlotLimiter {
+  let activeQueries = 0;
+  const queryQueue: Array<() => void> = [];
+
+  function acquire(): Promise<void> {
+    if (activeQueries < maxConcurrentQueries) {
       activeQueries++;
-      resolve();
+      return Promise.resolve();
+    }
+
+    return new Promise<void>((resolve) => {
+      queryQueue.push(() => {
+        activeQueries++;
+        resolve();
+      });
     });
-  });
+  }
+
+  function release(): void {
+    activeQueries--;
+    const next = queryQueue.shift();
+    if (next) {
+      next();
+    }
+  }
+
+  return {
+    acquire,
+    release,
+  };
 }
 
-function releaseQuerySlot(): void {
-  const next = queryQueue.shift();
-  if (next) {
-    next();
-  } else {
-    activeQueries--;
-  }
-}
+const querySlotLimiter = createQuerySlotLimiter(MAX_CONCURRENT_QUERIES);
 const DEFAULT_DB_STATEMENT_TIMEOUT_MS = parsePositiveIntFlag(
   process.env.API_DB_STATEMENT_TIMEOUT_MS,
   180_000
@@ -200,12 +214,12 @@ export async function runQuery<T extends object>(
   values: readonly SqlParameterValue[],
   options?: RunQueryOptions
 ): Promise<T[]> {
-  await acquireQuerySlot();
+  await querySlotLimiter.acquire();
   try {
     const sqlClient = getSqlClient();
     return await runQueryWithReconnect<T>(sqlClient, text, values, resolveRunQueryOptions(options));
   } finally {
-    releaseQuerySlot();
+    querySlotLimiter.release();
   }
 }
 
