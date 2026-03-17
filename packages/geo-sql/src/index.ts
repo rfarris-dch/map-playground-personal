@@ -38,7 +38,7 @@ const QUERY_SPECS: Record<QueryName, RegisteredQuerySpec> = {
   facilities_bbox_colocation: {
     name: "facilities_bbox_colocation",
     endpointClass: "feature-collection",
-    maxRows: 50000,
+    maxRows: 50_000,
     sql: `
 WITH bounds AS (
   SELECT ST_Transform(ST_MakeEnvelope($1, $2, $3, $4, 4326), 3857) AS bbox_3857
@@ -104,7 +104,7 @@ LEFT JOIN market_current.markets mkt ON mkt.market_id = mb.market_id;`,
   facilities_bbox_hyperscale: {
     name: "facilities_bbox_hyperscale",
     endpointClass: "feature-collection",
-    maxRows: 50000,
+    maxRows: 50_000,
     sql: `
 WITH bounds AS (
   SELECT ST_Transform(ST_MakeEnvelope($1, $2, $3, $4, 4326), 3857) AS bbox_3857
@@ -134,8 +134,8 @@ SELECT
   c.facility_name,
   c.provider_id,
   COALESCE(
+    NULLIF(BTRIM(c.facility_name), ''),
     NULLIF(BTRIM(provider.provider_name), ''),
-    NULLIF(INITCAP(REPLACE(c.provider_slug, '-', ' ')), ''),
     c.provider_id
   ) AS provider_name,
   COALESCE(c.county_fips, ''::text) AS county_fips,
@@ -165,7 +165,7 @@ LEFT JOIN market_current.markets mkt ON mkt.market_id = mb.market_id;`,
   facilities_polygon_colocation: {
     name: "facilities_polygon_colocation",
     endpointClass: "feature-collection",
-    maxRows: 50000,
+    maxRows: 50_000,
     sql: `
 WITH aoi AS (
   SELECT ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON($1), 4326), 3857) AS geom_3857
@@ -231,7 +231,7 @@ LEFT JOIN market_current.markets mkt ON mkt.market_id = mb.market_id;`,
   facilities_polygon_hyperscale: {
     name: "facilities_polygon_hyperscale",
     endpointClass: "feature-collection",
-    maxRows: 50000,
+    maxRows: 50_000,
     sql: `
 WITH aoi AS (
   SELECT ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON($1), 4326), 3857) AS geom_3857
@@ -261,8 +261,8 @@ SELECT
   c.facility_name,
   c.provider_id,
   COALESCE(
+    NULLIF(BTRIM(c.facility_name), ''),
     NULLIF(BTRIM(provider.provider_name), ''),
-    NULLIF(INITCAP(REPLACE(c.provider_slug, '-', ' ')), ''),
     c.provider_id
   ) AS provider_name,
   COALESCE(c.county_fips, ''::text) AS county_fips,
@@ -347,8 +347,8 @@ SELECT
   facility.facility_name,
   facility.provider_id,
   COALESCE(
+    NULLIF(BTRIM(facility.facility_name), ''),
     NULLIF(BTRIM(provider.provider_name), ''),
-    NULLIF(INITCAP(REPLACE(facility.provider_slug, '-', ' ')), ''),
     facility.provider_id
   ) AS provider_name,
   COALESCE(facility.county_fips, ''::text) AS county_fips,

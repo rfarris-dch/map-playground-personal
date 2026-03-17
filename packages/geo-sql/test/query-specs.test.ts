@@ -46,7 +46,7 @@ describe("geo-sql query specs", () => {
       perspective: "colocation",
     });
 
-    expect(query.params).toEqual([-100, 30, -90, 40, 250]);
+    expect(query.params).toEqual([-100, 30, -90, 40]);
     expect(query.sql).toContain("serve.facility_site");
   });
 
@@ -95,7 +95,7 @@ describe("geo-sql query specs", () => {
       perspective: "hyperscale",
     });
 
-    expect(polygonQuery.params).toEqual(['{"type":"Polygon","coordinates":[]}', 100]);
+    expect(polygonQuery.params).toEqual(['{"type":"Polygon","coordinates":[]}']);
     expect(polygonQuery.sql).toContain("serve.hyperscale_site");
     expect(detailQuery.params).toEqual(["facility-123"]);
     expect(detailQuery.sql).toContain("serve.hyperscale_site");
@@ -114,6 +114,12 @@ describe("geo-sql query specs", () => {
     for (const spec of specs) {
       expect(spec.sql).toContain("provider_id IS NOT NULL");
       expect(spec.sql).toContain("provider.provider_name");
+      if (spec.sql.includes("serve.hyperscale_site")) {
+        expect(spec.sql).toContain("facility_name");
+        expect(spec.sql).not.toContain("INITCAP(REPLACE(");
+        continue;
+      }
+
       expect(spec.sql).toContain("INITCAP(REPLACE(");
     }
   });

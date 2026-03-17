@@ -130,8 +130,8 @@ SELECT
   facility.facility_name,
   facility.provider_id,
   COALESCE(
+    NULLIF(BTRIM(facility.facility_name), ''),
     NULLIF(BTRIM(provider.provider_name), ''),
-    NULLIF(INITCAP(REPLACE(facility.provider_slug, '-', ' ')), ''),
     facility.provider_id
   ) AS provider_name,
   facility.state_abbrev,
