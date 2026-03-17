@@ -186,11 +186,11 @@
       </div>
 
       <!-- Metric Cards -->
-      <div v-if="metrics.length > 0" class="flex flex-wrap gap-2">
+      <div v-if="metrics.length > 0" class="flex flex-wrap justify-start gap-2">
         <div
           v-for="metric in metrics"
           :key="metric.label"
-          class="flex w-[80px] flex-col items-center justify-center gap-[4px] rounded-[8px] p-2"
+          class="flex w-[80px] flex-col items-start gap-[4px] rounded-[8px] p-2"
           :class="accentBg"
         >
           <span class="text-[16px] font-normal leading-none whitespace-nowrap text-white">
