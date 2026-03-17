@@ -21,6 +21,7 @@ import type {
 import {
   FLOOD_100_LAYER_ID,
   FLOOD_500_LAYER_ID,
+  GAS_PIPELINES_LAYER_ID,
   fiberLayerId,
   HYDRO_BASINS_LAYER_ID,
   PARCELS_LAYER_ID,
@@ -1124,6 +1125,7 @@ function resolveVisibleLayerIdsFromAppShell(
   applyBooleanVisibilityLayer(visibleLayerIds, HYDRO_BASINS_LAYER_ID, args.hydroBasinsVisible);
   applyBooleanVisibilityLayer(visibleLayerIds, PARCELS_LAYER_ID, args.parcelsVisible);
   applyBooleanVisibilityLayer(visibleLayerIds, WATER_FEATURES_LAYER_ID, args.waterVisible);
+  applyBooleanVisibilityLayer(visibleLayerIds, GAS_PIPELINES_LAYER_ID, args.gasPipelineVisible);
   applyPowerVisibilityLayers(visibleLayerIds, args.powerVisibility);
   applyFiberVisibilityLayers(visibleLayerIds, args.fiberVisibility);
 
@@ -1320,6 +1322,9 @@ const mapContextLayerVisibilityAppliers = {
   },
   [powerLayerId("plants")]: (args: ApplyMapContextTransferToAppShellArgs, visible: boolean) => {
     args.setPowerLayerVisible?.("plants", visible);
+  },
+  [GAS_PIPELINES_LAYER_ID]: (args: ApplyMapContextTransferToAppShellArgs, visible: boolean) => {
+    args.setGasPipelineVisible?.(visible);
   },
   [fiberLayerId("metro")]: (args: ApplyMapContextTransferToAppShellArgs, visible: boolean) => {
     args.setFiberLayerVisibility?.("metro", visible);

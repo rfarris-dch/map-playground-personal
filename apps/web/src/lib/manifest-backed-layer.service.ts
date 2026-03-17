@@ -9,6 +9,7 @@ import type { IMap } from "@map-migration/map-engine";
 import { Effect, Either } from "effect";
 
 interface ManifestBackedLayerState {
+  cachedManifest: TilePublishManifest | null;
   destroyed: boolean;
   ready: boolean;
   sourceInitializationPromise: Promise<void> | null;
@@ -40,6 +41,7 @@ interface ManifestBackedLayerBootstrapOptions {
 
 function initialState(): ManifestBackedLayerState {
   return {
+    cachedManifest: null,
     destroyed: false,
     ready: false,
     sourceInitialized: false,
@@ -94,6 +96,7 @@ export function mountManifestBackedLayerBootstrap(
           );
         }
 
+        state.cachedManifest = manifest;
         options.ensureSource(manifest);
         options.ensureLayers();
         state.sourceInitialized = true;
@@ -122,11 +125,20 @@ export function mountManifestBackedLayerBootstrap(
 
   function onLoad(): void {
     const wasReady = state.ready;
+    const wasSourceInitialized = state.sourceInitialized;
     state.ready = true;
 
-    if (wasReady && state.sourceInitialized) {
+    if (wasReady && wasSourceInitialized) {
       state.sourceInitialized = false;
       state.sourceInitializationPromise = null;
+    }
+
+    if (wasReady && wasSourceInitialized && state.cachedManifest !== null) {
+      options.ensureSource(state.cachedManifest);
+      options.ensureLayers();
+      state.sourceInitialized = true;
+      options.onInitialized?.(state.cachedManifest);
+      return;
     }
 
     options.onReady?.(bootstrap);

@@ -29,6 +29,10 @@ function pointLayerIdForPerspective(perspective: FacilityPerspective): string {
   return `facilities.${perspective}.points`;
 }
 
+function iconFallbackLayerIdForPerspective(perspective: FacilityPerspective): string {
+  return `facilities.${perspective}.icon-fallback`;
+}
+
 function clusterLayerIdForPerspective(perspective: FacilityPerspective): string {
   return `facilities.${perspective}.clusters`;
 }
@@ -52,6 +56,7 @@ function perspectiveForClusterLayerId(
 function toHoverState(
   feature: {
     id: unknown;
+    geometry?: { type: string; coordinates: unknown };
     properties: unknown;
   },
   screenPoint: readonly [number, number]
@@ -87,12 +92,27 @@ function toHoverState(
   const plannedPowerMw = readNullableNumberProperty(feature.properties, "plannedPowerMw");
   const availablePowerMw = readNullableNumberProperty(feature.properties, "availablePowerMw");
   const statusLabel = readStringProperty(feature.properties, "statusLabel");
+  const facilityCode = readStringProperty(feature.properties, "facilityCode");
+  const address = readStringProperty(feature.properties, "address");
+  const city = readStringProperty(feature.properties, "city");
+  const stateAbbrev = readStringProperty(feature.properties, "stateAbbrev");
+  const marketName = readStringProperty(feature.properties, "marketName");
+
+  const coordinates: readonly [number, number] | null =
+    feature.geometry?.type === "Point"
+      ? readPointCenter(feature.geometry.coordinates)
+      : null;
 
   return {
+    address,
     availablePowerMw,
+    city,
+    coordinates,
+    facilityCode,
     perspective,
     facilityId,
     facilityName,
+    marketName,
     providerId,
     providerName,
     commissionedPowerMw,
@@ -100,6 +120,7 @@ function toHoverState(
     leaseOrOwn,
     plannedPowerMw,
     screenPoint,
+    stateAbbrev,
     statusLabel,
     underConstructionPowerMw,
   };
@@ -162,6 +183,9 @@ export function mountFacilitiesHover(
   const pointLayerIds = options.perspectives.map((perspective) => {
     return pointLayerIdForPerspective(perspective);
   });
+  const iconFallbackLayerIds = options.perspectives.map((perspective) => {
+    return iconFallbackLayerIdForPerspective(perspective);
+  });
   const clusterLayerIds = options.perspectives.map((perspective) => {
     return clusterLayerIdForPerspective(perspective);
   });
@@ -169,7 +193,13 @@ export function mountFacilitiesHover(
   let clusterFetchSequence = 0;
 
   const queryablePointLayerIds = (): string[] => {
-    return pointLayerIds.filter((layerId) => map.hasLayer(layerId));
+    const layers = pointLayerIds.filter((layerId) => map.hasLayer(layerId));
+    for (const fallbackId of iconFallbackLayerIds) {
+      if (map.hasLayer(fallbackId)) {
+        layers.push(fallbackId);
+      }
+    }
+    return layers;
   };
 
   const queryableClusterLayerIds = (): string[] => {
@@ -201,8 +231,13 @@ export function mountFacilitiesHover(
       const screenPoint = toScreenPoint(event);
 
       for (const feature of features) {
-        const nextHover = toHoverState(feature, screenPoint);
-        if (nextHover === null || !isFeatureId(feature.id)) {
+        if (!isFeatureId(feature.id)) {
+          continue;
+        }
+        const cachedProperties = options.resolveFeatureProperties?.(feature.id) ?? null;
+        const properties = cachedProperties ?? feature.properties;
+        const nextHover = toHoverState({ id: feature.id, geometry: feature.geometry, properties }, screenPoint);
+        if (nextHover === null) {
           continue;
         }
 

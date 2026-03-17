@@ -115,6 +115,15 @@ export function initializeFacilitiesRuntime(options: UseAppShellMapLifecycleOpti
     onClusterHoverChange: (nextHover) => {
       options.state.hoveredFacilityCluster.value = nextHover;
     },
+    resolveFeatureProperties: (featureId) => {
+      for (const controller of nextFacilitiesControllers) {
+        const properties = controller.resolveFeatureProperties(featureId);
+        if (properties !== null) {
+          return properties;
+        }
+      }
+      return null;
+    },
   });
 }
 

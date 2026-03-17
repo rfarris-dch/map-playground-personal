@@ -2,6 +2,7 @@ import type {
   AddLayerObject,
   ControlPosition,
   ExpressionSpecification,
+  GeoJSONFeature,
   IControl,
   MapGeoJSONFeature,
   PointLike,
@@ -55,6 +56,7 @@ export interface IMap {
   getZoom(): number;
   hasImage(id: string): boolean;
   hasLayer(layerId: string): boolean;
+  isLayerVisible(layerId: string): boolean;
   hasSource(sourceId: string): boolean;
   loadImage(url: string): Promise<ImageBitmap | HTMLImageElement | ImageData>;
   off(event: "load" | "moveend", handler: () => void): void;
@@ -74,6 +76,7 @@ export interface IMap {
     target: MapPointLike | [MapPointLike, MapPointLike],
     options?: MapQueryRenderedFeaturesOptions
   ): MapRenderedFeature[];
+  querySourceFeatures(sourceId: string, sourceLayer: string): MapSourceFeature[];
   removeControl(control: MapControl): void;
   removeLayer(layerId: string): void;
   removeSource(sourceId: string): void;
@@ -174,6 +177,7 @@ export type MapPointLike = PointLike;
 export type MapProjectionSpecification = ProjectionSpecification;
 export type MapQueryRenderedFeaturesOptions = QueryRenderedFeaturesOptions;
 export type MapRenderedFeature = MapGeoJSONFeature;
+export type MapSourceFeature = GeoJSONFeature;
 export type MapRequestParameters = RequestParameters;
 export type MapViewport =
   | {

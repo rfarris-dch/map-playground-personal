@@ -4,6 +4,7 @@ import type { MarketBoundaryVisibilityState } from "@/features/app/components/ma
 import {
   FLOOD_100_LAYER_ID,
   FLOOD_500_LAYER_ID,
+  GAS_PIPELINES_LAYER_ID,
   facilitiesLayerId,
   HYDRO_BASINS_LAYER_ID,
   PARCELS_LAYER_ID,
@@ -162,6 +163,7 @@ export function useAppShellVisibility(options: UseAppShellVisibilityOptions) {
   function setGasPipelineVisible(visible: boolean): void {
     gasPipelineVisible.value = visible;
     options.gasPipelineController?.value?.setVisible(visible);
+    options.layerRuntime.value?.setUserVisible(GAS_PIPELINES_LAYER_ID, visible);
   }
 
   function setWaterVisible(visible: boolean): void {

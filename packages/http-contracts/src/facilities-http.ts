@@ -64,9 +64,11 @@ export const FacilitiesPropertiesSchema = z.object({
   commissionedSemantic: CommissionedSemanticSchema,
   leaseOrOwn: LeaseOrOwnSchema.nullable(),
   statusLabel: z.string().nullable(),
+  facilityCode: z.string().nullable(),
   address: z.string().nullable(),
   city: z.string().nullable(),
   state: z.string().nullable(),
+  marketName: z.string().nullable(),
 });
 
 export const FacilitiesFeatureSchema = z.object({
@@ -134,9 +136,11 @@ export const FacilitiesDetailPropertiesSchema = z.object({
   availablePowerMw: z.number().nullable(),
   squareFootage: z.number().nullable(),
   statusLabel: z.string().nullable(),
+  facilityCode: z.string().nullable(),
   address: z.string().nullable(),
   city: z.string().nullable(),
   state: z.string().nullable(),
+  marketName: z.string().nullable(),
 });
 
 export const FacilitiesDetailFeatureSchema = z.object({

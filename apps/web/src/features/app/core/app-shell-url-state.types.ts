@@ -21,6 +21,7 @@ export interface UseAppShellUrlStateOptions {
   readonly currentSurface: ComputedRef<MapContextSurface>;
   readonly fiberVisibility: ShallowRef<FiberVisibilityState>;
   readonly floodVisibility: ShallowRef<FloodVisibilityState>;
+  readonly gasPipelineVisible: ShallowRef<boolean>;
   readonly hydroBasinsVisible: ShallowRef<boolean>;
   readonly layerRuntimeSnapshot: ShallowRef<LayerRuntimeSnapshot | null>;
   readonly map: ShallowRef<import("@map-migration/map-engine").IMap | null>;
@@ -42,6 +43,7 @@ export interface UseAppShellUrlStateOptions {
     selectedLayerNames: readonly string[]
   ) => void;
   readonly setFloodLayerVisible: (layerId: "flood100" | "flood500", visible: boolean) => void;
+  readonly setGasPipelineVisible: (visible: boolean) => void;
   readonly setHydroBasinsVisible: (visible: boolean) => void;
   readonly setParcelsVisible: (visible: boolean) => void;
   readonly setPerspectiveVisibility: (perspective: FacilityPerspective, visible: boolean) => void;

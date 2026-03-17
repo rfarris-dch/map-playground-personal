@@ -174,9 +174,11 @@ export function mapFacilitiesRowsToFeatures(
       commissionedSemantic: readCommissionedSemantic(row.commissioned_semantic),
       leaseOrOwn: readLeaseOrOwn(row.lease_or_own),
       statusLabel: readNullableText(row.status_label),
+      facilityCode: readNullableText(row.facility_code),
       address: readNullableText(row.address),
       city: readNullableText(row.city),
       state: readNullableText(row.state),
+      marketName: readNullableText(row.market_name),
     },
   }));
 }
@@ -210,9 +212,11 @@ export function mapFacilityDetailRowToFeature(
       availablePowerMw: readNullableNumber(row.available_power_mw),
       squareFootage: readNullableNumber(row.square_footage),
       statusLabel: readNullableText(row.status_label),
+      facilityCode: readNullableText(row.facility_code),
       address: readNullableText(row.address),
       city: readNullableText(row.city),
       state: readNullableText(row.state),
+      marketName: readNullableText(row.market_name),
     },
   };
 }

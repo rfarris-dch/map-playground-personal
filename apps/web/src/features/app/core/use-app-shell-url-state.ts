@@ -99,6 +99,7 @@ export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
         setFiberLayerVisibility: options.setFiberLayerVisibility,
         setFiberSourceLayerSelection: options.setFiberSourceLayerSelection,
         setFloodLayerVisible: options.setFloodLayerVisible,
+        setGasPipelineVisible: options.setGasPipelineVisible,
         setHydroBasinsVisible: options.setHydroBasinsVisible,
         setMapViewport: (viewport) => {
           options.map.value?.setViewport(normalizeViewportForMap(viewport));
@@ -146,6 +147,7 @@ export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
       options.boundaryVisibility.value,
       options.fiberVisibility.value,
       options.floodVisibility.value,
+      options.gasPipelineVisible.value,
       options.hydroBasinsVisible.value,
       options.layerRuntimeSnapshot.value,
       options.parcelsVisible.value,

@@ -47,6 +47,7 @@ export interface ApplyMapContextTransferToAppShellArgs {
     selectedLayerNames: readonly string[]
   ) => void;
   readonly setFloodLayerVisible?: (layerId: "flood100" | "flood500", visible: boolean) => void;
+  readonly setGasPipelineVisible?: (visible: boolean) => void;
   readonly setHydroBasinsVisible?: (visible: boolean) => void;
   readonly setMapViewport?: (viewport: NonNullable<MapContextTransfer["viewport"]>) => void;
   readonly setParcelsVisible?: (visible: boolean) => void;
@@ -63,6 +64,7 @@ export interface BuildMapContextTransferFromAppShellArgs {
   readonly facilityIds?: readonly string[];
   readonly fiberVisibility?: FiberVisibilityState;
   readonly floodVisibility?: FloodVisibilityState;
+  readonly gasPipelineVisible?: boolean;
   readonly highlightTarget?: MapContextHighlightTarget;
   readonly hydroBasinsVisible?: boolean;
   readonly layerRuntimeSnapshot?: LayerRuntimeSnapshot | null;

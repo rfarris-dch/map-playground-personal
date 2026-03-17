@@ -6,9 +6,13 @@ import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-per
 import type { FacilityClusterSummary } from "@/features/facilities/facilities-cluster.types";
 
 export interface FacilityHoverState {
+  readonly address: string | null;
   readonly availablePowerMw: number | null;
+  readonly city: string | null;
   readonly commissionedPowerMw: number | null;
   readonly commissionedSemantic: CommissionedSemantic;
+  readonly coordinates: readonly [number, number] | null;
+  readonly facilityCode: string | null;
   readonly facilityId: string;
   readonly facilityName: string;
   readonly leaseOrOwn: LeaseOrOwn | null;
@@ -17,6 +21,8 @@ export interface FacilityHoverState {
   readonly providerId: string;
   readonly providerName: string;
   readonly screenPoint: readonly [number, number];
+  readonly marketName: string | null;
+  readonly stateAbbrev: string | null;
   readonly statusLabel: string | null;
   readonly underConstructionPowerMw: number | null;
 }
@@ -46,6 +52,7 @@ export interface FacilitiesHoverOptions {
   readonly onClusterHoverChange?: (nextHover: FacilityClusterHoverState | null) => void;
   readonly onHoverChange?: (nextHover: FacilityHoverState | null) => void;
   readonly perspectives: readonly FacilityPerspective[];
+  readonly resolveFeatureProperties?: (featureId: number | string) => unknown | null;
 }
 
 export interface FacilitiesHoverController {

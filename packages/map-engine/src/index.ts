@@ -33,6 +33,7 @@ import type {
   MapProjectionSpecification,
   MapQueryRenderedFeaturesOptions,
   MapRenderedFeature,
+  MapSourceFeature,
   MapSourceSpecification,
   MapStyleSpecification,
   MapTerrainSpecification,
@@ -65,6 +66,7 @@ export type {
   MapProjectionSpecification,
   MapQueryRenderedFeaturesOptions,
   MapRenderedFeature,
+  MapSourceFeature,
   MapRequestParameters,
   MapRequestTransformFunction,
   MapResourceType,
@@ -284,6 +286,13 @@ class MapLibreEngine implements IMap {
     return this.map.queryRenderedFeatures(target, options);
   }
 
+  querySourceFeatures(
+    sourceId: string,
+    sourceLayer: string
+  ): MapSourceFeature[] {
+    return this.map.querySourceFeatures(sourceId, { sourceLayer });
+  }
+
   project(lngLat: LngLat): [number, number] {
     const point = this.map.project({
       lng: lngLat[0],
@@ -408,6 +417,13 @@ class MapLibreEngine implements IMap {
     }
 
     this.map.setFilter(layerId, filter ?? undefined);
+  }
+
+  isLayerVisible(layerId: string): boolean {
+    if (!this.hasLayer(layerId)) {
+      return false;
+    }
+    return this.map.getLayoutProperty(layerId, "visibility") !== "none";
   }
 
   setLayerVisibility(layerId: string, visible: boolean): void {

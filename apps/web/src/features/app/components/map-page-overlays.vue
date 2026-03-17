@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, ref, watch } from "vue";
+  import { computed, ref, shallowRef, watch } from "vue";
   import MapInitErrorOverlay from "@/features/app/components/map-init-error-overlay.vue";
   import MapLoadingBar from "@/features/app/components/map-loading-bar.vue";
   import MapStatusBar from "@/features/app/components/map-status-bar.vue";
@@ -7,6 +7,8 @@
   import BoundaryHoverTooltip from "@/features/boundaries/components/boundary-hover-tooltip.vue";
   import FacilityClusterHoverTooltip from "@/features/facilities/components/facility-cluster-hover-tooltip.vue";
   import FacilityHoverTooltip from "@/features/facilities/components/facility-hover-tooltip.vue";
+  import FacilitySelectedTooltip from "@/features/facilities/components/facility-selected-tooltip.vue";
+  import type { FacilityHoverState } from "@/features/facilities/hover.types";
   import FiberLocatorHoverTooltip from "@/features/fiber-locator/components/fiber-locator-hover-tooltip.vue";
   import MarketBoundaryHoverTooltip from "@/features/market-boundaries/components/market-boundary-hover-tooltip.vue";
   import ParcelDetailDrawer from "@/features/parcels/parcel-detail/components/parcel-detail-drawer.vue";
@@ -15,6 +17,44 @@
   import ScannerPanel from "@/features/scanner/components/scanner-panel.vue";
 
   const shell = useMapShellContext();
+
+  const selectedFacilityState = shallowRef<FacilityHoverState | null>(null);
+
+  watch(
+    () => shell.selectedFacility.value,
+    (next) => {
+      if (next === null) {
+        selectedFacilityState.value = null;
+        return;
+      }
+      const hover = shell.hoveredFacility.value;
+      if (hover !== null && hover.facilityId === next.facilityId) {
+        selectedFacilityState.value = hover;
+      }
+    }
+  );
+
+  const suppressedHoverState = computed(() => {
+    if (
+      selectedFacilityState.value !== null &&
+      shell.hoveredFacility.value?.facilityId === selectedFacilityState.value.facilityId
+    ) {
+      return null;
+    }
+    return shell.hoveredFacility.value;
+  });
+
+  function handleSelectedClose(): void {
+    shell.clearSelectedFacility();
+    selectedFacilityState.value = null;
+  }
+
+  function handleSelectedViewDetails(facilityId: string, perspective: string): void {
+    shell.navigateToFacilityDetail({
+      facilityId,
+      perspective: perspective as "colocation" | "hyperscale",
+    });
+  }
 
   const parcelDetail = computed(() => shell.parcelDetailQuery.data.value ?? null);
   const isParcelDetailLoading = computed(() => shell.parcelDetailQuery.isLoading.value);
@@ -81,9 +121,13 @@
   <MapLoadingBar :active="isInitialLoading" />
   <MapStatusBar :overlay-status-message="shell.overlayStatusMessage.value" />
 
-  <FacilityHoverTooltip
-    :hover-state="shell.hoveredFacility.value"
-    @select="(facilityId, perspective) => shell.navigateToFacilityDetail({ facilityId, perspective: perspective as 'colocation' | 'hyperscale' })"
+  <FacilityHoverTooltip :hover-state="suppressedHoverState" />
+  <FacilitySelectedTooltip
+    v-if="selectedFacilityState !== null"
+    :state="selectedFacilityState"
+    :map="shell.map.value"
+    @close="handleSelectedClose"
+    @view-details="handleSelectedViewDetails"
   />
   <FacilityClusterHoverTooltip
     :hover-state="shell.hoveredFacilityCluster.value"

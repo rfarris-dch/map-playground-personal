@@ -645,12 +645,19 @@ export function mountFacilitiesLayer(
       minzoom: minZoom,
       paint: {
         "circle-radius": [
-          "case",
-          ["boolean", ["feature-state", "selected"], false],
-          8,
-          ["boolean", ["feature-state", "hover"], false],
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          4,
+          6,
           7,
-          5,
+          10,
+          10,
+          14,
+          13,
+          18,
+          16,
+          24,
         ],
         "circle-stroke-width": 2,
         "circle-stroke-color": defaultCircleColor,
@@ -865,12 +872,11 @@ export function mountFacilitiesLayer(
   };
 
   const querySelectableLayerIds = (): string[] => {
-    const queryLayers = [pointLayerId];
     if (state.viewMode === "icons" && map.hasLayer(iconFallbackLayerId)) {
-      queryLayers.push(iconFallbackLayerId);
+      return [iconFallbackLayerId, pointLayerId];
     }
 
-    return queryLayers;
+    return [pointLayerId];
   };
 
   const readPointCenter = (coordinates: unknown): readonly [number, number] | null => {
@@ -904,7 +910,7 @@ export function mountFacilitiesLayer(
     }
 
     const currentZoom = map.getZoom();
-    const targetZoom = Math.max(currentZoom, 14);
+    const targetZoom = Math.max(currentZoom + 2, 16);
 
     map.setViewport({
       type: "center",
@@ -913,6 +919,32 @@ export function mountFacilitiesLayer(
       animate: true,
     });
   };
+
+  const nudgeToFeature = (feature: MapRenderedFeature): void => {
+    const geom = feature.geometry;
+    if (geom.type !== "Point") {
+      return;
+    }
+
+    const center = readPointCenter(geom.coordinates);
+    if (center === null) {
+      return;
+    }
+
+    map.setViewport({
+      type: "center",
+      center: [center[0], center[1]],
+      zoom: map.getZoom(),
+      animate: true,
+    });
+  };
+
+  let pendingClick: {
+    featureId: number | string;
+    timer: ReturnType<typeof setTimeout>;
+  } | null = null;
+
+  const DOUBLE_CLICK_MS = 300;
 
   const onClick = (event: MapClickEvent): void => {
     if (!(state.ready && state.visible && isInteractionEnabled())) {
@@ -933,20 +965,38 @@ export function mountFacilitiesLayer(
 
     const selectedFeature = features[0];
     if (!(selectedFeature && isFeatureId(selectedFeature.id))) {
+      if (pendingClick !== null) {
+        clearTimeout(pendingClick.timer);
+        pendingClick = null;
+      }
       setSelectedFeatureId(null);
       return;
     }
 
     const selectedFacility = toSelectedFacilityRef(selectedFeature.id, selectedFeature.properties);
 
-    if (selectedFeature.id === state.selectedFeatureId) {
+    if (pendingClick !== null && pendingClick.featureId === selectedFeature.id) {
+      clearTimeout(pendingClick.timer);
+      pendingClick = null;
       emitSelectedFacility(selectedFeature.id, selectedFacility);
       focusSelectedFeature(selectedFeature);
       return;
     }
 
+    if (pendingClick !== null) {
+      clearTimeout(pendingClick.timer);
+      pendingClick = null;
+    }
+
     setSelectedFeatureId(selectedFeature.id, selectedFacility);
-    focusSelectedFeature(selectedFeature);
+
+    pendingClick = {
+      featureId: selectedFeature.id,
+      timer: setTimeout(() => {
+        nudgeToFeature(selectedFeature);
+        pendingClick = null;
+      }, DOUBLE_CLICK_MS),
+    };
   };
 
   const resetVisibleFacilitiesData = (): void => {
@@ -1237,6 +1287,11 @@ export function mountFacilitiesLayer(
     applyFilter,
     clearSelection,
     perspective,
+    resolveFeatureProperties(featureId: number | string): unknown | null {
+      const target = String(featureId);
+      const feature = state.cachedFeatures.find((f) => String(f.id) === target);
+      return feature?.properties ?? null;
+    },
     setViewMode,
     setVisible,
     zoomToCluster,
@@ -1249,6 +1304,11 @@ export function mountFacilitiesLayer(
         window.clearTimeout(state.debounceTimer);
       }
       state.debounceTimer = null;
+
+      if (pendingClick !== null) {
+        clearTimeout(pendingClick.timer);
+        pendingClick = null;
+      }
 
       map.off("load", onLoad);
       map.off("moveend", onMoveEnd);

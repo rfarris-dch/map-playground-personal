@@ -81,13 +81,25 @@ SELECT
   c.commissioned_semantic,
   NULL::text AS lease_or_own,
   NULL::text AS status_label,
-  NULL::text AS address,
-  NULL::text AS city,
-  NULL::text AS state,
+  NULLIF(BTRIM(c.provider_slug), '') AS facility_code,
+  NULLIF(BTRIM(pts.address), '') AS address,
+  NULLIF(BTRIM(pts.city), '') AS city,
+  NULLIF(BTRIM(pts.state), '') AS state,
+  mkt.name AS market_name,
   ST_AsGeoJSON(c.geom)::jsonb AS geom_json
 FROM candidates AS c
 LEFT JOIN facility_current.providers AS provider
-  ON provider.provider_id = c.provider_id;`,
+  ON provider.provider_id = c.provider_id
+LEFT JOIN LATERAL (
+  SELECT p.address, p.city, p.state
+  FROM spatial.colo_facility_points p
+  WHERE 'colo:' || p.id::text = c.facility_id
+     OR ST_DWithin(p.geom, c.geom, 0.001)
+  ORDER BY (CASE WHEN 'colo:' || p.id::text = c.facility_id THEN 0 ELSE 1 END), ST_Distance(p.geom, c.geom)
+  LIMIT 1
+) pts ON true
+LEFT JOIN market_current.market_boundaries mb ON ST_Contains(mb.geom, c.geom)
+LEFT JOIN market_current.markets mkt ON mkt.market_id = mb.market_id;`,
   },
   facilities_bbox_hyperscale: {
     name: "facilities_bbox_hyperscale",
@@ -101,6 +113,7 @@ candidates AS (
   SELECT
     facility.hyperscale_id,
     facility.facility_name,
+    facility.facility_code,
     facility.provider_id,
     facility.provider_slug,
     facility.county_fips,
@@ -135,13 +148,19 @@ SELECT
   c.commissioned_semantic,
   c.lease_or_own,
   NULL::text AS status_label,
-  NULL::text AS address,
-  NULL::text AS city,
-  NULL::text AS state,
+  NULLIF(BTRIM(c.facility_code), '') AS facility_code,
+  NULLIF(BTRIM(pts.address), '') AS address,
+  NULLIF(BTRIM(pts.city), '') AS city,
+  NULLIF(BTRIM(pts.state), '') AS state,
+  mkt.name AS market_name,
   ST_AsGeoJSON(c.geom)::jsonb AS geom_json
 FROM candidates AS c
 LEFT JOIN facility_current.providers AS provider
-  ON provider.provider_id = c.provider_id;`,
+  ON provider.provider_id = c.provider_id
+LEFT JOIN spatial.hyperscale_facility_points AS pts
+  ON ST_DWithin(c.geom, pts.geom, 0.001)
+LEFT JOIN market_current.market_boundaries mb ON ST_Contains(mb.geom, c.geom)
+LEFT JOIN market_current.markets mkt ON mkt.market_id = mb.market_id;`,
   },
   facilities_polygon_colocation: {
     name: "facilities_polygon_colocation",
@@ -189,13 +208,25 @@ SELECT
   c.commissioned_semantic,
   NULL::text AS lease_or_own,
   NULL::text AS status_label,
-  NULL::text AS address,
-  NULL::text AS city,
-  NULL::text AS state,
+  NULLIF(BTRIM(c.provider_slug), '') AS facility_code,
+  NULLIF(BTRIM(pts.address), '') AS address,
+  NULLIF(BTRIM(pts.city), '') AS city,
+  NULLIF(BTRIM(pts.state), '') AS state,
+  mkt.name AS market_name,
   ST_AsGeoJSON(c.geom)::jsonb AS geom_json
 FROM candidates AS c
 LEFT JOIN facility_current.providers AS provider
-  ON provider.provider_id = c.provider_id;`,
+  ON provider.provider_id = c.provider_id
+LEFT JOIN LATERAL (
+  SELECT p.address, p.city, p.state
+  FROM spatial.colo_facility_points p
+  WHERE 'colo:' || p.id::text = c.facility_id
+     OR ST_DWithin(p.geom, c.geom, 0.001)
+  ORDER BY (CASE WHEN 'colo:' || p.id::text = c.facility_id THEN 0 ELSE 1 END), ST_Distance(p.geom, c.geom)
+  LIMIT 1
+) pts ON true
+LEFT JOIN market_current.market_boundaries mb ON ST_Contains(mb.geom, c.geom)
+LEFT JOIN market_current.markets mkt ON mkt.market_id = mb.market_id;`,
   },
   facilities_polygon_hyperscale: {
     name: "facilities_polygon_hyperscale",
@@ -209,6 +240,7 @@ candidates AS (
   SELECT
     facility.hyperscale_id,
     facility.facility_name,
+    facility.facility_code,
     facility.provider_id,
     facility.provider_slug,
     facility.county_fips,
@@ -243,13 +275,19 @@ SELECT
   c.commissioned_semantic,
   c.lease_or_own,
   NULL::text AS status_label,
-  NULL::text AS address,
-  NULL::text AS city,
-  NULL::text AS state,
+  NULLIF(BTRIM(c.facility_code), '') AS facility_code,
+  NULLIF(BTRIM(pts.address), '') AS address,
+  NULLIF(BTRIM(pts.city), '') AS city,
+  NULLIF(BTRIM(pts.state), '') AS state,
+  mkt.name AS market_name,
   ST_AsGeoJSON(c.geom)::jsonb AS geom_json
 FROM candidates AS c
 LEFT JOIN facility_current.providers AS provider
-  ON provider.provider_id = c.provider_id;`,
+  ON provider.provider_id = c.provider_id
+LEFT JOIN spatial.hyperscale_facility_points AS pts
+  ON ST_DWithin(c.geom, pts.geom, 0.001)
+LEFT JOIN market_current.market_boundaries mb ON ST_Contains(mb.geom, c.geom)
+LEFT JOIN market_current.markets mkt ON mkt.market_id = mb.market_id;`,
   },
   facility_detail_colocation: {
     name: "facility_detail_colocation",
@@ -275,13 +313,25 @@ SELECT
   facility.commissioned_semantic,
   NULL::text AS lease_or_own,
   NULL::text AS status_label,
-  NULL::text AS address,
-  NULL::text AS city,
-  NULL::text AS state,
+  NULLIF(BTRIM(facility.provider_slug), '') AS facility_code,
+  NULLIF(BTRIM(pts.address), '') AS address,
+  NULLIF(BTRIM(pts.city), '') AS city,
+  NULLIF(BTRIM(pts.state), '') AS state,
+  mkt.name AS market_name,
   ST_AsGeoJSON(facility.geom)::jsonb AS geom_json
 FROM serve.facility_site AS facility
 LEFT JOIN facility_current.providers AS provider
   ON provider.provider_id = facility.provider_id
+LEFT JOIN LATERAL (
+  SELECT p.address, p.city, p.state
+  FROM spatial.colo_facility_points p
+  WHERE 'colo:' || p.id::text = facility.facility_id
+     OR ST_DWithin(p.geom, facility.geom, 0.001)
+  ORDER BY (CASE WHEN 'colo:' || p.id::text = facility.facility_id THEN 0 ELSE 1 END), ST_Distance(p.geom, facility.geom)
+  LIMIT 1
+) pts ON true
+LEFT JOIN market_current.market_boundaries mb ON ST_Contains(mb.geom, facility.geom)
+LEFT JOIN market_current.markets mkt ON mkt.market_id = mb.market_id
 WHERE facility.facility_id = $1
   AND facility.geom IS NOT NULL
   AND facility.provider_id IS NOT NULL
@@ -311,13 +361,19 @@ SELECT
   facility.commissioned_semantic,
   facility.lease_or_own,
   NULL::text AS status_label,
-  NULL::text AS address,
-  NULL::text AS city,
-  NULL::text AS state,
+  NULLIF(BTRIM(facility.facility_code), '') AS facility_code,
+  NULLIF(BTRIM(pts.address), '') AS address,
+  NULLIF(BTRIM(pts.city), '') AS city,
+  NULLIF(BTRIM(pts.state), '') AS state,
+  mkt.name AS market_name,
   ST_AsGeoJSON(facility.geom)::jsonb AS geom_json
 FROM serve.hyperscale_site AS facility
 LEFT JOIN facility_current.providers AS provider
   ON provider.provider_id = facility.provider_id
+LEFT JOIN spatial.hyperscale_facility_points AS pts
+  ON ST_DWithin(facility.geom, pts.geom, 0.001)
+LEFT JOIN market_current.market_boundaries mb ON ST_Contains(mb.geom, facility.geom)
+LEFT JOIN market_current.markets mkt ON mkt.market_id = mb.market_id
 WHERE facility.hyperscale_id = $1
   AND facility.geom IS NOT NULL
   AND facility.provider_id IS NOT NULL
