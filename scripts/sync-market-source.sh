@@ -146,7 +146,10 @@ mysql_exec "
     'market_id', facility.MARKET,
     'submarket_id', facility.SUBMARKET_ID,
     'company', facility.COMPANY,
-    'facility_code', facility.FACILITY_CODE,
+    'facility_code', COALESCE(
+      NULLIF(TRIM(facility.FACILITY_CODE), ''),
+      NULLIF(TRIM(facility.BUILDING_DESIGNATION), '')
+    ),
     'address', facility.ADDRESS,
     'city', facility.CITY,
     'state', facility.STATE,

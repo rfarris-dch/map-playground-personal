@@ -61,11 +61,11 @@
     displayState.value?.perspective === "hyperscale" ? "border-hyper-500" : "border-colo-500"
   );
 
-  const statusText = computed(() => {
+  const codeText = computed(() => {
     if (displayState.value === null) {
-      return "";
+      return null;
     }
-    return displayState.value.statusLabel ?? displayState.value.commissionedSemantic;
+    return displayState.value.facilityCode;
   });
 
   function formatCompact(value: number): string {
@@ -112,7 +112,7 @@
     ariaLabel="Facility hover details"
     :screen-point="displayState?.screenPoint ?? null"
     :show="displayState !== null"
-    :surface-class="`pointer-events-auto absolute z-30 flex flex-col items-center justify-center rounded-[8px] border border-solid p-1 shadow-md ${accentBorder}`"
+    :surface-class="`pointer-events-auto absolute z-30 flex flex-col items-center justify-center rounded-[8px] border-2 border-solid p-1 shadow-md ${accentBorder}`"
   >
     <div
       v-if="displayState !== null"
@@ -124,8 +124,8 @@
         <span class="text-[16px] font-semibold leading-none" :class="accentText">
           {{ displayState.providerName }}
         </span>
-        <span class="text-[12px] font-normal leading-none text-[#94a3b8]">
-          {{ statusText }}
+        <span v-if="codeText" class="text-[12px] font-normal leading-none text-[#94a3b8]">
+          {{ codeText }}
         </span>
       </div>
 

@@ -144,7 +144,7 @@
 <template>
   <Transition enter-active-class="transition-opacity duration-100" enter-from-class="opacity-0">
     <aside
-      class="pointer-events-auto fixed right-[52px] top-[120px] z-30 flex flex-col items-start rounded-[8px] border border-solid p-1 shadow-md"
+      class="pointer-events-auto fixed right-[52px] top-[120px] z-30 flex flex-col items-start rounded-[8px] border-2 border-solid p-1 shadow-md"
       :class="accentBorder"
       aria-label="Facility details"
     >
