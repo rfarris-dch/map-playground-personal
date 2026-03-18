@@ -82,10 +82,14 @@ async function querySelectionPerspectives(args: {
   const countsByPerspective: Record<FacilityPerspective, number> = {
     colocation: 0,
     hyperscale: 0,
+    "hyperscale-leased": 0,
+    enterprise: 0,
   };
   const truncatedByPerspective: Record<FacilityPerspective, boolean> = {
     colocation: false,
     hyperscale: false,
+    "hyperscale-leased": false,
+    enterprise: false,
   };
   const features: FacilitiesFeatureCollection["features"] = [];
   const warnings: Warning[] = [];

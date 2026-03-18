@@ -5,6 +5,7 @@ import {
   parseLeaseOrOwn,
 } from "@map-migration/geo-kernel/commissioned-semantic";
 import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
+import { GeometrySchema, type Geometry } from "@map-migration/geo-kernel/geometry";
 import type {
   FacilitiesDetailFeature,
   FacilitiesFeature,
@@ -42,25 +43,13 @@ function readCoordinates(input: unknown): [number, number] {
   return [lng, lat];
 }
 
-function parseGeometry(input: unknown): PointGeometry | { type: string; coordinates: unknown } {
+function parseGeometry(input: unknown): Geometry {
   const value = typeof input === "string" ? parseJsonObject(input) : input;
-  assertObject(value);
-
-  const type = Reflect.get(value, "type");
-  const coordinates = Reflect.get(value, "coordinates");
-
-  if (type === "Point") {
-    return {
-      type: "Point",
-      coordinates: readCoordinates(coordinates),
-    };
+  const parsed = GeometrySchema.safeParse(value);
+  if (!parsed.success) {
+    throw new Error(`Invalid geom_json: ${parsed.error.issues[0]?.message ?? "unknown geometry"}`);
   }
-
-  if (typeof type === "string" && coordinates !== undefined) {
-    return { type, coordinates };
-  }
-
-  throw new Error(`Invalid geom_json: unsupported geometry type ${String(type)}`);
+  return parsed.data;
 }
 
 function parsePointGeometry(input: unknown): PointGeometry {
@@ -68,7 +57,7 @@ function parsePointGeometry(input: unknown): PointGeometry {
   if (geom.type !== "Point") {
     throw new Error("Invalid geom_json: geometry type must be Point");
   }
-  return geom as PointGeometry;
+  return geom;
 }
 
 function readNullableNumber(value: number | string | null | undefined): number | null {
