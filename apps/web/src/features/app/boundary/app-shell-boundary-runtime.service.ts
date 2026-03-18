@@ -115,6 +115,7 @@ export function initializeBoundaryRuntime(options: UseAppShellMapLifecycleOption
       },
     });
     controller.setIncludedRegionIds(options.state.boundaryFacetSelection.value[boundaryId]);
+    controller.setHeatEnabled(false);
     options.runtime.layerRuntime.value?.registerLayerController(boundaryId, controller);
     return withBoundaryController(controllers, boundaryId, controller);
   }, initialBoundaryControllerState());

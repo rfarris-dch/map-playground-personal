@@ -75,7 +75,7 @@ import type {
   SketchMeasureState,
 } from "@/features/sketch-measure/sketch-measure.types";
 import type { WaterLayerVisibilityController } from "@/features/water/water.types";
-import type { UseAppShellStateResult } from "./use-app-shell-state.types";
+import type { PerspectiveViewModeState, UseAppShellStateResult } from "./use-app-shell-state.types";
 
 export function useAppShellState(): UseAppShellStateResult {
   const mapContainer = useTemplateRef<HTMLDivElement>("map-container");
@@ -83,6 +83,7 @@ export function useAppShellState(): UseAppShellStateResult {
   const mapInitStatus = shallowRef<MapInitStatus>({ phase: "initializing", errorReason: null });
   const hoveredFacility = shallowRef<FacilityHoverState | null>(null);
   const hoveredFacilityCluster = shallowRef<FacilityClusterHoverState | null>(null);
+  const clusterClickSignal = shallowRef(0);
   const hoveredBoundary = shallowRef<BoundaryHoverState | null>(null);
   const boundaryHoverByLayer = shallowRef<BoundaryHoverByLayerState>(
     initialBoundaryHoverByLayerState()
@@ -113,6 +114,12 @@ export function useAppShellState(): UseAppShellStateResult {
   const hydroBasinsController = shallowRef<HydroBasinsVisibilityController | null>(null);
   const powerLayersController = shallowRef<PowerLayerMountResult | null>(null);
   const parcelsController = shallowRef<ParcelsLayerController | null>(null);
+  const perspectiveViewModes = shallowRef<PerspectiveViewModeState>({
+    colocation: "icons",
+    hyperscale: "icons",
+    "hyperscale-leased": "dots",
+    enterprise: "dots",
+  });
   const layerRuntime = shallowRef<LayerRuntimeController | null>(null);
   const layerRuntimeSnapshot = shallowRef<LayerRuntimeSnapshot | null>(null);
   const environmentalStressController = shallowRef<EnvironmentalStressController | null>(null);
@@ -248,6 +255,7 @@ export function useAppShellState(): UseAppShellStateResult {
     mapInitStatus,
     hoveredFacility,
     hoveredFacilityCluster,
+    clusterClickSignal,
     hoveredBoundary,
     boundaryHoverByLayer,
     hoveredPower,
@@ -275,6 +283,7 @@ export function useAppShellState(): UseAppShellStateResult {
     disposeMapRuntime,
     facilitiesStatus,
     parcelsStatus,
+    perspectiveViewModes,
     boundaryFacetOptions,
     boundaryFacetSelection,
     boundaryFetchError,

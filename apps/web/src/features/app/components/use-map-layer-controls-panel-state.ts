@@ -1,5 +1,5 @@
 import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
-import { computed, inject, ref } from "vue";
+import { computed, inject, ref, watch } from "vue";
 import type { FilterOption } from "@/features/app/components/app-filter-panel.vue";
 import type { MapNavViewModeId } from "@/features/app/components/map-nav.types";
 import { MAP_FILTERS_KEY } from "@/features/app/filters/map-filters.keys";
@@ -57,9 +57,25 @@ export function useMapLayerControlsPanelState(
   const mapFilters = inject(MAP_FILTERS_KEY);
 
   const activeTab = ref<PanelTab>("layers");
-  const colocationViewMode = ref<MapNavViewModeId>("icons");
-  const hyperscaleViewMode = ref<MapNavViewModeId>("icons");
+  const colocationViewMode = ref<MapNavViewModeId>(props.perspectiveViewModes.colocation);
+  const hyperscaleViewMode = ref<MapNavViewModeId>(props.perspectiveViewModes.hyperscale);
   const fiberExpanded = ref(false);
+
+  watch(
+    () => props.perspectiveViewModes.colocation,
+    (mode) => {
+      colocationViewMode.value = mode;
+    },
+    { immediate: true }
+  );
+
+  watch(
+    () => props.perspectiveViewModes.hyperscale,
+    (mode) => {
+      hyperscaleViewMode.value = mode;
+    },
+    { immediate: true }
+  );
 
   const powerTypeOptions: readonly FilterOption[] = [
     { id: "commissioned", label: "Commissioned/Owned" },

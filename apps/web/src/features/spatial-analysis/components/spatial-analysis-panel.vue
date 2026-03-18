@@ -370,7 +370,7 @@
         <Download class="h-3.5 w-3.5" />
         {{ props.exportLabel }}
       </Button>
-      <Button variant="destructive" size="sm" @click="emit('dismiss')"> {{ props.dismissLabel }} </Button>
+      <Button variant="outline" size="sm" @click="emit('dismiss')"> {{ props.dismissLabel }} </Button>
     </footer>
   </aside>
 </template>

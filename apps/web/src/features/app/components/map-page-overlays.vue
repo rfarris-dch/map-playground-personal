@@ -6,9 +6,10 @@
   import { useMapShellContext } from "@/features/app/core/map-shell-context";
   import BoundaryHoverTooltip from "@/features/boundaries/components/boundary-hover-tooltip.vue";
   import FacilityClusterHoverTooltip from "@/features/facilities/components/facility-cluster-hover-tooltip.vue";
+  import FacilityClusterSelectedTooltip from "@/features/facilities/components/facility-cluster-selected-tooltip.vue";
   import FacilityHoverTooltip from "@/features/facilities/components/facility-hover-tooltip.vue";
   import FacilitySelectedTooltip from "@/features/facilities/components/facility-selected-tooltip.vue";
-  import type { FacilityHoverState } from "@/features/facilities/hover.types";
+  import type { FacilityClusterHoverState, FacilityHoverState } from "@/features/facilities/hover.types";
   import FiberLocatorHoverTooltip from "@/features/fiber-locator/components/fiber-locator-hover-tooltip.vue";
   import MarketBoundaryHoverTooltip from "@/features/market-boundaries/components/market-boundary-hover-tooltip.vue";
   import ParcelDetailDrawer from "@/features/parcels/parcel-detail/components/parcel-detail-drawer.vue";
@@ -54,6 +55,32 @@
       facilityId,
       perspective: perspective as "colocation" | "hyperscale",
     });
+  }
+
+  const selectedClusterState = shallowRef<FacilityClusterHoverState | null>(null);
+
+  watch(
+    () => shell.clusterClickSignal.value,
+    () => {
+      const hover = shell.hoveredFacilityCluster.value;
+      if (hover !== null) {
+        selectedClusterState.value = hover;
+        selectedFacilityState.value = null;
+      }
+    }
+  );
+
+  function handleClusterSelectedClose(): void {
+    selectedClusterState.value = null;
+  }
+
+  function handleClusterZoom(
+    perspective: FacilityClusterHoverState["perspective"],
+    clusterId: number,
+    center: readonly [number, number]
+  ): void {
+    shell.zoomToCluster(perspective, clusterId, center);
+    selectedClusterState.value = null;
   }
 
   const parcelDetail = computed(() => shell.parcelDetailQuery.data.value ?? null);
@@ -131,7 +158,12 @@
   />
   <FacilityClusterHoverTooltip
     :hover-state="shell.hoveredFacilityCluster.value"
-    @zoom-to-cluster="shell.zoomToCluster"
+  />
+  <FacilityClusterSelectedTooltip
+    v-if="selectedClusterState !== null"
+    :state="selectedClusterState"
+    @close="handleClusterSelectedClose"
+    @zoom-to-cluster="handleClusterZoom"
   />
   <BoundaryHoverTooltip :hover-state="shell.hoveredBoundary.value" />
   <MarketBoundaryHoverTooltip :hover="shell.hoveredMarketBoundary.value" />

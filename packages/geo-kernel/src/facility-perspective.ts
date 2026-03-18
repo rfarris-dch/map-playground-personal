@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const FacilityPerspectiveSchema = z.enum(["colocation", "hyperscale"]);
+export const FacilityPerspectiveSchema = z.enum(["colocation", "hyperscale", "hyperscale-leased", "enterprise"]);
 export type FacilityPerspective = z.infer<typeof FacilityPerspectiveSchema>;
 
 export function parseFacilityPerspectiveParam(

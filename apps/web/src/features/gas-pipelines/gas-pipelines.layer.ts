@@ -51,15 +51,18 @@ function ensureLayers(map: IMap): void {
     },
     paint: {
       "line-color": [
-        "case",
-        ["==", ["get", "typepipe"], "Interstate"],
-        "#dc2626",
-        ["==", ["get", "typepipe"], "Intrastate"],
-        "#f97316",
-        "#a3a3a3",
+        "match",
+        ["coalesce", ["get", "capacity_range"], ""],
+        "0-25", "#F1B51F",
+        "25-100", "#E21111",
+        "100-350", "#D13CFF",
+        "350-800", "#00B9C6",
+        "800+", "#4908A7",
+        "#6F6F79",
       ],
       "line-opacity": 0.7,
-      "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.4, 6, 0.8, 9, 1.4, 13, 2.5],
+      "line-dasharray": [4, 2],
+      "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.6, 6, 1, 9, 1.6, 13, 2.5],
     },
   });
 }

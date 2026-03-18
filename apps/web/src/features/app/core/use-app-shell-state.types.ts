@@ -26,7 +26,10 @@ import type {
 } from "@/features/app/market-boundary/app-shell-market-boundary.types";
 import type { BasemapLayerVisibilityController } from "@/features/basemap/basemap.types";
 import type { BoundaryHoverState } from "@/features/boundaries/boundaries.types";
-import type { FacilitiesLayerController } from "@/features/facilities/facilities.types";
+import type {
+  FacilitiesLayerController,
+  FacilitiesViewMode,
+} from "@/features/facilities/facilities.types";
 import type {
   FacilitiesHoverController,
   FacilityClusterHoverState,
@@ -55,6 +58,13 @@ import type {
 } from "@/features/sketch-measure/sketch-measure.types";
 import type { WaterLayerVisibilityController } from "@/features/water/water.types";
 
+export interface PerspectiveViewModeState {
+  readonly colocation: FacilitiesViewMode;
+  readonly hyperscale: FacilitiesViewMode;
+  readonly "hyperscale-leased": FacilitiesViewMode;
+  readonly enterprise: FacilitiesViewMode;
+}
+
 export interface UseAppShellStateResult {
   readonly activeToolPanel: ShallowRef<AppShellToolPanel>;
   readonly basemapLayerController: ShallowRef<BasemapLayerVisibilityController | null>;
@@ -65,6 +75,7 @@ export interface UseAppShellStateResult {
   readonly boundaryHoverByLayer: ShallowRef<BoundaryHoverByLayerState>;
   readonly clearSelectionGeometry: () => void;
   readonly clearSketchMeasure: () => void;
+  readonly clusterClickSignal: ShallowRef<number>;
   readonly colocationViewportFeatures: ShallowRef<FacilitiesFeatureCollection["features"]>;
   readonly dismissAllToolPanels: () => void;
   readonly disposeMapRuntime: ShallowRef<(() => Promise<void>) | null>;
@@ -98,6 +109,7 @@ export interface UseAppShellStateResult {
   readonly marketBoundaryHoverByLayer: ShallowRef<MarketBoundaryHoverByLayerState>;
   readonly parcelsController: ShallowRef<ParcelsLayerController | null>;
   readonly parcelsStatus: ShallowRef<ParcelsStatus>;
+  readonly perspectiveViewModes: ShallowRef<PerspectiveViewModeState>;
   readonly powerHoverController: ShallowRef<PowerHoverController | null>;
   readonly powerLayersController: ShallowRef<PowerLayerMountResult | null>;
   readonly selectionGeometry: ShallowRef<SketchAreaGeometry | null>;

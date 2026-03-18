@@ -42,21 +42,33 @@ function readCoordinates(input: unknown): [number, number] {
   return [lng, lat];
 }
 
-function parsePointGeometry(input: unknown): PointGeometry {
+function parseGeometry(input: unknown): PointGeometry | { type: string; coordinates: unknown } {
   const value = typeof input === "string" ? parseJsonObject(input) : input;
   assertObject(value);
 
   const type = Reflect.get(value, "type");
   const coordinates = Reflect.get(value, "coordinates");
 
-  if (type !== "Point") {
-    throw new Error("Invalid geom_json: geometry type must be Point");
+  if (type === "Point") {
+    return {
+      type: "Point",
+      coordinates: readCoordinates(coordinates),
+    };
   }
 
-  return {
-    type: "Point",
-    coordinates: readCoordinates(coordinates),
-  };
+  if (typeof type === "string" && coordinates !== undefined) {
+    return { type, coordinates };
+  }
+
+  throw new Error(`Invalid geom_json: unsupported geometry type ${String(type)}`);
+}
+
+function parsePointGeometry(input: unknown): PointGeometry {
+  const geom = parseGeometry(input);
+  if (geom.type !== "Point") {
+    throw new Error("Invalid geom_json: geometry type must be Point");
+  }
+  return geom as PointGeometry;
 }
 
 function readNullableNumber(value: number | string | null | undefined): number | null {
@@ -142,7 +154,7 @@ function readProviderName(args: {
 }
 
 function readProviderId(value: string | null | undefined): string {
-  return readRequiredText(value, "provider_id");
+  return readNullableText(value) ?? "unknown";
 }
 
 export function mapFacilitiesRowsToFeatures(
@@ -152,7 +164,7 @@ export function mapFacilitiesRowsToFeatures(
   return rows.map((row) => ({
     type: "Feature",
     id: row.facility_id,
-    geometry: parsePointGeometry(row.geom_json),
+    geometry: parseGeometry(row.geom_json),
     properties: {
       perspective,
       facilityId: row.facility_id,

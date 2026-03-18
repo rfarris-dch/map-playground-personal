@@ -46,6 +46,10 @@ export function useAppShellMapLifecycle(options: UseAppShellMapLifecycleOptions)
     options.layers.powerLayersController.value?.controllers.transmission.setFilter(filter ?? null);
   });
 
+  watch(options.filters.gasFilter, (filter) => {
+    options.layers.gasPipelineController.value?.setFilter(filter ?? null);
+  });
+
   watch(options.filters.parcelFilter, (filter) => {
     const controller = options.layers.parcelsController.value;
     if (controller !== null) {

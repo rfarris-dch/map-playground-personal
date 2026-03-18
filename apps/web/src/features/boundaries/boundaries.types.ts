@@ -34,6 +34,7 @@ export interface BoundaryLayerOptions {
 
 export interface BoundaryLayerController extends LayerVisibilityController {
   clearHover(): void;
+  setHeatEnabled(enabled: boolean): void;
   setIncludedRegionIds(regionIds: readonly string[] | null): void;
 }
 
@@ -41,6 +42,7 @@ export interface BoundaryLayerState {
   allFeatures: readonly BoundaryPowerFeature[];
   basemapLayersSuppressed: boolean;
   dataLoaded: boolean;
+  heatEnabled: boolean;
   includedRegionIds: readonly string[] | null;
   ready: boolean;
   requestSequence: number;

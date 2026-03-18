@@ -41,6 +41,10 @@ export interface MapLayerControlsPanelProps {
   readonly marketBoundaryVisibility: MarketBoundaryVisibilityState;
   readonly parcelsStatusText: string;
   readonly parcelsVisible: boolean;
+  readonly perspectiveViewModes: {
+    readonly colocation: FacilitiesViewMode;
+    readonly hyperscale: FacilitiesViewMode;
+  };
   readonly powerVisibility: PowerVisibilityState;
   readonly selectedFiberSourceLayerNames: FiberSourceLayerSelectionState;
   readonly showFlood100ZoomHint: boolean;

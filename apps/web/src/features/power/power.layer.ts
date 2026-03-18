@@ -55,11 +55,11 @@ function ensurePowerLayers(map: IMap): void {
       paint: {
         "line-color": [
           "case",
-          [">=", ["to-number", ["coalesce", ["get", "voltage"], 0]], 500_000],
+          [">=", ["to-number", ["coalesce", ["get", "voltage"], 0]], 500],
           "#6d28d9",
-          [">=", ["to-number", ["coalesce", ["get", "voltage"], 0]], 220_000],
+          [">=", ["to-number", ["coalesce", ["get", "voltage"], 0]], 220],
           "#dc2626",
-          [">=", ["to-number", ["coalesce", ["get", "voltage"], 0]], 100_000],
+          [">=", ["to-number", ["coalesce", ["get", "voltage"], 0]], 100],
           "#f97316",
           "#1d4ed8",
         ],

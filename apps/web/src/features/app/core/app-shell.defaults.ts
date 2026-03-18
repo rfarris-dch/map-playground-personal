@@ -56,6 +56,8 @@ export function initialPerspectiveStatusState(): PerspectiveStatusState {
   return {
     colocation: { state: "idle" },
     hyperscale: { state: "idle" },
+    "hyperscale-leased": { state: "idle" },
+    enterprise: { state: "idle" },
   };
 }
 

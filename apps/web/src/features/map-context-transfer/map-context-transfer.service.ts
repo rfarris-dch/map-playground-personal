@@ -5,6 +5,7 @@ import {
 import { parseBboxParam } from "@map-migration/geo-kernel/geometry";
 import {
   MAP_CONTEXT_TRANSFER_SCHEMA_VERSION,
+  MapContextFacilityViewModeSchema,
   type MapContextHighlightTarget,
   type MapContextSurface,
   MapContextSurfaceSchema,
@@ -13,6 +14,7 @@ import {
   MapContextViewportSchema,
 } from "@map-migration/http-contracts/map-context-transfer";
 import { LAYER_IDS } from "@map-migration/map-layer-catalog";
+import type { FacilitiesViewMode } from "@/features/facilities/facilities.types";
 import type {
   LocationQueryRaw,
   LocationQueryValueRaw,
@@ -21,8 +23,8 @@ import type {
 import {
   FLOOD_100_LAYER_ID,
   FLOOD_500_LAYER_ID,
-  GAS_PIPELINES_LAYER_ID,
   fiberLayerId,
+  GAS_PIPELINES_LAYER_ID,
   HYDRO_BASINS_LAYER_ID,
   PARCELS_LAYER_ID,
   powerLayerId,
@@ -55,6 +57,7 @@ type MapContextQueryKey =
   | "basemapLayerIds"
   | "companyIds"
   | "contextToken"
+  | "colocationViewMode"
   | "countryIds"
   | "countyIds"
   | "facilityIds"
@@ -74,6 +77,7 @@ type MapContextQueryKey =
   | "sourceSurface"
   | "stateIds"
   | "targetSurface"
+  | "hyperscaleViewMode"
   | "visibleLayerIds"
   | "version";
 
@@ -81,6 +85,7 @@ const mapContextQueryKeys: Record<MapContextQueryKey, string> = {
   basemapLayerIds: "basemapLayerIds",
   companyIds: "companyIds",
   contextToken: "mapContextToken",
+  colocationViewMode: "colocationViewMode",
   countryIds: "countryIds",
   countyIds: "countyIds",
   facilityIds: "facilityIds",
@@ -100,6 +105,7 @@ const mapContextQueryKeys: Record<MapContextQueryKey, string> = {
   sourceSurface: "mapSource",
   stateIds: "stateIds",
   targetSurface: "mapTarget",
+  hyperscaleViewMode: "hyperscaleViewMode",
   visibleLayerIds: "visibleLayerIds",
   version: "mapContextVersion",
 };
@@ -198,6 +204,17 @@ function formatPerspectives(
   perspectives: readonly FacilityPerspective[] | undefined
 ): string | undefined {
   return formatStringList(perspectives);
+}
+
+function parseFacilityViewMode(
+  value: string | null
+): FacilitiesViewMode | undefined {
+  if (value === null) {
+    return undefined;
+  }
+
+  const parsed = MapContextFacilityViewModeSchema.safeParse(value);
+  return parsed.success ? parsed.data : undefined;
 }
 
 function parseHighlightTarget(value: string | null): MapContextHighlightTarget | undefined {
@@ -484,6 +501,11 @@ function buildMergedOptionalMapContextFields(
   );
   assignMapContextField(
     mergedFields,
+    "facilityViewModes",
+    shortContext.facilityViewModes ?? storedContext?.facilityViewModes
+  );
+  assignMapContextField(
+    mergedFields,
     "visibleLayerIds",
     shortContext.visibleLayerIds ?? storedContext?.visibleLayerIds
   );
@@ -606,6 +628,26 @@ function buildRouteSelectedFiberSourceLayerNames(
   };
 }
 
+function buildRouteFacilityViewModes(
+  route: RouteLocationNormalizedLoaded
+): MapContextTransfer["facilityViewModes"] | undefined {
+  const colocation = parseFacilityViewMode(
+    readFirstQueryValue(route.query[mapContextQueryKeys.colocationViewMode])
+  );
+  const hyperscale = parseFacilityViewMode(
+    readFirstQueryValue(route.query[mapContextQueryKeys.hyperscaleViewMode])
+  );
+
+  if (typeof colocation === "undefined" && typeof hyperscale === "undefined") {
+    return undefined;
+  }
+
+  return {
+    ...(typeof colocation === "undefined" ? {} : { colocation }),
+    ...(typeof hyperscale === "undefined" ? {} : { hyperscale }),
+  };
+}
+
 function buildShortContextFieldsFromRoute(
   route: RouteLocationNormalizedLoaded
 ): Partial<MapContextTransfer> {
@@ -646,6 +688,7 @@ function buildShortContextFieldsFromRoute(
     "activePerspectives",
     parsePerspectives(route.query[mapContextQueryKeys.perspectives])?.slice()
   );
+  assignMapContextField(shortContext, "facilityViewModes", buildRouteFacilityViewModes(route));
   assignMapContextField(
     shortContext,
     "visibleLayerIds",
@@ -912,6 +955,8 @@ export function buildMapContextTransferQuery(
     [mapContextQueryKeys.providerIds]: formatStringList(inlineProviderIds),
     [mapContextQueryKeys.facilityIds]: formatStringList(inlineFacilityIds),
     [mapContextQueryKeys.perspectives]: formatPerspectives(context.activePerspectives),
+    [mapContextQueryKeys.colocationViewMode]: context.facilityViewModes?.colocation,
+    [mapContextQueryKeys.hyperscaleViewMode]: context.facilityViewModes?.hyperscale,
     [mapContextQueryKeys.visibleLayerIds]: formatStringList(inlineVisibleLayerIds),
     [mapContextQueryKeys.basemapLayerIds]: formatStringList(inlineVisibleBasemapLayerIds),
     [mapContextQueryKeys.countryIds]: formatStringList(context.selectedBoundaryIds?.country),
@@ -1190,6 +1235,19 @@ function resolveViewportFromMap(
   };
 }
 
+function resolveFacilityViewModes(
+  perspectiveViewModes: BuildMapContextTransferFromAppShellArgs["perspectiveViewModes"]
+): MapContextTransfer["facilityViewModes"] | undefined {
+  if (typeof perspectiveViewModes === "undefined") {
+    return undefined;
+  }
+
+  return {
+    colocation: perspectiveViewModes.colocation,
+    hyperscale: perspectiveViewModes.hyperscale,
+  };
+}
+
 export function buildMapContextTransferFromAppShell(
   args: BuildMapContextTransferFromAppShellArgs
 ): MapContextTransfer {
@@ -1198,6 +1256,7 @@ export function buildMapContextTransferFromAppShell(
   );
   const visibleLayerIds = resolveVisibleLayerIdsFromAppShell(args);
   const visibleBasemapLayerIds = resolveVisibleBasemapLayerIds(args.basemapVisibility);
+  const facilityViewModes = resolveFacilityViewModes(args.perspectiveViewModes);
   const selectedBoundaryIds = buildSelectedBoundaryIds(args.boundaryFacetSelection);
   const selectedFiberSourceLayerNames = resolveSelectedFiberSourceLayerNames(
     args.selectedFiberSourceLayerNames
@@ -1215,6 +1274,10 @@ export function buildMapContextTransferFromAppShell(
 
   if (typeof visibleLayerIds !== "undefined") {
     context.visibleLayerIds = [...visibleLayerIds];
+  }
+
+  if (typeof facilityViewModes !== "undefined") {
+    context.facilityViewModes = facilityViewModes;
   }
 
   if (typeof visibleBasemapLayerIds !== "undefined") {
@@ -1390,6 +1453,12 @@ export function applyMapContextTransferToAppShell(
   applyMapViewportContext(args);
   applyBasemapVisibilityContext(args);
   applyPerspectiveVisibilityContext(args);
+  if (typeof args.context.facilityViewModes?.colocation !== "undefined") {
+    args.setPerspectiveViewMode?.("colocation", args.context.facilityViewModes.colocation);
+  }
+  if (typeof args.context.facilityViewModes?.hyperscale !== "undefined") {
+    args.setPerspectiveViewMode?.("hyperscale", args.context.facilityViewModes.hyperscale);
+  }
   applyLayerVisibilityContext(args);
   applyFiberSourceLayerSelectionContext(args);
   applySelectedBoundaryIdsContext(args);

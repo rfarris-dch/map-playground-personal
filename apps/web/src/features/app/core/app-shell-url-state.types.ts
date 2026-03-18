@@ -11,6 +11,7 @@ import type {
 } from "@/features/app/core/app-shell.types";
 import type { BasemapLayerId, BasemapVisibilityState } from "@/features/basemap/basemap.types";
 import type { BoundaryLayerId } from "@/features/boundaries/boundaries.types";
+import type { FacilitiesViewMode } from "@/features/facilities/facilities.types";
 import type { LayerRuntimeSnapshot } from "@/features/layers/layer-runtime.types";
 import type { PowerLayerId } from "@/features/power/power.types";
 
@@ -26,6 +27,10 @@ export interface UseAppShellUrlStateOptions {
   readonly layerRuntimeSnapshot: ShallowRef<LayerRuntimeSnapshot | null>;
   readonly map: ShallowRef<import("@map-migration/map-engine").IMap | null>;
   readonly parcelsVisible: ShallowRef<boolean>;
+  readonly perspectiveViewModes: ShallowRef<{
+    readonly colocation: FacilitiesViewMode;
+    readonly hyperscale: FacilitiesViewMode;
+  }>;
   readonly powerVisibility: ShallowRef<import("@/features/power/power.types").PowerVisibilityState>;
   readonly selectedFiberSourceLayerNames: ShallowRef<FiberSourceLayerSelectionState>;
   readonly setBasemapLayerVisible: (layerId: BasemapLayerId, visible: boolean) => void;
@@ -46,6 +51,10 @@ export interface UseAppShellUrlStateOptions {
   readonly setGasPipelineVisible: (visible: boolean) => void;
   readonly setHydroBasinsVisible: (visible: boolean) => void;
   readonly setParcelsVisible: (visible: boolean) => void;
+  readonly setPerspectiveViewMode: (
+    perspective: FacilityPerspective,
+    mode: FacilitiesViewMode
+  ) => void;
   readonly setPerspectiveVisibility: (perspective: FacilityPerspective, visible: boolean) => void;
   readonly setPowerLayerVisible: (layerId: PowerLayerId, visible: boolean) => void;
   readonly setWaterVisible: (visible: boolean) => void;

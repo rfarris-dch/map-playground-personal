@@ -192,12 +192,17 @@ export function mountFacilitiesHover(
   let hoveredClusterId: number | null = null;
   let clusterFetchSequence = 0;
 
+  const VORONOI_FILL_LAYER_ID = "hyperscale-leased-voronoi.fill";
+
   const queryablePointLayerIds = (): string[] => {
     const layers = pointLayerIds.filter((layerId) => map.hasLayer(layerId));
     for (const fallbackId of iconFallbackLayerIds) {
       if (map.hasLayer(fallbackId)) {
         layers.push(fallbackId);
       }
+    }
+    if (map.hasLayer(VORONOI_FILL_LAYER_ID)) {
+      layers.push(VORONOI_FILL_LAYER_ID);
     }
     return layers;
   };
@@ -236,7 +241,11 @@ export function mountFacilitiesHover(
         }
         const cachedProperties = options.resolveFeatureProperties?.(feature.id) ?? null;
         const properties = cachedProperties ?? feature.properties;
-        const nextHover = toHoverState({ id: feature.id, geometry: feature.geometry, properties }, screenPoint);
+        const geom = feature.geometry;
+        const hoverFeature = geom.type !== "GeometryCollection"
+          ? { id: feature.id, geometry: { type: geom.type, coordinates: geom.coordinates }, properties }
+          : { id: feature.id, properties };
+        const nextHover = toHoverState(hoverFeature, screenPoint);
         if (nextHover === null) {
           continue;
         }

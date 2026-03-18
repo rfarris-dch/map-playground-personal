@@ -24,6 +24,7 @@ export function buildAppShellUrlStateQuery(
     layerRuntimeSnapshot: options.layerRuntimeSnapshot.value,
     map: options.map.value,
     parcelsVisible: options.parcelsVisible.value,
+    perspectiveViewModes: options.perspectiveViewModes.value,
     powerVisibility: options.powerVisibility.value,
     selectedFiberSourceLayerNames: options.selectedFiberSourceLayerNames.value,
     sourceSurface: options.currentSurface.value,

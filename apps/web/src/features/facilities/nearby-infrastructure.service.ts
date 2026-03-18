@@ -63,22 +63,28 @@ function props(feature: MapSourceFeature): Record<string, unknown> {
   return {};
 }
 
+function readPair(arr: unknown): [number, number] | null {
+  if (!Array.isArray(arr) || arr.length < 2) {
+    return null;
+  }
+  const x: unknown = arr[0];
+  const y: unknown = arr[1];
+  if (typeof x !== "number" || typeof y !== "number") {
+    return null;
+  }
+  return [x, y];
+}
+
 function extractCoords(feature: MapSourceFeature): [number, number] | null {
   const geom = feature.geometry;
   if (geom.type === "Point") {
-    const coords = geom.coordinates;
-    if (Array.isArray(coords) && coords.length >= 2) {
-      return [coords[0], coords[1]];
-    }
+    return readPair(geom.coordinates);
   }
   if (geom.type === "LineString" || geom.type === "MultiLineString") {
     const coords =
       geom.type === "LineString" ? geom.coordinates : geom.coordinates[0];
     if (Array.isArray(coords) && coords.length > 0) {
-      const mid = coords[Math.floor(coords.length / 2)];
-      if (Array.isArray(mid) && mid.length >= 2) {
-        return [mid[0], mid[1]];
-      }
+      return readPair(coords[Math.floor(coords.length / 2)]);
     }
   }
   if (geom.type === "Polygon" || geom.type === "MultiPolygon") {

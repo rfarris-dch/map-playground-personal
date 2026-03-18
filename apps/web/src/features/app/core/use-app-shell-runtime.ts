@@ -102,6 +102,7 @@ export function useAppShellRuntime(
       parcelFilter: mapFilters.parcelFilter,
       parcelViewportFacets: mapFilters.parcelViewportFacets,
       transmissionFilter: mapFilters.transmissionFilter,
+      gasFilter: mapFilters.gasFilter,
     },
     initialViewport: options.initialViewport,
     layers: {
@@ -136,6 +137,7 @@ export function useAppShellRuntime(
       facilitiesStatus: state.facilitiesStatus,
       hoveredBoundary: state.hoveredBoundary,
       hoveredFacility: state.hoveredFacility,
+      clusterClickSignal: state.clusterClickSignal,
       hoveredFacilityCluster: state.hoveredFacilityCluster,
       hoveredMarketBoundary: state.hoveredMarketBoundary,
       hoveredPower: state.hoveredPower,
@@ -147,6 +149,7 @@ export function useAppShellRuntime(
       hyperscaleViewportFeatures: state.hyperscaleViewportFeatures,
       layerRuntimeSnapshot: state.layerRuntimeSnapshot,
       parcelsStatus: state.parcelsStatus,
+      perspectiveViewModes: state.perspectiveViewModes,
       selectedFacility: selection.selectedFacility,
       selectedParcel: selection.selectedParcel,
       sketchMeasureState: state.sketchMeasureState,

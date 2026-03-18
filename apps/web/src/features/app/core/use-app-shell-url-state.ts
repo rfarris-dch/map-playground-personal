@@ -105,6 +105,7 @@ export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
           options.map.value?.setViewport(normalizeViewportForMap(viewport));
         },
         setParcelsVisible: options.setParcelsVisible,
+        setPerspectiveViewMode: options.setPerspectiveViewMode,
         setPerspectiveVisibility: options.setPerspectiveVisibility,
         setPowerLayerVisible: options.setPowerLayerVisible,
         setWaterVisible: options.setWaterVisible,
@@ -151,6 +152,7 @@ export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
       options.hydroBasinsVisible.value,
       options.layerRuntimeSnapshot.value,
       options.parcelsVisible.value,
+      options.perspectiveViewModes.value,
       options.powerVisibility.value,
       options.selectedFiberSourceLayerNames.value,
       options.visiblePerspectives.value,

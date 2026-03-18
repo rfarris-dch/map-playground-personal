@@ -7,11 +7,12 @@ import type {
   UseAppShellMapLifecycleOptions,
 } from "@/features/app/lifecycle/use-app-shell-map-lifecycle.types";
 import { mountFacilitiesLayer } from "@/features/facilities/facilities.layer";
+import { mountHyperscaleLeasedLayer } from "@/features/facilities/facilities-leased.layer";
 import type { FacilitiesStatus } from "@/features/facilities/facilities.types";
 import { mountFacilitiesHover } from "@/features/facilities/hover";
 
 const FACILITIES_LAYER_MIN_ZOOM = 2.5;
-const FACILITIES_LAYER_LIMIT = 50000;
+const FACILITIES_LAYER_LIMIT = 50_000;
 const FACILITIES_LAYER_DEBOUNCE_MS = 350;
 
 function setPerspectiveStatus(
@@ -44,9 +45,29 @@ function mountPerspectiveLayer({
   options,
   perspective,
 }: MountPerspectiveLayerArgs): void {
+  if (perspective === "hyperscale-leased") {
+    const leasedController = mountHyperscaleLeasedLayer(map, {
+      perspective,
+      limit: FACILITIES_LAYER_LIMIT,
+      onStatusChange: (status) => {
+        setPerspectiveStatus(options, perspective, status);
+      },
+      onViewportUpdate: (snapshot) => {
+        setViewportFacilities(options, perspective, snapshot.features);
+      },
+    });
+    options.runtime.layerRuntime.value?.registerLayerController(
+      facilitiesLayerId(perspective),
+      leasedController
+    );
+    nextControllers.push(leasedController);
+    return;
+  }
+
   const controller = mountFacilitiesLayer(map, {
     debounceMs: FACILITIES_LAYER_DEBOUNCE_MS,
     filterPredicate: () => options.filters.facilitiesPredicate.value ?? null,
+    initialViewMode: options.state.perspectiveViewModes.value[perspective],
     limit: FACILITIES_LAYER_LIMIT,
     minZoom: FACILITIES_LAYER_MIN_ZOOM,
     perspective,
@@ -59,6 +80,9 @@ function mountPerspectiveLayer({
     },
     onViewportUpdate: (snapshot) => {
       setViewportFacilities(options, perspective, snapshot.features);
+    },
+    onClusterClick: () => {
+      options.state.clusterClickSignal.value += 1;
     },
     onSelectFacility: (facility) => {
       if (facility === null) {
@@ -92,22 +116,19 @@ export function initializeFacilitiesRuntime(options: UseAppShellMapLifecycleOpti
   }
 
   const nextFacilitiesControllers: MountPerspectiveLayerArgs["nextControllers"] = [];
-  mountPerspectiveLayer({
-    map: currentMap,
-    nextControllers: nextFacilitiesControllers,
-    perspective: "colocation",
-    options,
-  });
-  mountPerspectiveLayer({
-    map: currentMap,
-    nextControllers: nextFacilitiesControllers,
-    perspective: "hyperscale",
-    options,
-  });
+  const allPerspectives: readonly FacilityPerspective[] = ["colocation", "hyperscale", "hyperscale-leased", "enterprise"];
+  for (const perspective of allPerspectives) {
+    mountPerspectiveLayer({
+      map: currentMap,
+      nextControllers: nextFacilitiesControllers,
+      perspective,
+      options,
+    });
+  }
   options.layers.facilitiesControllers.value = nextFacilitiesControllers;
 
   options.layers.facilitiesHoverController.value = mountFacilitiesHover(currentMap, {
-    perspectives: ["colocation", "hyperscale"],
+    perspectives: allPerspectives,
     isInteractionEnabled: () => options.areFacilityInteractionsEnabled.value,
     onHoverChange: (nextHover) => {
       options.state.hoveredFacility.value = nextHover;
@@ -128,8 +149,9 @@ export function initializeFacilitiesRuntime(options: UseAppShellMapLifecycleOpti
 }
 
 export function destroyFacilitiesRuntime(options: UseAppShellMapLifecycleOptions): void {
-  options.runtime.layerRuntime.value?.unregisterLayerController(facilitiesLayerId("colocation"));
-  options.runtime.layerRuntime.value?.unregisterLayerController(facilitiesLayerId("hyperscale"));
+  for (const perspective of ["colocation", "hyperscale", "hyperscale-leased", "enterprise"] as const) {
+    options.runtime.layerRuntime.value?.unregisterLayerController(facilitiesLayerId(perspective));
+  }
 
   options.layers.facilitiesHoverController.value?.destroy();
   options.layers.facilitiesHoverController.value = null;

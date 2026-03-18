@@ -100,6 +100,7 @@ export function useAppShell() {
     layerRuntimeSnapshot: state.layerRuntimeSnapshot,
     map: state.map,
     parcelsVisible: visibility.parcelsVisible,
+    perspectiveViewModes: state.perspectiveViewModes,
     powerVisibility: visibility.powerVisibility,
     selectedFiberSourceLayerNames: fiber.selectedFiberSourceLayerNames,
     setBasemapLayerVisible: visibility.setBasemapLayerVisible,
@@ -111,6 +112,7 @@ export function useAppShell() {
     setGasPipelineVisible: visibility.setGasPipelineVisible,
     setHydroBasinsVisible: visibility.setHydroBasinsVisible,
     setParcelsVisible: visibility.setParcelsVisible,
+    setPerspectiveViewMode,
     setPerspectiveVisibility: visibility.setPerspectiveVisibility,
     setPowerLayerVisible: visibility.setPowerLayerVisible,
     setWaterVisible: visibility.setWaterVisible,
@@ -234,6 +236,11 @@ export function useAppShell() {
     perspective: FacilityPerspective,
     mode: FacilitiesViewMode
   ): void {
+    state.perspectiveViewModes.value = {
+      ...state.perspectiveViewModes.value,
+      [perspective]: mode,
+    };
+
     for (const controller of state.facilitiesControllers.value) {
       if (controller.perspective === perspective) {
         controller.setViewMode(mode);
@@ -263,6 +270,7 @@ export function useAppShell() {
     selectedParcel: selection.selectedParcel,
     hoveredFacility: state.hoveredFacility,
     hoveredFacilityCluster: state.hoveredFacilityCluster,
+    clusterClickSignal: state.clusterClickSignal,
     hoveredBoundary: state.hoveredBoundary,
     hoveredMarketBoundary: state.hoveredMarketBoundary,
     hoveredFiber: fiber.hoveredFiber,
@@ -284,6 +292,7 @@ export function useAppShell() {
     marketBoundaryVisibility: visibility.marketBoundaryVisibility,
     parcelsVisible: visibility.parcelsVisible,
     parcelsStatusText: status.parcelsStatusText,
+    perspectiveViewModes: state.perspectiveViewModes,
     powerVisibility: visibility.powerVisibility,
     waterVisible: visibility.waterVisible,
     marketBoundaryColorMode: state.marketBoundaryColorMode,
@@ -343,6 +352,12 @@ export function useAppShell() {
       state.marketBoundaryColorMode.value = colorMode;
       state.marketBoundaryControllers.value.market?.setColorMode(colorMode);
       state.marketBoundaryControllers.value.submarket?.setColorMode(colorMode);
+    },
+    setBoundaryHeatEnabled(
+      boundaryId: import("@/features/boundaries/boundaries.types").BoundaryLayerId,
+      enabled: boolean
+    ): void {
+      state.boundaryControllers.value[boundaryId]?.setHeatEnabled(enabled);
     },
     setWaterVisible: visibility.setWaterVisible,
     setFiberLayerVisibility: fiber.setFiberLayerVisibility,

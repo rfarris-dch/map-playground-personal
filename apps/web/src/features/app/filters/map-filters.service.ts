@@ -67,7 +67,42 @@ export function buildTransmissionVoltageFilter(state: MapFiltersState): MapExpre
     return null;
   }
 
-  return [">=", ["to-number", ["coalesce", ["get", "voltage"], 0]], state.transmissionMinVoltage];
+  return [
+    "any",
+    ["!", ["has", "voltage"]],
+    [">=", ["to-number", ["get", "voltage"], 9999], state.transmissionMinVoltage],
+  ];
+}
+
+export function buildGasPipelineFilter(state: MapFiltersState): MapExpression | null {
+  const hasCapacity = state.gasCapacities.size > 0;
+  const hasStatus = state.gasStatuses.size > 0;
+  if (!hasCapacity && !hasStatus) {
+    return null;
+  }
+
+  const conditions: MapExpression[] = [];
+
+  if (hasStatus) {
+    const statusValues = [...state.gasStatuses];
+    conditions.push(["match", ["downcase", ["to-string", ["coalesce", ["get", "status"], ""]]], statusValues, true, false]);
+  }
+
+  if (hasCapacity) {
+    const capacityValues = [...state.gasCapacities];
+    conditions.push(["match", ["to-string", ["coalesce", ["get", "capacity_range"], ""]], capacityValues, true, false]);
+  }
+
+  if (conditions.length === 0) {
+    return null;
+  }
+  if (conditions.length === 1) {
+    const single = conditions[0];
+    if (single !== undefined) {
+      return single;
+    }
+  }
+  return ["all", ...conditions];
 }
 
 export function buildParcelFilter(state: MapFiltersState): MapExpression | null {

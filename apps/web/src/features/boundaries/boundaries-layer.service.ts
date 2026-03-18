@@ -16,6 +16,7 @@ export function initialBoundaryLayerState(): BoundaryLayerState {
     allFeatures: [],
     basemapLayersSuppressed: false,
     dataLoaded: false,
+    heatEnabled: false,
     includedRegionIds: null,
     ready: false,
     requestSequence: 0,

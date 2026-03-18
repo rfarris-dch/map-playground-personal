@@ -24,6 +24,8 @@ export type {
 type QueryName =
   | "facilities_bbox_colocation"
   | "facilities_bbox_hyperscale"
+  | "facilities_bbox_hyperscale_leased"
+  | "facilities_bbox_enterprise"
   | "facilities_polygon_colocation"
   | "facilities_polygon_hyperscale"
   | "facility_detail_colocation"
@@ -161,6 +163,133 @@ LEFT JOIN spatial.hyperscale_facility_points AS pts
   ON ST_DWithin(c.geom, pts.geom, 0.001)
 LEFT JOIN market_current.market_boundaries mb ON ST_Contains(mb.geom, c.geom)
 LEFT JOIN market_current.markets mkt ON mkt.market_id = mb.market_id;`,
+  },
+  facilities_bbox_hyperscale_leased: {
+    name: "facilities_bbox_hyperscale_leased",
+    endpointClass: "feature-collection",
+    maxRows: 50_000,
+    sql: `
+WITH bounds AS (
+  SELECT ST_Transform(ST_MakeEnvelope($1, $2, $3, $4, 4326), 3857) AS bbox_3857
+),
+lease_entries AS (
+  SELECT
+    lt.id AS lease_id,
+    lt.company_name,
+    lt.market_name,
+    lt.lease_mw,
+    mb.geom AS market_geom,
+    mkt.market_id,
+    ST_GeneratePoints(mb.geom, 1) AS seed_point
+  FROM serve.hyperscale_lease_total lt
+  CROSS JOIN bounds
+  JOIN market_current.markets mkt ON mkt.name = lt.market_name
+  JOIN market_current.market_boundaries mb ON mb.market_id = mkt.market_id
+  WHERE ST_Transform(mb.geom, 3857) && bounds.bbox_3857
+    AND lt.lease_mw > 0
+),
+positioned AS (
+  SELECT
+    le.*,
+    (ST_Dump(le.seed_point)).geom AS pt
+  FROM lease_entries le
+),
+market_groups AS (
+  SELECT
+    market_id,
+    market_geom,
+    ST_Collect(pt) AS points
+  FROM positioned
+  GROUP BY market_id, market_geom
+),
+voronoi_raw AS (
+  SELECT
+    mg.market_id,
+    mg.market_geom,
+    (ST_Dump(ST_VoronoiPolygons(mg.points, 0, mg.market_geom))).geom AS cell_geom
+  FROM market_groups mg
+  WHERE ST_NumGeometries(mg.points) > 1
+),
+clipped AS (
+  SELECT
+    p.lease_id,
+    p.company_name,
+    p.market_name,
+    p.lease_mw,
+    p.market_id,
+    ST_Intersection(v.cell_geom, v.market_geom) AS voronoi_geom
+  FROM voronoi_raw v
+  JOIN positioned p ON ST_Contains(v.cell_geom, p.pt) AND p.market_id = v.market_id
+
+  UNION ALL
+
+  SELECT
+    p.lease_id,
+    p.company_name,
+    p.market_name,
+    p.lease_mw,
+    p.market_id,
+    p.market_geom AS voronoi_geom
+  FROM positioned p
+  WHERE p.market_id IN (
+    SELECT mg.market_id FROM market_groups mg WHERE ST_NumGeometries(mg.points) = 1
+  )
+)
+SELECT
+  'lease-' || c.lease_id::text AS facility_id,
+  c.company_name AS facility_name,
+  c.company_name AS provider_id,
+  c.company_name AS provider_name,
+  ''::text AS county_fips,
+  NULL::text AS state_abbrev,
+  c.lease_mw AS commissioned_power_mw,
+  NULL::numeric AS planned_power_mw,
+  NULL::numeric AS under_construction_power_mw,
+  NULL::numeric AS available_power_mw,
+  NULL::numeric AS square_footage,
+  'leased'::text AS commissioned_semantic,
+  'lease'::text AS lease_or_own,
+  NULL::text AS status_label,
+  NULL::text AS facility_code,
+  NULL::text AS address,
+  NULL::text AS city,
+  NULL::text AS state,
+  c.market_name,
+  ST_AsGeoJSON(c.voronoi_geom)::jsonb AS geom_json
+FROM clipped AS c;`,
+  },
+  facilities_bbox_enterprise: {
+    name: "facilities_bbox_enterprise",
+    endpointClass: "feature-collection",
+    maxRows: 50_000,
+    sql: `
+WITH bounds AS (
+  SELECT ST_Transform(ST_MakeEnvelope($1, $2, $3, $4, 4326), 3857) AS bbox_3857
+)
+SELECT
+  facility.enterprise_site_id AS facility_id,
+  COALESCE(NULLIF(BTRIM(facility.company), ''), facility.enterprise_name) AS facility_name,
+  NULLIF(BTRIM(facility.company), '') AS provider_id,
+  COALESCE(NULLIF(BTRIM(facility.company), ''), facility.enterprise_name) AS provider_name,
+  COALESCE(facility.county_fips, ''::text) AS county_fips,
+  NULLIF(BTRIM(facility.state_abbrev), '') AS state_abbrev,
+  NULL::numeric AS commissioned_power_mw,
+  NULL::numeric AS planned_power_mw,
+  NULL::numeric AS under_construction_power_mw,
+  NULL::numeric AS available_power_mw,
+  facility.facility_sf::numeric AS square_footage,
+  NULL::text AS commissioned_semantic,
+  NULL::text AS lease_or_own,
+  NULL::text AS status_label,
+  NULL::text AS facility_code,
+  NULLIF(BTRIM(facility.address), '') AS address,
+  NULLIF(BTRIM(facility.city), '') AS city,
+  facility.state_abbrev AS state,
+  NULL::text AS market_name,
+  ST_AsGeoJSON(facility.geom)::jsonb AS geom_json
+FROM serve.enterprise_site AS facility, bounds
+WHERE facility.geom_3857 && bounds.bbox_3857
+  AND ST_Intersects(facility.geom_3857, bounds.bbox_3857);`,
   },
   facilities_polygon_colocation: {
     name: "facilities_polygon_colocation",
@@ -446,9 +575,15 @@ function getQuerySpec(name: QueryName): RegisteredQuerySpec {
 
 function getFacilitiesBboxQueryName(
   perspective: FacilityPerspective
-): "facilities_bbox_colocation" | "facilities_bbox_hyperscale" {
+): "facilities_bbox_colocation" | "facilities_bbox_hyperscale" | "facilities_bbox_hyperscale_leased" | "facilities_bbox_enterprise" {
   if (perspective === "hyperscale") {
     return "facilities_bbox_hyperscale";
+  }
+  if (perspective === "hyperscale-leased") {
+    return "facilities_bbox_hyperscale_leased";
+  }
+  if (perspective === "enterprise") {
+    return "facilities_bbox_enterprise";
   }
 
   return "facilities_bbox_colocation";
@@ -457,7 +592,7 @@ function getFacilitiesBboxQueryName(
 function getFacilitiesPolygonQueryName(
   perspective: FacilityPerspective
 ): "facilities_polygon_colocation" | "facilities_polygon_hyperscale" {
-  if (perspective === "hyperscale") {
+  if (perspective === "hyperscale" || perspective === "hyperscale-leased") {
     return "facilities_polygon_hyperscale";
   }
 
@@ -467,7 +602,7 @@ function getFacilitiesPolygonQueryName(
 function getFacilityDetailQueryName(
   perspective: FacilityPerspective
 ): "facility_detail_colocation" | "facility_detail_hyperscale" {
-  if (perspective === "hyperscale") {
+  if (perspective === "hyperscale" || perspective === "hyperscale-leased") {
     return "facility_detail_hyperscale";
   }
 

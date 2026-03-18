@@ -5,6 +5,7 @@ import {
 import { FacilityPerspectiveSchema } from "@map-migration/geo-kernel/facility-perspective";
 import {
   BBoxSchema,
+  GeometrySchema,
   PointGeometrySchema,
   PolygonGeometrySchema,
   parseBboxParam,
@@ -74,7 +75,7 @@ export const FacilitiesPropertiesSchema = z.object({
 export const FacilitiesFeatureSchema = z.object({
   type: z.literal("Feature"),
   id: z.union([z.string(), z.number()]),
-  geometry: PointGeometrySchema,
+  geometry: GeometrySchema,
   properties: FacilitiesPropertiesSchema,
 });
 

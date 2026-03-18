@@ -10,11 +10,15 @@ export type AppShellToolPanel = "layers" | "selection" | "sketch-measure" | null
 export interface PerspectiveStatusState {
   readonly colocation: FacilitiesStatus;
   readonly hyperscale: FacilitiesStatus;
+  readonly "hyperscale-leased": FacilitiesStatus;
+  readonly enterprise: FacilitiesStatus;
 }
 
 export interface PerspectiveVisibilityState {
   readonly colocation: boolean;
   readonly hyperscale: boolean;
+  readonly "hyperscale-leased": boolean;
+  readonly enterprise: boolean;
 }
 
 export interface FloodVisibilityState {

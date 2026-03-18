@@ -18,6 +18,14 @@ export const MapContextHighlightTargetSchema = z.object({
   kind: z.enum(["market", "company", "provider", "facility"]),
 });
 
+export const MapContextFacilityViewModeSchema = z.enum([
+  "bubbles",
+  "clusters",
+  "dots",
+  "heatmap",
+  "icons",
+]);
+
 export const MapContextViewportSchema = MapViewportSchema;
 
 export const MapContextTransferSchema = z.object({
@@ -29,6 +37,12 @@ export const MapContextTransferSchema = z.object({
   providerIds: z.array(z.string().min(1)).optional(),
   facilityIds: z.array(z.string().min(1)).optional(),
   activePerspectives: z.array(FacilityPerspectiveSchema).optional(),
+  facilityViewModes: z
+    .object({
+      colocation: MapContextFacilityViewModeSchema.optional(),
+      hyperscale: MapContextFacilityViewModeSchema.optional(),
+    })
+    .optional(),
   visibleLayerIds: z.array(z.string().min(1)).optional(),
   visibleBasemapLayerIds: z.array(z.string().min(1)).optional(),
   selectedBoundaryIds: z

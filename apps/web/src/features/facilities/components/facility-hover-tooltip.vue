@@ -112,7 +112,7 @@
     ariaLabel="Facility hover details"
     :screen-point="displayState?.screenPoint ?? null"
     :show="displayState !== null"
-    :surface-class="`pointer-events-auto absolute z-30 flex flex-col items-center justify-center rounded-[8px] border-2 border-solid p-1 shadow-md ${accentBorder}`"
+    :surface-class="`pointer-events-auto absolute z-30 flex flex-col items-center justify-center rounded-[8px] border border-solid p-1 shadow-md ${accentBorder}`"
   >
     <div
       v-if="displayState !== null"

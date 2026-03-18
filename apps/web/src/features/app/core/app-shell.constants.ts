@@ -15,6 +15,8 @@ export const WATER_FEATURES_LAYER_ID: LayerId = "environmental.water-features";
 const FACILITIES_LAYER_ID_BY_PERSPECTIVE: Readonly<Record<FacilityPerspective, LayerId>> = {
   colocation: "facilities.colocation",
   hyperscale: "facilities.hyperscale",
+  "hyperscale-leased": "facilities.hyperscale-leased",
+  enterprise: "facilities.enterprise",
 };
 
 const FIBER_LAYER_ID_BY_LINE_ID: Readonly<Record<FiberLocatorLineId, LayerId>> = {

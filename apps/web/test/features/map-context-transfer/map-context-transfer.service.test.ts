@@ -65,6 +65,9 @@ describe("map-context-transfer service", () => {
       schemaVersion: MAP_CONTEXT_TRANSFER_SCHEMA_VERSION,
       sourceSurface: "market-map",
       targetSurface: "market-map",
+      facilityViewModes: {
+        colocation: "dots",
+      },
       marketIds: ["dfw"],
       selectedBoundaryIds: {
         country: ["us"],
@@ -78,6 +81,7 @@ describe("map-context-transfer service", () => {
     };
     const route = resolveRoute("map", {
       mapContextToken: "stored-token",
+      colocationViewMode: "dots",
       map: "9.5/32.7767/-96.797",
       stateIds: "tx",
     });
@@ -99,6 +103,9 @@ describe("map-context-transfer service", () => {
       sourceSurface: "market-map",
       targetSurface: "global-map",
       contextToken: "stored-token",
+      facilityViewModes: {
+        colocation: "dots",
+      },
       marketIds: ["dfw"],
       selectedBoundaryIds: {
         country: ["us"],
@@ -263,6 +270,10 @@ describe("map-context-transfer service", () => {
         longhaul: [],
         metro: ["att", "zayo"],
       },
+      perspectiveViewModes: {
+        colocation: "clusters",
+        hyperscale: "dots",
+      },
       sourceSurface: "global-map",
       targetSurface: "global-map",
       visiblePerspectives: {
@@ -283,6 +294,10 @@ describe("map-context-transfer service", () => {
       "fiber-locator.metro",
       "power.plants",
     ]);
+    expect(context.facilityViewModes).toEqual({
+      colocation: "clusters",
+      hyperscale: "dots",
+    });
     expect(context.visibleBasemapLayerIds).toEqual(["buildings3d", "labels", "roads"]);
     expect(context.selectedFiberSourceLayerNames).toEqual({
       metro: ["att", "zayo"],
@@ -290,6 +305,8 @@ describe("map-context-transfer service", () => {
 
     const query = buildMapContextTransferQuery(context);
     expect(query.map).toBe("9.25/32.78/-96.8/18/50");
+    expect(query.colocationViewMode).toBe("clusters");
+    expect(query.hyperscaleViewMode).toBe("dots");
     expect(query.visibleLayerIds).toBe("facilities.colocation,fiber-locator.metro,power.plants");
     expect(query.basemapLayerIds).toBe("buildings3d,labels,roads");
     expect(query.fiberMetroSourceLayerNames).toBe("att,zayo");
@@ -312,6 +329,7 @@ describe("map-context-transfer service", () => {
       hydroBasinsVisible: [] as boolean[],
       mapViewport: [] as unknown[],
       parcelsVisible: [] as boolean[],
+      perspectiveViewMode: [] as Array<{ readonly perspective: string; readonly mode: string }>,
       perspectiveVisible: [] as Array<{ readonly perspective: string; readonly visible: boolean }>,
       powerVisible: [] as Array<{ readonly layerId: string; readonly visible: boolean }>,
       waterVisible: [] as boolean[],
@@ -323,6 +341,10 @@ describe("map-context-transfer service", () => {
         sourceSurface: "global-map",
         targetSurface: "company-map",
         activePerspectives: ["colocation"],
+        facilityViewModes: {
+          colocation: "clusters",
+          hyperscale: "dots",
+        },
         visibleBasemapLayerIds: ["labels", "roads"],
         visibleLayerIds: [
           "environmental.flood-100",
@@ -373,6 +395,9 @@ describe("map-context-transfer service", () => {
       setParcelsVisible(visible) {
         calls.parcelsVisible.push(visible);
       },
+      setPerspectiveViewMode(perspective, mode) {
+        calls.perspectiveViewMode.push({ perspective, mode });
+      },
       setPerspectiveVisibility(perspective, visible) {
         calls.perspectiveVisible.push({ perspective, visible });
       },
@@ -407,6 +432,10 @@ describe("map-context-transfer service", () => {
     expect(calls.perspectiveVisible).toEqual([
       { perspective: "colocation", visible: true },
       { perspective: "hyperscale", visible: false },
+    ]);
+    expect(calls.perspectiveViewMode).toEqual([
+      { perspective: "colocation", mode: "clusters" },
+      { perspective: "hyperscale", mode: "dots" },
     ]);
     expect(calls.fiberLayerVisible).toEqual([
       { lineId: "metro", visible: true },

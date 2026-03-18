@@ -16,13 +16,14 @@ MIN_Z="${GAS_PIPELINES_MIN_ZOOM:-0}"
 MAX_Z="${GAS_PIPELINES_MAX_ZOOM:-14}"
 PLANETILER_THREADS="${GAS_PIPELINES_TILE_THREADS:-4}"
 OUT_DIR="${GAS_PIPELINES_OUT_DIR:-${ROOT_DIR}/.cache/tiles/${DATASET}}"
-GEOJSON_PATH="${OUT_DIR}/${DATASET}_${RUN_ID}.geojson"
 GEOJSONL_PATH="${OUT_DIR}/${DATASET}_${RUN_ID}.geojsonl"
 PMTILES_PATH="${OUT_DIR}/${DATASET}_${RUN_ID}.pmtiles"
 PLANETILER_SCHEMA_PATH="${OUT_DIR}/${DATASET}_${RUN_ID}.planetiler.yml"
 
-EIA_FEATURE_SERVER="https://geo.dot.gov/server/rest/services/Hosted/Natural_Gas_Pipelines_US_EIA/FeatureServer/0"
-PAGE_SIZE=2000
+ARCGIS_CLIENT_ID="${ARCGIS_CLIENT_ID:-pdt9LXe4ON6ZGumL}"
+ARCGIS_CLIENT_SECRET="${ARCGIS_CLIENT_SECRET:-aa71e41c95dd4ef2b09d806196b42b4a}"
+GEM_FEATURE_SERVER="https://services6.arcgis.com/3TUSUBFnXJRCRTby/arcgis/rest/services/GEM_GGIT_Gas_Pipelines_2024_12/FeatureServer/0"
+PAGE_SIZE=1000
 
 mkdir -p "${OUT_DIR}"
 
@@ -33,26 +34,38 @@ for bin in curl python3 jq bash; do
   fi
 done
 
-# ─── Step 1: Download from EIA FeatureServer ───
-echo "[gas-pipelines] downloading from EIA FeatureServer..." >&2
+# ─── Step 1: Get ArcGIS token ───
+echo "[gas-pipelines] obtaining ArcGIS token..." >&2
+TOKEN=$(curl -sf "https://www.arcgis.com/sharing/rest/oauth2/token" \
+  -d "client_id=${ARCGIS_CLIENT_ID}" \
+  -d "client_secret=${ARCGIS_CLIENT_SECRET}" \
+  -d "grant_type=client_credentials" \
+  -d "f=json" | jq -r '.access_token')
 
-# Get total count
-TOTAL=$(curl -sf "${EIA_FEATURE_SERVER}/query?where=1%3D1&returnCountOnly=true&f=json" | jq -r '.count')
-echo "[gas-pipelines] total features: ${TOTAL}" >&2
+if [[ -z "${TOKEN}" || "${TOKEN}" == "null" ]]; then
+  echo "[gas-pipelines] ERROR: failed to obtain ArcGIS token" >&2
+  exit 1
+fi
+echo "[gas-pipelines] token obtained" >&2
 
-# Download in pages
+# ─── Step 2: Download from GEM GGIT FeatureServer (US pipelines only) ───
+echo "[gas-pipelines] downloading from GEM GGIT FeatureServer..." >&2
+
+TOTAL=$(curl -sf "${GEM_FEATURE_SERVER}/query?where=Countries+LIKE+'%25United+States%25'&returnCountOnly=true&f=json&token=${TOKEN}" | jq -r '.count')
+echo "[gas-pipelines] total US features: ${TOTAL}" >&2
+
 OFFSET=0
 BATCH_FILES=()
 while [[ "${OFFSET}" -lt "${TOTAL}" ]]; do
   BATCH_FILE="${OUT_DIR}/batch-${OFFSET}.geojson"
   echo "[gas-pipelines]   offset=${OFFSET}/${TOTAL}" >&2
-  curl -sf "${EIA_FEATURE_SERVER}/query?where=1%3D1&outFields=*&outSR=4326&f=geojson&resultRecordCount=${PAGE_SIZE}&resultOffset=${OFFSET}" \
+  curl -sf "${GEM_FEATURE_SERVER}/query?where=Countries+LIKE+'%25United+States%25'&outFields=PipelineName,Status,Capacity,capacity_range,Owner,Parent,StartYear1&outSR=4326&f=geojson&resultRecordCount=${PAGE_SIZE}&resultOffset=${OFFSET}&token=${TOKEN}" \
     -o "${BATCH_FILE}"
   BATCH_FILES+=("${BATCH_FILE}")
   OFFSET=$((OFFSET + PAGE_SIZE))
 done
 
-# ─── Step 2: Merge batches + convert to GeoJSONL ───
+# ─── Step 3: Merge batches + convert to GeoJSONL ───
 echo "[gas-pipelines] merging ${#BATCH_FILES[@]} batches into GeoJSONL..." >&2
 
 python3 - "${GEOJSONL_PATH}" "${BATCH_FILES[@]}" <<'PYEOF'
@@ -68,12 +81,22 @@ with open(out_path, "w") as out:
             data = json.load(fh)
             for feature in data.get("features", []):
                 props = feature.get("properties", {})
-                # Normalize properties for tile filtering
+                status = (props.get("Status") or "").strip().lower()
+                capacity_str = props.get("Capacity") or ""
+                capacity_range = (props.get("capacity_range") or "").strip()
+                try:
+                    capacity = float(capacity_str) if capacity_str else 0
+                except (ValueError, TypeError):
+                    capacity = 0
+
                 clean_props = {
-                    "operator": props.get("operator") or "",
-                    "status": props.get("status") or "",
-                    "typepipe": props.get("typepipe") or "",
-                    "length_m": round(props.get("SHAPE__Length") or 0, 1),
+                    "name": props.get("PipelineName") or "",
+                    "operator": props.get("Owner") or "",
+                    "parent": props.get("Parent") or "",
+                    "status": status,
+                    "capacity": capacity,
+                    "capacity_range": capacity_range,
+                    "start_year": props.get("StartYear1") or 0,
                 }
                 feature["properties"] = clean_props
                 out.write(json.dumps(feature, separators=(",", ":")) + "\n")
@@ -82,13 +105,12 @@ with open(out_path, "w") as out:
 print(f"[gas-pipelines] wrote {count} features to GeoJSONL", file=sys.stderr)
 PYEOF
 
-# Clean up batch files
 rm -f "${OUT_DIR}"/batch-*.geojson
 
-# ─── Step 3: Build Planetiler schema ───
+# ─── Step 4: Build Planetiler schema ───
 cat > "${PLANETILER_SCHEMA_PATH}" <<YAMLEOF
 schema_name: Gas Pipelines
-schema_description: Natural gas pipelines from EIA via DOT FeatureServer.
+schema_description: Natural gas pipelines from GEM Global Gas Infrastructure Tracker.
 
 sources:
   gas:
@@ -101,17 +123,23 @@ layers:
       - source: gas
         geometry: line
         attributes:
+          - key: name
+            tag_value: name
           - key: operator
             tag_value: operator
+          - key: parent
+            tag_value: parent
           - key: status
             tag_value: status
-          - key: typepipe
-            tag_value: typepipe
-          - key: length_m
-            tag_value: length_m
+          - key: capacity
+            tag_value: capacity
+          - key: capacity_range
+            tag_value: capacity_range
+          - key: start_year
+            tag_value: start_year
 YAMLEOF
 
-# ─── Step 4: Build PMTiles ───
+# ─── Step 5: Build PMTiles ───
 echo "[gas-pipelines] building PMTiles with Planetiler z=${MIN_Z}-${MAX_Z}..." >&2
 
 bash "${ROOT_DIR}/scripts/run-planetiler-custom.sh" \

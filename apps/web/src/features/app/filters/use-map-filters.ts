@@ -8,6 +8,7 @@ import type { ParcelsViewportFacets } from "@/features/parcels/parcels.types";
 import { buildApiRequestInit } from "@/lib/api/api-request-init.service";
 import {
   buildFacilitiesFilterPredicate,
+  buildGasPipelineFilter,
   buildParcelFilter,
   buildTransmissionVoltageFilter,
 } from "./map-filters.service";
@@ -69,6 +70,7 @@ export interface UseMapFiltersResult {
   toggleUser(id: string): void;
   toggleZoningType(id: string): void;
   readonly transmissionFilter: Readonly<ReturnType<typeof shallowRef<MapExpression | null>>>;
+  readonly gasFilter: Readonly<ReturnType<typeof shallowRef<MapExpression | null>>>;
 }
 
 function createInitialState(): MapFiltersState {
@@ -96,6 +98,7 @@ export function useMapFilters(): UseMapFiltersResult {
   const parcelFilter = shallowRef<MapExpression | null>(null);
   const parcelViewportFacets = shallowRef<ParcelsViewportFacets | null>(null);
   const transmissionFilter = shallowRef<MapExpression | null>(null);
+  const gasFilter = shallowRef<MapExpression | null>(null);
   const knownProviders = shallowRef<ReadonlySet<string>>(new Set());
   const knownMarkets = shallowRef<ReadonlySet<string>>(new Set());
 
@@ -105,6 +108,7 @@ export function useMapFilters(): UseMapFiltersResult {
       facilitiesPredicate.value = buildFacilitiesFilterPredicate(current);
       parcelFilter.value = buildParcelFilter(current);
       transmissionFilter.value = buildTransmissionVoltageFilter(current);
+      gasFilter.value = buildGasPipelineFilter(current);
     },
     { immediate: true }
   );
@@ -284,6 +288,7 @@ export function useMapFilters(): UseMapFiltersResult {
     parcelViewportFacets,
     setParcelViewportFacets,
     transmissionFilter,
+    gasFilter,
     availableProviders,
     availableMarkets,
     setAvailableFeatures,

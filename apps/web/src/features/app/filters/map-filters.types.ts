@@ -13,11 +13,11 @@ export const FACILITY_STATUS_TO_SEMANTIC: Record<FacilityStatusFilterId, Commiss
 export type TransmissionVoltageFilterId = "ge-25" | "ge-50" | "ge-100" | "ge-230" | "ge-765";
 
 export const VOLTAGE_THRESHOLDS: Record<TransmissionVoltageFilterId, number> = {
-  "ge-25": 25_000,
-  "ge-50": 50_000,
-  "ge-100": 100_000,
-  "ge-230": 230_000,
-  "ge-765": 765_000,
+  "ge-25": 25,
+  "ge-50": 50,
+  "ge-100": 100,
+  "ge-230": 230,
+  "ge-765": 765,
 };
 
 export type PowerTypeFilterId = "commissioned" | "available" | "under-construction" | "planned";

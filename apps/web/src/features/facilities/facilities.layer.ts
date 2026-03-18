@@ -46,6 +46,8 @@ function defaultPerspective(): FacilityPerspective {
   return "colocation";
 }
 
+const providerNameTokenPattern = /[^A-Za-z0-9]+/;
+
 function toFacilitiesCatalogLayerId(
   perspective: FacilityPerspective
 ): "facilities.colocation" | "facilities.hyperscale" {
@@ -68,6 +70,12 @@ function getCanvasContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
 interface ClusterMarkerEntry {
   readonly marker: IMapMarker;
   readonly signature: string;
+}
+
+interface ViewportFeaturesCache {
+  bboxKey: string | null;
+  features: FacilitiesFeatureCollection["features"] | null;
+  viewportFeatures: FacilitiesFeatureCollection["features"];
 }
 
 function computePointFeatureBounds(features: readonly MapRenderedFeature[]): LngLatBounds | null {
@@ -104,6 +112,7 @@ export function mountFacilitiesLayer(
   map: IMap,
   options: FacilitiesLayerOptions = {}
 ): FacilitiesLayerController {
+  const VIEWPORT_BBOX_DECIMALS = 2;
   const perspective = options.perspective ?? defaultPerspective();
   const sourceId = toFacilitiesCatalogLayerId(perspective);
   const styleLayerIds = getFacilitiesStyleLayerIds(sourceId);
@@ -123,24 +132,86 @@ export function mountFacilitiesLayer(
   const logoBaseUrl = "https://d1cf1x3z5qnthi.cloudfront.net/provider-logos";
   const loadedLogos = new Set<string>();
   const failedLogos = new Set<string>();
+  const providerNamesById = new Map<string, string>();
   const clusterMarkers = new Map<number, ClusterMarkerEntry>();
 
   const LOGO_SIZE = 128;
   const logoPrefix = "logo-";
+  const LOGO_LOAD_DEFER_MS = 180;
 
   const replacingImages = new Set<string>();
+  const viewportFeaturesCache: ViewportFeaturesCache = {
+    bboxKey: null,
+    features: null,
+    viewportFeatures: [],
+  };
+  let logoLoadTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const toFallbackLogoText = (providerName: string | null): string => {
+    if (providerName === null) {
+      return "DC";
+    }
+
+    const tokens = providerName
+      .trim()
+      .split(providerNameTokenPattern)
+      .filter((token) => token.length > 0);
+
+    const first = tokens[0];
+    const second = tokens[1];
+    if (first !== undefined && second !== undefined) {
+      return `${first[0] ?? "D"}${second[0] ?? "C"}`.toUpperCase();
+    }
+
+    const compactName = providerName.replace(/[^A-Za-z0-9]+/g, "");
+    if (compactName.length >= 2) {
+      return compactName.slice(0, 2).toUpperCase();
+    }
+
+    if (compactName.length === 1) {
+      return `${compactName.toUpperCase()}C`;
+    }
+
+    return "DC";
+  };
+
+  const createFallbackLogoImage = (providerName: string | null): ImageData => {
+    const canvas = document.createElement("canvas");
+    canvas.width = LOGO_SIZE;
+    canvas.height = LOGO_SIZE;
+    const context = getCanvasContext(canvas);
+
+    context.clearRect(0, 0, LOGO_SIZE, LOGO_SIZE);
+    context.fillStyle = perspective === "hyperscale" ? "#065f46" : "#1e40af";
+    context.font = "700 42px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText(toFallbackLogoText(providerName), LOGO_SIZE / 2, LOGO_SIZE / 2);
+
+    return context.getImageData(0, 0, LOGO_SIZE, LOGO_SIZE);
+  };
+
+  const replaceLogoImage = (imageId: string, image: ImageData): void => {
+    replacingImages.add(imageId);
+    try {
+      map.replaceImage(imageId, image);
+    } finally {
+      replacingImages.delete(imageId);
+    }
+  };
+
+  const installFallbackLogo = (providerId: string): void => {
+    const providerName = providerNamesById.get(providerId) ?? null;
+    replaceLogoImage(`${logoPrefix}${providerId}`, createFallbackLogoImage(providerName));
+    loadedLogos.add(providerId);
+  };
 
   const handleStyleImageMissing = (id: string): void => {
     if (!id.startsWith(logoPrefix) || map.hasImage(id) || replacingImages.has(id)) {
       return;
     }
-    const canvas = document.createElement("canvas");
-    canvas.width = 1;
-    canvas.height = 1;
-    const ctx = canvas.getContext("2d");
-    if (ctx !== null) {
-      map.addImage(id, ctx.getImageData(0, 0, 1, 1));
-    }
+
+    map.addImage(id, createFallbackLogoImage(null));
   };
 
   map.onStyleImageMissing(handleStyleImageMissing);
@@ -180,12 +251,18 @@ export function mountFacilitiesLayer(
 
     for (const f of features) {
       const pid = String(f.properties?.providerId ?? "");
+      const providerName = f.properties?.providerName;
+      if (typeof providerName === "string" && providerName.trim().length > 0) {
+        providerNamesById.set(pid, providerName);
+      }
+
       if (!pid || loadedLogos.has(pid) || failedLogos.has(pid)) {
         continue;
       }
       const filename = logoMap[pid];
       if (!filename) {
         failedLogos.add(pid);
+        installFallbackLogo(pid);
         continue;
       }
       toLoad.push({
@@ -207,16 +284,11 @@ export function mountFacilitiesLayer(
           }
           const raw = await map.loadImage(url);
           const normalized = normalizeLogoImage(raw);
-          const imageId = `logo-${providerId}`;
-          replacingImages.add(imageId);
-          try {
-            map.replaceImage(imageId, normalized);
-          } finally {
-            replacingImages.delete(imageId);
-          }
+          replaceLogoImage(`${logoPrefix}${providerId}`, normalized);
           loadedLogos.add(providerId);
         } catch {
           failedLogos.add(providerId);
+          installFallbackLogo(providerId);
         }
       })
     );
@@ -232,7 +304,7 @@ export function mountFacilitiesLayer(
     lastFetchKey: null,
     requestSequence: 0,
     selectedFeatureId: null,
-    viewMode: "icons",
+    viewMode: options.initialViewMode ?? "icons",
     visible: true,
   };
 
@@ -262,6 +334,9 @@ export function mountFacilitiesLayer(
     state.fetchedBbox = null;
     state.lastRequestId = null;
     state.lastTruncated = false;
+    viewportFeaturesCache.bboxKey = null;
+    viewportFeaturesCache.features = null;
+    viewportFeaturesCache.viewportFeatures = [];
   };
 
   const getFilterPredicate = (): ReturnType<
@@ -274,11 +349,45 @@ export function mountFacilitiesLayer(
     return applyFacilitiesFilter(state.cachedFeatures, getFilterPredicate());
   };
 
-  const emitCurrentViewportUpdate = (bbox: BBox): void => {
-    const filtered = getFilteredCachedFeatures();
-    const viewportFeatures = filterFacilitiesFeaturesToBbox(filtered, bbox);
-    const requestId = state.lastRequestId ?? "n/a";
-    emitViewportUpdate(viewportFeatures, requestId, state.lastTruncated);
+  const toBboxKey = (bbox: BBox): string => {
+    return `${bbox.west},${bbox.south},${bbox.east},${bbox.north}`;
+  };
+
+  const getViewportFeatures = (
+    features: FacilitiesFeatureCollection["features"],
+    bbox: BBox
+  ): FacilitiesFeatureCollection["features"] => {
+    const bboxKey = toBboxKey(bbox);
+    if (viewportFeaturesCache.features === features && viewportFeaturesCache.bboxKey === bboxKey) {
+      return viewportFeaturesCache.viewportFeatures;
+    }
+
+    const viewportFeatures = filterFacilitiesFeaturesToBbox(features, bbox);
+    viewportFeaturesCache.features = features;
+    viewportFeaturesCache.bboxKey = bboxKey;
+    viewportFeaturesCache.viewportFeatures = viewportFeatures;
+    return viewportFeatures;
+  };
+
+  const clearScheduledLogoLoad = (): void => {
+    if (logoLoadTimer === null) {
+      return;
+    }
+
+    clearTimeout(logoLoadTimer);
+    logoLoadTimer = null;
+  };
+
+  const scheduleLogoLoad = (features: FacilitiesFeatureCollection["features"]): void => {
+    clearScheduledLogoLoad();
+    logoLoadTimer = setTimeout(() => {
+      logoLoadTimer = null;
+      if (!(state.visible && state.viewMode === "icons")) {
+        return;
+      }
+
+      loadProviderLogos(features).catch(ignoreBestEffortAsyncError);
+    }, LOGO_LOAD_DEFER_MS);
   };
 
   const readFacilityIdFromProperties = (properties: unknown): string | null => {
@@ -644,21 +753,7 @@ export function mountFacilitiesLayer(
       source: sourceId,
       minzoom: minZoom,
       paint: {
-        "circle-radius": [
-          "interpolate",
-          ["linear"],
-          ["zoom"],
-          4,
-          6,
-          7,
-          10,
-          10,
-          14,
-          13,
-          18,
-          16,
-          24,
-        ],
+        "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 6, 7, 10, 10, 14, 13, 18, 16, 24],
         "circle-stroke-width": 2,
         "circle-stroke-color": defaultCircleColor,
         "circle-color": "#ffffff",
@@ -867,7 +962,7 @@ export function mountFacilitiesLayer(
       return false;
     }
 
-    zoomToCluster(clusterId, [event.lngLat.lng, event.lngLat.lat]);
+    options.onClusterClick?.();
     return true;
   };
 
@@ -1000,6 +1095,7 @@ export function mountFacilitiesLayer(
   };
 
   const resetVisibleFacilitiesData = (): void => {
+    clearScheduledLogoLoad();
     map.setGeoJSONSourceData(sourceId, emptyFacilitiesSourceData());
     clearClusterMarkers();
   };
@@ -1044,12 +1140,14 @@ export function mountFacilitiesLayer(
   };
 
   const emitCoveredViewportStatus = (bbox: BBox): void => {
-    emitCurrentViewportUpdate(bbox);
+    const filtered = getFilteredCachedFeatures();
+    const viewportFeatures = getViewportFeatures(filtered, bbox);
+    emitViewportUpdate(viewportFeatures, state.lastRequestId ?? "n/a", state.lastTruncated);
     setStatus({
       state: "ok",
       perspective,
       requestId: state.lastRequestId ?? "n/a",
-      count: filterFacilitiesFeaturesToBbox(state.cachedFeatures, bbox).length,
+      count: viewportFeatures.length,
       truncated: state.lastTruncated,
     });
   };
@@ -1071,7 +1169,7 @@ export function mountFacilitiesLayer(
     map.setGeoJSONSourceData(sourceId, { type: "FeatureCollection", features: filtered });
     syncClusterMarkers();
     syncSelectionForFeatures(filtered);
-    const viewportFeatures = filterFacilitiesFeaturesToBbox(filtered, args.bbox);
+    const viewportFeatures = getViewportFeatures(filtered, args.bbox);
     emitViewportUpdate(viewportFeatures, args.requestId, args.truncated);
 
     setStatus({
@@ -1083,7 +1181,7 @@ export function mountFacilitiesLayer(
     });
 
     if (state.viewMode === "icons") {
-      loadProviderLogos(filtered).catch(ignoreBestEffortAsyncError);
+      scheduleLogoLoad(filtered);
     }
   };
 
@@ -1122,13 +1220,13 @@ export function mountFacilitiesLayer(
       return;
     }
 
-    const bbox = quantizeBbox(map.getBounds(), 3);
+    const bbox = quantizeBbox(map.getBounds(), VIEWPORT_BBOX_DECIMALS);
     if (state.fetchedBbox !== null && bboxContains(state.fetchedBbox, bbox)) {
       emitCoveredViewportStatus(bbox);
       return;
     }
 
-    const fetchBbox = quantizeBbox(expandBbox(bbox, fetchPaddingFactor), 3);
+    const fetchBbox = quantizeBbox(expandBbox(bbox, fetchPaddingFactor), VIEWPORT_BBOX_DECIMALS);
     const fetchKey = getFetchKey(fetchBbox);
     if (state.lastFetchKey === fetchKey) {
       return;
@@ -1187,6 +1285,7 @@ export function mountFacilitiesLayer(
     state.requestSequence += 1;
     clearCachedViewport();
     state.lastFetchKey = null;
+    clearScheduledLogoLoad();
 
     if (state.debounceTimer) {
       window.clearTimeout(state.debounceTimer);
@@ -1246,7 +1345,7 @@ export function mountFacilitiesLayer(
         syncSelectionForFeatures(filtered);
 
         if (mode === "icons") {
-          loadProviderLogos(filtered).catch(ignoreBestEffortAsyncError);
+          scheduleLogoLoad(filtered);
         }
       } else {
         clearClusterMarkers();
@@ -1271,14 +1370,15 @@ export function mountFacilitiesLayer(
     syncClusterMarkers();
     syncSelectionForFeatures(filtered);
 
-    const bbox = quantizeBbox(map.getBounds(), 3);
-    emitCurrentViewportUpdate(bbox);
+    const bbox = quantizeBbox(map.getBounds(), VIEWPORT_BBOX_DECIMALS);
+    const viewportFeatures = getViewportFeatures(filtered, bbox);
+    emitViewportUpdate(viewportFeatures, state.lastRequestId ?? "n/a", state.lastTruncated);
 
     setStatus({
       state: "ok",
       perspective,
       requestId: state.lastRequestId ?? "n/a",
-      count: filterFacilitiesFeaturesToBbox(filtered, bbox).length,
+      count: viewportFeatures.length,
       truncated: state.lastTruncated,
     });
   };
@@ -1304,6 +1404,7 @@ export function mountFacilitiesLayer(
         window.clearTimeout(state.debounceTimer);
       }
       state.debounceTimer = null;
+      clearScheduledLogoLoad();
 
       if (pendingClick !== null) {
         clearTimeout(pendingClick.timer);

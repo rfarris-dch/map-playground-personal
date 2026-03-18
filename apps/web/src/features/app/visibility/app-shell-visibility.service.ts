@@ -46,6 +46,8 @@ export function buildInitialPerspectiveVisibilityState(
   return {
     colocation: readCatalogDefaultVisible(facilitiesLayerId("colocation"), catalog),
     hyperscale: readCatalogDefaultVisible(facilitiesLayerId("hyperscale"), catalog),
+    "hyperscale-leased": readCatalogDefaultVisible(facilitiesLayerId("hyperscale-leased"), catalog),
+    enterprise: readCatalogDefaultVisible(facilitiesLayerId("enterprise"), catalog),
   };
 }
 

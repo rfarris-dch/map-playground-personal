@@ -16,6 +16,7 @@ import type {
 } from "@/features/app/core/app-shell.types";
 import type { BasemapVisibilityState } from "@/features/basemap/basemap.types";
 import type { BoundaryLayerId } from "@/features/boundaries/boundaries.types";
+import type { FacilitiesViewMode } from "@/features/facilities/facilities.types";
 import type { FiberLocatorLineId } from "@/features/fiber-locator/fiber-locator.types";
 import type { LayerRuntimeSnapshot } from "@/features/layers/layer-runtime.types";
 import type { PowerLayerId } from "@/features/power/power.types";
@@ -51,6 +52,10 @@ export interface ApplyMapContextTransferToAppShellArgs {
   readonly setHydroBasinsVisible?: (visible: boolean) => void;
   readonly setMapViewport?: (viewport: NonNullable<MapContextTransfer["viewport"]>) => void;
   readonly setParcelsVisible?: (visible: boolean) => void;
+  readonly setPerspectiveViewMode?: (
+    perspective: FacilityPerspective,
+    mode: FacilitiesViewMode
+  ) => void;
   readonly setPerspectiveVisibility: (perspective: FacilityPerspective, visible: boolean) => void;
   readonly setPowerLayerVisible?: (layerId: PowerLayerId, visible: boolean) => void;
   readonly setWaterVisible?: (visible: boolean) => void;
@@ -71,6 +76,10 @@ export interface BuildMapContextTransferFromAppShellArgs {
   readonly map: IMap | null;
   readonly marketIds?: readonly string[];
   readonly parcelsVisible?: boolean;
+  readonly perspectiveViewModes?: {
+    readonly colocation: FacilitiesViewMode;
+    readonly hyperscale: FacilitiesViewMode;
+  };
   readonly powerVisibility?: import("@/features/power/power.types").PowerVisibilityState;
   readonly providerIds?: readonly string[];
   readonly selectedFiberSourceLayerNames?: FiberSourceLayerSelectionState;

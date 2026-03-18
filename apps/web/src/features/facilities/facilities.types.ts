@@ -52,10 +52,12 @@ export type FacilitiesFeatureFilterPredicate = (
 export interface FacilitiesLayerOptions {
   debounceMs?: number;
   readonly filterPredicate?: () => FacilitiesFeatureFilterPredicate | null;
+  readonly initialViewMode?: FacilitiesViewMode;
   readonly isInteractionEnabled?: () => boolean;
   limit?: number;
   minZoom?: number;
   readonly onCachedFeaturesUpdate?: (features: FacilitiesFeatureCollection["features"]) => void;
+  readonly onClusterClick?: () => void;
   readonly onSelectFacility?: (facility: SelectedFacilityRef | null) => void;
   readonly onStatus?: (status: FacilitiesStatus) => void;
   readonly onViewportUpdate?: (snapshot: FacilitiesViewportSnapshot) => void;
@@ -69,6 +71,7 @@ export interface FacilitiesLayerController {
   clearSelection(): void;
   destroy(): void;
   readonly perspective: FacilityPerspective;
+  resolveFeatureProperties(featureId: number | string): unknown | null;
   setViewMode(mode: FacilitiesViewMode): void;
   setVisible(visible: boolean): void;
   zoomToCluster(clusterId: number, center: [number, number]): void;

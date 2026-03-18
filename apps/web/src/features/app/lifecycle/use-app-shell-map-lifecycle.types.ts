@@ -11,6 +11,7 @@ import type {
   BoundaryFacetSelectionState,
   PerspectiveStatusState,
 } from "@/features/app/core/app-shell.types";
+import type { PerspectiveViewModeState } from "@/features/app/core/use-app-shell-state.types";
 import type { FacilitiesFilterPredicate } from "@/features/app/filters/map-filters.types";
 import type {
   MarketBoundaryControllerState,
@@ -125,6 +126,7 @@ export interface AppShellMapLifecycleStateRefs {
   readonly boundaryFacetSelection: ShallowRef<BoundaryFacetSelectionState>;
   readonly boundaryFetchError: ShallowRef<BoundaryFetchErrorState>;
   readonly boundaryHoverByLayer: ShallowRef<BoundaryHoverByLayerState>;
+  readonly clusterClickSignal: ShallowRef<number>;
   readonly colocationViewportFeatures: ShallowRef<FacilitiesFeatureCollection["features"]>;
   readonly facilitiesStatus: ShallowRef<PerspectiveStatusState>;
   readonly hoveredBoundary: ShallowRef<BoundaryHoverState | null>;
@@ -140,6 +142,7 @@ export interface AppShellMapLifecycleStateRefs {
   readonly marketBoundaryFetchError: ShallowRef<MarketBoundaryFetchErrorState>;
   readonly marketBoundaryHoverByLayer: ShallowRef<MarketBoundaryHoverByLayerState>;
   readonly parcelsStatus: ShallowRef<ParcelsStatus>;
+  readonly perspectiveViewModes: ShallowRef<PerspectiveViewModeState>;
   readonly selectedFacility: ShallowRef<SelectedFacilityRef | null>;
   readonly selectedParcel: ShallowRef<SelectedParcelRef | null>;
   readonly sketchMeasureState: ShallowRef<SketchMeasureState>;
@@ -163,6 +166,7 @@ export interface AppShellMapFiltersRefs {
     ShallowRef<import("@/features/parcels/parcels.types").ParcelsViewportFacets | null | undefined>
   >;
   readonly transmissionFilter: Readonly<ShallowRef<MapExpression | null | undefined>>;
+  readonly gasFilter: Readonly<ShallowRef<MapExpression | null | undefined>>;
 }
 
 export interface UseAppShellMapLifecycleOptions {

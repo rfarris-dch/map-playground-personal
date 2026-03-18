@@ -124,12 +124,14 @@ export function mountBoundaryLayer(
           source: sourceId,
           paint: {
             "fill-color": boundaryFillColorExpression(),
-            "fill-opacity": [
-              "case",
-              ["boolean", ["feature-state", "hover"], false],
-              Math.min(0.95, boundaryFillOpacity(layerId) + 0.28),
-              boundaryFillOpacity(layerId),
-            ],
+            "fill-opacity": state.heatEnabled
+              ? [
+                  "case",
+                  ["boolean", ["feature-state", "hover"], false],
+                  Math.min(0.95, boundaryFillOpacity(layerId) + 0.28),
+                  boundaryFillOpacity(layerId),
+                ]
+              : 0,
           },
         },
         labelLayerId
@@ -144,13 +146,15 @@ export function mountBoundaryLayer(
           type: "line",
           source: sourceId,
           paint: {
-            "line-color": [
-              "case",
-              ["boolean", ["feature-state", "hover"], false],
-              "#0f172a",
-              boundaryOutlineColorExpression(),
-            ],
-            "line-opacity": ["case", ["boolean", ["feature-state", "hover"], false], 1, 0.9],
+            "line-color": state.heatEnabled
+              ? [
+                  "case",
+                  ["boolean", ["feature-state", "hover"], false],
+                  "#0f172a",
+                  boundaryOutlineColorExpression(),
+                ]
+              : "#0f172a",
+            "line-opacity": 0.9,
             "line-width": [
               "interpolate",
               ["linear"],
@@ -291,6 +295,34 @@ export function mountBoundaryLayer(
 
   return {
     clearHover,
+    setHeatEnabled(enabled: boolean): void {
+      state.heatEnabled = enabled;
+      if (map.hasLayer(fillLayerId)) {
+        map.setPaintProperty(fillLayerId, "fill-opacity", enabled
+          ? [
+              "case",
+              ["boolean", ["feature-state", "hover"], false],
+              Math.min(0.95, boundaryFillOpacity(layerId) + 0.28),
+              boundaryFillOpacity(layerId),
+            ]
+          : 0
+        );
+      }
+      if (map.hasLayer(outlineLayerId)) {
+        map.setPaintProperty(outlineLayerId, "line-color", enabled
+          ? [
+              "case",
+              ["boolean", ["feature-state", "hover"], false],
+              "#0f172a",
+              boundaryOutlineColorExpression(),
+            ]
+          : "#0f172a"
+        );
+      }
+      if (!enabled) {
+        clearHover();
+      }
+    },
     setIncludedRegionIds(regionIds: readonly string[] | null): void {
       const normalizedRegionIds = normalizeIncludedRegionIds(regionIds);
       if (areSameIncludedRegionIds(state.includedRegionIds, normalizedRegionIds)) {

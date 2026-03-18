@@ -52,6 +52,14 @@
         underConstructionPowerMw: 0,
         unknownCount: 0,
       },
+      marketSelection: {
+        markets: [],
+        matchCount: 0,
+        minimumSelectionOverlapPercent: 0,
+        primaryMarket: null,
+        selectionAreaSqKm: 0,
+        unavailableReason: null,
+      },
       parcelSelection: {
         count: 0,
         nextCursor: null,
