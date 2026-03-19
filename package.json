@@ -34,6 +34,8 @@
     "sync:facility-providers": "bash ./scripts/refresh-facility-providers.sh",
     "init:market-source-schema": "bash ./scripts/init-market-source-schema.sh",
     "sync:market-source": "bash ./scripts/sync-market-source.sh",
+    "init:market-canonical-schema": "bash ./scripts/init-market-canonical-schema.sh",
+    "load:market-canonical": "bash ./scripts/load-market-canonical.sh",
     "init:market-boundaries-schema": "bash ./scripts/init-market-boundaries-schema.sh",
     "sync:market-boundaries": "bash ./scripts/refresh-market-boundaries.sh",
     "init:parcels-schema": "bash ./scripts/init-parcels-schema.sh",

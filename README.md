@@ -27,6 +27,10 @@ bun run dev:pipeline-monitor
 bun run build
 bun run test
 bun run typecheck
+bun run init:market-source-schema
+bun run sync:market-source
+bun run init:market-canonical-schema
+bun run load:market-canonical
 bun x ultracite fix
 bun x ultracite check
 ```
@@ -43,3 +47,5 @@ bun x ultracite check
 - The web app and pipeline monitor both use Vite.
 - The API and several packages use Bun-native scripts and test execution.
 - Parcel sync runs through the dedicated worker entrypoint in `apps/api/src/sync-worker.ts`.
+- Market source landing lives in `market_source.*`; canonical market modeling for the hybrid
+  relational core now lives in `canon.*` with `serve.*` read models.

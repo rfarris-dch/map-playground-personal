@@ -127,6 +127,37 @@ CREATE TABLE IF NOT EXISTS market_source.market_cap_reports (
   payload jsonb NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS market_source.companies (
+  company_id text PRIMARY KEY,
+  company_name text,
+  archived boolean NOT NULL DEFAULT false,
+  payload jsonb NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS market_source.power_space_info (
+  power_space_info_id text PRIMARY KEY,
+  available_power numeric,
+  commissioned_power numeric,
+  planned_dc_power numeric,
+  under_construction_power numeric,
+  date_updated timestamptz,
+  payload jsonb NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS market_source.facility_quarterly_data (
+  facility_quarterly_data_id text PRIMARY KEY,
+  facility_id text,
+  year integer,
+  quarter integer,
+  available_power numeric,
+  commissioned_power numeric,
+  planned_power numeric,
+  under_construction_power numeric,
+  preleasing_override numeric,
+  date_updated timestamptz,
+  payload jsonb NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS market_source.colocation_points (
   point_id text PRIMARY KEY,
   market_id text,
@@ -139,6 +170,19 @@ CREATE TABLE IF NOT EXISTS market_source.colocation_points (
   latitude double precision,
   longitude double precision,
   geom geometry(Point, 4326),
+  payload jsonb NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS market_source.hyperscale_facility_current (
+  facility_id text PRIMARY KEY,
+  market_id text,
+  submarket_id text,
+  company text,
+  commissioned_power numeric,
+  estimated_commissioned_power numeric,
+  under_construction_power numeric,
+  planned_power numeric,
+  date_updated timestamptz,
   payload jsonb NOT NULL
 );
 
@@ -159,6 +203,62 @@ CREATE TABLE IF NOT EXISTS market_source.hyperscale_points (
   longitude double precision,
   geom geometry(Point, 4326),
   updated_at timestamptz,
+  payload jsonb NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS market_source.hyperscale_historical_capacity (
+  historical_capacity_id text PRIMARY KEY,
+  facility_id text,
+  year integer,
+  quarter integer,
+  owned_power numeric,
+  under_construction_power numeric,
+  planned_power numeric,
+  live boolean NOT NULL DEFAULT false,
+  payload jsonb NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS market_source.hyperscale_company_lease_total (
+  lease_total_id text PRIMARY KEY,
+  company_id text,
+  market_id text,
+  year integer,
+  total numeric,
+  date_updated timestamptz,
+  payload jsonb NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS market_source.hs_grid_company_market_lease_total (
+  lease_total_id text PRIMARY KEY,
+  company_id text,
+  market_id text,
+  year integer,
+  total numeric,
+  payload jsonb NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS market_source.insight_forecast (
+  forecast_id text PRIMARY KEY,
+  market_id text,
+  year integer,
+  commissioned_power numeric,
+  payload jsonb NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS market_source.insight_pricing_forecast (
+  pricing_forecast_id text PRIMARY KEY,
+  market_id text,
+  year integer,
+  retail_min numeric,
+  retail_max numeric,
+  wholesale_min numeric,
+  wholesale_max numeric,
+  hyper_min numeric,
+  hyper_max numeric,
+  absorption numeric,
+  currency_id text,
+  archived boolean NOT NULL DEFAULT false,
+  date_updated timestamptz,
   payload jsonb NOT NULL
 );
 
@@ -210,6 +310,15 @@ CREATE INDEX IF NOT EXISTS market_updates_market_id_idx
 CREATE INDEX IF NOT EXISTS market_cap_reports_market_id_idx
   ON market_source.market_cap_reports (market_id);
 
+CREATE INDEX IF NOT EXISTS companies_company_name_idx
+  ON market_source.companies (company_name);
+
+CREATE INDEX IF NOT EXISTS power_space_info_date_updated_idx
+  ON market_source.power_space_info (date_updated DESC);
+
+CREATE INDEX IF NOT EXISTS facility_quarterly_data_facility_id_idx
+  ON market_source.facility_quarterly_data (facility_id, year DESC, quarter DESC);
+
 CREATE INDEX IF NOT EXISTS colocation_points_market_id_idx
   ON market_source.colocation_points (market_id);
 
@@ -217,9 +326,30 @@ CREATE INDEX IF NOT EXISTS colocation_points_geom_idx
   ON market_source.colocation_points
   USING gist (geom);
 
+CREATE INDEX IF NOT EXISTS hyperscale_facility_current_market_id_idx
+  ON market_source.hyperscale_facility_current (market_id);
+
+CREATE INDEX IF NOT EXISTS hyperscale_facility_current_submarket_id_idx
+  ON market_source.hyperscale_facility_current (submarket_id);
+
 CREATE INDEX IF NOT EXISTS hyperscale_points_market_id_idx
   ON market_source.hyperscale_points (market_id);
 
 CREATE INDEX IF NOT EXISTS hyperscale_points_geom_idx
   ON market_source.hyperscale_points
   USING gist (geom);
+
+CREATE INDEX IF NOT EXISTS hyperscale_historical_capacity_facility_id_idx
+  ON market_source.hyperscale_historical_capacity (facility_id, year DESC, quarter DESC);
+
+CREATE INDEX IF NOT EXISTS hyperscale_company_lease_total_lookup_idx
+  ON market_source.hyperscale_company_lease_total (company_id, market_id, year DESC);
+
+CREATE INDEX IF NOT EXISTS hs_grid_company_market_lease_total_lookup_idx
+  ON market_source.hs_grid_company_market_lease_total (company_id, market_id, year DESC);
+
+CREATE INDEX IF NOT EXISTS insight_forecast_market_id_idx
+  ON market_source.insight_forecast (market_id, year DESC);
+
+CREATE INDEX IF NOT EXISTS insight_pricing_forecast_market_id_idx
+  ON market_source.insight_pricing_forecast (market_id, year DESC);

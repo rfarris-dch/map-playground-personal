@@ -105,6 +105,29 @@ export_table_json() {
   mysql_exec "${json_query}" > "${output_file}"
 }
 
+mysql_column_exists() {
+  local table_name="${1}"
+  local column_name="${2}"
+
+  [[ "$(
+    mysql_exec "
+      SELECT EXISTS(
+        SELECT 1
+        FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = '${DB_NAME}'
+          AND TABLE_NAME = '${table_name}'
+          AND COLUMN_NAME = '${column_name}'
+      );
+    " | tail -n 1
+  )" == "1" ]]
+}
+
+if mysql_column_exists "HYPERSCALE_FACILITY" "COUNTY_FIPS"; then
+  HYPERSCALE_COUNTY_FIPS_EXPR="facility.COUNTY_FIPS"
+else
+  HYPERSCALE_COUNTY_FIPS_EXPR="CAST(NULL AS CHAR)"
+fi
+
 export_table_json "MARKET_GROUP" "${TMP_DIR}/market-groups.ndjson"
 export_table_json "WORLD_REGION" "${TMP_DIR}/world-regions.ndjson"
 export_table_json "HAWK_MARKET" "${TMP_DIR}/markets.ndjson"
@@ -114,6 +137,15 @@ export_table_json "HAWK_MARKET_YEARLY_DATA" "${TMP_DIR}/market-yearly-data.ndjso
 export_table_json "HAWK_MARKET_TOTALS_DATA" "${TMP_DIR}/market-totals-data.ndjson"
 export_table_json "HAWK_MARKET_UPDATES" "${TMP_DIR}/market-updates.ndjson"
 export_table_json "HAWK_MARKET_CAP_REPORT" "${TMP_DIR}/market-cap-reports.ndjson"
+export_table_json "HAWK_COMPANY" "${TMP_DIR}/companies.ndjson"
+export_table_json "HAWK_POWER_SPACE_INFO" "${TMP_DIR}/power-space-info.ndjson"
+export_table_json "HAWK_FACILITY_QUARTERLY_DATA" "${TMP_DIR}/facility-quarterly-data.ndjson"
+export_table_json "HYPERSCALE_FACILITY" "${TMP_DIR}/hyperscale-facility-current.ndjson"
+export_table_json "HYPERSCALE_HISTORICAL_CAPACITY" "${TMP_DIR}/hyperscale-historical-capacity.ndjson"
+export_table_json "HYPERSCALE_COMPANY_LEASE_TOTAL" "${TMP_DIR}/hyperscale-company-lease-total.ndjson"
+export_table_json "HS_GRID_COMPANY_MARKET_LEASE_TOTAL" "${TMP_DIR}/hs-grid-company-market-lease-total.ndjson"
+export_table_json "INSIGHT_FORECAST" "${TMP_DIR}/insight-forecast.ndjson"
+export_table_json "INSIGHT_PRICING_FORECAST" "${TMP_DIR}/insight-pricing-forecast.ndjson"
 
 mysql_exec "
   SELECT JSON_OBJECT(
@@ -154,7 +186,7 @@ mysql_exec "
     'city', facility.CITY,
     'state', facility.STATE,
     'country', facility.COUNTRY,
-    'county_fips', facility.COUNTY_FIPS,
+    'county_fips', ${HYPERSCALE_COUNTY_FIPS_EXPR},
     'facility_status', facility.FACILITY_STATUS,
     'lease_or_own', facility.LEASE_OR_OWN,
     'latitude', facility.LATITUDE,
@@ -175,10 +207,19 @@ psql \
 BEGIN;
 
 TRUNCATE TABLE market_source.market_cap_reports;
+TRUNCATE TABLE market_source.insight_pricing_forecast;
+TRUNCATE TABLE market_source.insight_forecast;
+TRUNCATE TABLE market_source.hs_grid_company_market_lease_total;
+TRUNCATE TABLE market_source.hyperscale_company_lease_total;
+TRUNCATE TABLE market_source.hyperscale_historical_capacity;
+TRUNCATE TABLE market_source.hyperscale_facility_current;
 TRUNCATE TABLE market_source.market_totals_data;
 TRUNCATE TABLE market_source.market_yearly_data;
 TRUNCATE TABLE market_source.market_quarterly_data;
 TRUNCATE TABLE market_source.market_updates;
+TRUNCATE TABLE market_source.facility_quarterly_data;
+TRUNCATE TABLE market_source.power_space_info;
+TRUNCATE TABLE market_source.companies;
 TRUNCATE TABLE market_source.submarkets;
 TRUNCATE TABLE market_source.colocation_points;
 TRUNCATE TABLE market_source.hyperscale_points;
@@ -195,8 +236,17 @@ CREATE TEMP TABLE market_yearly_data_stage (payload jsonb NOT NULL) ON COMMIT DR
 CREATE TEMP TABLE market_totals_data_stage (payload jsonb NOT NULL) ON COMMIT DROP;
 CREATE TEMP TABLE market_updates_stage (payload jsonb NOT NULL) ON COMMIT DROP;
 CREATE TEMP TABLE market_cap_reports_stage (payload jsonb NOT NULL) ON COMMIT DROP;
+CREATE TEMP TABLE companies_stage (payload jsonb NOT NULL) ON COMMIT DROP;
+CREATE TEMP TABLE power_space_info_stage (payload jsonb NOT NULL) ON COMMIT DROP;
+CREATE TEMP TABLE facility_quarterly_data_stage (payload jsonb NOT NULL) ON COMMIT DROP;
 CREATE TEMP TABLE colocation_points_stage (payload jsonb NOT NULL) ON COMMIT DROP;
+CREATE TEMP TABLE hyperscale_facility_current_stage (payload jsonb NOT NULL) ON COMMIT DROP;
 CREATE TEMP TABLE hyperscale_points_stage (payload jsonb NOT NULL) ON COMMIT DROP;
+CREATE TEMP TABLE hyperscale_historical_capacity_stage (payload jsonb NOT NULL) ON COMMIT DROP;
+CREATE TEMP TABLE hyperscale_company_lease_total_stage (payload jsonb NOT NULL) ON COMMIT DROP;
+CREATE TEMP TABLE hs_grid_company_market_lease_total_stage (payload jsonb NOT NULL) ON COMMIT DROP;
+CREATE TEMP TABLE insight_forecast_stage (payload jsonb NOT NULL) ON COMMIT DROP;
+CREATE TEMP TABLE insight_pricing_forecast_stage (payload jsonb NOT NULL) ON COMMIT DROP;
 
 \copy market_groups_stage(payload) FROM '${TMP_DIR}/market-groups.ndjson'
 \copy world_regions_stage(payload) FROM '${TMP_DIR}/world-regions.ndjson'
@@ -207,8 +257,17 @@ CREATE TEMP TABLE hyperscale_points_stage (payload jsonb NOT NULL) ON COMMIT DRO
 \copy market_totals_data_stage(payload) FROM '${TMP_DIR}/market-totals-data.ndjson'
 \copy market_updates_stage(payload) FROM '${TMP_DIR}/market-updates.ndjson'
 \copy market_cap_reports_stage(payload) FROM '${TMP_DIR}/market-cap-reports.ndjson'
+\copy companies_stage(payload) FROM '${TMP_DIR}/companies.ndjson'
+\copy power_space_info_stage(payload) FROM '${TMP_DIR}/power-space-info.ndjson'
+\copy facility_quarterly_data_stage(payload) FROM '${TMP_DIR}/facility-quarterly-data.ndjson'
 \copy colocation_points_stage(payload) FROM '${TMP_DIR}/colocation-points.ndjson'
+\copy hyperscale_facility_current_stage(payload) FROM '${TMP_DIR}/hyperscale-facility-current.ndjson'
 \copy hyperscale_points_stage(payload) FROM '${TMP_DIR}/hyperscale-points.ndjson'
+\copy hyperscale_historical_capacity_stage(payload) FROM '${TMP_DIR}/hyperscale-historical-capacity.ndjson'
+\copy hyperscale_company_lease_total_stage(payload) FROM '${TMP_DIR}/hyperscale-company-lease-total.ndjson'
+\copy hs_grid_company_market_lease_total_stage(payload) FROM '${TMP_DIR}/hs-grid-company-market-lease-total.ndjson'
+\copy insight_forecast_stage(payload) FROM '${TMP_DIR}/insight-forecast.ndjson'
+\copy insight_pricing_forecast_stage(payload) FROM '${TMP_DIR}/insight-pricing-forecast.ndjson'
 
 INSERT INTO market_source.market_groups (
   market_group_id,
@@ -691,6 +750,118 @@ SELECT
 FROM market_cap_reports_stage
 WHERE NULLIF(BTRIM(payload->>'ID'), '') IS NOT NULL;
 
+INSERT INTO market_source.companies (
+  company_id,
+  company_name,
+  archived,
+  payload
+)
+SELECT
+  payload->>'COMPANY_ID' AS company_id,
+  NULLIF(BTRIM(payload->>'COMPANY_NAME'), '') AS company_name,
+  COALESCE(NULLIF(BTRIM(payload->>'ARCHIVED'), ''), 'N') IN ('1', 'true', 'TRUE', 'y', 'Y') AS archived,
+  payload
+FROM companies_stage
+WHERE NULLIF(BTRIM(payload->>'COMPANY_ID'), '') IS NOT NULL;
+
+INSERT INTO market_source.power_space_info (
+  power_space_info_id,
+  available_power,
+  commissioned_power,
+  planned_dc_power,
+  under_construction_power,
+  date_updated,
+  payload
+)
+SELECT
+  payload->>'POWER_SPACE_INFO_ID' AS power_space_info_id,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'AVAILABLE_POWER'), '') ~ '^-?[0-9]+([.][0-9]+)?$'
+      THEN (payload->>'AVAILABLE_POWER')::numeric
+    ELSE NULL
+  END AS available_power,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'COMISSIONED_POWER'), '') ~ '^-?[0-9]+([.][0-9]+)?$'
+      THEN (payload->>'COMISSIONED_POWER')::numeric
+    ELSE NULL
+  END AS commissioned_power,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'PLANNED_DC_POWER'), '') ~ '^-?[0-9]+([.][0-9]+)?$'
+      THEN (payload->>'PLANNED_DC_POWER')::numeric
+    ELSE NULL
+  END AS planned_dc_power,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'UC_POWER'), '') ~ '^-?[0-9]+([.][0-9]+)?$'
+      THEN (payload->>'UC_POWER')::numeric
+    ELSE NULL
+  END AS under_construction_power,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'DATE_UPDATED'), '') IS NULL THEN NULL
+    ELSE (payload->>'DATE_UPDATED')::timestamptz
+  END AS date_updated,
+  payload
+FROM power_space_info_stage
+WHERE NULLIF(BTRIM(payload->>'POWER_SPACE_INFO_ID'), '') IS NOT NULL;
+
+INSERT INTO market_source.facility_quarterly_data (
+  facility_quarterly_data_id,
+  facility_id,
+  year,
+  quarter,
+  available_power,
+  commissioned_power,
+  planned_power,
+  under_construction_power,
+  preleasing_override,
+  date_updated,
+  payload
+)
+SELECT
+  payload->>'FACILITY_QUARTERLY_DATA_ID' AS facility_quarterly_data_id,
+  NULLIF(BTRIM(payload->>'FACILITY_ID'), '') AS facility_id,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'YEAR'), '') ~ '^-?[0-9]+$'
+      THEN (payload->>'YEAR')::integer
+    ELSE NULL
+  END AS year,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'QUARTER'), '') ~ '^-?[0-9]+$'
+      THEN (payload->>'QUARTER')::integer
+    ELSE NULL
+  END AS quarter,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'AVAILABLE_POWER'), '') ~ '^-?[0-9]+([.][0-9]+)?$'
+      THEN (payload->>'AVAILABLE_POWER')::numeric
+    ELSE NULL
+  END AS available_power,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'COMISSIONED_POWER'), '') ~ '^-?[0-9]+([.][0-9]+)?$'
+      THEN (payload->>'COMISSIONED_POWER')::numeric
+    ELSE NULL
+  END AS commissioned_power,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'PLANNED_POWER'), '') ~ '^-?[0-9]+([.][0-9]+)?$'
+      THEN (payload->>'PLANNED_POWER')::numeric
+    ELSE NULL
+  END AS planned_power,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'UC_POWER'), '') ~ '^-?[0-9]+([.][0-9]+)?$'
+      THEN (payload->>'UC_POWER')::numeric
+    ELSE NULL
+  END AS under_construction_power,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'PRELEASING_OVERRIDE'), '') ~ '^-?[0-9]+([.][0-9]+)?$'
+      THEN (payload->>'PRELEASING_OVERRIDE')::numeric
+    ELSE NULL
+  END AS preleasing_override,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'DATE_UPDATED'), '') IS NULL THEN NULL
+    ELSE (payload->>'DATE_UPDATED')::timestamptz
+  END AS date_updated,
+  payload
+FROM facility_quarterly_data_stage
+WHERE NULLIF(BTRIM(payload->>'FACILITY_QUARTERLY_DATA_ID'), '') IS NOT NULL;
+
 INSERT INTO market_source.colocation_points (
   point_id,
   market_id,
@@ -739,6 +910,51 @@ SELECT
   payload
 FROM colocation_points_stage
 WHERE NULLIF(BTRIM(payload->>'product_id'), '') IS NOT NULL;
+
+INSERT INTO market_source.hyperscale_facility_current (
+  facility_id,
+  market_id,
+  submarket_id,
+  company,
+  commissioned_power,
+  estimated_commissioned_power,
+  under_construction_power,
+  planned_power,
+  date_updated,
+  payload
+)
+SELECT
+  payload->>'ID' AS facility_id,
+  NULLIF(BTRIM(payload->>'MARKET'), '') AS market_id,
+  NULLIF(BTRIM(payload->>'SUBMARKET_ID'), '') AS submarket_id,
+  NULLIF(BTRIM(payload->>'COMPANY'), '') AS company,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'COMMISSIONED_POWER'), '') ~ '^-?[0-9]+([.][0-9]+)?$'
+      THEN (payload->>'COMMISSIONED_POWER')::numeric
+    ELSE NULL
+  END AS commissioned_power,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'ESTIMATED_COMMISSIONED_POWER'), '') ~ '^-?[0-9]+([.][0-9]+)?$'
+      THEN (payload->>'ESTIMATED_COMMISSIONED_POWER')::numeric
+    ELSE NULL
+  END AS estimated_commissioned_power,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'UNDER_CONSTRUCTION_POWER'), '') ~ '^-?[0-9]+([.][0-9]+)?$'
+      THEN (payload->>'UNDER_CONSTRUCTION_POWER')::numeric
+    ELSE NULL
+  END AS under_construction_power,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'PLANNED_POWER'), '') ~ '^-?[0-9]+([.][0-9]+)?$'
+      THEN (payload->>'PLANNED_POWER')::numeric
+    ELSE NULL
+  END AS planned_power,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'DATE_UPDATED'), '') IS NULL THEN NULL
+    ELSE (payload->>'DATE_UPDATED')::timestamptz
+  END AS date_updated,
+  payload
+FROM hyperscale_facility_current_stage
+WHERE NULLIF(BTRIM(payload->>'ID'), '') IS NOT NULL;
 
 INSERT INTO market_source.hyperscale_points (
   point_id,
@@ -802,6 +1018,200 @@ SELECT
 FROM hyperscale_points_stage
 WHERE NULLIF(BTRIM(payload->>'point_id'), '') IS NOT NULL;
 
+INSERT INTO market_source.hyperscale_historical_capacity (
+  historical_capacity_id,
+  facility_id,
+  year,
+  quarter,
+  owned_power,
+  under_construction_power,
+  planned_power,
+  live,
+  payload
+)
+SELECT
+  payload->>'ID' AS historical_capacity_id,
+  NULLIF(BTRIM(payload->>'FACILITY_ID'), '') AS facility_id,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'YEAR'), '') ~ '^-?[0-9]+$'
+      THEN (payload->>'YEAR')::integer
+    ELSE NULL
+  END AS year,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'QUARTER'), '') ~ '^-?[0-9]+$'
+      THEN (payload->>'QUARTER')::integer
+    ELSE NULL
+  END AS quarter,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'OWNED_POWER'), '') ~ '^-?[0-9]+([.][0-9]+)?$'
+      THEN (payload->>'OWNED_POWER')::numeric
+    ELSE NULL
+  END AS owned_power,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'UNDER_CONSTRUCTION_POWER'), '') ~ '^-?[0-9]+([.][0-9]+)?$'
+      THEN (payload->>'UNDER_CONSTRUCTION_POWER')::numeric
+    ELSE NULL
+  END AS under_construction_power,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'PLANNED_POWER'), '') ~ '^-?[0-9]+([.][0-9]+)?$'
+      THEN (payload->>'PLANNED_POWER')::numeric
+    ELSE NULL
+  END AS planned_power,
+  COALESCE(NULLIF(BTRIM(payload->>'LIVE'), ''), '0') IN ('1', 'true', 'TRUE', 'y', 'Y') AS live,
+  payload
+FROM hyperscale_historical_capacity_stage
+WHERE NULLIF(BTRIM(payload->>'ID'), '') IS NOT NULL;
+
+INSERT INTO market_source.hyperscale_company_lease_total (
+  lease_total_id,
+  company_id,
+  market_id,
+  year,
+  total,
+  date_updated,
+  payload
+)
+SELECT
+  payload->>'ID' AS lease_total_id,
+  NULLIF(BTRIM(payload->>'COMPANY_ID'), '') AS company_id,
+  NULLIF(BTRIM(payload->>'MARKET_ID'), '') AS market_id,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'YEAR'), '') ~ '^-?[0-9]+$'
+      THEN (payload->>'YEAR')::integer
+    ELSE NULL
+  END AS year,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'TOTAL'), '') ~ '^-?[0-9]+([.][0-9]+)?$'
+      THEN (payload->>'TOTAL')::numeric
+    ELSE NULL
+  END AS total,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'DATE_UPDATED'), '') IS NULL THEN NULL
+    ELSE (payload->>'DATE_UPDATED')::timestamptz
+  END AS date_updated,
+  payload
+FROM hyperscale_company_lease_total_stage
+WHERE NULLIF(BTRIM(payload->>'ID'), '') IS NOT NULL;
+
+INSERT INTO market_source.hs_grid_company_market_lease_total (
+  lease_total_id,
+  company_id,
+  market_id,
+  year,
+  total,
+  payload
+)
+SELECT
+  payload->>'ID' AS lease_total_id,
+  NULLIF(BTRIM(payload->>'COMPANY_ID'), '') AS company_id,
+  NULLIF(BTRIM(payload->>'MARKET_ID'), '') AS market_id,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'YEAR'), '') ~ '^-?[0-9]+$'
+      THEN (payload->>'YEAR')::integer
+    ELSE NULL
+  END AS year,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'TOTAL'), '') ~ '^-?[0-9]+([.][0-9]+)?$'
+      THEN (payload->>'TOTAL')::numeric
+    ELSE NULL
+  END AS total,
+  payload
+FROM hs_grid_company_market_lease_total_stage
+WHERE NULLIF(BTRIM(payload->>'ID'), '') IS NOT NULL;
+
+INSERT INTO market_source.insight_forecast (
+  forecast_id,
+  market_id,
+  year,
+  commissioned_power,
+  payload
+)
+SELECT
+  payload->>'ID' AS forecast_id,
+  NULLIF(BTRIM(payload->>'MARKET_ID'), '') AS market_id,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'YEAR'), '') ~ '^-?[0-9]+$'
+      THEN (payload->>'YEAR')::integer
+    ELSE NULL
+  END AS year,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'COMMISSIONED_POWER'), '') ~ '^-?[0-9]+([.][0-9]+)?$'
+      THEN (payload->>'COMMISSIONED_POWER')::numeric
+    ELSE NULL
+  END AS commissioned_power,
+  payload
+FROM insight_forecast_stage
+WHERE NULLIF(BTRIM(payload->>'ID'), '') IS NOT NULL;
+
+INSERT INTO market_source.insight_pricing_forecast (
+  pricing_forecast_id,
+  market_id,
+  year,
+  retail_min,
+  retail_max,
+  wholesale_min,
+  wholesale_max,
+  hyper_min,
+  hyper_max,
+  absorption,
+  currency_id,
+  archived,
+  date_updated,
+  payload
+)
+SELECT
+  payload->>'ID' AS pricing_forecast_id,
+  NULLIF(BTRIM(payload->>'MARKET_ID'), '') AS market_id,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'YEAR'), '') ~ '^-?[0-9]+$'
+      THEN (payload->>'YEAR')::integer
+    ELSE NULL
+  END AS year,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'RETAIL_MIN'), '') ~ '^-?[0-9]+([.][0-9]+)?$'
+      THEN (payload->>'RETAIL_MIN')::numeric
+    ELSE NULL
+  END AS retail_min,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'RETAIL_MAX'), '') ~ '^-?[0-9]+([.][0-9]+)?$'
+      THEN (payload->>'RETAIL_MAX')::numeric
+    ELSE NULL
+  END AS retail_max,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'WHOLESALE_MIN'), '') ~ '^-?[0-9]+([.][0-9]+)?$'
+      THEN (payload->>'WHOLESALE_MIN')::numeric
+    ELSE NULL
+  END AS wholesale_min,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'WHOLESALE_MAX'), '') ~ '^-?[0-9]+([.][0-9]+)?$'
+      THEN (payload->>'WHOLESALE_MAX')::numeric
+    ELSE NULL
+  END AS wholesale_max,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'HYPER_MIN'), '') ~ '^-?[0-9]+([.][0-9]+)?$'
+      THEN (payload->>'HYPER_MIN')::numeric
+    ELSE NULL
+  END AS hyper_min,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'HYPER_MAX'), '') ~ '^-?[0-9]+([.][0-9]+)?$'
+      THEN (payload->>'HYPER_MAX')::numeric
+    ELSE NULL
+  END AS hyper_max,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'ABSORPTION'), '') ~ '^-?[0-9]+([.][0-9]+)?$'
+      THEN (payload->>'ABSORPTION')::numeric
+    ELSE NULL
+  END AS absorption,
+  NULLIF(BTRIM(payload->>'CURRENCY_ID'), '') AS currency_id,
+  COALESCE(NULLIF(BTRIM(payload->>'ARCHIVED'), ''), 'N') IN ('1', 'true', 'TRUE', 'y', 'Y') AS archived,
+  CASE
+    WHEN NULLIF(BTRIM(payload->>'DATE_UPDATED'), '') IS NULL THEN NULL
+    ELSE (payload->>'DATE_UPDATED')::timestamptz
+  END AS date_updated,
+  payload
+FROM insight_pricing_forecast_stage
+WHERE NULLIF(BTRIM(payload->>'ID'), '') IS NOT NULL;
+
 ANALYZE market_source.market_groups;
 ANALYZE market_source.world_regions;
 ANALYZE market_source.markets;
@@ -811,8 +1221,17 @@ ANALYZE market_source.market_yearly_data;
 ANALYZE market_source.market_totals_data;
 ANALYZE market_source.market_updates;
 ANALYZE market_source.market_cap_reports;
+ANALYZE market_source.companies;
+ANALYZE market_source.power_space_info;
+ANALYZE market_source.facility_quarterly_data;
 ANALYZE market_source.colocation_points;
+ANALYZE market_source.hyperscale_facility_current;
 ANALYZE market_source.hyperscale_points;
+ANALYZE market_source.hyperscale_historical_capacity;
+ANALYZE market_source.hyperscale_company_lease_total;
+ANALYZE market_source.hs_grid_company_market_lease_total;
+ANALYZE market_source.insight_forecast;
+ANALYZE market_source.insight_pricing_forecast;
 
 COMMIT;
 SQL
