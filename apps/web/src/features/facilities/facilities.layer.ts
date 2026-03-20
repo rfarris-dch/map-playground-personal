@@ -19,10 +19,12 @@ import {
   emptyFacilitiesSourceData,
   expandBbox,
   filterFacilitiesFeaturesToBbox,
+  findFacilitiesBboxCacheEntry,
   hasFeatureId,
   isFeatureId,
   quantizeBbox,
   toFacilityId,
+  upsertFacilitiesBboxCacheEntry,
 } from "@/features/facilities/facilities.service";
 import type {
   FacilitiesLayerController,
@@ -122,7 +124,6 @@ export function mountFacilitiesLayer(
   const minZoom = options.minZoom ?? 4;
   const limit = options.limit ?? 2000;
   const debounceMs = options.debounceMs ?? 250;
-  const fetchPaddingFactor = 0.5;
   const defaultCircleColor = perspective === "hyperscale" ? "#10b981" : "#3b82f6";
   const hoverCircleColor = perspective === "hyperscale" ? "#059669" : "#2563eb";
   const selectedCircleColor = perspective === "hyperscale" ? "#047857" : "#1d4ed8";
@@ -145,6 +146,7 @@ export function mountFacilitiesLayer(
     features: null,
     viewportFeatures: [],
   };
+  let bboxCacheEntries: ReturnType<typeof upsertFacilitiesBboxCacheEntry> = [];
   let logoLoadTimer: ReturnType<typeof setTimeout> | null = null;
 
   const toFallbackLogoText = (providerName: string | null): string => {
@@ -229,6 +231,11 @@ export function mountFacilitiesLayer(
     const dh = Math.round(sh * scale);
     const dx = Math.round((LOGO_SIZE - dw) / 2);
     const dy = Math.round((LOGO_SIZE - dh) / 2);
+
+    ctx.beginPath();
+    ctx.arc(LOGO_SIZE / 2, LOGO_SIZE / 2, LOGO_SIZE / 2, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
 
     if (source instanceof ImageData) {
       const tmp = document.createElement("canvas");
@@ -771,15 +778,15 @@ export function mountFacilitiesLayer(
           ["linear"],
           ["zoom"],
           4,
-          0.08,
+          0.06,
           7,
-          0.14,
+          0.12,
           10,
-          0.22,
+          0.19,
           13,
-          0.32,
+          0.25,
           16,
-          0.45,
+          0.34,
         ],
         "icon-allow-overlap": true,
         "icon-ignore-placement": true,
@@ -1185,6 +1192,19 @@ export function mountFacilitiesLayer(
     }
   };
 
+  const applyCachedRefreshResult = (args: {
+    readonly bbox: BBox;
+    readonly entry: NonNullable<ReturnType<typeof findFacilitiesBboxCacheEntry>>;
+  }): void => {
+    applyRefreshResult({
+      bbox: args.bbox,
+      fetchBbox: args.entry.bbox,
+      features: args.entry.features,
+      requestId: args.entry.requestId,
+      truncated: args.entry.truncated,
+    });
+  };
+
   const scheduleRefresh = (): void => {
     if (!state.visible) {
       return;
@@ -1226,8 +1246,18 @@ export function mountFacilitiesLayer(
       return;
     }
 
-    const fetchBbox = quantizeBbox(expandBbox(bbox, fetchPaddingFactor), VIEWPORT_BBOX_DECIMALS);
+    const fetchBbox = expandBbox(bbox, 0.3);
     const fetchKey = getFetchKey(fetchBbox);
+    const cachedEntry = findFacilitiesBboxCacheEntry(bboxCacheEntries, fetchBbox);
+    if (cachedEntry !== null) {
+      state.lastFetchKey = fetchKey;
+      applyCachedRefreshResult({
+        bbox,
+        entry: cachedEntry,
+      });
+      return;
+    }
+
     if (state.lastFetchKey === fetchKey) {
       return;
     }
@@ -1270,6 +1300,12 @@ export function mountFacilitiesLayer(
     applyRefreshResult({
       bbox,
       fetchBbox,
+      features: result.right.data.features,
+      requestId: result.right.requestId,
+      truncated: result.right.data.meta.truncated,
+    });
+    bboxCacheEntries = upsertFacilitiesBboxCacheEntry(bboxCacheEntries, {
+      bbox: fetchBbox,
       features: result.right.data.features,
       requestId: result.right.requestId,
       truncated: result.right.data.meta.truncated,
@@ -1397,6 +1433,7 @@ export function mountFacilitiesLayer(
     zoomToCluster,
     destroy(): void {
       state.requestSequence += 1;
+      bboxCacheEntries = [];
       clearClusterMarkers();
       clearSelection();
 

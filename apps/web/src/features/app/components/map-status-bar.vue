@@ -1,17 +1,21 @@
 <script setup lang="ts">
+  import { useGsapTransition } from "@/composables/use-gsap-transition";
   import type { MapStatusBarProps } from "@/features/app/components/map-status-bar.types";
 
   const props = defineProps<MapStatusBarProps>();
+
+  const statusTransition = useGsapTransition({
+    enter: { from: { y: 12, opacity: 0 }, duration: 0.25, ease: "power2.out" },
+    leave: { to: { y: 8, opacity: 0 }, duration: 0.18, ease: "power2.in" },
+  });
 </script>
 
 <template>
   <Transition
-    enter-active-class="transition-all duration-200 ease-out"
-    enter-from-class="translate-y-2 opacity-0"
-    enter-to-class="translate-y-0 opacity-100"
-    leave-active-class="transition-all duration-150 ease-in"
-    leave-from-class="translate-y-0 opacity-100"
-    leave-to-class="translate-y-2 opacity-0"
+    :css="false"
+    @before-enter="statusTransition.onBeforeEnter"
+    @enter="statusTransition.onEnter"
+    @leave="statusTransition.onLeave"
   >
     <div
       v-if="props.overlayStatusMessage !== null"

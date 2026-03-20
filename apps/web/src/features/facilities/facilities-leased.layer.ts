@@ -1,23 +1,28 @@
 import { runEffectPromise } from "@map-migration/core-runtime/effect";
+import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
+import type { BBox } from "@map-migration/geo-kernel/geometry";
 import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts/facilities-http";
 import type { IMap } from "@map-migration/map-engine";
 import { Effect, Either } from "effect";
 import { fetchFacilitiesByBboxEffect } from "@/features/facilities/api";
 import {
-  expandBbox,
-  quantizeBbox,
   bboxContains,
   emptyFacilitiesSourceData,
+  expandBbox,
+  quantizeBbox,
 } from "@/features/facilities/facilities.service";
-import type { FacilitiesLayerController } from "@/features/facilities/facilities.types";
-import type { FacilitiesStatus } from "@/features/facilities/facilities.types";
-import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
+import type {
+  FacilitiesLayerController,
+  FacilitiesStatus,
+} from "@/features/facilities/facilities.types";
 
 interface HyperscaleLeasedLayerOptions {
-  readonly perspective: FacilityPerspective;
   readonly limit?: number;
   readonly onStatusChange?: (status: FacilitiesStatus) => void;
-  readonly onViewportUpdate?: (snapshot: { features: FacilitiesFeatureCollection["features"] }) => void;
+  readonly onViewportUpdate?: (snapshot: {
+    features: FacilitiesFeatureCollection["features"];
+  }) => void;
+  readonly perspective: FacilityPerspective;
 }
 
 const SOURCE_ID = "hyperscale-leased-voronoi";
@@ -28,7 +33,7 @@ export function mountHyperscaleLeasedLayer(
   map: IMap,
   options: HyperscaleLeasedLayerOptions
 ): FacilitiesLayerController {
-  let cachedBbox: readonly [number, number, number, number] | null = null;
+  let cachedBbox: BBox | null = null;
   let cachedFeatures: FacilitiesFeatureCollection["features"] = [];
   let visible = false;
   let fetchSequence = 0;
@@ -52,19 +57,20 @@ export function mountHyperscaleLeasedLayer(
             "interpolate",
             ["linear"],
             ["coalesce", ["get", "commissionedPowerMw"], 0],
-            0, "#fde68a",
-            10, "#fbbf24",
-            30, "#f59e0b",
-            60, "#d97706",
-            100, "#b45309",
-            200, "#92400e",
+            0,
+            "#fde68a",
+            10,
+            "#fbbf24",
+            30,
+            "#f59e0b",
+            60,
+            "#d97706",
+            100,
+            "#b45309",
+            200,
+            "#92400e",
           ],
-          "fill-opacity": [
-            "case",
-            ["boolean", ["feature-state", "hover"], false],
-            0.7,
-            0.45,
-          ],
+          "fill-opacity": ["case", ["boolean", ["feature-state", "hover"], false], 0.7, 0.45],
         },
       });
     }
@@ -82,12 +88,7 @@ export function mountHyperscaleLeasedLayer(
             "#92400e",
           ],
           "line-opacity": 0.7,
-          "line-width": [
-            "case",
-            ["boolean", ["feature-state", "hover"], false],
-            2.5,
-            1,
-          ],
+          "line-width": ["case", ["boolean", ["feature-state", "hover"], false], 2.5, 1],
         },
       });
     }
@@ -118,10 +119,10 @@ export function mountHyperscaleLeasedLayer(
   }
 
   interface Bbox {
-    readonly west: number;
-    readonly south: number;
     readonly east: number;
     readonly north: number;
+    readonly south: number;
+    readonly west: number;
   }
 
   async function fetchData(bounds: Bbox): Promise<void> {
@@ -134,12 +135,12 @@ export function mountHyperscaleLeasedLayer(
 
     const expanded = expandBbox(bbox);
 
-    if (cachedBbox !== null && bboxContains(cachedBbox, [bbox.west, bbox.south, bbox.east, bbox.north])) {
+    if (cachedBbox !== null && bboxContains(cachedBbox, bbox)) {
       return;
     }
 
     const seq = ++fetchSequence;
-    options.onStatusChange?.({ state: "loading" });
+    options.onStatusChange?.({ state: "loading", perspective: options.perspective });
 
     const result = await runEffectPromise(
       Effect.either(
@@ -156,14 +157,30 @@ export function mountHyperscaleLeasedLayer(
     }
 
     if (Either.isLeft(result)) {
-      options.onStatusChange?.({ state: "error", reason: "fetch failed" });
+      options.onStatusChange?.({
+        state: "error",
+        perspective: options.perspective,
+        requestId: String(seq),
+        reason: "fetch failed",
+      });
       return;
     }
 
-    cachedBbox = [expanded.west, expanded.south, expanded.east, expanded.north];
+    cachedBbox = {
+      west: expanded.west,
+      south: expanded.south,
+      east: expanded.east,
+      north: expanded.north,
+    };
     cachedFeatures = result.right.data.features;
     updateSource(cachedFeatures);
-    options.onStatusChange?.({ state: "ready" });
+    options.onStatusChange?.({
+      state: "ok",
+      perspective: options.perspective,
+      requestId: String(seq),
+      count: cachedFeatures.length,
+      truncated: false,
+    });
     options.onViewportUpdate?.({ features: cachedFeatures });
   }
 
@@ -173,7 +190,12 @@ export function mountHyperscaleLeasedLayer(
     }
     const bounds = map.getBounds();
     fetchData(bounds).catch(() => {
-      options.onStatusChange?.({ state: "error", reason: "fetch failed" });
+      options.onStatusChange?.({
+        state: "error",
+        perspective: options.perspective,
+        requestId: String(fetchSequence),
+        reason: "fetch failed",
+      });
     });
   }
 

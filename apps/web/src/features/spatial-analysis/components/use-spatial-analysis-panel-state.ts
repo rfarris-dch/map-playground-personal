@@ -38,6 +38,7 @@ function createEmptySummary(): SpatialAnalysisPanelSummary {
       underConstructionPowerMw: 0,
       unknownCount: 0,
     },
+    marketInsight: null,
     marketSelection: {
       markets: [],
       matchCount: 0,
@@ -62,8 +63,10 @@ export function useSpatialAnalysisPanelState(props: SpatialAnalysisPanelProps) {
   const activeTab = shallowRef<SpatialAnalysisPanelTab>("overview");
 
   const panelSummary = computed(() => props.summary?.summary ?? createEmptySummary());
+  const history = computed(() => props.summary?.history ?? null);
 
   const hasFacilities = computed(() => panelSummary.value.totalCount > 0);
+  const hasHistory = computed(() => history.value !== null);
   const hasMarkets = computed(() => (panelSummary.value.marketSelection?.matchCount ?? 0) > 0);
   const marketSelectionUnavailableReason = computed(
     () => panelSummary.value.marketSelection?.unavailableReason ?? null
@@ -127,6 +130,12 @@ export function useSpatialAnalysisPanelState(props: SpatialAnalysisPanelProps) {
       disabled: false,
       id: "overview",
       label: "Overview",
+    },
+    {
+      count: history.value?.pointCount ?? null,
+      disabled: false,
+      id: "history",
+      label: "History",
     },
     {
       count: countySelectionCount.value,
@@ -260,17 +269,43 @@ export function useSpatialAnalysisPanelState(props: SpatialAnalysisPanelProps) {
   }
 
   function firstValidTab(): SpatialAnalysisPanelTab {
-    if (hasFacilities.value) return "facilities";
-    if (hasCountyScores.value) return "counties";
-    if (hasParcels.value) return "parcels";
+    if (hasHistory.value) {
+      return "history";
+    }
+    if (hasFacilities.value) {
+      return "facilities";
+    }
+    if (hasCountyScores.value) {
+      return "counties";
+    }
+    if (hasParcels.value) {
+      return "parcels";
+    }
     return "overview";
   }
 
   watch(
-    [hasAnyResults, hasFacilities, hasParcels, hasCountyScores],
-    ([nextHasAnyResults]) => {
+    [hasAnyResults, hasHistory, hasFacilities, hasParcels, hasCountyScores],
+    ([nextHasAnyResults, nextHasHistory], previousValues) => {
+      const [previousHasAnyResults, previousHasHistory] = previousValues;
+
       if (!nextHasAnyResults) {
         activeTab.value = "overview";
+        return;
+      }
+
+      if (!previousHasAnyResults && nextHasAnyResults) {
+        activeTab.value = firstValidTab();
+        return;
+      }
+
+      if (!previousHasHistory && nextHasHistory && activeTab.value === "overview") {
+        activeTab.value = "history";
+        return;
+      }
+
+      if (!hasHistory.value && activeTab.value === "history") {
+        activeTab.value = firstValidTab();
         return;
       }
 
@@ -305,6 +340,8 @@ export function useSpatialAnalysisPanelState(props: SpatialAnalysisPanelProps) {
     hasColocation,
     hasCountyScores,
     hasFacilities,
+    hasHistory,
+    history,
     hasHyperscale,
     hasMarkets,
     hasParcels,

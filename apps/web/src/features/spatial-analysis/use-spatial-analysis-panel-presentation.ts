@@ -42,6 +42,7 @@ export function useSpatialAnalysisPanelPresentation(
     }
 
     const hasResults =
+      (options.summary.value?.history?.pointCount ?? 0) > 0 ||
       summary.totalCount > 0 ||
       summary.parcelSelection.count > 0 ||
       (summary.marketSelection?.matchCount ?? 0) > 0;

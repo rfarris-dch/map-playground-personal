@@ -66,10 +66,10 @@ export type {
   MapProjectionSpecification,
   MapQueryRenderedFeaturesOptions,
   MapRenderedFeature,
-  MapSourceFeature,
   MapRequestParameters,
   MapRequestTransformFunction,
   MapResourceType,
+  MapSourceFeature,
   MapSourceSpecification,
   MapStyleLayer,
   MapStyleSpecification,
@@ -286,10 +286,7 @@ class MapLibreEngine implements IMap {
     return this.map.queryRenderedFeatures(target, options);
   }
 
-  querySourceFeatures(
-    sourceId: string,
-    sourceLayer: string
-  ): MapSourceFeature[] {
+  querySourceFeatures(sourceId: string, sourceLayer: string): MapSourceFeature[] {
     return this.map.querySourceFeatures(sourceId, { sourceLayer });
   }
 
@@ -813,6 +810,7 @@ function buildMapLibreOptions(container: HTMLElement, options: MapCreateOptions)
     center: options.center,
     zoom: options.zoom,
     style: options.style,
+    attributionControl: false,
   };
 
   if (typeof options.bearing === "number") {

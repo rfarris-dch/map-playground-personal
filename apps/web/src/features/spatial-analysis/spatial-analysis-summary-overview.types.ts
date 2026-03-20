@@ -1,34 +1,38 @@
-import type { SpatialAnalysisSummaryResponse } from "@map-migration/http-contracts/spatial-analysis-summary-http";
+import type { SpatialAnalysisPanelSummary } from "@/features/spatial-analysis/components/spatial-analysis-panel.types";
 import type { SpatialAnalysisProviderSummaryItem } from "@/features/spatial-analysis/spatial-analysis-provider-summary.types";
 
-type SpatialAnalysisSelectionSummary = SpatialAnalysisSummaryResponse["summary"];
-
-export type SpatialAnalysisOverviewPerspectiveSummary =
-  SpatialAnalysisSelectionSummary["colocation"];
+export type SpatialAnalysisOverviewPerspectiveSummary = SpatialAnalysisPanelSummary["colocation"];
 
 export type SpatialAnalysisOverviewProviderSummary = SpatialAnalysisProviderSummaryItem;
 
-export interface SpatialAnalysisOverviewSummary {
-  readonly colocation: SpatialAnalysisSelectionSummary["colocation"];
-  readonly flood?: SpatialAnalysisSelectionSummary["flood"];
-  readonly hyperscale: SpatialAnalysisSelectionSummary["hyperscale"];
-  readonly topColocationProviders: readonly SpatialAnalysisOverviewProviderSummary[];
-  readonly topHyperscaleProviders: readonly SpatialAnalysisOverviewProviderSummary[];
-  readonly totalCount: SpatialAnalysisSelectionSummary["totalCount"];
-}
+export type SpatialAnalysisOverviewSummary = Pick<
+  SpatialAnalysisPanelSummary,
+  | "colocation"
+  | "flood"
+  | "hyperscale"
+  | "marketInsight"
+  | "marketSelection"
+  | "topColocationProviders"
+  | "topHyperscaleProviders"
+  | "totalCount"
+>;
 
 export interface SpatialAnalysisOverviewMetrics {
   readonly averageCommissionedPowerMwPerFacility: number;
   readonly averageSquareFootagePerFacility: number;
+  readonly colocationAvailablePowerMw: number;
   readonly colocationCommissionedPowerMw: number;
   readonly colocationCount: number;
   readonly colocationPipelinePowerMw: number;
-  readonly hyperscaleCommissionedPowerMw: number;
+  readonly colocationPlannedPowerMw: number;
+  readonly colocationUnderConstructionPowerMw: number;
   readonly hyperscaleCount: number;
+  readonly hyperscaleOwnedPowerMw: number;
   readonly hyperscalePipelinePowerMw: number;
-  readonly totalCommissionedPowerMw: number;
+  readonly hyperscalePlannedPowerMw: number;
+  readonly hyperscaleUnderConstructionPowerMw: number;
   readonly totalFacilities: number;
-  readonly totalPipelinePowerMw: number;
+  readonly totalMarketSizeMw: number;
   readonly totalSquareFootage: number;
 }
 

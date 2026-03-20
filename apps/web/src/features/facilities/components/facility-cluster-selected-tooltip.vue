@@ -1,11 +1,9 @@
 <script setup lang="ts">
-  import {
-    buildFacilityClusterPowerSegments,
-  } from "@/features/facilities/facilities-cluster.service";
+  import { computed } from "vue";
+  import { buildFacilityClusterPowerSegments } from "@/features/facilities/facilities-cluster.service";
   import type { FacilityClusterHoverState } from "@/features/facilities/hover.types";
   import { buildDonutChartArcSegments } from "@/lib/donut-chart.service";
   import { formatMegawatts } from "@/lib/power-format.service";
-  import { computed } from "vue";
 
   interface Props {
     readonly state: FacilityClusterHoverState;
@@ -153,9 +151,7 @@
               class="inline-block size-[12px] rounded-full"
               :style="{ backgroundColor: segment.color }"
             />
-            <span class="text-[12px] font-normal text-[#94a3b8]">
-              {{ segment.shortLabel }}
-            </span>
+            <span class="text-[12px] font-normal text-[#94a3b8]"> {{ segment.shortLabel }} </span>
           </div>
         </div>
 
@@ -168,9 +164,33 @@
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="text-[#94a3b8]">
             <circle cx="7" cy="7" r="4" stroke="currentColor" stroke-width="1.2" fill="none" />
-            <line x1="10" y1="10" x2="13" y2="13" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
-            <line x1="5" y1="7" x2="9" y2="7" stroke="currentColor" stroke-width="1" stroke-linecap="round" />
-            <line x1="7" y1="5" x2="7" y2="9" stroke="currentColor" stroke-width="1" stroke-linecap="round" />
+            <line
+              x1="10"
+              y1="10"
+              x2="13"
+              y2="13"
+              stroke="currentColor"
+              stroke-width="1.2"
+              stroke-linecap="round"
+            />
+            <line
+              x1="5"
+              y1="7"
+              x2="9"
+              y2="7"
+              stroke="currentColor"
+              stroke-width="1"
+              stroke-linecap="round"
+            />
+            <line
+              x1="7"
+              y1="5"
+              x2="7"
+              y2="9"
+              stroke="currentColor"
+              stroke-width="1"
+              stroke-linecap="round"
+            />
           </svg>
           <span class="text-[16px] font-normal leading-none text-[#94a3b8]">Jump to Selection</span>
         </button>

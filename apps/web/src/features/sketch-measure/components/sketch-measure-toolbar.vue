@@ -112,7 +112,7 @@
     <button
       type="button"
       class="rounded px-2 py-1 text-xs font-medium text-primary hover:bg-muted disabled:text-muted-foreground/40"
-      :disabled="props.state.completedAreaGeometry === null"
+      :disabled="props.state.draftAreaGeometry === null"
       @click="emit('use-as-selection')"
     >
       Use as Selection

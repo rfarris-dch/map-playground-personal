@@ -7,6 +7,7 @@ import type {
 import { parsePositiveIntFlag } from "@/config/env-parsing.service";
 import {
   getMarketBoundarySourceVersion,
+  getMarketInsightByMarketId,
   listIntersectedCountyIds,
 } from "@/geo/analysis-summary/analysis-summary.repo";
 import type { CountyScoresStatusRow } from "@/geo/county-intelligence/county-intelligence.repo";
@@ -52,9 +53,23 @@ const ANALYSIS_SUMMARY_MAX_TOTAL_PARCELS = parsePositiveIntFlag(
 const COUNTY_BOUNDARY_RELATION_NAME = "serve.boundary_county_geom_lod1";
 const COUNTY_FIPS_PATTERN = /^[0-9]{5}$/;
 const MARKET_BOUNDARY_RELATION_NAME = "market_current.market_boundaries";
+const MARKET_INSIGHT_RELATION_NAME = "serve.market_size_report_live";
 
 function buildWarning(code: string, message: string): Warning {
   return { code, message };
+}
+
+function readNullableNumber(value: number | string | null): number | null {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
 }
 
 function normalizeCountyFips(value: string | null | undefined): string | null {
@@ -423,6 +438,46 @@ export function createAnalysisSummaryPorts(): AnalysisSummaryPorts {
 
     queryMarketsBySelection(args) {
       return queryMarketsBySelection(args);
+    },
+
+    async queryMarketInsightByMarketId(args) {
+      try {
+        const insight = await getMarketInsightByMarketId(args.marketId);
+        if (insight === null) {
+          return {
+            ok: true as const,
+            value: null,
+          };
+        }
+
+        return {
+          ok: true as const,
+          value: {
+            colocationCommissionedMw: readNullableNumber(insight.colocation_commissioned_mw),
+            growthRatio: readNullableNumber(insight.growth_ratio),
+            growthYear: insight.growth_year,
+            hyperscaleOwnedMw: readNullableNumber(insight.hyperscale_owned_mw),
+            marketId: args.marketId,
+            marketName: insight.market_name,
+            periodLabel: insight.period_label,
+            preleasingMw: readNullableNumber(insight.preleasing_mw),
+            preleasingPctOfAbsorption: readNullableNumber(insight.preleasing_pct_of_absorption),
+            preleasingPctOfCommissioned: readNullableNumber(insight.preleasing_pct_of_commissioned),
+            sourceBasis: insight.source_basis,
+            totalMarketSizeMw: readNullableNumber(insight.total_market_size_mw),
+          },
+        };
+      } catch (error) {
+        return {
+          ok: false as const,
+          value: {
+            error,
+            reason: isMissingRelationError(error, MARKET_INSIGHT_RELATION_NAME)
+              ? "source_unavailable"
+              : "query_failed",
+          },
+        };
+      }
     },
 
     async lookupMarketBoundarySourceVersion() {

@@ -5,6 +5,7 @@ import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts/
 import type { MarketSelectionMatch } from "@map-migration/http-contracts/markets-selection-http";
 import type { ParcelsFeatureCollection } from "@map-migration/http-contracts/parcels-http";
 import type {
+  SpatialAnalysisMarketInsight,
   SpatialAnalysisSummaryRequest,
   SpatialAnalysisSummaryResponse,
 } from "@map-migration/http-contracts/spatial-analysis-summary-http";
@@ -191,6 +192,19 @@ export interface FloodSummaryPort {
 
 export interface MarketsSummaryPort {
   lookupMarketBoundarySourceVersion(): Promise<MarketBoundarySourceVersionResult>;
+  queryMarketInsightByMarketId(args: { readonly marketId: string }): Promise<
+    | {
+        readonly ok: true;
+        readonly value: SpatialAnalysisMarketInsight | null;
+      }
+    | {
+        readonly ok: false;
+        readonly value: {
+          readonly error: unknown;
+          readonly reason: "query_failed" | "source_unavailable";
+        };
+      }
+  >;
   queryMarketsBySelection(args: {
     readonly geometryGeoJson: string;
     readonly limit: number;

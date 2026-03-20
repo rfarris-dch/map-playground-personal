@@ -6,6 +6,13 @@ import type {
   FacilitiesStatus,
 } from "@/features/facilities/facilities.types";
 
+export interface FacilitiesBboxCacheEntry {
+  readonly bbox: BBox;
+  readonly features: FacilitiesFeatureCollection["features"];
+  readonly requestId: string;
+  readonly truncated: boolean;
+}
+
 export function emptyFacilitiesSourceData(): FacilitiesSourceData {
   return { type: "FeatureCollection", features: [] };
 }
@@ -132,6 +139,63 @@ export function bboxContains(container: BBox, candidate: BBox): boolean {
   );
 }
 
+function bboxEquals(left: BBox, right: BBox): boolean {
+  return (
+    left.west === right.west &&
+    left.south === right.south &&
+    left.east === right.east &&
+    left.north === right.north
+  );
+}
+
+function bboxArea(bbox: BBox): number {
+  return Math.max(0, bbox.east - bbox.west) * Math.max(0, bbox.north - bbox.south);
+}
+
+export function findFacilitiesBboxCacheEntry(
+  entries: readonly FacilitiesBboxCacheEntry[],
+  bbox: BBox
+): FacilitiesBboxCacheEntry | null {
+  let bestContainingEntry: FacilitiesBboxCacheEntry | null = null;
+
+  for (const entry of entries) {
+    if (bboxEquals(entry.bbox, bbox)) {
+      return entry;
+    }
+
+    if (entry.truncated || !bboxContains(entry.bbox, bbox)) {
+      continue;
+    }
+
+    if (bestContainingEntry === null || bboxArea(entry.bbox) < bboxArea(bestContainingEntry.bbox)) {
+      bestContainingEntry = entry;
+    }
+  }
+
+  return bestContainingEntry;
+}
+
+export function upsertFacilitiesBboxCacheEntry(
+  entries: readonly FacilitiesBboxCacheEntry[],
+  nextEntry: FacilitiesBboxCacheEntry,
+  maxEntries = 24
+): readonly FacilitiesBboxCacheEntry[] {
+  const nextEntries = [nextEntry];
+
+  for (const entry of entries) {
+    if (bboxEquals(entry.bbox, nextEntry.bbox)) {
+      continue;
+    }
+
+    nextEntries.push(entry);
+    if (nextEntries.length >= maxEntries) {
+      break;
+    }
+  }
+
+  return nextEntries;
+}
+
 function pointWithinBbox(coordinates: readonly [number, number], bbox: BBox): boolean {
   const [lng, lat] = coordinates;
   return lng >= bbox.west && lng <= bbox.east && lat >= bbox.south && lat <= bbox.north;
@@ -141,7 +205,12 @@ export function filterFacilitiesFeaturesToBbox(
   features: FacilitiesFeatureCollection["features"],
   bbox: BBox
 ): FacilitiesFeatureCollection["features"] {
-  return features.filter((feature) => pointWithinBbox(feature.geometry.coordinates, bbox));
+  return features.filter((feature) => {
+    if (feature.geometry.type !== "Point") {
+      return false;
+    }
+    return pointWithinBbox(feature.geometry.coordinates, bbox);
+  });
 }
 
 export function applyFacilitiesFilter(

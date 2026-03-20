@@ -298,25 +298,31 @@ export function mountBoundaryLayer(
     setHeatEnabled(enabled: boolean): void {
       state.heatEnabled = enabled;
       if (map.hasLayer(fillLayerId)) {
-        map.setPaintProperty(fillLayerId, "fill-opacity", enabled
-          ? [
-              "case",
-              ["boolean", ["feature-state", "hover"], false],
-              Math.min(0.95, boundaryFillOpacity(layerId) + 0.28),
-              boundaryFillOpacity(layerId),
-            ]
-          : 0
+        map.setPaintProperty(
+          fillLayerId,
+          "fill-opacity",
+          enabled
+            ? [
+                "case",
+                ["boolean", ["feature-state", "hover"], false],
+                Math.min(0.95, boundaryFillOpacity(layerId) + 0.28),
+                boundaryFillOpacity(layerId),
+              ]
+            : 0
         );
       }
       if (map.hasLayer(outlineLayerId)) {
-        map.setPaintProperty(outlineLayerId, "line-color", enabled
-          ? [
-              "case",
-              ["boolean", ["feature-state", "hover"], false],
-              "#0f172a",
-              boundaryOutlineColorExpression(),
-            ]
-          : "#0f172a"
+        map.setPaintProperty(
+          outlineLayerId,
+          "line-color",
+          enabled
+            ? [
+                "case",
+                ["boolean", ["feature-state", "hover"], false],
+                "#0f172a",
+                boundaryOutlineColorExpression(),
+              ]
+            : "#0f172a"
         );
       }
       if (!enabled) {

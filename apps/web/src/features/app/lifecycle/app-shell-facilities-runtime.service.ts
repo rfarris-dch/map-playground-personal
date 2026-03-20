@@ -7,8 +7,8 @@ import type {
   UseAppShellMapLifecycleOptions,
 } from "@/features/app/lifecycle/use-app-shell-map-lifecycle.types";
 import { mountFacilitiesLayer } from "@/features/facilities/facilities.layer";
-import { mountHyperscaleLeasedLayer } from "@/features/facilities/facilities-leased.layer";
 import type { FacilitiesStatus } from "@/features/facilities/facilities.types";
+import { mountHyperscaleLeasedLayer } from "@/features/facilities/facilities-leased.layer";
 import { mountFacilitiesHover } from "@/features/facilities/hover";
 
 const FACILITIES_LAYER_MIN_ZOOM = 2.5;
@@ -116,7 +116,12 @@ export function initializeFacilitiesRuntime(options: UseAppShellMapLifecycleOpti
   }
 
   const nextFacilitiesControllers: MountPerspectiveLayerArgs["nextControllers"] = [];
-  const allPerspectives: readonly FacilityPerspective[] = ["colocation", "hyperscale", "hyperscale-leased", "enterprise"];
+  const allPerspectives: readonly FacilityPerspective[] = [
+    "colocation",
+    "hyperscale",
+    "hyperscale-leased",
+    "enterprise",
+  ];
   for (const perspective of allPerspectives) {
     mountPerspectiveLayer({
       map: currentMap,
@@ -149,7 +154,12 @@ export function initializeFacilitiesRuntime(options: UseAppShellMapLifecycleOpti
 }
 
 export function destroyFacilitiesRuntime(options: UseAppShellMapLifecycleOptions): void {
-  for (const perspective of ["colocation", "hyperscale", "hyperscale-leased", "enterprise"] as const) {
+  for (const perspective of [
+    "colocation",
+    "hyperscale",
+    "hyperscale-leased",
+    "enterprise",
+  ] as const) {
     options.runtime.layerRuntime.value?.unregisterLayerController(facilitiesLayerId(perspective));
   }
 

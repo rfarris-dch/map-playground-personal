@@ -16,12 +16,12 @@ export interface FacilityHoverState {
   readonly facilityId: string;
   readonly facilityName: string;
   readonly leaseOrOwn: LeaseOrOwn | null;
+  readonly marketName: string | null;
   readonly perspective: FacilityPerspective;
   readonly plannedPowerMw: number | null;
   readonly providerId: string;
   readonly providerName: string;
   readonly screenPoint: readonly [number, number];
-  readonly marketName: string | null;
   readonly stateAbbrev: string | null;
   readonly statusLabel: string | null;
   readonly underConstructionPowerMw: number | null;

@@ -279,6 +279,7 @@ function buildSelectionSummary(args: {
   readonly countyIds: readonly string[];
   readonly flood: SpatialAnalysisFloodSummary;
   readonly hyperscaleFeatures: FacilitiesFeatureCollection["features"];
+  readonly marketInsight: SpatialAnalysisSelectionSummary["marketInsight"];
   readonly marketSelection: SpatialAnalysisSelectionSummary["marketSelection"];
   readonly parcelFeatures: ParcelsFeatureCollection["features"];
   readonly parcelNextCursor: string | null;
@@ -299,6 +300,7 @@ function buildSelectionSummary(args: {
     facilities,
     flood: args.flood,
     hyperscale: buildPerspectiveSummary(hyperscaleFacilities),
+    marketInsight: args.marketInsight,
     marketSelection: {
       ...args.marketSelection,
       markets: [...args.marketSelection.markets],
@@ -434,6 +436,44 @@ interface SelectionSummaryAssembly {
   readonly selectionAreaSqKm: number;
   readonly summary: SpatialAnalysisSelectionSummary;
   readonly warnings: readonly Warning[];
+}
+
+async function attachMarketInsightToSelection(args: {
+  readonly ports: AnalysisSummaryPorts;
+  readonly selection: SelectionSummaryAssembly;
+}): Promise<SelectionSummaryAssembly> {
+  const primaryMarket = args.selection.marketSelection.primaryMarket;
+  if (args.selection.marketSelection.matchCount !== 1 || primaryMarket === null) {
+    return args.selection;
+  }
+
+  const marketInsightResult = await args.ports.queryMarketInsightByMarketId({
+    marketId: primaryMarket.marketId,
+  });
+  if (!marketInsightResult.ok) {
+    return {
+      ...args.selection,
+      warnings: [
+        ...args.selection.warnings,
+        buildWarning(
+          marketInsightResult.value.reason === "source_unavailable"
+            ? "MARKET_INSIGHT_SOURCE_UNAVAILABLE"
+            : "MARKET_INSIGHT_QUERY_FAILED",
+          marketInsightResult.value.reason === "source_unavailable"
+            ? "Canonical market insight views are unavailable for this selection."
+            : "Canonical market insight metrics could not be loaded for this selection."
+        ),
+      ],
+    };
+  }
+
+  return {
+    ...args.selection,
+    summary: {
+      ...args.selection.summary,
+      marketInsight: marketInsightResult.value,
+    },
+  };
 }
 
 interface CountyIntelligenceAssembly {
@@ -812,6 +852,7 @@ function assembleSelectionSummary(args: {
     countyIds: countyIdsFromGeometry,
     flood: args.slices.floodResult.summary,
     hyperscaleFeatures: args.slices.hyperscaleResult.features,
+    marketInsight: null,
     marketSelection: marketSelectionResult.selection,
     parcelFeatures: args.slices.parcelResult.features,
     parcelNextCursor: args.slices.parcelResult.nextCursor,
@@ -832,6 +873,7 @@ function assembleSelectionSummary(args: {
           countyIds,
           flood: args.slices.floodResult.summary,
           hyperscaleFeatures: args.slices.hyperscaleResult.features,
+          marketInsight: null,
           marketSelection: marketSelectionResult.selection,
           parcelFeatures: args.slices.parcelResult.features,
           parcelNextCursor: args.slices.parcelResult.nextCursor,
@@ -1140,9 +1182,13 @@ export async function querySpatialAnalysisSummary(
   }
 
   const runtimeMetadata = ports.getRuntimeMetadata();
-  const selection = assembleSelectionSummary({
+  const selectionWithoutInsight = assembleSelectionSummary({
     input: args,
     slices: collectedResult.value,
+  });
+  const selection = await attachMarketInsightToSelection({
+    ports,
+    selection: selectionWithoutInsight,
   });
   const countyIntelligence = await assembleCountyIntelligence({
     countyIds: selection.countyIds,

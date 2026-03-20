@@ -56,8 +56,8 @@ export interface IMap {
   getZoom(): number;
   hasImage(id: string): boolean;
   hasLayer(layerId: string): boolean;
-  isLayerVisible(layerId: string): boolean;
   hasSource(sourceId: string): boolean;
+  isLayerVisible(layerId: string): boolean;
   loadImage(url: string): Promise<ImageBitmap | HTMLImageElement | ImageData>;
   off(event: "load" | "moveend", handler: () => void): void;
   offClick(handler: (event: MapClickEvent) => void): void;

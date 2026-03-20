@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import { ArrowRight, ChevronDown, Download, X } from "lucide-vue-next";
+  import { nextTick, ref, watch } from "vue";
   import Button from "@/components/ui/button/button.vue";
+  import { useGsapStagger } from "@/composables/use-gsap-stagger";
   import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";
   import { formatScannerPowerMw } from "@/features/scanner/scanner.service";
   import { type ScannerPanelProps, useScannerPanelModel } from "./use-scanner-panel-model";
@@ -32,6 +34,35 @@
     tabClass,
     setActiveTab,
   } = useScannerPanelModel(props as ScannerPanelProps, emit);
+
+  const facilitiesListRef = ref<HTMLElement | null>(null);
+  const { animate: staggerFacilities } = useGsapStagger({
+    container: facilitiesListRef,
+    selector: "button",
+    stagger: 0.025,
+    duration: 0.25,
+    from: { opacity: 0, y: 8 },
+  });
+
+  const overviewRef = ref<HTMLElement | null>(null);
+  const { animate: staggerOverview } = useGsapStagger({
+    container: overviewRef,
+    selector: ":scope > *",
+    stagger: 0.04,
+    duration: 0.25,
+    from: { opacity: 0, y: 10 },
+  });
+
+  watch(activeTab, (tab) => {
+    nextTick(() => {
+      if (tab === "facilities") {
+        staggerFacilities();
+      }
+      if (tab === "overview") {
+        staggerOverview();
+      }
+    });
+  });
 </script>
 
 <template>
@@ -94,6 +125,7 @@
 
       <section
         v-else-if="activeTab === 'overview'"
+        ref="overviewRef"
         role="tabpanel"
         aria-label="Overview"
         class="flex flex-col gap-4 overflow-auto"
@@ -308,7 +340,13 @@
         </div>
       </section>
 
-      <section v-else role="tabpanel" aria-label="Facilities" class="flex-1 overflow-auto">
+      <section
+        v-else
+        ref="facilitiesListRef"
+        role="tabpanel"
+        aria-label="Facilities"
+        class="flex-1 overflow-auto"
+      >
         <div
           class="grid grid-cols-[1fr_70px_52px_40px_40px] gap-x-2 border-b border-border pb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap"
         >
@@ -336,7 +374,10 @@
             />
             <span class="truncate text-foreground/85">{{ facility.facilityName }}</span>
           </span>
-          <span class="truncate text-right text-muted-foreground" :title="facility.providerName ?? undefined">
+          <span
+            class="truncate text-right text-muted-foreground"
+            :title="facility.providerName ?? undefined"
+          >
             {{ facility.providerName ?? "—" }}
           </span>
           <span class="text-right text-muted-foreground">

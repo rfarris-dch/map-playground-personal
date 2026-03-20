@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { computed, ref, shallowRef, watch } from "vue";
+  import { useGsapTransition } from "@/composables/use-gsap-transition";
   import MapInitErrorOverlay from "@/features/app/components/map-init-error-overlay.vue";
   import MapLoadingBar from "@/features/app/components/map-loading-bar.vue";
   import MapStatusBar from "@/features/app/components/map-status-bar.vue";
@@ -9,7 +10,10 @@
   import FacilityClusterSelectedTooltip from "@/features/facilities/components/facility-cluster-selected-tooltip.vue";
   import FacilityHoverTooltip from "@/features/facilities/components/facility-hover-tooltip.vue";
   import FacilitySelectedTooltip from "@/features/facilities/components/facility-selected-tooltip.vue";
-  import type { FacilityClusterHoverState, FacilityHoverState } from "@/features/facilities/hover.types";
+  import type {
+    FacilityClusterHoverState,
+    FacilityHoverState,
+  } from "@/features/facilities/hover.types";
   import FiberLocatorHoverTooltip from "@/features/fiber-locator/components/fiber-locator-hover-tooltip.vue";
   import MarketBoundaryHoverTooltip from "@/features/market-boundaries/components/market-boundary-hover-tooltip.vue";
   import ParcelDetailDrawer from "@/features/parcels/parcel-detail/components/parcel-detail-drawer.vue";
@@ -112,31 +116,55 @@
     },
     { immediate: true }
   );
+
+  const scannerTransition = useGsapTransition({
+    enter: { from: { x: 20, opacity: 0 }, duration: 0.3, ease: "power3.out" },
+    leave: { to: { x: 16, opacity: 0 }, duration: 0.2, ease: "power2.in" },
+  });
+
+  const quickViewTransition = useGsapTransition({
+    enter: { from: { opacity: 0, scale: 0.95 }, duration: 0.25, ease: "power2.out" },
+    leave: { to: { opacity: 0, scale: 0.95 }, duration: 0.15, ease: "power2.in" },
+  });
 </script>
 
 <template>
-  <QuickViewOverlay
-    v-if="shell.isQuickViewVisible.value"
-    :active="shell.isQuickViewVisible.value"
-    :facilities="shell.scannerFacilities.value"
-    :map="shell.map.value"
-    :density-limit="15"
-    @object-count="shell.setQuickViewObjectCount"
-  />
+  <Transition
+    :css="false"
+    @before-enter="quickViewTransition.onBeforeEnter"
+    @enter="quickViewTransition.onEnter"
+    @leave="quickViewTransition.onLeave"
+  >
+    <QuickViewOverlay
+      v-if="shell.isQuickViewVisible.value"
+      :active="shell.isQuickViewVisible.value"
+      :facilities="shell.scannerFacilities.value"
+      :map="shell.map.value"
+      :density-limit="15"
+      @object-count="shell.setQuickViewObjectCount"
+    />
+  </Transition>
 
-  <ScannerPanel
-    v-if="shell.isScannerVisible.value"
-    :county-ids="shell.scannerAnalysisSummary.value?.area?.countyIds"
-    :summary="shell.scannerAnalysisSummary.value"
-    :is-filtered="shell.scannerIsFiltered.value"
-    :is-parcels-loading="shell.isScannerParcelsLoading.value"
-    :parcels-error-message="shell.scannerParcelsError.value"
-    :empty-message="shell.scannerEmptyMessage.value"
-    @close="shell.setScannerActive(false)"
-    @export="shell.exportScannerSelection"
-    @open-dashboard="shell.openScannerDashboard"
-    @select-facility="shell.navigateToFacilityDetail"
-  />
+  <Transition
+    :css="false"
+    @before-enter="scannerTransition.onBeforeEnter"
+    @enter="scannerTransition.onEnter"
+    @leave="scannerTransition.onLeave"
+  >
+    <ScannerPanel
+      v-if="shell.isScannerVisible.value"
+      :county-ids="shell.scannerAnalysisSummary.value?.area?.countyIds"
+      :summary="shell.scannerAnalysisSummary.value"
+      :is-filtered="shell.scannerIsFiltered.value"
+      :is-parcels-loading="shell.isScannerParcelsLoading.value"
+      :parcels-error-message="shell.scannerParcelsError.value"
+      :empty-message="shell.scannerEmptyMessage.value"
+      @close="shell.setScannerActive(false)"
+      @export="shell.exportScannerSelection"
+      @open-dashboard="shell.openScannerDashboard"
+      @select-facility="shell.navigateToFacilityDetail"
+    />
+  </Transition>
 
   <MapInitErrorOverlay
     v-if="isMapInitError && mapInitStatus.errorReason !== null"
@@ -156,9 +184,7 @@
     @close="handleSelectedClose"
     @view-details="handleSelectedViewDetails"
   />
-  <FacilityClusterHoverTooltip
-    :hover-state="shell.hoveredFacilityCluster.value"
-  />
+  <FacilityClusterHoverTooltip :hover-state="shell.hoveredFacilityCluster.value" />
   <FacilityClusterSelectedTooltip
     v-if="selectedClusterState !== null"
     :state="selectedClusterState"

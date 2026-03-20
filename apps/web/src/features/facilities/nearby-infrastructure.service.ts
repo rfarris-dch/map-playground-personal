@@ -8,33 +8,24 @@ const FIBER_LONGHAUL_SOURCE_ID = "fiber-locator.longhaul";
 const MAX_DISTANCE_KM = 25;
 const MAX_ITEMS_PER_CATEGORY = 3;
 
-const POWER_LAYER_IDS = [
-  "power.transmission",
-  "power.substations",
-  "power.plants",
-];
+const POWER_LAYER_IDS = ["power.transmission", "power.substations", "power.plants"];
 
 const GAS_LAYER_ID = "gas-pipelines.lines";
 
 export interface NearbyInfrastructureItem {
-  readonly label: string;
   readonly distance: string;
+  readonly label: string;
 }
 
 export interface NearbyInfrastructureResult {
-  readonly substations: readonly NearbyInfrastructureItem[];
-  readonly powerPlants: readonly NearbyInfrastructureItem[];
-  readonly transmissionLines: readonly NearbyInfrastructureItem[];
-  readonly gasPipelines: readonly NearbyInfrastructureItem[];
   readonly fiberRoutes: readonly NearbyInfrastructureItem[];
+  readonly gasPipelines: readonly NearbyInfrastructureItem[];
+  readonly powerPlants: readonly NearbyInfrastructureItem[];
+  readonly substations: readonly NearbyInfrastructureItem[];
+  readonly transmissionLines: readonly NearbyInfrastructureItem[];
 }
 
-function haversineKm(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): number {
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
@@ -48,18 +39,22 @@ function haversineKm(
 }
 
 function formatDistance(km: number): string {
-  const mi = km * 0.621371;
+  const mi = km * 0.621_371;
   return `${mi.toFixed(1)} mi`;
 }
 
 function str(value: unknown): string | null {
-  if (typeof value === "string" && value.trim().length > 0) return value.trim();
+  if (typeof value === "string" && value.trim().length > 0) {
+    return value.trim();
+  }
   return null;
 }
 
 function props(feature: MapSourceFeature): Record<string, unknown> {
   const p = feature.properties;
-  if (typeof p === "object" && p !== null) return p as Record<string, unknown>;
+  if (typeof p === "object" && p !== null) {
+    return p as Record<string, unknown>;
+  }
   return {};
 }
 
@@ -81,15 +76,13 @@ function extractCoords(feature: MapSourceFeature): [number, number] | null {
     return readPair(geom.coordinates);
   }
   if (geom.type === "LineString" || geom.type === "MultiLineString") {
-    const coords =
-      geom.type === "LineString" ? geom.coordinates : geom.coordinates[0];
+    const coords = geom.type === "LineString" ? geom.coordinates : geom.coordinates[0];
     if (Array.isArray(coords) && coords.length > 0) {
       return readPair(coords[Math.floor(coords.length / 2)]);
     }
   }
   if (geom.type === "Polygon" || geom.type === "MultiPolygon") {
-    const ring =
-      geom.type === "Polygon" ? geom.coordinates[0] : geom.coordinates[0]?.[0];
+    const ring = geom.type === "Polygon" ? geom.coordinates[0] : geom.coordinates[0]?.[0];
     if (Array.isArray(ring) && ring.length > 0) {
       let sumX = 0;
       let sumY = 0;
@@ -120,9 +113,15 @@ function buildPowerLabel(feature: MapSourceFeature, fallback: string): string {
   }
 
   const parts: string[] = [];
-  if (operator) parts.push(operator);
-  if (name) parts.push(name);
-  if (voltage) parts.push(voltage);
+  if (operator) {
+    parts.push(operator);
+  }
+  if (name) {
+    parts.push(name);
+  }
+  if (voltage) {
+    parts.push(voltage);
+  }
   return parts.length > 0 ? parts.join(" · ") : fallback;
 }
 
@@ -132,15 +131,17 @@ function buildGasLabel(feature: MapSourceFeature, fallback: string): string {
   const capacity = str(p.capacity) ?? str(p.capacity_bcf);
 
   const parts: string[] = [];
-  if (owner) parts.push(owner);
-  if (capacity) parts.push(capacity);
+  if (owner) {
+    parts.push(owner);
+  }
+  if (capacity) {
+    parts.push(capacity);
+  }
   return parts.length > 0 ? parts.join(" · ") : fallback;
 }
 
 function prettifySourceLayerName(sourceLayer: string): string {
-  const cleaned = sourceLayer
-    .replace(/^(metro_|longhaul_|l_)/, "")
-    .replace(/_/g, " ");
+  const cleaned = sourceLayer.replace(/^(metro_|longhaul_|l_)/, "").replace(/_/g, " ");
   return cleaned
     .split(" ")
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
@@ -157,8 +158,12 @@ function fiberTypeFromSourceLayer(sourceLayer: string): string {
 function buildFiberLabel(sourceLayer: string, feature: MapSourceFeature, fallback: string): string {
   const p = props(feature);
   const provider =
-    str(p.provider) ?? str(p.operator) ?? str(p.owner) ?? str(p.network_operator) ?? str(p.name)
-    ?? prettifySourceLayerName(sourceLayer);
+    str(p.provider) ??
+    str(p.operator) ??
+    str(p.owner) ??
+    str(p.network_operator) ??
+    str(p.name) ??
+    prettifySourceLayerName(sourceLayer);
   const fiberType = fiberTypeFromSourceLayer(sourceLayer);
   return `${provider} · ${fiberType}`;
 }
@@ -176,9 +181,13 @@ function nearestFeatures(
   const withDist = features
     .map((f) => {
       const coords = extractCoords(f);
-      if (!coords) return null;
+      if (!coords) {
+        return null;
+      }
       const km = haversineKm(facilityLat, facilityLng, coords[1], coords[0]);
-      if (km > MAX_DISTANCE_KM) return null;
+      if (km > MAX_DISTANCE_KM) {
+        return null;
+      }
       return { feature: f, km };
     })
     .filter((x): x is WithDistance => x !== null);
@@ -194,9 +203,13 @@ function buildItems(
   const seen = new Set<string>();
   const result: NearbyInfrastructureItem[] = [];
   for (const { feature, km } of sorted) {
-    if (result.length >= MAX_ITEMS_PER_CATEGORY) break;
+    if (result.length >= MAX_ITEMS_PER_CATEGORY) {
+      break;
+    }
     const label = labelFn(feature, `${fallbackPrefix} ${result.length + 1}`);
-    if (seen.has(label)) continue;
+    if (seen.has(label)) {
+      continue;
+    }
     seen.add(label);
     result.push({ label, distance: formatDistance(km) });
   }
@@ -208,9 +221,13 @@ function hasAnyVisibleLayer(map: IMap, layerIds: readonly string[]): boolean {
 }
 
 function queryFiberSourceLayers(map: IMap, sourceId: string): string[] {
-  if (!map.hasSource(sourceId)) return [];
+  if (!map.hasSource(sourceId)) {
+    return [];
+  }
   const style = map.getStyle();
-  if (!style.layers) return [];
+  if (!style.layers) {
+    return [];
+  }
   const layers: string[] = [];
   for (const layer of style.layers) {
     if (
@@ -241,7 +258,7 @@ export function queryNearbyInfrastructure(
   const fiberLonghaulLayers = queryFiberSourceLayers(map, FIBER_LONGHAUL_SOURCE_ID);
   const hasFiber = fiberMetroLayers.length > 0 || fiberLonghaulLayers.length > 0;
 
-  if (!hasPower && !hasGas && !hasFiber) {
+  if (!(hasPower || hasGas || hasFiber)) {
     return null;
   }
 
@@ -258,15 +275,18 @@ export function queryNearbyInfrastructure(
 
     substations = buildItems(
       nearestFeatures(subFeatures, facilityLng, facilityLat),
-      buildPowerLabel, "Substation"
+      buildPowerLabel,
+      "Substation"
     );
     powerPlants = buildItems(
       nearestFeatures(plantFeatures, facilityLng, facilityLat),
-      buildPowerLabel, "Power Plant"
+      buildPowerLabel,
+      "Power Plant"
     );
     transmissionLines = buildItems(
       nearestFeatures(lineFeatures, facilityLng, facilityLat),
-      buildPowerLabel, "Transmission Line"
+      buildPowerLabel,
+      "Transmission Line"
     );
   }
 
@@ -274,7 +294,8 @@ export function queryNearbyInfrastructure(
     const gasFeatures = map.querySourceFeatures(GAS_SOURCE_ID, GAS_SOURCE_LAYER);
     gasPipelines = buildItems(
       nearestFeatures(gasFeatures, facilityLng, facilityLat),
-      buildGasLabel, "Gas Pipeline"
+      buildGasLabel,
+      "Gas Pipeline"
     );
   }
 
@@ -301,7 +322,8 @@ export function queryNearbyInfrastructure(
 
     fiberRoutes = buildItems(
       nearestFeatures(allFiberFeatures, facilityLng, facilityLat),
-      fiberLabel, "Fiber Route"
+      fiberLabel,
+      "Fiber Route"
     );
   }
 

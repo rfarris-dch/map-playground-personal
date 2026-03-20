@@ -63,6 +63,7 @@ candidates AS (
   WHERE facility.geom_3857 && bounds.bbox_3857
     AND ST_Intersects(facility.geom_3857, bounds.bbox_3857)
     AND facility.provider_id IS NOT NULL
+  LIMIT $5
 )
 SELECT
   c.facility_id,
@@ -84,22 +85,24 @@ SELECT
   NULL::text AS lease_or_own,
   NULL::text AS status_label,
   NULLIF(BTRIM(c.provider_slug), '') AS facility_code,
-  NULLIF(BTRIM(pts.address), '') AS address,
-  NULLIF(BTRIM(pts.city), '') AS city,
-  NULLIF(BTRIM(pts.state), '') AS state,
+  NULLIF(BTRIM(COALESCE(pts_id.address, pts_near.address)), '') AS address,
+  NULLIF(BTRIM(COALESCE(pts_id.city, pts_near.city)), '') AS city,
+  NULLIF(BTRIM(COALESCE(pts_id.state, pts_near.state)), '') AS state,
   mkt.name AS market_name,
   ST_AsGeoJSON(c.geom)::jsonb AS geom_json
 FROM candidates AS c
 LEFT JOIN facility_current.providers AS provider
   ON provider.provider_id = c.provider_id
+LEFT JOIN spatial.colo_facility_points pts_id
+  ON 'colo:' || pts_id.id::text = c.facility_id
 LEFT JOIN LATERAL (
   SELECT p.address, p.city, p.state
   FROM spatial.colo_facility_points p
-  WHERE 'colo:' || p.id::text = c.facility_id
-     OR ST_DWithin(p.geom, c.geom, 0.001)
-  ORDER BY (CASE WHEN 'colo:' || p.id::text = c.facility_id THEN 0 ELSE 1 END), ST_Distance(p.geom, c.geom)
+  WHERE pts_id.id IS NULL
+    AND ST_DWithin(p.geom, c.geom, 0.001)
+  ORDER BY p.geom <-> c.geom
   LIMIT 1
-) pts ON true
+) pts_near ON pts_id.id IS NULL
 LEFT JOIN market_current.market_boundaries mb ON ST_Contains(mb.geom, c.geom)
 LEFT JOIN market_current.markets mkt ON mkt.market_id = mb.market_id;`,
   },
@@ -130,6 +133,7 @@ candidates AS (
   WHERE facility.geom_3857 && bounds.bbox_3857
     AND ST_Intersects(facility.geom_3857, bounds.bbox_3857)
     AND facility.provider_id IS NOT NULL
+  LIMIT $5
 )
 SELECT
   c.hyperscale_id AS facility_id,
@@ -289,7 +293,8 @@ SELECT
   ST_AsGeoJSON(facility.geom)::jsonb AS geom_json
 FROM serve.enterprise_site AS facility, bounds
 WHERE facility.geom_3857 && bounds.bbox_3857
-  AND ST_Intersects(facility.geom_3857, bounds.bbox_3857);`,
+  AND ST_Intersects(facility.geom_3857, bounds.bbox_3857)
+LIMIT $5;`,
   },
   facilities_polygon_colocation: {
     name: "facilities_polygon_colocation",
@@ -317,6 +322,7 @@ candidates AS (
   WHERE facility.geom_3857 && aoi.geom_3857
     AND ST_Intersects(facility.geom_3857, aoi.geom_3857)
     AND facility.provider_id IS NOT NULL
+  LIMIT $2
 )
 SELECT
   c.facility_id,
@@ -338,22 +344,24 @@ SELECT
   NULL::text AS lease_or_own,
   NULL::text AS status_label,
   NULLIF(BTRIM(c.provider_slug), '') AS facility_code,
-  NULLIF(BTRIM(pts.address), '') AS address,
-  NULLIF(BTRIM(pts.city), '') AS city,
-  NULLIF(BTRIM(pts.state), '') AS state,
+  NULLIF(BTRIM(COALESCE(pts_id.address, pts_near.address)), '') AS address,
+  NULLIF(BTRIM(COALESCE(pts_id.city, pts_near.city)), '') AS city,
+  NULLIF(BTRIM(COALESCE(pts_id.state, pts_near.state)), '') AS state,
   mkt.name AS market_name,
   ST_AsGeoJSON(c.geom)::jsonb AS geom_json
 FROM candidates AS c
 LEFT JOIN facility_current.providers AS provider
   ON provider.provider_id = c.provider_id
+LEFT JOIN spatial.colo_facility_points pts_id
+  ON 'colo:' || pts_id.id::text = c.facility_id
 LEFT JOIN LATERAL (
   SELECT p.address, p.city, p.state
   FROM spatial.colo_facility_points p
-  WHERE 'colo:' || p.id::text = c.facility_id
-     OR ST_DWithin(p.geom, c.geom, 0.001)
-  ORDER BY (CASE WHEN 'colo:' || p.id::text = c.facility_id THEN 0 ELSE 1 END), ST_Distance(p.geom, c.geom)
+  WHERE pts_id.id IS NULL
+    AND ST_DWithin(p.geom, c.geom, 0.001)
+  ORDER BY p.geom <-> c.geom
   LIMIT 1
-) pts ON true
+) pts_near ON pts_id.id IS NULL
 LEFT JOIN market_current.market_boundaries mb ON ST_Contains(mb.geom, c.geom)
 LEFT JOIN market_current.markets mkt ON mkt.market_id = mb.market_id;`,
   },
@@ -384,6 +392,7 @@ candidates AS (
   WHERE facility.geom_3857 && aoi.geom_3857
     AND ST_Intersects(facility.geom_3857, aoi.geom_3857)
     AND facility.provider_id IS NOT NULL
+  LIMIT $2
 )
 SELECT
   c.hyperscale_id AS facility_id,
@@ -456,7 +465,7 @@ LEFT JOIN LATERAL (
   FROM spatial.colo_facility_points p
   WHERE 'colo:' || p.id::text = facility.facility_id
      OR ST_DWithin(p.geom, facility.geom, 0.001)
-  ORDER BY (CASE WHEN 'colo:' || p.id::text = facility.facility_id THEN 0 ELSE 1 END), ST_Distance(p.geom, facility.geom)
+  ORDER BY (CASE WHEN 'colo:' || p.id::text = facility.facility_id THEN 0 ELSE 1 END), p.geom <-> facility.geom
   LIMIT 1
 ) pts ON true
 LEFT JOIN market_current.market_boundaries mb ON ST_Contains(mb.geom, facility.geom)
@@ -575,7 +584,11 @@ function getQuerySpec(name: QueryName): RegisteredQuerySpec {
 
 function getFacilitiesBboxQueryName(
   perspective: FacilityPerspective
-): "facilities_bbox_colocation" | "facilities_bbox_hyperscale" | "facilities_bbox_hyperscale_leased" | "facilities_bbox_enterprise" {
+):
+  | "facilities_bbox_colocation"
+  | "facilities_bbox_hyperscale"
+  | "facilities_bbox_hyperscale_leased"
+  | "facilities_bbox_enterprise" {
   if (perspective === "hyperscale") {
     return "facilities_bbox_hyperscale";
   }
@@ -630,7 +643,7 @@ export function buildFacilitiesBboxQuery(query: FacilitiesBboxSqlQueryArgs): Par
 
   return {
     sql: spec.sql,
-    params: [query.west, query.south, query.east, query.north],
+    params: [query.west, query.south, query.east, query.north, query.limit],
   };
 }
 
@@ -639,7 +652,7 @@ export function buildFacilitiesPolygonQuery(query: FacilitiesPolygonSqlQueryArgs
 
   return {
     sql: spec.sql,
-    params: [query.geometryGeoJson],
+    params: [query.geometryGeoJson, query.limit],
   };
 }
 

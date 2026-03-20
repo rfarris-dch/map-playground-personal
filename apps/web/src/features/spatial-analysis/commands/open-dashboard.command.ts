@@ -13,6 +13,7 @@ export interface OpenDashboardCommand {
 
 export function hasDashboardResults(summary: SpatialAnalysisSummaryModel): boolean {
   return (
+    (summary.history?.pointCount ?? 0) > 0 ||
     summary.summary.totalCount > 0 ||
     summary.summary.parcelSelection.count > 0 ||
     (summary.summary.marketSelection?.matchCount ?? 0) > 0 ||

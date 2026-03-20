@@ -7,7 +7,7 @@ import type { SpatialAnalysisSummaryModel } from "@/features/spatial-analysis/sp
 export type SelectionToolSummary = SpatialAnalysisSummaryModel;
 export type SelectionToolAnalysisSummary = SpatialAnalysisSummaryModel;
 
-export type SelectionToolProgressStageKey = "facilities" | "markets" | "parcels";
+export type SelectionToolProgressStageKey = "facilities" | "history" | "markets" | "parcels";
 
 export type SelectionToolProgressStageStatus =
   | "complete"

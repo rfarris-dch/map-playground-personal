@@ -15,7 +15,11 @@
 
 <template>
   <div class="flex flex-col gap-2">
-    <span class="text-[10px] font-semibold uppercase tracking-wider text-foreground/50">Color By</span>
+    <span
+      data-flyout-section
+      class="text-[10px] font-semibold uppercase tracking-wider text-foreground/50"
+      >Color By</span
+    >
     <select
       :value="props.colorMode"
       class="h-7 w-full rounded-md border border-border bg-transparent px-2 text-xs text-foreground/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-  import { computed } from "vue";
+  import { computed, nextTick, onMounted, ref } from "vue";
+  import { useGsapStagger } from "@/composables/use-gsap-stagger";
   import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";
   import {
     toSpatialAnalysisPerspectiveLabel,
@@ -123,6 +124,42 @@
   function statusToneClass(tone: string): string {
     return STATUS_TONE_MAP[tone] ?? STATUS_TONE_DEFAULT;
   }
+
+  const metricsRef = ref<HTMLElement | null>(null);
+  const providersRef = ref<HTMLElement | null>(null);
+  const facilitiesRef = ref<HTMLElement | null>(null);
+
+  const { animate: staggerMetrics } = useGsapStagger({
+    container: metricsRef,
+    selector: ":scope > div",
+    stagger: 0.05,
+    duration: 0.3,
+    from: { opacity: 0, y: 16, scale: 0.97 },
+  });
+
+  const { animate: staggerProviders } = useGsapStagger({
+    container: providersRef,
+    selector: "[data-provider]",
+    stagger: 0.03,
+    duration: 0.25,
+    from: { opacity: 0, y: 8 },
+  });
+
+  const { animate: staggerFacilities } = useGsapStagger({
+    container: facilitiesRef,
+    selector: "[data-facility]",
+    stagger: 0.025,
+    duration: 0.25,
+    from: { opacity: 0, y: 8 },
+  });
+
+  onMounted(() => {
+    nextTick(() => {
+      staggerMetrics();
+      setTimeout(() => staggerProviders(), 100);
+      setTimeout(() => staggerFacilities(), 150);
+    });
+  });
 </script>
 
 <template>
@@ -143,7 +180,7 @@
       </div>
     </div>
 
-    <div class="grid gap-x-4 gap-y-2 text-xs sm:grid-cols-2 xl:grid-cols-3">
+    <div ref="metricsRef" class="grid gap-x-4 gap-y-2 text-xs sm:grid-cols-2 xl:grid-cols-3">
       <div>
         <div class="uppercase tracking-wide text-muted-foreground">Colocation</div>
         <div class="text-lg font-semibold text-foreground/70">{{ metrics.colocationCount }}</div>
@@ -254,8 +291,12 @@
           <h4 class="m-0 text-xs font-semibold text-muted-foreground">Top Providers</h4>
         </div>
 
-        <div v-if="providers.length > 0" class="space-y-1.5">
-          <div v-for="provider in providers" :key="provider.providerId ?? provider.providerName">
+        <div v-if="providers.length > 0" ref="providersRef" class="space-y-1.5">
+          <div
+            v-for="provider in providers"
+            :key="provider.providerId ?? provider.providerName"
+            data-provider
+          >
             <div class="flex items-center justify-between gap-2 text-xs">
               <span class="truncate font-medium text-foreground/70"
                 >{{ provider.providerName }}</span
@@ -324,10 +365,11 @@
         <h4 class="m-0 text-xs font-semibold text-muted-foreground">Facilities</h4>
       </div>
 
-      <div v-if="facilityPreview.length > 0" class="space-y-1">
+      <div v-if="facilityPreview.length > 0" ref="facilitiesRef" class="space-y-1">
         <button
           v-for="facility in facilityPreview"
           :key="`${facility.perspective}:${facility.facilityId}`"
+          data-facility
           type="button"
           class="flex w-full items-start justify-between gap-2 rounded-sm border border-border px-2 py-1.5 text-left text-xs transition-colors hover:border-border hover:bg-background"
           @click="selectFacility(facility)"

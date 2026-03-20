@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { SpatialAnalysisSummaryResponse } from "@map-migration/http-contracts/spatial-analysis-summary-http";
-  import { computed } from "vue";
+  import { computed, nextTick, onMounted, ref } from "vue";
+  import { useGsapStagger } from "@/composables/use-gsap-stagger";
   import SpatialAnalysisProviderSummary from "@/features/spatial-analysis/components/spatial-analysis-provider-summary.vue";
   import type { SpatialAnalysisProviderSummaryItem } from "@/features/spatial-analysis/spatial-analysis-provider-summary.types";
 
@@ -25,6 +26,19 @@
   });
 
   const providerItems = computed(() => props.providers ?? []);
+
+  const dlRef = ref<HTMLElement | null>(null);
+  const { animate: staggerDlRows } = useGsapStagger({
+    container: dlRef,
+    selector: "dt, dd",
+    stagger: 0.02,
+    duration: 0.25,
+    from: { opacity: 0, y: 8 },
+  });
+
+  onMounted(() => {
+    nextTick(() => staggerDlRows());
+  });
 </script>
 
 <template>
@@ -34,7 +48,7 @@
       <h3 class="m-0 text-xs font-semibold text-muted-foreground">{{ props.title }}</h3>
     </div>
 
-    <dl class="grid grid-cols-[1fr_auto] gap-x-2 gap-y-1 text-xs">
+    <dl ref="dlRef" class="grid grid-cols-[1fr_auto] gap-x-2 gap-y-1 text-xs">
       <dt class="text-muted-foreground">Facilities</dt>
       <dd class="m-0 font-medium text-foreground/70">{{ props.summary.count }}</dd>
       <dt class="text-muted-foreground">Commissioned</dt>

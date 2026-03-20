@@ -1,24 +1,64 @@
 <script setup lang="ts">
-  import { computed, inject, onBeforeUnmount, onMounted, ref, shallowRef, watch } from "vue";
+  import {
+    computed,
+    inject,
+    nextTick,
+    onBeforeUnmount,
+    onMounted,
+    ref,
+    shallowRef,
+    watch,
+  } from "vue";
   import MapNavIcon from "@/components/icons/map-nav-icon.vue";
   import Switch from "@/components/ui/switch/switch.vue";
-  import type { MapNavViewModeId } from "@/features/app/components/map-nav.types";
-  import { MAP_FILTERS_KEY } from "@/features/app/filters/map-filters.keys";
-  import type { FacilityStatusFilterId } from "@/features/app/filters/map-filters.types";
-  import { useMapShellContext } from "@/features/app/core/map-shell-context";
-  import type { BoundaryLayerId } from "@/features/boundaries/boundaries.types";
-  import type { FiberLocatorLineId } from "@/features/fiber-locator/fiber-locator.types";
-  import type { FacilitiesViewMode } from "@/features/facilities/facilities.types";
-  import MapLayerFlyout from "@/features/app/components/map-layer-flyout.vue";
+  import { useGsapStagger } from "@/composables/use-gsap-stagger";
+  import { useGsapTransition } from "@/composables/use-gsap-transition";
+  import DockFlyoutBasemap from "@/features/app/components/dock-flyout-basemap.vue";
   import DockFlyoutFacilities from "@/features/app/components/dock-flyout-facilities.vue";
   import DockFlyoutFiber from "@/features/app/components/dock-flyout-fiber.vue";
-  import DockFlyoutParcels from "@/features/app/components/dock-flyout-parcels.vue";
-  import DockFlyoutMarkets from "@/features/app/components/dock-flyout-markets.vue";
   import DockFlyoutGas from "@/features/app/components/dock-flyout-gas.vue";
+  import DockFlyoutMarkets from "@/features/app/components/dock-flyout-markets.vue";
+  import DockFlyoutParcels from "@/features/app/components/dock-flyout-parcels.vue";
   import DockFlyoutTransmission from "@/features/app/components/dock-flyout-transmission.vue";
-  import DockFlyoutBasemap from "@/features/app/components/dock-flyout-basemap.vue";
+  import MapLayerFlyout from "@/features/app/components/map-layer-flyout.vue";
+  import type { MapNavViewModeId } from "@/features/app/components/map-nav.types";
+  import { useMapShellContext } from "@/features/app/core/map-shell-context";
+  import { MAP_FILTERS_KEY } from "@/features/app/filters/map-filters.keys";
+  import type { FacilityStatusFilterId } from "@/features/app/filters/map-filters.types";
+  import type { BoundaryLayerId } from "@/features/boundaries/boundaries.types";
+  import type { FacilitiesViewMode } from "@/features/facilities/facilities.types";
+  import type { FiberLocatorLineId } from "@/features/fiber-locator/fiber-locator.types";
 
   const shell = useMapShellContext();
+
+  const dockTransition = useGsapTransition({
+    enter: { from: { x: -16, opacity: 0 }, duration: 0.3, ease: "power3.out" },
+    leave: { to: { x: -12, opacity: 0 }, duration: 0.2, ease: "power2.in" },
+  });
+
+  const flyoutTransition = useGsapTransition({
+    enter: { from: { x: -20, opacity: 0 }, duration: 0.3, ease: "power3.out" },
+    leave: { to: { x: -16, opacity: 0 }, duration: 0.2, ease: "power2.in" },
+  });
+
+  const layerListRef = ref<HTMLElement | null>(null);
+  const { animate: staggerLayerRows } = useGsapStagger({
+    container: layerListRef,
+    selector: "[data-layer-row]",
+    stagger: 0.03,
+    duration: 0.25,
+    from: { opacity: 0, y: 6 },
+  });
+
+  const flyoutRef = ref<InstanceType<typeof MapLayerFlyout> | null>(null);
+  const flyoutContentRef = computed(() => flyoutRef.value?.slotContainerRef ?? null);
+  const { animate: staggerFlyoutContent } = useGsapStagger({
+    container: flyoutContentRef,
+    selector: "[data-flyout-section]",
+    stagger: 0.04,
+    duration: 0.25,
+    from: { opacity: 0, y: 8 },
+  });
   const mapFilters = inject(MAP_FILTERS_KEY);
 
   const panelOpen = ref(false);
@@ -40,13 +80,17 @@
 
   watch(
     () => shell.perspectiveViewModes.value.colocation,
-    (mode) => { colocationViewMode.value = mode; },
+    (mode) => {
+      colocationViewMode.value = mode;
+    },
     { immediate: true }
   );
 
   watch(
     () => shell.perspectiveViewModes.value.hyperscale,
-    (mode) => { hyperscaleViewMode.value = mode; },
+    (mode) => {
+      hyperscaleViewMode.value = mode;
+    },
     { immediate: true }
   );
 
@@ -115,28 +159,154 @@
 
   const sections: readonly SectionItem[] = [
     { kind: "header", label: "Facilities" },
-    layer({ id: "colocation", label: "Colocation", dot: "#3b82f6", visible: () => shell.visiblePerspectives.value.colocation, toggle: () => shell.setPerspectiveVisibility("colocation", !shell.visiblePerspectives.value.colocation), hasDrawer: true }),
-    layer({ id: "hyperscale", label: "Hyperscale", dot: "#059669", visible: () => shell.visiblePerspectives.value.hyperscale, toggle: () => shell.setPerspectiveVisibility("hyperscale", !shell.visiblePerspectives.value.hyperscale), hasDrawer: true }),
-    layer({ id: "hyperscale-leased", label: "Hyperscale Leased", dot: "#f7cd5e", visible: () => shell.visiblePerspectives.value["hyperscale-leased"], toggle: () => shell.setPerspectiveVisibility("hyperscale-leased", !shell.visiblePerspectives.value["hyperscale-leased"]), hasDrawer: false }),
-    layer({ id: "enterprise", label: "Enterprise", dot: "#4f46e5", visible: () => shell.visiblePerspectives.value.enterprise, toggle: () => shell.setPerspectiveVisibility("enterprise", !shell.visiblePerspectives.value.enterprise), hasDrawer: false }),
+    layer({
+      id: "colocation",
+      label: "Colocation",
+      dot: "#3b82f6",
+      visible: () => shell.visiblePerspectives.value.colocation,
+      toggle: () =>
+        shell.setPerspectiveVisibility("colocation", !shell.visiblePerspectives.value.colocation),
+      hasDrawer: true,
+    }),
+    layer({
+      id: "hyperscale",
+      label: "Hyperscale",
+      dot: "#059669",
+      visible: () => shell.visiblePerspectives.value.hyperscale,
+      toggle: () =>
+        shell.setPerspectiveVisibility("hyperscale", !shell.visiblePerspectives.value.hyperscale),
+      hasDrawer: true,
+    }),
+    layer({
+      id: "hyperscale-leased",
+      label: "Hyperscale Leased",
+      dot: "#f7cd5e",
+      visible: () => shell.visiblePerspectives.value["hyperscale-leased"],
+      toggle: () =>
+        shell.setPerspectiveVisibility(
+          "hyperscale-leased",
+          !shell.visiblePerspectives.value["hyperscale-leased"]
+        ),
+      hasDrawer: false,
+    }),
+    layer({
+      id: "enterprise",
+      label: "Enterprise",
+      dot: "#4f46e5",
+      visible: () => shell.visiblePerspectives.value.enterprise,
+      toggle: () =>
+        shell.setPerspectiveVisibility("enterprise", !shell.visiblePerspectives.value.enterprise),
+      hasDrawer: false,
+    }),
     { kind: "divider" },
     { kind: "header", label: "Infrastructure" },
-    layer({ id: "fiber", label: "Fiber Routes", dot: "#ec4899", visible: () => fiberRoutesVisible.value, toggle: toggleFiberRoutes, hasDrawer: true }),
-    layer({ id: "transmission", label: "Transmission Lines", dot: "#f97316", visible: () => shell.powerVisibility.value.transmission, toggle: () => shell.setPowerLayerVisible("transmission", !shell.powerVisibility.value.transmission), hasDrawer: true }),
-    layer({ id: "gas", label: "Natural Gas Pipelines", dot: "#eab308", visible: () => shell.gasPipelineVisible.value, toggle: () => shell.setGasPipelineVisible(!shell.gasPipelineVisible.value), hasDrawer: true }),
-    layer({ id: "parcels", label: "US Parcels", dot: "#8b5cf6", visible: () => shell.parcelsVisible.value, toggle: () => shell.setParcelsVisible(!shell.parcelsVisible.value), hasDrawer: true }),
-    layer({ id: "substations", label: "Substations", dot: "#f97316", visible: () => shell.powerVisibility.value.substations, toggle: () => shell.setPowerLayerVisible("substations", !shell.powerVisibility.value.substations), hasDrawer: false }),
-    layer({ id: "plants", label: "Power Plants", dot: "#f97316", visible: () => shell.powerVisibility.value.plants, toggle: () => shell.setPowerLayerVisible("plants", !shell.powerVisibility.value.plants), hasDrawer: false }),
+    layer({
+      id: "fiber",
+      label: "Fiber Routes",
+      dot: "#ec4899",
+      visible: () => fiberRoutesVisible.value,
+      toggle: toggleFiberRoutes,
+      hasDrawer: true,
+    }),
+    layer({
+      id: "transmission",
+      label: "Transmission Lines",
+      dot: "#f97316",
+      visible: () => shell.powerVisibility.value.transmission,
+      toggle: () =>
+        shell.setPowerLayerVisible("transmission", !shell.powerVisibility.value.transmission),
+      hasDrawer: true,
+    }),
+    layer({
+      id: "gas",
+      label: "Natural Gas Pipelines",
+      dot: "#eab308",
+      visible: () => shell.gasPipelineVisible.value,
+      toggle: () => shell.setGasPipelineVisible(!shell.gasPipelineVisible.value),
+      hasDrawer: true,
+    }),
+    layer({
+      id: "parcels",
+      label: "US Parcels",
+      dot: "#8b5cf6",
+      visible: () => shell.parcelsVisible.value,
+      toggle: () => shell.setParcelsVisible(!shell.parcelsVisible.value),
+      hasDrawer: true,
+    }),
+    layer({
+      id: "substations",
+      label: "Substations",
+      dot: "#f97316",
+      visible: () => shell.powerVisibility.value.substations,
+      toggle: () =>
+        shell.setPowerLayerVisible("substations", !shell.powerVisibility.value.substations),
+      hasDrawer: false,
+    }),
+    layer({
+      id: "plants",
+      label: "Power Plants",
+      dot: "#f97316",
+      visible: () => shell.powerVisibility.value.plants,
+      toggle: () => shell.setPowerLayerVisible("plants", !shell.powerVisibility.value.plants),
+      hasDrawer: false,
+    }),
     { kind: "divider" },
     { kind: "header", label: "Environmental" },
-    layer({ id: "flood100", label: "Flood Zones (100yr)", dot: "#06b6d4", visible: () => shell.floodVisibility.value.flood100, toggle: () => shell.setFloodLayerVisible("flood100", !shell.floodVisibility.value.flood100), hasDrawer: false }),
-    layer({ id: "flood500", label: "Flood Zones (500yr)", dot: "#06b6d4", visible: () => shell.floodVisibility.value.flood500, toggle: () => shell.setFloodLayerVisible("flood500", !shell.floodVisibility.value.flood500), hasDrawer: false }),
-    layer({ id: "hydro", label: "Hydro Basins", dot: "#0ea5e9", visible: () => shell.hydroBasinsVisible.value, toggle: () => shell.setHydroBasinsVisible(!shell.hydroBasinsVisible.value), hasDrawer: false }),
-    layer({ id: "water", label: "Water Features", dot: "#0ea5e9", visible: () => shell.waterVisible.value, toggle: () => shell.setWaterVisible(!shell.waterVisible.value), hasDrawer: false }),
+    layer({
+      id: "flood100",
+      label: "Flood Zones (100yr)",
+      dot: "#06b6d4",
+      visible: () => shell.floodVisibility.value.flood100,
+      toggle: () => shell.setFloodLayerVisible("flood100", !shell.floodVisibility.value.flood100),
+      hasDrawer: false,
+    }),
+    layer({
+      id: "flood500",
+      label: "Flood Zones (500yr)",
+      dot: "#06b6d4",
+      visible: () => shell.floodVisibility.value.flood500,
+      toggle: () => shell.setFloodLayerVisible("flood500", !shell.floodVisibility.value.flood500),
+      hasDrawer: false,
+    }),
+    layer({
+      id: "hydro",
+      label: "Hydro Basins",
+      dot: "#0ea5e9",
+      visible: () => shell.hydroBasinsVisible.value,
+      toggle: () => shell.setHydroBasinsVisible(!shell.hydroBasinsVisible.value),
+      hasDrawer: false,
+    }),
+    layer({
+      id: "water",
+      label: "Water Features",
+      dot: "#0ea5e9",
+      visible: () => shell.waterVisible.value,
+      toggle: () => shell.setWaterVisible(!shell.waterVisible.value),
+      hasDrawer: false,
+    }),
     { kind: "divider" },
     { kind: "header", label: "Markets" },
-    layer({ id: "markets", label: "Market Boundaries", dot: "#6366f1", visible: () => shell.marketBoundaryVisibility.value.market, toggle: () => shell.setMarketBoundaryVisible("market", !shell.marketBoundaryVisibility.value.market), hasDrawer: true }),
-    layer({ id: "submarkets", label: "Submarket Boundaries", dot: "#6366f1", visible: () => shell.marketBoundaryVisibility.value.submarket, toggle: () => shell.setMarketBoundaryVisible("submarket", !shell.marketBoundaryVisibility.value.submarket), hasDrawer: false }),
+    layer({
+      id: "markets",
+      label: "Market Boundaries",
+      dot: "#6366f1",
+      visible: () => shell.marketBoundaryVisibility.value.market,
+      toggle: () =>
+        shell.setMarketBoundaryVisible("market", !shell.marketBoundaryVisibility.value.market),
+      hasDrawer: true,
+    }),
+    layer({
+      id: "submarkets",
+      label: "Submarket Boundaries",
+      dot: "#6366f1",
+      visible: () => shell.marketBoundaryVisibility.value.submarket,
+      toggle: () =>
+        shell.setMarketBoundaryVisible(
+          "submarket",
+          !shell.marketBoundaryVisibility.value.submarket
+        ),
+      hasDrawer: false,
+    }),
   ];
 
   const FLYOUT_TITLES: Record<string, string> = {
@@ -228,6 +398,18 @@
     }
   }
 
+  watch(panelOpen, (open) => {
+    if (open) {
+      nextTick(() => staggerLayerRows());
+    }
+  });
+
+  watch(expandedLayer, (layer) => {
+    if (layer !== null) {
+      nextTick(() => staggerFlyoutContent());
+    }
+  });
+
   onMounted(() => {
     document.addEventListener("keydown", onKeydown);
   });
@@ -249,12 +431,10 @@
   </button>
 
   <Transition
-    enter-active-class="transition-all duration-200 ease-out"
-    enter-from-class="-translate-x-2 opacity-0"
-    enter-to-class="translate-x-0 opacity-100"
-    leave-active-class="transition-all duration-150 ease-in"
-    leave-from-class="translate-x-0 opacity-100"
-    leave-to-class="-translate-x-2 opacity-0"
+    :css="false"
+    @before-enter="dockTransition.onBeforeEnter"
+    @enter="dockTransition.onEnter"
+    @leave="dockTransition.onLeave"
   >
     <div
       v-if="panelOpen"
@@ -280,23 +460,38 @@
             @keydown.enter="togglePanel"
           >
             <svg class="h-3.5 w-3.5" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-              <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+              <path
+                d="M2 2l10 10M12 2L2 12"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+              />
             </svg>
           </span>
         </div>
 
         <div class="mx-4 h-px bg-border/40" />
 
-        <div class="max-h-[calc(100vh-8rem)] overflow-y-auto scrollbar-hide pb-2">
+        <div
+          ref="layerListRef"
+          class="max-h-[calc(100vh-8rem)] overflow-y-auto scrollbar-hide pb-2"
+        >
           <template v-for="(item, idx) in sections" :key="idx">
-            <div v-if="item.kind === 'header'" class="px-5 pb-1" :class="idx === 0 ? 'pt-3' : 'pt-2.5'">
-              <span class="text-[11px] font-semibold uppercase tracking-wider text-foreground/50">{{ item.label }}</span>
+            <div
+              v-if="item.kind === 'header'"
+              class="px-5 pb-1"
+              :class="idx === 0 ? 'pt-3' : 'pt-2.5'"
+            >
+              <span class="text-[11px] font-semibold uppercase tracking-wider text-foreground/50"
+                >{{ item.label }}</span
+              >
             </div>
 
             <div v-else-if="item.kind === 'divider'" class="mx-5 my-1 h-px bg-border/35" />
 
             <div
               v-else-if="item.kind === 'layer'"
+              data-layer-row
               class="flex h-10 items-center justify-between px-5"
             >
               <div class="flex flex-1 items-center gap-2.5">
@@ -312,7 +507,8 @@
                 <span
                   class="text-sm transition-colors duration-150"
                   :class="item.layer.visible() ? 'font-semibold text-foreground/90' : 'font-medium text-foreground/40'"
-                >{{ item.layer.label }}</span>
+                  >{{ item.layer.label }}</span
+                >
               </div>
               <div class="flex items-center gap-2">
                 <span
@@ -326,11 +522,29 @@
                   @click="toggleExpanded(item.layer.id)"
                   @keydown.enter="toggleExpanded(item.layer.id)"
                 >
-                  <svg v-if="expandedLayer === item.layer.id" class="h-4 w-4" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                  <svg
+                    v-if="expandedLayer === item.layer.id"
+                    class="h-4 w-4"
+                    viewBox="0 0 16 16"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
                     <path d="M1.5 1.5h13L9.75 7.75V13l-3.5 1.5V7.75z" />
                   </svg>
-                  <svg v-else class="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true">
-                    <path d="M1.5 1.5h13L9.75 7.75V13l-3.5 1.5V7.75z" stroke-linecap="round" stroke-linejoin="round" />
+                  <svg
+                    v-else
+                    class="h-4 w-4"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.3"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M1.5 1.5h13L9.75 7.75V13l-3.5 1.5V7.75z"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
                   </svg>
                 </span>
                 <Switch
@@ -345,7 +559,9 @@
           <div class="mx-5 my-1 h-px bg-border/35" />
 
           <div class="px-5 pt-2.5 pb-1">
-            <span class="text-[11px] font-semibold uppercase tracking-wider text-foreground/50">Basemap</span>
+            <span class="text-[11px] font-semibold uppercase tracking-wider text-foreground/50"
+              >Basemap</span
+            >
           </div>
           <div class="flex h-10 items-center justify-between px-5">
             <span class="flex-1 text-sm font-semibold text-foreground/90">Basemap Settings</span>
@@ -360,9 +576,20 @@
                 @click="toggleExpanded('basemap')"
                 @keydown.enter="toggleExpanded('basemap')"
               >
-                <svg class="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <svg
+                  class="h-4 w-4"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.3"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
                   <path d="M8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" />
-                  <path d="M6.7 1.2l-.5 1.6a5 5 0 0 0-1.5.9L3.2 3.2l-1.3 2.3 1.1 1.2a5 5 0 0 0 0 1.7l-1.1 1.2 1.3 2.3 1.5-.5a5 5 0 0 0 1.5.9l.5 1.6h2.6l.5-1.6a5 5 0 0 0 1.5-.9l1.5.5 1.3-2.3-1.1-1.2a5 5 0 0 0 0-1.7l1.1-1.2-1.3-2.3-1.5.5a5 5 0 0 0-1.5-.9l-.5-1.6z" />
+                  <path
+                    d="M6.7 1.2l-.5 1.6a5 5 0 0 0-1.5.9L3.2 3.2l-1.3 2.3 1.1 1.2a5 5 0 0 0 0 1.7l-1.1 1.2 1.3 2.3 1.5-.5a5 5 0 0 0 1.5.9l.5 1.6h2.6l.5-1.6a5 5 0 0 0 1.5-.9l1.5.5 1.3-2.3-1.1-1.2a5 5 0 0 0 0-1.7l1.1-1.2-1.3-2.3-1.5.5a5 5 0 0 0-1.5-.9l-.5-1.6z"
+                  />
                 </svg>
               </span>
             </div>
@@ -371,15 +598,14 @@
       </div>
 
       <Transition
-        enter-active-class="transition-all duration-200 ease-out"
-        enter-from-class="-translate-x-2 opacity-0"
-        enter-to-class="translate-x-0 opacity-100"
-        leave-active-class="transition-all duration-150 ease-in"
-        leave-from-class="translate-x-0 opacity-100"
-        leave-to-class="-translate-x-2 opacity-0"
+        :css="false"
+        @before-enter="flyoutTransition.onBeforeEnter"
+        @enter="flyoutTransition.onEnter"
+        @leave="flyoutTransition.onLeave"
       >
         <MapLayerFlyout
           v-if="expandedLayer !== null"
+          ref="flyoutRef"
           :flyout-id="expandedLayer"
           :title="flyoutTitle"
           @close="closeDrawer"

@@ -14,7 +14,6 @@ import {
   MapContextViewportSchema,
 } from "@map-migration/http-contracts/map-context-transfer";
 import { LAYER_IDS } from "@map-migration/map-layer-catalog";
-import type { FacilitiesViewMode } from "@/features/facilities/facilities.types";
 import type {
   LocationQueryRaw,
   LocationQueryValueRaw,
@@ -32,6 +31,7 @@ import {
 } from "@/features/app/core/app-shell.constants";
 import { basemapLayerIds } from "@/features/basemap/basemap.service";
 import type { BoundaryLayerId } from "@/features/boundaries/boundaries.types";
+import type { FacilitiesViewMode } from "@/features/facilities/facilities.types";
 import type {
   ApplyMapContextTransferToAppShellArgs,
   BuildMapContextTransferFromAppShellArgs,
@@ -206,9 +206,7 @@ function formatPerspectives(
   return formatStringList(perspectives);
 }
 
-function parseFacilityViewMode(
-  value: string | null
-): FacilitiesViewMode | undefined {
+function parseFacilityViewMode(value: string | null): FacilitiesViewMode | undefined {
   if (value === null) {
     return undefined;
   }

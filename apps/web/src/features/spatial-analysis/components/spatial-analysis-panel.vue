@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import { Download, LayoutDashboard, X } from "lucide-vue-next";
+  import { nextTick, ref, watch } from "vue";
   import Button from "@/components/ui/button/button.vue";
+  import { useGsapStagger } from "@/composables/use-gsap-stagger";
   import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";
   import SpatialAnalysisCountyScoresSection from "@/features/spatial-analysis/components/spatial-analysis-county-scores-section.vue";
   import SpatialAnalysisFacilitiesTable from "@/features/spatial-analysis/components/spatial-analysis-facilities-table.vue";
@@ -9,6 +11,8 @@
   import SpatialAnalysisPerspectiveCard from "@/features/spatial-analysis/components/spatial-analysis-perspective-card.vue";
   import SpatialAnalysisSummaryOverview from "@/features/spatial-analysis/components/spatial-analysis-summary-overview.vue";
   import { useSpatialAnalysisPanelState } from "@/features/spatial-analysis/components/use-spatial-analysis-panel-state";
+  import { Flip, gsap } from "@/lib/gsap";
+  import { prefersReducedMotion } from "@/lib/reduced-motion";
 
   const props = defineProps<SpatialAnalysisPanelProps>();
 
@@ -50,11 +54,43 @@
     tabItems,
     visibleProgressStages,
   } = useSpatialAnalysisPanelState(props as SpatialAnalysisPanelProps);
+
+  const panelRef = ref<HTMLElement | null>(null);
+  const chipsRef = ref<HTMLElement | null>(null);
+
+  const { animate: staggerChips } = useGsapStagger({
+    container: chipsRef,
+    selector: "span",
+    stagger: 0.03,
+    duration: 0.25,
+    from: { opacity: 0, y: 6 },
+  });
+
+  watch(panelWidthClass, () => {
+    const el = panelRef.value;
+    if (el === null) {
+      return;
+    }
+    const state = Flip.getState(el);
+    nextTick(() => {
+      Flip.from(state, {
+        duration: prefersReducedMotion.value ? 0 : 0.35,
+        ease: "power2.inOut",
+      });
+    });
+  });
+
+  watch(summaryChips, (chips) => {
+    if (chips.length > 0) {
+      nextTick(() => staggerChips());
+    }
+  });
 </script>
 
 <template>
   <aside
-    class="pointer-events-auto absolute bottom-4 right-3 z-20 flex max-h-[78vh] flex-col overflow-hidden rounded-sm border border-border bg-card p-2 text-muted-foreground shadow-sm transition-[width] duration-200 font-sans"
+    ref="panelRef"
+    class="pointer-events-auto absolute bottom-4 right-3 z-20 flex max-h-[78vh] flex-col overflow-hidden rounded-sm border border-border bg-card p-2 text-muted-foreground shadow-sm font-sans"
     :class="panelWidthClass"
     :aria-label="props.title"
   >
@@ -89,7 +125,7 @@
       {{ props.errorMessage }}
     </p>
 
-    <div v-if="hasAnyResults" class="mb-3 flex flex-wrap items-center gap-1.5">
+    <div v-if="hasAnyResults" ref="chipsRef" class="mb-3 flex flex-wrap items-center gap-1.5">
       <span
         v-for="chip in summaryChips"
         :key="chip.label"
@@ -370,7 +406,9 @@
         <Download class="h-3.5 w-3.5" />
         {{ props.exportLabel }}
       </Button>
-      <Button variant="outline" size="sm" @click="emit('dismiss')"> {{ props.dismissLabel }} </Button>
+      <Button variant="outline" size="sm" @click="emit('dismiss')">
+        {{ props.dismissLabel }}
+      </Button>
     </footer>
   </aside>
 </template>

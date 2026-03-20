@@ -44,6 +44,7 @@ export interface UseMapFiltersResult {
   readonly facilitiesPredicate: Readonly<
     ReturnType<typeof shallowRef<FacilitiesFilterPredicate | null>>
   >;
+  readonly gasFilter: Readonly<ReturnType<typeof shallowRef<MapExpression | null>>>;
   readonly parcelFilter: Readonly<ReturnType<typeof shallowRef<MapExpression | null>>>;
   readonly parcelViewportFacets: Readonly<
     ReturnType<typeof shallowRef<ParcelsViewportFacets | null>>
@@ -70,7 +71,6 @@ export interface UseMapFiltersResult {
   toggleUser(id: string): void;
   toggleZoningType(id: string): void;
   readonly transmissionFilter: Readonly<ReturnType<typeof shallowRef<MapExpression | null>>>;
-  readonly gasFilter: Readonly<ReturnType<typeof shallowRef<MapExpression | null>>>;
 }
 
 function createInitialState(): MapFiltersState {
@@ -84,6 +84,8 @@ function createInitialState(): MapFiltersState {
     powerTypes: new Set(),
     gasCapacities: new Set(),
     gasStatuses: new Set(),
+    parcelAcresMin: null,
+    parcelAcresMax: null,
     parcelDataset: "",
     parcelStyleAcres: "",
     parcelDavPercent: "",
@@ -229,6 +231,10 @@ export function useMapFilters(): UseMapFiltersResult {
     updateState((prev) => ({ ...prev, parcelDavPercent: value }));
   }
 
+  function setParcelAcresRange(min: number | null, max: number | null): void {
+    updateState((prev) => ({ ...prev, parcelAcresMin: min, parcelAcresMax: max }));
+  }
+
   function setParcelViewportFacets(facets: ParcelsViewportFacets): void {
     parcelViewportFacets.value = facets;
   }
@@ -300,6 +306,7 @@ export function useMapFilters(): UseMapFiltersResult {
     toggleGasStatus,
     setParcelDataset,
     setParcelStyleAcres,
+    setParcelAcresRange,
     setParcelDavPercent,
     toggleZoningType,
     toggleFloodZone,

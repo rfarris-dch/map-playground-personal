@@ -3,11 +3,13 @@ import { runQuery } from "@/db/postgres";
 import type {
   AnalysisSummaryAreaRow,
   AnalysisSummaryMarketBoundarySourceVersionRow,
+  AnalysisSummaryMarketInsightRow,
 } from "./analysis-summary.repo.types";
 
 export type {
   AnalysisSummaryAreaRow,
   AnalysisSummaryMarketBoundarySourceVersionRow,
+  AnalysisSummaryMarketInsightRow,
 } from "./analysis-summary.repo.types";
 
 export function listIntersectedCountyIds(
@@ -50,4 +52,35 @@ FROM market_current.market_boundaries;
   );
 
   return rows[0]?.source_version ?? null;
+}
+
+export async function getMarketInsightByMarketId(
+  marketId: string
+): Promise<AnalysisSummaryMarketInsightRow | null> {
+  const rows = await runQuery<AnalysisSummaryMarketInsightRow>(
+    `
+WITH requested_market AS (
+  SELECT canon.stable_uuid('market', $1) AS market_uuid
+)
+SELECT
+  insight_rows.market_id::text AS market_id,
+  insight_rows.market_name,
+  insight_rows.period_label,
+  insight_rows.colo_commissioned_mw AS colocation_commissioned_mw,
+  insight_rows.hyperscale_owned_mw,
+  insight_rows.total_market_size_mw,
+  insight_rows.preleasing_mw,
+  insight_rows.preleasing_pct_of_absorption,
+  insight_rows.preleasing_pct_of_commissioned,
+  insight_rows.growth_year_num::integer AS growth_year,
+  insight_rows.growth_ratio,
+  insight_rows.source_basis
+FROM requested_market
+INNER JOIN serve.market_insight_live AS insight_rows
+  ON insight_rows.market_id = requested_market.market_uuid;
+`,
+    [marketId]
+  );
+
+  return rows[0] ?? null;
 }

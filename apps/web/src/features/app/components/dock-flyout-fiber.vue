@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import Checkbox from "@/components/ui/checkbox/checkbox.vue";
   import Switch from "@/components/ui/switch/switch.vue";
   import type {
     FiberSourceLayerOptionsState,
@@ -8,23 +9,24 @@
   import type { FiberLocatorLineId } from "@/features/fiber-locator/fiber-locator.types";
 
   interface DockFlyoutFiberProps {
-    readonly visibleFiberLayers: FiberVisibilityState;
     readonly fiberSourceLayerOptions: FiberSourceLayerOptionsState;
     readonly selectedFiberSourceLayerNames: FiberSourceLayerSelectionState;
+    readonly visibleFiberLayers: FiberVisibilityState;
   }
 
   interface DockFlyoutFiberEmits {
-    "update:fiber-line-visible": [lineId: FiberLocatorLineId, visible: boolean];
     "toggle-source-layer": [lineId: FiberLocatorLineId, layerName: string, visible: boolean];
+    "update:fiber-line-visible": [lineId: FiberLocatorLineId, visible: boolean];
   }
 
   const props = defineProps<DockFlyoutFiberProps>();
   const emit = defineEmits<DockFlyoutFiberEmits>();
 
   function isSourceSelected(lineId: FiberLocatorLineId, layerName: string): boolean {
-    const selected = lineId === "metro"
-      ? props.selectedFiberSourceLayerNames.metro
-      : props.selectedFiberSourceLayerNames.longhaul;
+    const selected =
+      lineId === "metro"
+        ? props.selectedFiberSourceLayerNames.metro
+        : props.selectedFiberSourceLayerNames.longhaul;
     return selected.some((n) => n.toLowerCase() === layerName.toLowerCase());
   }
 
@@ -34,13 +36,10 @@
 </script>
 
 <template>
-  <div class="flex flex-col gap-3">
-    <div>
+  <div class="flyout-sections flex flex-col">
+    <div data-flyout-section>
       <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <span class="h-2.5 w-2.5 rounded-full bg-pink-500" aria-hidden="true" />
-          <span class="text-[13px] font-semibold text-foreground/90">Metro</span>
-        </div>
+        <span class="text-xs font-semibold text-foreground/50">Metro</span>
         <Switch
           :checked="props.visibleFiberLayers.metro"
           aria-label="Toggle metro fiber"
@@ -55,57 +54,33 @@
       </p>
       <div
         v-if="props.fiberSourceLayerOptions.metro.length > 0 && props.visibleFiberLayers.metro"
-        class="mt-1 flex flex-col gap-0.5 pl-4"
+        class="mt-1 flex flex-col gap-0.5 pl-3"
       >
         <label
           v-for="layer in props.fiberSourceLayerOptions.metro"
           :key="layer.layerName"
-          class="flex cursor-pointer items-center gap-2 rounded-md px-1 py-1 transition-colors hover:bg-black/[0.07]"
+          class="flex cursor-pointer items-center gap-2 py-0.5"
         >
-          <span
-            class="flex size-3.5 shrink-0 items-center justify-center rounded-sm border transition-colors"
-            :class="isSourceSelected('metro', layer.layerName)
-              ? 'border-foreground/65 bg-foreground/65'
-              : 'border-border bg-transparent'"
+          <Checkbox
+            :checked="isSourceSelected('metro', layer.layerName)"
+            @update:checked="toggleSource('metro', layer.layerName)"
+          />
+          <span class="min-w-0 flex-1 truncate text-[10px] text-foreground/50"
+            >{{ layer.label }}</span
           >
-            <svg
-              v-if="isSourceSelected('metro', layer.layerName)"
-              aria-hidden="true"
-              class="size-2.5 text-white"
-              viewBox="0 0 10 10"
-              fill="none"
-            >
-              <path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </span>
           <span
             v-if="layer.color"
-            class="h-[3px] w-3 rounded-full"
+            class="h-[2px] w-5 shrink-0 rounded-full"
             :style="{ backgroundColor: layer.color }"
             aria-hidden="true"
           />
-          <span
-            class="min-w-0 flex-1 truncate text-xs leading-none"
-            :class="isSourceSelected('metro', layer.layerName) ? 'text-foreground' : 'text-foreground/70'"
-          >{{ layer.label }}</span>
-          <input
-            type="checkbox"
-            class="sr-only"
-            :checked="isSourceSelected('metro', layer.layerName)"
-            @change="toggleSource('metro', layer.layerName)"
-          >
         </label>
       </div>
     </div>
 
-    <div class="h-px bg-border" />
-
-    <div>
+    <div data-flyout-section>
       <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <span class="h-2.5 w-2.5 rounded-full bg-colocation" aria-hidden="true" />
-          <span class="text-[13px] font-semibold text-foreground/90">Longhaul</span>
-        </div>
+        <span class="text-xs font-semibold text-foreground/50">Long Haul</span>
         <Switch
           :checked="props.visibleFiberLayers.longhaul"
           aria-label="Toggle longhaul fiber"
@@ -120,47 +95,45 @@
       </p>
       <div
         v-if="props.fiberSourceLayerOptions.longhaul.length > 0 && props.visibleFiberLayers.longhaul"
-        class="mt-1 flex flex-col gap-0.5 pl-4"
+        class="mt-1 flex flex-col gap-0.5 pl-3"
       >
         <label
           v-for="layer in props.fiberSourceLayerOptions.longhaul"
           :key="layer.layerName"
-          class="flex cursor-pointer items-center gap-2 rounded-md px-1 py-1 transition-colors hover:bg-black/[0.07]"
+          class="flex cursor-pointer items-center gap-2 py-0.5"
         >
-          <span
-            class="flex size-3.5 shrink-0 items-center justify-center rounded-sm border transition-colors"
-            :class="isSourceSelected('longhaul', layer.layerName)
-              ? 'border-foreground/65 bg-foreground/65'
-              : 'border-border bg-transparent'"
+          <Checkbox
+            :checked="isSourceSelected('longhaul', layer.layerName)"
+            @update:checked="toggleSource('longhaul', layer.layerName)"
+          />
+          <span class="min-w-0 flex-1 truncate text-[10px] text-foreground/50"
+            >{{ layer.label }}</span
           >
-            <svg
-              v-if="isSourceSelected('longhaul', layer.layerName)"
-              aria-hidden="true"
-              class="size-2.5 text-white"
-              viewBox="0 0 10 10"
-              fill="none"
-            >
-              <path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </span>
           <span
             v-if="layer.color"
-            class="h-[3px] w-3 rounded-full"
+            class="h-[2px] w-5 shrink-0 rounded-full"
             :style="{ backgroundColor: layer.color }"
             aria-hidden="true"
           />
-          <span
-            class="min-w-0 flex-1 truncate text-xs leading-none"
-            :class="isSourceSelected('longhaul', layer.layerName) ? 'text-foreground' : 'text-foreground/70'"
-          >{{ layer.label }}</span>
-          <input
-            type="checkbox"
-            class="sr-only"
-            :checked="isSourceSelected('longhaul', layer.layerName)"
-            @change="toggleSource('longhaul', layer.layerName)"
-          >
         </label>
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+  .flyout-sections > * {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  }
+
+  .flyout-sections > *:first-child {
+    padding-top: 0;
+  }
+
+  .flyout-sections > *:last-child {
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+</style>

@@ -48,6 +48,8 @@ export interface MapFiltersState {
   readonly gasCapacities: ReadonlySet<string>;
   readonly gasStatuses: ReadonlySet<string>;
   readonly interconnectivityHub: boolean;
+  readonly parcelAcresMax: number | null;
+  readonly parcelAcresMin: number | null;
   readonly parcelDataset: string;
   readonly parcelDavPercent: string;
   readonly parcelStyleAcres: string;

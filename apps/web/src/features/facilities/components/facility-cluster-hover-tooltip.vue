@@ -33,7 +33,9 @@
 
   const titleLine = computed(() => {
     const state = displayState.value;
-    if (state === null) return "";
+    if (state === null) {
+      return "";
+    }
     const providerCount = state.topProviders.length;
     const facilityCount = state.facilityCount;
     const providerLabel = state.perspective === "hyperscale" ? "Users" : "Providers";
@@ -42,7 +44,9 @@
 
   const totalMw = computed(() => {
     const state = displayState.value;
-    if (state === null) return "";
+    if (state === null) {
+      return "";
+    }
     return `(${formatMegawatts(state.totalPowerMw)})`;
   });
 
@@ -60,7 +64,9 @@
 
   const metrics = computed<Metric[]>(() => {
     const state = displayState.value;
-    if (state === null) return [];
+    if (state === null) {
+      return [];
+    }
 
     const result: Metric[] = [];
     if (state.commissionedPowerMw > 0) {
@@ -133,9 +139,7 @@
         <span class="text-[16px] font-semibold leading-none" :class="accentText">
           {{ titleLine }}
         </span>
-        <span class="text-[12px] font-normal leading-none text-[#94a3b8]">
-          {{ totalMw }}
-        </span>
+        <span class="text-[12px] font-normal leading-none text-[#94a3b8]"> {{ totalMw }} </span>
       </div>
 
       <div v-if="metrics.length > 0" class="flex items-start gap-2">

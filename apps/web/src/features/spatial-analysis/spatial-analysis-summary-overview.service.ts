@@ -89,26 +89,28 @@ function readNumberAttribute(parcel: SpatialAnalysisParcelRecord, key: string): 
 export function buildSpatialAnalysisOverviewMetrics(
   summary: SpatialAnalysisOverviewSummary
 ): SpatialAnalysisOverviewMetrics {
-  const totalCommissionedPowerMw =
+  const totalMarketSizeMw =
     summary.colocation.commissionedPowerMw + summary.hyperscale.commissionedPowerMw;
-  const totalPipelinePowerMw =
-    summary.colocation.pipelinePowerMw + summary.hyperscale.pipelinePowerMw;
   const totalFacilities = summary.totalCount;
   const totalSquareFootage = summary.colocation.squareFootage + summary.hyperscale.squareFootage;
 
   return {
     averageCommissionedPowerMwPerFacility:
-      totalFacilities > 0 ? totalCommissionedPowerMw / totalFacilities : 0,
+      totalFacilities > 0 ? totalMarketSizeMw / totalFacilities : 0,
     averageSquareFootagePerFacility: totalFacilities > 0 ? totalSquareFootage / totalFacilities : 0,
+    colocationAvailablePowerMw: summary.colocation.availablePowerMw,
     colocationCommissionedPowerMw: summary.colocation.commissionedPowerMw,
     colocationCount: summary.colocation.count,
     colocationPipelinePowerMw: summary.colocation.pipelinePowerMw,
-    hyperscaleCommissionedPowerMw: summary.hyperscale.commissionedPowerMw,
+    colocationPlannedPowerMw: summary.colocation.plannedPowerMw,
+    colocationUnderConstructionPowerMw: summary.colocation.underConstructionPowerMw,
     hyperscaleCount: summary.hyperscale.count,
+    hyperscaleOwnedPowerMw: summary.hyperscale.commissionedPowerMw,
     hyperscalePipelinePowerMw: summary.hyperscale.pipelinePowerMw,
-    totalCommissionedPowerMw,
+    hyperscalePlannedPowerMw: summary.hyperscale.plannedPowerMw,
+    hyperscaleUnderConstructionPowerMw: summary.hyperscale.underConstructionPowerMw,
     totalFacilities,
-    totalPipelinePowerMw,
+    totalMarketSizeMw,
     totalSquareFootage,
   };
 }

@@ -46,8 +46,9 @@ describe("geo-sql query specs", () => {
       perspective: "colocation",
     });
 
-    expect(query.params).toEqual([-100, 30, -90, 40]);
+    expect(query.params).toEqual([-100, 30, -90, 40, 250]);
     expect(query.sql).toContain("serve.facility_site");
+    expect(query.sql).toContain("LIMIT $5");
   });
 
   it("keeps facilities queries on local Postgres tables only", () => {
@@ -95,8 +96,9 @@ describe("geo-sql query specs", () => {
       perspective: "hyperscale",
     });
 
-    expect(polygonQuery.params).toEqual(['{"type":"Polygon","coordinates":[]}']);
+    expect(polygonQuery.params).toEqual(['{"type":"Polygon","coordinates":[]}', 100]);
     expect(polygonQuery.sql).toContain("serve.hyperscale_site");
+    expect(polygonQuery.sql).toContain("LIMIT $2");
     expect(detailQuery.params).toEqual(["facility-123"]);
     expect(detailQuery.sql).toContain("serve.hyperscale_site");
   });

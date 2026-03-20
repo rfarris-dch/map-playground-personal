@@ -4,8 +4,8 @@ import type { MarketBoundaryVisibilityState } from "@/features/app/components/ma
 import {
   FLOOD_100_LAYER_ID,
   FLOOD_500_LAYER_ID,
-  GAS_PIPELINES_LAYER_ID,
   facilitiesLayerId,
+  GAS_PIPELINES_LAYER_ID,
   HYDRO_BASINS_LAYER_ID,
   PARCELS_LAYER_ID,
   powerLayerId,

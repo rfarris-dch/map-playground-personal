@@ -60,9 +60,9 @@ import type { WaterLayerVisibilityController } from "@/features/water/water.type
 
 export interface PerspectiveViewModeState {
   readonly colocation: FacilitiesViewMode;
+  readonly enterprise: FacilitiesViewMode;
   readonly hyperscale: FacilitiesViewMode;
   readonly "hyperscale-leased": FacilitiesViewMode;
-  readonly enterprise: FacilitiesViewMode;
 }
 
 export interface UseAppShellStateResult {

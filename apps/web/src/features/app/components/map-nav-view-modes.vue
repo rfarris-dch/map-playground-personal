@@ -5,13 +5,16 @@
 
   interface MapNavViewModesProps {
     readonly activeMode: MapNavViewModeId;
+    readonly stacked?: boolean;
   }
 
   interface MapNavViewModesEmits {
     "update:active-mode": [id: MapNavViewModeId];
   }
 
-  const props = defineProps<MapNavViewModesProps>();
+  const props = withDefaults(defineProps<MapNavViewModesProps>(), {
+    stacked: false,
+  });
   const emit = defineEmits<MapNavViewModesEmits>();
 
   const modes: readonly { id: MapNavViewModeId; label: string }[] = [
@@ -19,6 +22,17 @@
     { id: "bubbles", label: "Bubbles" },
     { id: "icons", label: "Icons" },
     { id: "dots", label: "Dots" },
+    { id: "heatmap", label: "Heatmap" },
+  ];
+
+  const topRow: readonly { id: MapNavViewModeId; label: string }[] = [
+    { id: "clusters", label: "Clusters" },
+    { id: "bubbles", label: "Bubbles" },
+    { id: "dots", label: "Dots" },
+  ];
+
+  const bottomRow: readonly { id: MapNavViewModeId; label: string }[] = [
+    { id: "icons", label: "Icons" },
     { id: "heatmap", label: "Heatmap" },
   ];
 
@@ -53,7 +67,7 @@
 </script>
 
 <template>
-  <div class="flex items-end bg-card px-1 py-2">
+  <div v-if="!props.stacked" class="flex items-end bg-card px-1 py-2">
     <div class="flex h-[38px] items-center gap-1 rounded-full bg-background p-2">
       <button
         v-for="mode in modes"
@@ -69,6 +83,43 @@
       >
         <MapNavIcon :name="mode.id" :class="iconSizeClasses[mode.id]" class="shrink-0" />
         <span class="text-xs leading-none">{{ mode.label }}</span>
+      </button>
+    </div>
+  </div>
+
+  <div v-else class="flex flex-col gap-1 px-1">
+    <div class="flex items-center rounded-full bg-slate-50 p-1">
+      <button
+        v-for="mode in topRow"
+        :key="mode.id"
+        type="button"
+        class="flex h-[22px] cursor-pointer items-center gap-0.5 rounded-full px-1.5 py-0.5 transition-colors focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
+        :class="
+          props.activeMode === mode.id
+            ? 'bg-foreground/65 text-white'
+            : 'text-muted-foreground hover:text-foreground/70'
+        "
+        @click="selectMode(mode.id)"
+      >
+        <MapNavIcon :name="mode.id" :class="iconSizeClasses[mode.id]" class="shrink-0" />
+        <span class="text-[10px] leading-none">{{ mode.label }}</span>
+      </button>
+    </div>
+    <div class="flex items-center rounded-full bg-slate-50 p-1">
+      <button
+        v-for="mode in bottomRow"
+        :key="mode.id"
+        type="button"
+        class="flex h-[22px] cursor-pointer items-center gap-0.5 rounded-full px-1.5 py-0.5 transition-colors focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
+        :class="
+          props.activeMode === mode.id
+            ? 'bg-foreground/65 text-white'
+            : 'text-muted-foreground hover:text-foreground/70'
+        "
+        @click="selectMode(mode.id)"
+      >
+        <MapNavIcon :name="mode.id" :class="iconSizeClasses[mode.id]" class="shrink-0" />
+        <span class="text-[10px] leading-none">{{ mode.label }}</span>
       </button>
     </div>
   </div>

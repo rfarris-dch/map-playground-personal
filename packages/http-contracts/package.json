@@ -82,6 +82,10 @@
       "types": "./dist/spatial-analysis-summary-http.d.ts",
       "default": "./dist/spatial-analysis-summary-http.js"
     },
+    "./spatial-analysis-history-http": {
+      "types": "./dist/spatial-analysis-history-http.d.ts",
+      "default": "./dist/spatial-analysis-history-http.js"
+    },
     "./tiles-http": {
       "types": "./dist/tiles-http.d.ts",
       "default": "./dist/tiles-http.js"

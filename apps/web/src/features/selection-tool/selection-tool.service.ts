@@ -1,22 +1,16 @@
 import { ApiAbortedError, getApiErrorMessage } from "@map-migration/core-runtime/api";
-import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts/facilities-http";
-import type { MarketsSelectionRequest } from "@map-migration/http-contracts/markets-selection-http";
+import type { SpatialAnalysisHistoryRequest } from "@map-migration/http-contracts/spatial-analysis-history-http";
 import type {
   SpatialAnalysisSummaryRequest,
   SpatialAnalysisSummaryResponse,
 } from "@map-migration/http-contracts/spatial-analysis-summary-http";
 import { Effect } from "effect";
 import { exportMeasureSelectionSummary } from "@/features/app/measure-selection/measure-selection-export.service";
-import { fetchFacilitiesByBboxEffect } from "@/features/facilities/api";
-import type { FacilitiesBboxRequest } from "@/features/facilities/facilities.types";
-import { buildMeasureSelectionSummary } from "@/features/measure/measure-analysis.service";
 import type { MeasureSelectionSummary } from "@/features/measure/measure-analysis.types";
 import {
-  buildSelectionRingBbox,
   selectionGeometryFromRing,
   selectionRingExceedsFastAnalysisLimits,
 } from "@/features/selection/selection-analysis-request.service";
-import { fetchMarketsBySelectionEffect } from "@/features/selection-tool/selection-tool.api";
 import type {
   QuerySelectionToolSummaryArgs,
   QuerySelectionToolSummaryResult,
@@ -24,6 +18,8 @@ import type {
   SelectionToolProgress,
   SelectionToolProgressStageKey,
 } from "@/features/selection-tool/selection-tool.types";
+import { fetchSpatialAnalysisHistoryEffect } from "@/features/spatial-analysis/spatial-analysis-history.api";
+import type { SpatialAnalysisHistoryModel } from "@/features/spatial-analysis/spatial-analysis-history.types";
 import { fetchSpatialAnalysisSummaryEffect } from "@/features/spatial-analysis/spatial-analysis-summary.api";
 import {
   buildEmptySpatialAnalysisSummary,
@@ -53,6 +49,7 @@ function createProgressStage(
 ): SelectionToolProgress["stages"][number] {
   const labels: Record<SelectionToolProgressStageKey, string> = {
     facilities: "Facilities",
+    history: "History",
     markets: "Markets",
     parcels: "Parcels",
   };
@@ -99,6 +96,9 @@ function createInitialSelectionProgress(
     perspectiveCount > 0
       ? createProgressStage("facilities", "running", "Analyzing facilities…")
       : createProgressStage("facilities", "skipped", "No facility layers enabled.", 1),
+    perspectiveCount > 0
+      ? createProgressStage("history", "running", "Loading live quarterly history…")
+      : createProgressStage("history", "skipped", "No facility layers enabled.", 1),
     createProgressStage("markets", "running", "Querying market coverage…"),
     includeParcels
       ? createProgressStage("parcels", "running", "Loading parcels…")
@@ -115,6 +115,7 @@ function publishSelectionProgress(
 }
 
 function completedSelectionProgress(args: {
+  readonly historyPointCount: number;
   readonly includeParcels: boolean;
   readonly perspectiveCount: number;
   readonly marketCount: number;
@@ -131,6 +132,14 @@ function completedSelectionProgress(args: {
           args.perspectiveCount
         )
       : createProgressStage("facilities", "skipped", "No facility layers enabled.", 1),
+    args.perspectiveCount > 0
+      ? createProgressStage(
+          "history",
+          "complete",
+          `${args.historyPointCount} live quarters loaded.`,
+          1
+        )
+      : createProgressStage("history", "skipped", "No facility layers enabled.", 1),
     createProgressStage("markets", "complete", `${args.marketCount} markets matched.`, 1),
     args.includeParcels
       ? createProgressStage("parcels", "complete", `${args.parcelCount} parcels loaded.`, 1)
@@ -164,203 +173,95 @@ function toMeasureSelectionSummary(summary: SelectionToolAnalysisSummary): Measu
   };
 }
 
+function buildSelectionHistoryRequest(
+  request: SpatialAnalysisSummaryRequest
+): SpatialAnalysisHistoryRequest {
+  return {
+    geometry: request.geometry,
+    periodLimit: 12,
+    perspectives: request.perspectives,
+  };
+}
+
+function buildUnavailableSelectionHistory(
+  unavailableReason: string | null
+): SpatialAnalysisHistoryModel {
+  return {
+    coverageStatus: "none",
+    geometryBasis: "current",
+    includedColocationFacilityCount: 0,
+    includedFacilityCount: 0,
+    includedHyperscaleFacilityCount: 0,
+    leasedOverlayAvailable: false,
+    leasedOverlayReason:
+      "Hyperscale leased totals are modeled at market plus company plus year and are not allocated to drawn selection areas.",
+    pointCount: 0,
+    points: [],
+    publicationBasis: "live_only",
+    selectedColocationFacilityCount: 0,
+    selectedFacilityCount: 0,
+    selectedHyperscaleFacilityCount: 0,
+    selectedMarketCount: 0,
+    unavailableReason: unavailableReason ?? "History is unavailable for this selection.",
+  };
+}
+
 function readSelectionWarningMessage(response: SpatialAnalysisSummaryResponse): string | null {
   const parcelWarning =
     response.warnings.find((warning) => warning.code === "PARCELS_POLICY_REJECTED") ?? null;
   return parcelWarning?.message ?? null;
 }
 
-function partitionSelectionFacilities(features: FacilitiesFeatureCollection["features"]): {
-  readonly colocationFeatures: FacilitiesFeatureCollection["features"];
-  readonly hyperscaleFeatures: FacilitiesFeatureCollection["features"];
-} {
-  const colocationFeatures: FacilitiesFeatureCollection["features"] = [];
-  const hyperscaleFeatures: FacilitiesFeatureCollection["features"] = [];
-
-  for (const feature of features) {
-    if (feature.properties.perspective === "colocation") {
-      colocationFeatures.push(feature);
-      continue;
-    }
-
-    if (feature.properties.perspective === "hyperscale") {
-      hyperscaleFeatures.push(feature);
-    }
-  }
-
-  return {
-    colocationFeatures,
-    hyperscaleFeatures,
-  };
-}
-
-function buildLargeSelectionFallbackSummary(args: {
-  readonly facilitiesFeatures: FacilitiesFeatureCollection["features"];
-  readonly marketSelection: NonNullable<SelectionToolAnalysisSummary["summary"]["marketSelection"]>;
-  readonly selectionRing: readonly [number, number][];
-}): SelectionToolAnalysisSummary {
-  const baseSummary = buildEmptySpatialAnalysisSummary(args.selectionRing);
-  const facilitiesByPerspective = partitionSelectionFacilities(args.facilitiesFeatures);
-  const measureSummary = buildMeasureSelectionSummary({
-    ring: args.selectionRing,
-    colocationFeatures: facilitiesByPerspective.colocationFeatures,
-    hyperscaleFeatures: facilitiesByPerspective.hyperscaleFeatures,
-    parcelFeatures: [],
-    parcelNextCursor: null,
-    parcelTruncated: false,
-  });
-
-  return {
-    ...baseSummary,
-    area: {
-      countyIds: measureSummary.countyIds,
-      selectionAreaSqKm: args.marketSelection.selectionAreaSqKm,
-    },
-    summary: {
-      ...baseSummary.summary,
-      ...measureSummary,
-      marketSelection: args.marketSelection,
-    },
-  };
-}
-
-function queryLargeSelectionToolSummaryEffect(
-  args: QuerySelectionToolSummaryArgs
-): Effect.Effect<QuerySelectionToolSummaryResult, never, never> {
-  return Effect.gen(function* () {
-    const perspectives = listVisiblePerspectives(args.visiblePerspectives);
-    const geometry = selectionGeometryFromRing(args.selectionRing);
-    const selectionBbox = buildSelectionRingBbox(args.selectionRing);
-
-    const marketsRequest: MarketsSelectionRequest = {
-      geometry,
-      limit: 25,
-      minimumSelectionOverlapPercent: args.minimumMarketSelectionOverlapPercent ?? 0,
-    };
-
-    type FacilitiesFetchOutcome =
-      | { ok: true; features: FacilitiesFeatureCollection["features"] }
-      | { ok: false; aborted: boolean };
-
-    const facilitiesOutcomes: FacilitiesFetchOutcome[] =
-      selectionBbox === null
-        ? []
-        : yield* Effect.all(
-            perspectives.map((perspective) =>
-              fetchFacilitiesByBboxEffect({
-                bbox: selectionBbox,
-                limit: 2000,
-                perspective,
-              } satisfies FacilitiesBboxRequest).pipe(
-                Effect.map(
-                  (result): FacilitiesFetchOutcome => ({ ok: true, features: result.data.features })
-                ),
-                Effect.catchAll(
-                  (error): Effect.Effect<FacilitiesFetchOutcome, never, never> =>
-                    Effect.succeed({ ok: false, aborted: error instanceof ApiAbortedError })
-                )
-              )
-            )
-          );
-
-    const marketsOutcome = yield* fetchMarketsBySelectionEffect(marketsRequest, args.signal).pipe(
-      Effect.map((result) => ({ ok: true as const, data: result.data })),
-      Effect.catchAll((error) =>
-        Effect.succeed({ ok: false as const, aborted: error instanceof ApiAbortedError })
-      )
-    );
-
-    for (const outcome of facilitiesOutcomes) {
-      if (!outcome.ok && outcome.aborted) {
-        return {
-          ok: false,
-          reason: "aborted",
-        } satisfies QuerySelectionToolSummaryResult;
-      }
-    }
-
-    if (!marketsOutcome.ok && marketsOutcome.aborted) {
-      return {
-        ok: false,
-        reason: "aborted",
-      } satisfies QuerySelectionToolSummaryResult;
-    }
-
-    const hasFacilitiesError = facilitiesOutcomes.some((r) => !r.ok);
-    const hasMarketsError = !marketsOutcome.ok;
-
-    if (hasFacilitiesError || hasMarketsError) {
-      yield* Effect.sync(() => {
-        publishSelectionProgress(
-          args,
-          buildSelectionProgress([
-            hasFacilitiesError
-              ? createProgressStage("facilities", "error", "Failed to load facilities.", 0)
-              : createProgressStage(
-                  "facilities",
-                  "complete",
-                  "Facilities loaded.",
-                  perspectives.length,
-                  perspectives.length
-                ),
-            hasMarketsError
-              ? createProgressStage("markets", "error", "Failed to load markets.", 0)
-              : createProgressStage("markets", "complete", "Markets loaded.", 1),
-            createProgressStage("parcels", "skipped", "Parcel enrichment disabled.", 1),
-          ])
-        );
-      });
-    }
-
-    const facilitiesFeatures = facilitiesOutcomes.flatMap((outcome) =>
-      outcome.ok ? outcome.features : []
-    );
-    const marketSelection = marketsOutcome.ok
-      ? {
-          markets: marketsOutcome.data.matchedMarkets,
-          matchCount: marketsOutcome.data.selection.matchCount,
-          minimumSelectionOverlapPercent:
-            marketsOutcome.data.selection.minimumSelectionOverlapPercent,
-          primaryMarket: marketsOutcome.data.primaryMarket,
-          selectionAreaSqKm: marketsOutcome.data.selection.selectionAreaSqKm,
-          unavailableReason: null,
-        }
+function querySelectionHistoryEffect(args: {
+  readonly request: SpatialAnalysisHistoryRequest;
+  readonly signal: AbortSignal | undefined;
+}): Effect.Effect<
+  {
+    readonly aborted: boolean;
+    readonly history: SpatialAnalysisHistoryModel | null;
+  },
+  never,
+  never
+> {
+  const options =
+    typeof args.signal === "undefined"
+      ? {}
       : {
-          markets: [],
-          matchCount: 0,
-          minimumSelectionOverlapPercent: args.minimumMarketSelectionOverlapPercent ?? 0,
-          primaryMarket: null,
-          selectionAreaSqKm: 0,
-          unavailableReason: null,
+          signal: args.signal,
         };
 
-    const summary = buildLargeSelectionFallbackSummary({
-      facilitiesFeatures,
-      marketSelection,
-      selectionRing: args.selectionRing,
-    });
+  return fetchSpatialAnalysisHistoryEffect(args.request, options).pipe(
+    Effect.map((result) => ({
+      aborted: false,
+      history: result.data.summary,
+    })),
+    Effect.catchAll(
+      (
+        error
+      ): Effect.Effect<
+        {
+          readonly aborted: boolean;
+          readonly history: SpatialAnalysisHistoryModel | null;
+        },
+        never,
+        never
+      > => {
+        if (error instanceof ApiAbortedError) {
+          return Effect.succeed({
+            aborted: true,
+            history: null,
+          });
+        }
 
-    yield* Effect.sync(() => {
-      publishSelectionProgress(
-        args,
-        completedSelectionProgress({
-          includeParcels: false,
-          marketCount: summary.summary.marketSelection?.matchCount ?? 0,
-          parcelCount: 0,
-          perspectiveCount: perspectives.length,
-          totalFacilityCount: summary.summary.totalCount,
-        })
-      );
-    });
-
-    return {
-      ok: true,
-      value: {
-        errorMessage: null,
-        summary,
-      },
-    } satisfies QuerySelectionToolSummaryResult;
-  });
+        return Effect.succeed({
+          aborted: false,
+          history: buildUnavailableSelectionHistory(
+            getApiErrorMessage(error, "Live quarterly history is unavailable for this selection.")
+          ),
+        });
+      }
+    )
+  );
 }
 
 export function buildEmptySelectionToolSummary(
@@ -388,6 +289,7 @@ export function querySelectionToolSummaryEffect(
       parcelPageSize: 20_000,
       perspectives,
     };
+    const historyRequest = buildSelectionHistoryRequest(request);
 
     yield* Effect.sync(() => {
       publishSelectionProgress(
@@ -395,13 +297,6 @@ export function querySelectionToolSummaryEffect(
         createInitialSelectionProgress(perspectives.length, includeParcels)
       );
     });
-
-    if (selectionExceedsFastAnalysisLimits) {
-      return yield* queryLargeSelectionToolSummaryEffect({
-        ...args,
-        includeParcels: false,
-      });
-    }
 
     const summaryOptions =
       typeof args.signal === "undefined"
@@ -413,27 +308,45 @@ export function querySelectionToolSummaryEffect(
             signal: args.signal,
           };
     return yield* fetchSpatialAnalysisSummaryEffect(request, summaryOptions).pipe(
-      Effect.map((result) => {
-        const summary = buildSpatialAnalysisSummaryModel(result.data);
-        publishSelectionProgress(
-          args,
-          completedSelectionProgress({
-            includeParcels,
-            marketCount: summary.summary.marketSelection?.matchCount ?? 0,
-            parcelCount: summary.summary.parcelSelection.count,
-            perspectiveCount: perspectives.length,
-            totalFacilityCount: summary.summary.totalCount,
-          })
-        );
+      Effect.flatMap((result) =>
+        querySelectionHistoryEffect({
+          request: historyRequest,
+          signal: args.signal,
+        }).pipe(
+          Effect.map((historyResult) => {
+            if (historyResult.aborted) {
+              return {
+                ok: false,
+                reason: "aborted",
+              } satisfies QuerySelectionToolSummaryResult;
+            }
 
-        return {
-          ok: true,
-          value: {
-            errorMessage: readSelectionWarningMessage(result.data),
-            summary,
-          },
-        } satisfies QuerySelectionToolSummaryResult;
-      }),
+            const summary = {
+              ...buildSpatialAnalysisSummaryModel(result.data),
+              history: historyResult.history,
+            };
+            publishSelectionProgress(
+              args,
+              completedSelectionProgress({
+                historyPointCount: summary.history?.pointCount ?? 0,
+                includeParcels,
+                marketCount: summary.summary.marketSelection?.matchCount ?? 0,
+                parcelCount: summary.summary.parcelSelection.count,
+                perspectiveCount: perspectives.length,
+                totalFacilityCount: summary.summary.totalCount,
+              })
+            );
+
+            return {
+              ok: true,
+              value: {
+                errorMessage: readSelectionWarningMessage(result.data),
+                summary,
+              },
+            } satisfies QuerySelectionToolSummaryResult;
+          })
+        )
+      ),
       Effect.catchAll((error): Effect.Effect<QuerySelectionToolSummaryResult, never, never> => {
         if (error instanceof ApiAbortedError) {
           return Effect.succeed({
@@ -446,6 +359,7 @@ export function querySelectionToolSummaryEffect(
           args,
           buildSelectionProgress([
             createProgressStage("facilities", "error", "Failed to load facilities.", 0),
+            createProgressStage("history", "error", "Failed to load live quarterly history.", 0),
             createProgressStage("markets", "error", "Failed to load markets.", 0),
             includeParcels
               ? createProgressStage("parcels", "error", "Failed to load parcels.", 0)

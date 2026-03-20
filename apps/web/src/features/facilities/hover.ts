@@ -99,9 +99,7 @@ function toHoverState(
   const marketName = readStringProperty(feature.properties, "marketName");
 
   const coordinates: readonly [number, number] | null =
-    feature.geometry?.type === "Point"
-      ? readPointCenter(feature.geometry.coordinates)
-      : null;
+    feature.geometry?.type === "Point" ? readPointCenter(feature.geometry.coordinates) : null;
 
   return {
     address,
@@ -242,9 +240,14 @@ export function mountFacilitiesHover(
         const cachedProperties = options.resolveFeatureProperties?.(feature.id) ?? null;
         const properties = cachedProperties ?? feature.properties;
         const geom = feature.geometry;
-        const hoverFeature = geom.type !== "GeometryCollection"
-          ? { id: feature.id, geometry: { type: geom.type, coordinates: geom.coordinates }, properties }
-          : { id: feature.id, properties };
+        const hoverFeature =
+          geom.type !== "GeometryCollection"
+            ? {
+                id: feature.id,
+                geometry: { type: geom.type, coordinates: geom.coordinates },
+                properties,
+              }
+            : { id: feature.id, properties };
         const nextHover = toHoverState(hoverFeature, screenPoint);
         if (nextHover === null) {
           continue;

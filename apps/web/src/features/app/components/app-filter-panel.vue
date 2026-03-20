@@ -256,7 +256,11 @@
         </AccordionContent>
       </AccordionItem>
 
-      <AccordionItem v-if="props.userOptions.length > 0" value="users" class="border-b border-border">
+      <AccordionItem
+        v-if="props.userOptions.length > 0"
+        value="users"
+        class="border-b border-border"
+      >
         <AccordionTrigger
           class="flex h-8 items-center justify-between px-3 text-[length:var(--size-2)] font-[number:var(--weight-3)] uppercase tracking-wide text-muted-foreground hover:no-underline"
         >

@@ -414,6 +414,7 @@ export function mountParcelsLayer(
       state.manifest = manifest;
       state.sourceInitialized = true;
       applyVisibility();
+      scheduleInitialFacetsCollection();
     },
     onReady(readyBootstrap) {
       state.ready = true;
@@ -434,6 +435,42 @@ export function mountParcelsLayer(
     return bootstrap.initializeSource();
   };
 
+  let facetsRetryTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const scheduleInitialFacetsCollection = (): void => {
+    if (facetsRetryTimer !== null) {
+      clearTimeout(facetsRetryTimer);
+    }
+    let attempts = 0;
+    const tryCollect = (): void => {
+      facetsRetryTimer = null;
+      if (!(state.visible && state.sourceInitialized) || state.destroyed) {
+        return;
+      }
+      collectViewportFacets();
+      if (!options.onViewportFacets) {
+        return;
+      }
+      // If queryRenderedFeatures returned nothing, tiles may still be loading — retry
+      if (!map.hasLayer(fillLayerId)) {
+        return;
+      }
+      const canvasSize = map.getCanvasSize();
+      const features = map.queryRenderedFeatures(
+        [
+          [0, 0],
+          [canvasSize.width, canvasSize.height],
+        ],
+        { layers: [fillLayerId] }
+      );
+      if (features.length === 0 && attempts < 10) {
+        attempts += 1;
+        facetsRetryTimer = setTimeout(tryCollect, 500);
+      }
+    };
+    facetsRetryTimer = setTimeout(tryCollect, 500);
+  };
+
   const collectViewportFacets = (): void => {
     if (!(state.visible && state.sourceInitialized && options.onViewportFacets)) {
       return;
@@ -452,6 +489,10 @@ export function mountParcelsLayer(
     );
     const zoningTypes = new Set<string>();
     const floodZones = new Set<string>();
+    let acresMin: number | null = null;
+    let acresMax: number | null = null;
+    let distTransmissionMin: number | null = null;
+    let distTransmissionMax: number | null = null;
 
     for (const feature of features) {
       const props = feature.properties;
@@ -466,9 +507,30 @@ export function mountParcelsLayer(
       if (typeof fz === "string" && fz.length > 0) {
         floodZones.add(fz);
       }
+      const rawAcres = Reflect.get(props, "ll_gisacre");
+      const acres = typeof rawAcres === "number" ? rawAcres : Number(rawAcres);
+      if (Number.isFinite(acres) && acres >= 0) {
+        acresMin = acresMin === null ? acres : Math.min(acresMin, acres);
+        acresMax = acresMax === null ? acres : Math.max(acresMax, acres);
+      }
+      const rawDist = Reflect.get(props, "dist_transmission_mi");
+      const dist = typeof rawDist === "number" ? rawDist : Number(rawDist);
+      if (Number.isFinite(dist) && dist >= 0) {
+        distTransmissionMin =
+          distTransmissionMin === null ? dist : Math.min(distTransmissionMin, dist);
+        distTransmissionMax =
+          distTransmissionMax === null ? dist : Math.max(distTransmissionMax, dist);
+      }
     }
 
-    options.onViewportFacets({ zoningTypes, floodZones });
+    options.onViewportFacets({
+      acresMin,
+      acresMax,
+      distTransmissionMin,
+      distTransmissionMax,
+      zoningTypes,
+      floodZones,
+    });
   };
 
   const onMoveEnd = (): void => {
@@ -591,6 +653,7 @@ export function mountParcelsLayer(
       initializeSource()
         .then(() => {
           applyVisibility();
+          scheduleInitialFacetsCollection();
         })
         .catch(() => {
           return;
@@ -598,6 +661,10 @@ export function mountParcelsLayer(
     },
     destroy(): void {
       state.destroyed = true;
+      if (facetsRetryTimer !== null) {
+        clearTimeout(facetsRetryTimer);
+        facetsRetryTimer = null;
+      }
       clearHover();
       clearSelection();
 

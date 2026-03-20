@@ -29,6 +29,7 @@ export interface SpatialAnalysisPanelSummary {
   readonly facilities: readonly SpatialAnalysisFacilityRecord[];
   readonly flood?: SpatialAnalysisSelectionSummary["flood"];
   readonly hyperscale: SpatialAnalysisSelectionSummary["hyperscale"];
+  readonly marketInsight: SpatialAnalysisSelectionSummary["marketInsight"];
   readonly marketSelection?: SpatialAnalysisPanelMarketSelection;
   readonly parcelSelection: SpatialAnalysisPanelParcelSelection;
   readonly topColocationProviders: readonly SpatialAnalysisProviderSummaryItem[];
@@ -36,7 +37,12 @@ export interface SpatialAnalysisPanelSummary {
   readonly totalCount: SpatialAnalysisSelectionSummary["totalCount"];
 }
 
-export type SpatialAnalysisPanelTab = "counties" | "facilities" | "overview" | "parcels";
+export type SpatialAnalysisPanelTab =
+  | "counties"
+  | "facilities"
+  | "history"
+  | "overview"
+  | "parcels";
 
 export interface SpatialAnalysisPanelProps {
   readonly compactWidthClass?: string;

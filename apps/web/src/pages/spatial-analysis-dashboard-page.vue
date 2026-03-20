@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { ArrowLeft, Clock3 } from "lucide-vue-next";
-  import { computed, shallowRef } from "vue";
+  import { computed, shallowRef, watch } from "vue";
   import { useRouter } from "vue-router";
   import Button from "@/components/ui/button/button.vue";
   import { buildMapContextTransferQuery } from "@/features/map-context-transfer/map-context-transfer.service";
@@ -8,6 +8,7 @@
   import { formatScannerPowerMw } from "@/features/scanner/scanner.service";
   import SpatialAnalysisCountyScoresSection from "@/features/spatial-analysis/components/spatial-analysis-county-scores-section.vue";
   import SpatialAnalysisFacilitiesTable from "@/features/spatial-analysis/components/spatial-analysis-facilities-table.vue";
+  import SpatialAnalysisHistoryChart from "@/features/spatial-analysis/components/spatial-analysis-history-chart.vue";
   import SpatialAnalysisParcelTable from "@/features/spatial-analysis/components/spatial-analysis-parcel-table.vue";
   import SpatialAnalysisPerspectiveCard from "@/features/spatial-analysis/components/spatial-analysis-perspective-card.vue";
   import SpatialAnalysisSummaryOverview from "@/features/spatial-analysis/components/spatial-analysis-summary-overview.vue";
@@ -19,7 +20,7 @@
   import { compareSpatialAnalysisFacilities } from "@/features/spatial-analysis/spatial-analysis-facilities.service";
   import { summarizeSpatialAnalysisParcels } from "@/features/spatial-analysis/spatial-analysis-overview.service";
 
-  type DashboardTab = "counties" | "facilities" | "overview" | "parcels";
+  type DashboardTab = "counties" | "facilities" | "history" | "overview" | "parcels";
 
   function createEmptyDashboardSummary() {
     return {
@@ -52,6 +53,7 @@
         underConstructionPowerMw: 0,
         unknownCount: 0,
       },
+      marketInsight: null,
       marketSelection: {
         markets: [],
         matchCount: 0,
@@ -79,6 +81,7 @@
   const activeTab = shallowRef<DashboardTab>("overview");
   const selectedCountyIds = computed(() => dashboardState.value?.summary.area.countyIds ?? []);
   const summary = computed(() => dashboardState.value?.summary.summary ?? null);
+  const history = computed(() => dashboardState.value?.summary.history ?? null);
   const dashboardSummary = computed(() => summary.value ?? createEmptyDashboardSummary());
   const facilities = computed(() => {
     const summaryValue = summary.value;
@@ -93,6 +96,7 @@
   const parcels = computed(() => summary.value?.parcelSelection.parcels ?? []);
   const parcelOverview = computed(() => summarizeSpatialAnalysisParcels(parcels.value));
   const hasFacilities = computed(() => facilities.value.length > 0);
+  const hasHistory = computed(() => history.value !== null);
   const hasParcels = computed(() => parcels.value.length > 0);
   const selectionMarketCount = computed(() => {
     const state = dashboardState.value;
@@ -113,7 +117,12 @@
   const hasCountySelections = computed(() => selectedCountyIds.value.length > 0);
   const hasCountyTab = computed(() => hasCountySelections.value || stateHasCountyIntelligence());
   const hasAnyResults = computed(
-    () => hasFacilities.value || hasParcels.value || hasMarkets.value || hasCountyTab.value
+    () =>
+      hasFacilities.value ||
+      hasHistory.value ||
+      hasParcels.value ||
+      hasMarkets.value ||
+      hasCountyTab.value
   );
   const isSelectionDashboard = computed(() => dashboardState.value?.source === "selection");
   const formatPower = computed(() =>
@@ -137,6 +146,70 @@
 
     return `${summaryValue.totalCount} facilities · ${summaryValue.parcelSelection.count} parcels · saved ${createdAtText}`;
   });
+
+  function firstValidDashboardTab(): DashboardTab {
+    if (hasHistory.value) {
+      return "history";
+    }
+
+    if (hasFacilities.value) {
+      return "facilities";
+    }
+
+    if (hasCountyTab.value) {
+      return "counties";
+    }
+
+    if (hasParcels.value) {
+      return "parcels";
+    }
+
+    return "overview";
+  }
+
+  watch(
+    [hasAnyResults, hasHistory, hasFacilities, hasCountyTab, hasParcels],
+    ([nextHasAnyResults, nextHasHistory], previousValues) => {
+      const [previousHasAnyResults, previousHasHistory] = previousValues;
+
+      if (!nextHasAnyResults) {
+        activeTab.value = "overview";
+        return;
+      }
+
+      if (!previousHasAnyResults && nextHasAnyResults) {
+        activeTab.value = firstValidDashboardTab();
+        return;
+      }
+
+      if (!previousHasHistory && nextHasHistory && activeTab.value === "overview") {
+        activeTab.value = "history";
+        return;
+      }
+
+      if (!hasHistory.value && activeTab.value === "history") {
+        activeTab.value = firstValidDashboardTab();
+        return;
+      }
+
+      if (!hasFacilities.value && activeTab.value === "facilities") {
+        activeTab.value = firstValidDashboardTab();
+        return;
+      }
+
+      if (!hasCountyTab.value && activeTab.value === "counties") {
+        activeTab.value = firstValidDashboardTab();
+        return;
+      }
+
+      if (!hasParcels.value && activeTab.value === "parcels") {
+        activeTab.value = firstValidDashboardTab();
+      }
+    },
+    {
+      immediate: true,
+    }
+  );
 
   function goBackToMap(): void {
     const ctx = dashboardState.value?.mapContext;
@@ -222,6 +295,14 @@
           </Button>
           <Button
             size="sm"
+            :variant="activeTab === 'history' ? 'default' : 'ghost'"
+            class="h-8 rounded-lg px-3"
+            @click="activeTab = 'history'"
+          >
+            History ({{ history?.pointCount ?? 0 }})
+          </Button>
+          <Button
+            size="sm"
             :variant="activeTab === 'counties' ? 'default' : 'ghost'"
             class="h-8 rounded-lg px-3"
             :disabled="!hasCountyTab"
@@ -257,6 +338,12 @@
         </div>
 
         <section v-if="hasAnyResults && activeTab === 'overview'" class="space-y-4">
+          <SpatialAnalysisHistoryChart
+            v-if="hasHistory"
+            :history="history"
+            :format-power="formatPower"
+          />
+
           <div class="grid gap-4 xl:grid-cols-2">
             <SpatialAnalysisPerspectiveCard
               title="Colocation"
@@ -274,7 +361,7 @@
               :summary="dashboardSummary.hyperscale"
               :providers="dashboardSummary.topHyperscaleProviders"
               :format-power="formatPower"
-              power-label="Commissioned"
+              power-label="Owned"
             />
           </div>
 
@@ -286,7 +373,10 @@
               :format-power="formatPower"
             />
 
-            <article v-if="hasMarkets" class="rounded-xl border border-border/70 bg-background/70 p-4">
+            <article
+              v-if="hasMarkets"
+              class="rounded-xl border border-border/70 bg-background/70 p-4"
+            >
               <div class="mb-2 flex items-center gap-2">
                 <span class="inline-block h-2.5 w-2.5 rounded-full bg-violet-500" />
                 <h2 class="m-0 text-sm font-semibold">Markets</h2>
@@ -335,6 +425,13 @@
               </dl>
             </article>
           </div>
+        </section>
+
+        <section
+          v-if="activeTab === 'history'"
+          class="rounded-xl border border-border/70 bg-background/70 p-4"
+        >
+          <SpatialAnalysisHistoryChart :history="history" :format-power="formatPower" />
         </section>
 
         <section v-if="hasCountyTab && activeTab === 'counties'" class="space-y-4">

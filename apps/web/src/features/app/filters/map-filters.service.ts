@@ -77,7 +77,7 @@ export function buildTransmissionVoltageFilter(state: MapFiltersState): MapExpre
 export function buildGasPipelineFilter(state: MapFiltersState): MapExpression | null {
   const hasCapacity = state.gasCapacities.size > 0;
   const hasStatus = state.gasStatuses.size > 0;
-  if (!hasCapacity && !hasStatus) {
+  if (!(hasCapacity || hasStatus)) {
     return null;
   }
 
@@ -85,12 +85,24 @@ export function buildGasPipelineFilter(state: MapFiltersState): MapExpression | 
 
   if (hasStatus) {
     const statusValues = [...state.gasStatuses];
-    conditions.push(["match", ["downcase", ["to-string", ["coalesce", ["get", "status"], ""]]], statusValues, true, false]);
+    conditions.push([
+      "match",
+      ["downcase", ["to-string", ["coalesce", ["get", "status"], ""]]],
+      statusValues,
+      true,
+      false,
+    ]);
   }
 
   if (hasCapacity) {
     const capacityValues = [...state.gasCapacities];
-    conditions.push(["match", ["to-string", ["coalesce", ["get", "capacity_range"], ""]], capacityValues, true, false]);
+    conditions.push([
+      "match",
+      ["to-string", ["coalesce", ["get", "capacity_range"], ""]],
+      capacityValues,
+      true,
+      false,
+    ]);
   }
 
   if (conditions.length === 0) {
@@ -118,6 +130,7 @@ export function buildParcelFilter(state: MapFiltersState): MapExpression | null 
   }
 
   conditions.push(...buildParcelAcreFilters(state.parcelStyleAcres));
+  conditions.push(...buildParcelAcreRangeFilters(state.parcelAcresMin, state.parcelAcresMax));
 
   if (conditions.length === 0) {
     return null;
@@ -183,6 +196,29 @@ function buildFloodZoneCondition(zone: string): MapExpression | null {
     default:
       return null;
   }
+}
+
+function buildParcelAcreRangeFilters(
+  min: number | null | undefined,
+  max: number | null | undefined
+): readonly MapExpression[] {
+  const lo = typeof min === "number" ? min : null;
+  const hi = typeof max === "number" ? max : null;
+  if (lo === null && hi === null) {
+    return [];
+  }
+
+  const acreExpr: MapExpression = ["to-number", ["coalesce", ["get", "ll_gisacre"], 0]];
+  const conditions: MapExpression[] = [];
+
+  if (lo !== null) {
+    conditions.push([">=", acreExpr, lo]);
+  }
+  if (hi !== null) {
+    conditions.push(["<=", acreExpr, hi]);
+  }
+
+  return conditions;
 }
 
 function buildParcelAcreFilters(parcelStyleAcres: string): readonly MapExpression[] {

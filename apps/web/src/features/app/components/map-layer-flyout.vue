@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import { ref } from "vue";
+
   interface MapLayerFlyoutProps {
     readonly flyoutId: string;
     readonly title?: string;
@@ -12,6 +14,10 @@
     title: "",
   });
   const emit = defineEmits<MapLayerFlyoutEmits>();
+
+  const slotContainerRef = ref<HTMLElement | null>(null);
+
+  defineExpose({ slotContainerRef });
 </script>
 
 <template>
@@ -35,11 +41,20 @@
         @keydown.enter="emit('close')"
       >
         <svg class="h-2.5 w-2.5" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-          <path d="M1 1l8 8M9 1L1 9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+          <path
+            d="M1 1l8 8M9 1L1 9"
+            stroke="currentColor"
+            stroke-width="1.3"
+            stroke-linecap="round"
+          />
         </svg>
       </span>
     </div>
-    <div class="overflow-y-auto scrollbar-hide p-4" style="max-height: calc(100vh - 8.5rem)">
+    <div
+      ref="slotContainerRef"
+      class="overflow-y-auto scrollbar-hide p-4"
+      style="max-height: calc(100vh - 8.5rem)"
+    >
       <slot />
     </div>
   </div>

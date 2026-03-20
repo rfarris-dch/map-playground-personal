@@ -1,20 +1,20 @@
 <script setup lang="ts">
   import Switch from "@/components/ui/switch/switch.vue";
-  import type { BasemapLayerId, BasemapVisibilityState } from "@/features/basemap/basemap.types";
   import type { BoundaryVisibilityState } from "@/features/app/core/app-shell.types";
+  import type { BasemapLayerId, BasemapVisibilityState } from "@/features/basemap/basemap.types";
   import type { BoundaryLayerId } from "@/features/boundaries/boundaries.types";
 
   interface DockFlyoutBasemapProps {
     readonly basemapVisibility: BasemapVisibilityState;
-    readonly boundaryVisibility: BoundaryVisibilityState;
     readonly boundaryHeatEnabled: Record<BoundaryLayerId, boolean>;
+    readonly boundaryVisibility: BoundaryVisibilityState;
   }
 
   interface DockFlyoutBasemapEmits {
-    "update:basemap-layer-visible": [layerId: BasemapLayerId, visible: boolean];
     "update:basemap-layer-color": [targetLayer: string, color: string];
-    "update:boundary-visible": [boundaryId: BoundaryLayerId, visible: boolean];
+    "update:basemap-layer-visible": [layerId: BasemapLayerId, visible: boolean];
     "update:boundary-heat": [boundaryId: BoundaryLayerId, enabled: boolean];
+    "update:boundary-visible": [boundaryId: BoundaryLayerId, visible: boolean];
   }
 
   const props = defineProps<DockFlyoutBasemapProps>();
@@ -41,24 +41,42 @@
       id: "water",
       label: "Water",
       colors: [
-        "#d4e6f1", "#aed6f1", "#85c1e9", "#5dade2",
-        "#3498db", "#2e86c1", "#2471a3", "#1a5276",
+        "#d4e6f1",
+        "#aed6f1",
+        "#85c1e9",
+        "#5dade2",
+        "#3498db",
+        "#2e86c1",
+        "#2471a3",
+        "#1a5276",
       ],
     },
     {
       id: "road",
       label: "Roads",
       colors: [
-        "#f5f5f5", "#e8e8e8", "#d5d8dc", "#b2babb",
-        "#f5e6cc", "#edbb99", "#d4ac6e", "#808b96",
+        "#f5f5f5",
+        "#e8e8e8",
+        "#d5d8dc",
+        "#b2babb",
+        "#f5e6cc",
+        "#edbb99",
+        "#d4ac6e",
+        "#808b96",
       ],
     },
     {
       id: "land",
       label: "Land",
       colors: [
-        "#fdfefe", "#f9f3ee", "#f5ecd7", "#e8e0d0",
-        "#e8f8f5", "#d5f5e3", "#d4e6f1", "#d7dbdd",
+        "#fdfefe",
+        "#f9f3ee",
+        "#f5ecd7",
+        "#e8e0d0",
+        "#e8f8f5",
+        "#d5f5e3",
+        "#d4e6f1",
+        "#d7dbdd",
       ],
     },
   ] as const;
@@ -70,7 +88,7 @@
 
 <template>
   <div class="flex flex-col gap-3">
-    <div class="grid grid-cols-3 gap-1">
+    <div data-flyout-section class="grid grid-cols-3 gap-1">
       <span
         v-for="layer in basemapLayers"
         :key="layer.id"
@@ -89,18 +107,17 @@
 
     <div class="h-px bg-border/40" />
 
-    <div>
-      <span class="text-[10px] font-semibold uppercase tracking-wider text-foreground/50">Boundaries</span>
-      <div
-        v-for="boundary in boundaryLayers"
-        :key="boundary.id"
-        class="mt-1"
+    <div data-flyout-section>
+      <span class="text-[10px] font-semibold uppercase tracking-wider text-foreground/50"
+        >Boundaries</span
       >
+      <div v-for="boundary in boundaryLayers" :key="boundary.id" class="mt-1">
         <div class="flex items-center justify-between">
           <span
             class="text-xs font-medium"
             :class="props.boundaryVisibility[boundary.id] ? 'text-foreground/80' : 'text-foreground/50'"
-          >{{ boundary.label }}</span>
+            >{{ boundary.label }}</span
+          >
           <Switch
             :checked="props.boundaryVisibility[boundary.id]"
             :aria-label="`${props.boundaryVisibility[boundary.id] ? 'Hide' : 'Show'} ${boundary.label}`"
@@ -123,13 +140,11 @@
 
     <div class="h-px bg-border/40" />
 
-    <div>
-      <span class="text-[10px] font-semibold uppercase tracking-wider text-foreground/50">Layer Colors</span>
-      <div
-        v-for="target in colorTargets"
-        :key="target.id"
-        class="mt-1.5 flex items-center gap-2"
+    <div data-flyout-section>
+      <span class="text-[10px] font-semibold uppercase tracking-wider text-foreground/50"
+        >Layer Colors</span
       >
+      <div v-for="target in colorTargets" :key="target.id" class="mt-1.5 flex items-center gap-2">
         <span class="w-12 text-xs text-muted-foreground">{{ target.label }}</span>
         <div class="flex gap-1">
           <span

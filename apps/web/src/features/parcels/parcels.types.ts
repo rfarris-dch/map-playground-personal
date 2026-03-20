@@ -49,6 +49,10 @@ export type ParcelsStatus =
     };
 
 export interface ParcelsViewportFacets {
+  readonly acresMax: number | null;
+  readonly acresMin: number | null;
+  readonly distTransmissionMax: number | null;
+  readonly distTransmissionMin: number | null;
   readonly floodZones: ReadonlySet<string>;
   readonly zoningTypes: ReadonlySet<string>;
 }

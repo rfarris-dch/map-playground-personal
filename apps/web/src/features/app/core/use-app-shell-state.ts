@@ -210,7 +210,8 @@ export function useAppShellState(): UseAppShellStateResult {
   }
 
   function useCompletedSketchAsSelection(): void {
-    const completedGeometry = sketchMeasureState.value.completedAreaGeometry;
+    const completedGeometry =
+      sketchMeasureState.value.completedAreaGeometry ?? sketchMeasureState.value.draftAreaGeometry;
     if (completedGeometry === null) {
       return;
     }

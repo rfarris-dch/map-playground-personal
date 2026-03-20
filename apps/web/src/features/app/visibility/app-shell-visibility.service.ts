@@ -122,6 +122,16 @@ export function syncPerspectiveVisibilityState(args: {
       facilitiesLayerId("hyperscale"),
       args.fallback.hyperscale
     ),
+    "hyperscale-leased": readRuntimeUserVisible(
+      args.runtime,
+      facilitiesLayerId("hyperscale-leased"),
+      args.fallback["hyperscale-leased"]
+    ),
+    enterprise: readRuntimeUserVisible(
+      args.runtime,
+      facilitiesLayerId("enterprise"),
+      args.fallback.enterprise
+    ),
   };
 }
 

@@ -50,6 +50,7 @@ export interface CountyScoresRouteArgs {
 }
 
 export interface ApiRoutesTable {
+  readonly analysisHistory: string;
   readonly analysisSummary: string;
   readonly boundariesPower: string;
   readonly countyScores: string;
@@ -112,6 +113,7 @@ export type HealthResponse = z.infer<typeof HealthSchema>;
 export const ApiRoutes = Object.freeze<ApiRoutesTable>({
   health: "/api/health",
   healthAlias: "/health",
+  analysisHistory: "/api/geo/analysis/history",
   analysisSummary: "/api/geo/analysis/summary",
   boundariesPower: "/api/geo/boundaries/power",
   countyScores: "/api/geo/counties/scores",
@@ -135,7 +137,7 @@ export const ApiRoutes = Object.freeze<ApiRoutesTable>({
 
 export const ApiQueryDefaults = Object.freeze<ApiQueryDefaultsTable>({
   facilities: {
-    bboxLimit: 50000,
+    bboxLimit: 50_000,
     perspective: "colocation",
   },
   parcelDetail: {
@@ -186,6 +188,10 @@ export function buildFacilitiesSelectionRoute(): string {
 
 export function buildSpatialAnalysisSummaryRoute(): string {
   return ApiRoutes.analysisSummary;
+}
+
+export function buildSpatialAnalysisHistoryRoute(): string {
+  return ApiRoutes.analysisHistory;
 }
 
 export function buildBoundaryPowerRoute(level: BoundaryPowerLevel): string {

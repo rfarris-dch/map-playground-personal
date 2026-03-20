@@ -5,7 +5,7 @@ import {
   parseLeaseOrOwn,
 } from "@map-migration/geo-kernel/commissioned-semantic";
 import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
-import { GeometrySchema, type Geometry } from "@map-migration/geo-kernel/geometry";
+import { type Geometry, GeometrySchema } from "@map-migration/geo-kernel/geometry";
 import type {
   FacilitiesDetailFeature,
   FacilitiesFeature,
@@ -20,12 +20,6 @@ function parseJsonObject(text: string): unknown {
     return JSON.parse(text);
   } catch {
     throw new Error("Invalid geom_json: not valid JSON");
-  }
-}
-
-function assertObject(input: unknown): asserts input is object {
-  if (typeof input !== "object" || input === null) {
-    throw new Error("Invalid geom_json: not an object");
   }
 }
 

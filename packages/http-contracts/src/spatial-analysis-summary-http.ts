@@ -95,6 +95,21 @@ export const SpatialAnalysisMarketSelectionSummarySchema = z.object({
   unavailableReason: z.string().nullable(),
 });
 
+export const SpatialAnalysisMarketInsightSchema = z.object({
+  colocationCommissionedMw: z.number().nonnegative().nullable(),
+  growthRatio: z.number().nullable(),
+  growthYear: z.number().int().nullable(),
+  hyperscaleOwnedMw: z.number().nonnegative().nullable(),
+  marketId: z.string().min(1),
+  marketName: z.string().min(1),
+  periodLabel: z.string().nullable(),
+  preleasingMw: z.number().nonnegative().nullable(),
+  preleasingPctOfAbsorption: z.number().nullable(),
+  preleasingPctOfCommissioned: z.number().nullable(),
+  sourceBasis: z.string().min(1),
+  totalMarketSizeMw: z.number().nonnegative().nullable(),
+});
+
 export const SpatialAnalysisFloodSummarySchema = z.object({
   flood100AreaSqKm: z.number().nonnegative(),
   flood100SelectionShare: z.number().min(0).max(1),
@@ -113,6 +128,7 @@ export const SpatialAnalysisSelectionSummarySchema = z.object({
   facilities: z.array(SpatialAnalysisSummaryFacilityRecordSchema),
   flood: SpatialAnalysisFloodSummarySchema,
   hyperscale: SpatialAnalysisPerspectiveSummarySchema,
+  marketInsight: SpatialAnalysisMarketInsightSchema.nullable(),
   marketSelection: SpatialAnalysisMarketSelectionSummarySchema,
   parcelSelection: SpatialAnalysisParcelSelectionSummarySchema,
   topColocationProviders: z.array(SpatialAnalysisProviderSummarySchema),
@@ -241,6 +257,7 @@ export type SpatialAnalysisPerspectiveSummary = z.infer<
 export type SpatialAnalysisProviderSummary = z.infer<typeof SpatialAnalysisProviderSummarySchema>;
 export type SpatialAnalysisParcelRecord = z.infer<typeof SpatialAnalysisParcelRecordSchema>;
 export type SpatialAnalysisFloodSummary = z.infer<typeof SpatialAnalysisFloodSummarySchema>;
+export type SpatialAnalysisMarketInsight = z.infer<typeof SpatialAnalysisMarketInsightSchema>;
 export type SpatialAnalysisSelectionSummary = z.infer<typeof SpatialAnalysisSelectionSummarySchema>;
 export type SpatialAnalysisCountyScores = z.infer<typeof SpatialAnalysisCountyScoresSchema>;
 export type SpatialAnalysisCountyScoresStatus = z.infer<

@@ -10,6 +10,7 @@ import type {
   SpatialAnalysisSummaryResponse,
 } from "@map-migration/http-contracts/spatial-analysis-summary-http";
 import type { SpatialAnalysisPanelSummary } from "@/features/spatial-analysis/components/spatial-analysis-panel.types";
+import type { SpatialAnalysisHistoryModel } from "@/features/spatial-analysis/spatial-analysis-history.types";
 
 export type SpatialAnalysisCoverageModel = SpatialAnalysisSummaryCoverage;
 export type SpatialAnalysisMetaModel = SpatialAnalysisSummaryResponse["meta"];
@@ -36,6 +37,7 @@ export interface SpatialAnalysisSummaryModel {
   readonly area: SpatialAnalysisAreaModel;
   readonly countyIntelligence: SpatialAnalysisCountyIntelligenceModel;
   readonly coverage: SpatialAnalysisCoverageModel | null;
+  readonly history: SpatialAnalysisHistoryModel | null;
   readonly meta: SpatialAnalysisMetaModel | null;
   readonly policy: SpatialAnalysisPolicyModel | null;
   readonly provenance: SpatialAnalysisProvenanceModel | null;

@@ -1,3 +1,4 @@
+import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
 import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts/facilities-http";
 import type { MapContextTransfer } from "@map-migration/http-contracts/map-context-transfer";
 import type { IMap, MapExpression } from "@map-migration/map-engine";
@@ -157,6 +158,7 @@ export interface AppShellMapLifecycleSelectionActions {
 
 export interface AppShellMapFiltersRefs {
   readonly facilitiesPredicate: Readonly<ShallowRef<FacilitiesFilterPredicate | null | undefined>>;
+  readonly gasFilter: Readonly<ShallowRef<MapExpression | null | undefined>>;
   readonly onCachedFeaturesUpdate: (features: FacilitiesFeatureCollection["features"]) => void;
   readonly onParcelViewportFacets: (
     facets: import("@/features/parcels/parcels.types").ParcelsViewportFacets
@@ -166,7 +168,6 @@ export interface AppShellMapFiltersRefs {
     ShallowRef<import("@/features/parcels/parcels.types").ParcelsViewportFacets | null | undefined>
   >;
   readonly transmissionFilter: Readonly<ShallowRef<MapExpression | null | undefined>>;
-  readonly gasFilter: Readonly<ShallowRef<MapExpression | null | undefined>>;
 }
 
 export interface UseAppShellMapLifecycleOptions {
@@ -185,5 +186,5 @@ export interface MountPerspectiveLayerArgs {
   readonly map: IMap;
   readonly nextControllers: FacilitiesLayerController[];
   readonly options: UseAppShellMapLifecycleOptions;
-  readonly perspective: "colocation" | "hyperscale";
+  readonly perspective: FacilityPerspective;
 }
