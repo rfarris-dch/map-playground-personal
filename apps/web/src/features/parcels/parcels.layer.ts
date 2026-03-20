@@ -80,6 +80,7 @@ export function mountParcelsLayer(
   map: IMap,
   options: ParcelsLayerOptions = {}
 ): ParcelsLayerController {
+  const VIEWPORT_FACETS_DEBOUNCE_MS = 140;
   const sourceId = "parcels";
   const sourceLayer = options.sourceLayer ?? PARCELS_DRAW_TILESET_SCHEMA.sourceLayer;
   const parcelsStyleLayerIds = getParcelsStyleLayerIds();
@@ -106,7 +107,16 @@ export function mountParcelsLayer(
     return options.isInteractionEnabled?.() ?? true;
   };
 
+  let lastStatusKey: string | null = null;
+  let viewportFacetsTimer: ReturnType<typeof setTimeout> | null = null;
+
   const setStatus = (status: ParcelsStatus): void => {
+    const nextStatusKey = JSON.stringify(status);
+    if (nextStatusKey === lastStatusKey) {
+      return;
+    }
+
+    lastStatusKey = nextStatusKey;
     options.onStatus?.(status);
   };
 
@@ -437,6 +447,26 @@ export function mountParcelsLayer(
 
   let facetsRetryTimer: ReturnType<typeof setTimeout> | null = null;
 
+  const clearViewportFacetsTimer = (): void => {
+    if (viewportFacetsTimer !== null) {
+      clearTimeout(viewportFacetsTimer);
+      viewportFacetsTimer = null;
+    }
+  };
+
+  const scheduleViewportFacetsCollection = (delayMs = VIEWPORT_FACETS_DEBOUNCE_MS): void => {
+    clearViewportFacetsTimer();
+
+    if (!(state.visible && state.sourceInitialized && options.onViewportFacets)) {
+      return;
+    }
+
+    viewportFacetsTimer = setTimeout(() => {
+      viewportFacetsTimer = null;
+      collectViewportFacets();
+    }, delayMs);
+  };
+
   const scheduleInitialFacetsCollection = (): void => {
     if (facetsRetryTimer !== null) {
       clearTimeout(facetsRetryTimer);
@@ -535,7 +565,7 @@ export function mountParcelsLayer(
 
   const onMoveEnd = (): void => {
     applyVisibility();
-    collectViewportFacets();
+    scheduleViewportFacetsCollection();
   };
 
   const hoverController = createFeatureHoverController(map, {
@@ -620,6 +650,7 @@ export function mountParcelsLayer(
     setFilter(filter: import("@map-migration/map-engine").MapExpression | null): void {
       currentFilter = filter;
       applyFilter();
+      scheduleViewportFacetsCollection(0);
     },
     setVisible(visible: boolean): void {
       if (state.visible === visible) {
@@ -629,6 +660,7 @@ export function mountParcelsLayer(
       state.visible = visible;
       stressGovernor.setEnabled(visible);
       if (!visible) {
+        clearViewportFacetsTimer();
         clearHover();
         setLayersVisible(false);
         const guardrail = state.guardrail;
@@ -665,6 +697,7 @@ export function mountParcelsLayer(
         clearTimeout(facetsRetryTimer);
         facetsRetryTimer = null;
       }
+      clearViewportFacetsTimer();
       clearHover();
       clearSelection();
 

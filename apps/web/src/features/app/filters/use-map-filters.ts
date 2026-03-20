@@ -3,7 +3,7 @@ import { buildMarketsRoute } from "@map-migration/http-contracts/api-routes";
 import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts/facilities-http";
 import { MarketsTableResponseSchema } from "@map-migration/http-contracts/table-contracts";
 import type { MapExpression } from "@map-migration/map-engine";
-import { computed, type Ref, shallowRef, watch } from "vue";
+import { computed, type Ref, type ShallowRef, shallowRef, watch } from "vue";
 import type { ParcelsViewportFacets } from "@/features/parcels/parcels.types";
 import { buildApiRequestInit } from "@/lib/api/api-request-init.service";
 import {
@@ -17,6 +17,10 @@ import type {
   FacilityStatusFilterId,
   MapFiltersState,
   TransmissionVoltageFilterId,
+} from "./map-filters.types";
+import {
+  cloneMapFiltersState,
+  createDefaultMapFiltersState,
 } from "./map-filters.types";
 import { VOLTAGE_THRESHOLDS } from "./map-filters.types";
 
@@ -40,6 +44,7 @@ export interface UseMapFiltersResult {
   /** Sorted unique provider names seen across all viewport updates. */
   readonly availableProviders: Ref<readonly string[]>;
   clearAll(): void;
+  setState(nextState: MapFiltersState): void;
 
   readonly facilitiesPredicate: Readonly<
     ReturnType<typeof shallowRef<FacilitiesFilterPredicate | null>>
@@ -58,7 +63,7 @@ export interface UseMapFiltersResult {
   setParcelStyleAcres(value: string): void;
   setParcelViewportFacets(facets: ParcelsViewportFacets): void;
   setTransmissionVoltage(id: TransmissionVoltageFilterId | null): void;
-  readonly state: Readonly<ReturnType<typeof shallowRef<MapFiltersState>>>;
+  readonly state: Readonly<ShallowRef<MapFiltersState>>;
   toggleFacilityProvider(providerName: string): void;
 
   toggleFacilityStatus(id: FacilityStatusFilterId): void;
@@ -95,7 +100,7 @@ function createInitialState(): MapFiltersState {
 }
 
 export function useMapFilters(): UseMapFiltersResult {
-  const state = shallowRef<MapFiltersState>(createInitialState());
+  const state = shallowRef<MapFiltersState>(createDefaultMapFiltersState());
   const facilitiesPredicate = shallowRef<FacilitiesFilterPredicate | null>(null);
   const parcelFilter = shallowRef<MapExpression | null>(null);
   const parcelViewportFacets = shallowRef<ParcelsViewportFacets | null>(null);
@@ -139,7 +144,7 @@ export function useMapFilters(): UseMapFiltersResult {
           .filter((name): name is string => name.trim().length > 0)
       );
       if (names.size > 0) {
-        knownMarkets.value = names;
+        knownMarkets.value = new Set([...knownMarkets.value, ...names]);
       }
     } catch (_) {
       _;
@@ -248,9 +253,7 @@ export function useMapFilters(): UseMapFiltersResult {
   }
 
   function clearAll(): void {
-    state.value = createInitialState();
-    knownProviders.value = new Set();
-    knownMarkets.value = new Set();
+    state.value = createDefaultMapFiltersState();
   }
 
   function setAvailableFeatures(features: FacilitiesFeatures): void {
@@ -283,12 +286,26 @@ export function useMapFilters(): UseMapFiltersResult {
     }
   }
 
+  function setState(nextState: MapFiltersState): void {
+    const clonedState = cloneMapFiltersState(nextState);
+    state.value = clonedState;
+
+    if (clonedState.facilityProviders.size > 0) {
+      knownProviders.value = new Set([...knownProviders.value, ...clonedState.facilityProviders]);
+    }
+
+    if (clonedState.activeMarkets.size > 0) {
+      knownMarkets.value = new Set([...knownMarkets.value, ...clonedState.activeMarkets]);
+    }
+  }
+
   return {
     state,
     toggleFacilityStatus,
     toggleFacilityProvider,
     setTransmissionVoltage,
     clearAll,
+    setState,
     facilitiesPredicate,
     parcelFilter,
     parcelViewportFacets,

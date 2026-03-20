@@ -257,9 +257,6 @@ export function mountPowerLayers(options: { map: IMap }): PowerLayerMountResult 
   };
 
   map.on("load", onLoad);
-  if ((map.getStyle()?.layers?.length ?? 0) > 0) {
-    onLoad();
-  }
 
   const transmission = createSubController(map, "transmission");
   const substations = createSubController(map, "substations");

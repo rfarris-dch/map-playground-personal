@@ -428,7 +428,15 @@ class MapLibreEngine implements IMap {
       return;
     }
 
-    this.map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
+    const nextVisibility = visible ? "visible" : "none";
+    const currentVisibility = this.map.getLayoutProperty(layerId, "visibility");
+    const normalizedCurrentVisibility = currentVisibility === "none" ? "none" : "visible";
+
+    if (normalizedCurrentVisibility === nextVisibility) {
+      return;
+    }
+
+    this.map.setLayoutProperty(layerId, "visibility", nextVisibility);
   }
 
   setPaintProperty(layerId: string, name: string, value: unknown): void {

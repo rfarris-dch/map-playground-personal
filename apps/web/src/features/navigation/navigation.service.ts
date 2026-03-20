@@ -112,6 +112,40 @@ export function buildCompanyDashboardRoute(
   );
 }
 
+function resolveFacilitiesPagePath(context?: MapContextTransfer): string {
+  const activePerspectives = context?.activePerspectives ?? [];
+  if (activePerspectives.length === 1) {
+    const onlyPerspective = activePerspectives[0];
+    if (onlyPerspective === "colocation") {
+      return "/facilities/colocation";
+    }
+    if (onlyPerspective === "hyperscale") {
+      return "/facilities/hyperscale";
+    }
+  }
+
+  return "/facilities";
+}
+
+export function buildMarketsPageRoute(context?: MapContextTransfer): RouteLocationRaw {
+  return buildRouteLocationWithMapContext("/markets", context);
+}
+
+export function buildProvidersPageRoute(context?: MapContextTransfer): RouteLocationRaw {
+  return buildRouteLocationWithMapContext("/providers", context);
+}
+
+export function buildFacilitiesPageRoute(context?: MapContextTransfer): RouteLocationRaw {
+  return buildRouteLocationWithMapContext(resolveFacilitiesPagePath(context), context);
+}
+
+export function buildFacilitiesPerspectivePageRoute(
+  perspective: "colocation" | "hyperscale",
+  context?: MapContextTransfer
+): RouteLocationRaw {
+  return buildRouteLocationWithMapContext(`/facilities/${perspective}`, context);
+}
+
 export function buildFacilityDetailPageRoute(params: FacilityDetailRouteParams): RouteLocationRaw {
   return {
     name: "facility-detail",

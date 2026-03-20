@@ -19,6 +19,7 @@ import type { BoundaryLayerId } from "@/features/boundaries/boundaries.types";
 import type { FacilitiesViewMode } from "@/features/facilities/facilities.types";
 import type { FiberLocatorLineId } from "@/features/fiber-locator/fiber-locator.types";
 import type { LayerRuntimeSnapshot } from "@/features/layers/layer-runtime.types";
+import type { MapFiltersState } from "@/features/app/filters/map-filters.types";
 import type { PowerLayerId } from "@/features/power/power.types";
 
 export interface MapContextTransferStore {
@@ -50,6 +51,7 @@ export interface ApplyMapContextTransferToAppShellArgs {
   readonly setFloodLayerVisible?: (layerId: "flood100" | "flood500", visible: boolean) => void;
   readonly setGasPipelineVisible?: (visible: boolean) => void;
   readonly setHydroBasinsVisible?: (visible: boolean) => void;
+  readonly setMapFiltersState?: (nextState: MapFiltersState) => void;
   readonly setMapViewport?: (viewport: NonNullable<MapContextTransfer["viewport"]>) => void;
   readonly setParcelsVisible?: (visible: boolean) => void;
   readonly setPerspectiveViewMode?: (
@@ -74,6 +76,7 @@ export interface BuildMapContextTransferFromAppShellArgs {
   readonly hydroBasinsVisible?: boolean;
   readonly layerRuntimeSnapshot?: LayerRuntimeSnapshot | null;
   readonly map: IMap | null;
+  readonly mapFilters?: MapFiltersState;
   readonly marketIds?: readonly string[];
   readonly parcelsVisible?: boolean;
   readonly perspectiveViewModes?: {

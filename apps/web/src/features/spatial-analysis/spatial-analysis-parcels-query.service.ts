@@ -85,6 +85,12 @@ export function fetchSpatialAnalysisParcelsPagesEffect(
     let ingestionRunId: string | null = null;
     let pageCount = 0;
     const warnings = new Map<string, Warning>();
+    const maxPageCount =
+      typeof args.maxPageCount === "number" &&
+      Number.isFinite(args.maxPageCount) &&
+      args.maxPageCount > 0
+        ? Math.floor(args.maxPageCount)
+        : null;
 
     while (true) {
       const pageRequest = createPageRequest(args, cursor);
@@ -126,6 +132,12 @@ export function fetchSpatialAnalysisParcelsPagesEffect(
         parcelCount: parcelsById.size,
         truncated: hasMore,
       });
+
+      if (hasMore && maxPageCount !== null && pageCount >= maxPageCount) {
+        truncated = true;
+        nextCursor = pageNextCursor;
+        break;
+      }
 
       if (!hasMore) {
         truncated = false;

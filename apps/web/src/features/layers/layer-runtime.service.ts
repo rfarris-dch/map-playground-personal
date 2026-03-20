@@ -14,6 +14,18 @@ import type {
 } from "@/features/layers/layer-runtime.types";
 import type { LayerRuntimeState } from "./layer-runtime.service.types";
 
+function serializeLayerVisibilityMap(map: ReadonlyMap<LayerId, boolean>): string {
+  return LAYER_IDS.map((layerId) => ((map.get(layerId) ?? false) ? "1" : "0")).join("");
+}
+
+function buildSnapshotSignature(state: LayerRuntimeState): string {
+  return [
+    serializeLayerVisibilityMap(state.userVisibility),
+    serializeLayerVisibilityMap(state.effectiveVisibility),
+    serializeLayerVisibilityMap(state.stressBlocked),
+  ].join("|");
+}
+
 function cloneMapToRecord(map: ReadonlyMap<LayerId, boolean>): Partial<Record<LayerId, boolean>> {
   return Array.from(map.entries()).reduce<Partial<Record<LayerId, boolean>>>(
     (output, [key, value]) => {
@@ -116,13 +128,25 @@ export function createLayerRuntime(
     stressBlocked: new Map(),
     userVisibility: readCatalogVisibilityDefaults(catalog),
   };
+  const controllerVisibility = new Map<LayerId, boolean>();
+  let lastMapZoom: number | null = null;
+  let lastSnapshotSignature: string | null = null;
+  let visibilityDirty = true;
 
-  const applyVisibility = (): void => {
+  const applyVisibility = (force = false): void => {
     if (state.destroyed) {
       return;
     }
 
     const mapZoom = map.getZoom();
+    const zoomChanged = lastMapZoom === null || Math.abs(mapZoom - lastMapZoom) > 1e-6;
+
+    if (!(force || visibilityDirty || zoomChanged)) {
+      return;
+    }
+
+    lastMapZoom = mapZoom;
+
     state.effectiveVisibility.clear();
 
     for (const layerId of LAYER_IDS) {
@@ -140,10 +164,21 @@ export function createLayerRuntime(
 
     for (const [layerId, controller] of state.controllers) {
       const nextVisible = state.effectiveVisibility.get(layerId) ?? false;
+      if (!force && controllerVisibility.get(layerId) === nextVisible) {
+        continue;
+      }
+
       controller.setVisible(nextVisible);
+      controllerVisibility.set(layerId, nextVisible);
     }
 
-    emitSnapshot(state, options.onSnapshot);
+    const nextSnapshotSignature = buildSnapshotSignature(state);
+    if (nextSnapshotSignature !== lastSnapshotSignature) {
+      lastSnapshotSignature = nextSnapshotSignature;
+      emitSnapshot(state, options.onSnapshot);
+    }
+
+    visibilityDirty = false;
   };
 
   const onMoveEnd = (): void => {
@@ -151,7 +186,12 @@ export function createLayerRuntime(
   };
 
   const onLoad = (): void => {
-    applyVisibility();
+    applyVisibility(true);
+    // Style reload: other controllers may recreate their map layers in their
+    // own "load" handlers that fire AFTER this one (registration order).
+    // Reset caches so the next moveend re-pushes visibility once those layers exist.
+    controllerVisibility.clear();
+    visibilityDirty = true;
   };
 
   map.on("moveend", onMoveEnd);
@@ -164,7 +204,9 @@ export function createLayerRuntime(
       }
 
       state.controllers.set(layerId, controller);
-      applyVisibility();
+      controllerVisibility.delete(layerId);
+      visibilityDirty = true;
+      applyVisibility(true);
     },
 
     unregisterLayerController(layerId: LayerId): void {
@@ -173,7 +215,7 @@ export function createLayerRuntime(
       }
 
       state.controllers.delete(layerId);
-      applyVisibility();
+      controllerVisibility.delete(layerId);
     },
 
     setUserVisible(layerId: LayerId, visible: boolean): void {
@@ -181,7 +223,12 @@ export function createLayerRuntime(
         return;
       }
 
+      if ((state.userVisibility.get(layerId) ?? false) === visible) {
+        return;
+      }
+
       state.userVisibility.set(layerId, visible);
+      visibilityDirty = true;
       applyVisibility();
     },
 
@@ -190,7 +237,12 @@ export function createLayerRuntime(
         return;
       }
 
+      if ((state.stressBlocked.get(layerId) ?? false) === blocked) {
+        return;
+      }
+
       state.stressBlocked.set(layerId, blocked);
+      visibilityDirty = true;
       applyVisibility();
     },
 
@@ -216,6 +268,10 @@ export function createLayerRuntime(
       state.effectiveVisibility.clear();
       state.stressBlocked.clear();
       state.userVisibility.clear();
+      controllerVisibility.clear();
+      lastMapZoom = null;
+      lastSnapshotSignature = null;
+      visibilityDirty = false;
     },
   };
 }

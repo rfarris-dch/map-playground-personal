@@ -68,6 +68,10 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
 
   const fiberStatusText = computed(() => formatFiberLocatorStatus(fiberStatus.value));
 
+  function hasVisibleFiberLayers(): boolean {
+    return visibleFiberLayers.value.metro || visibleFiberLayers.value.longhaul;
+  }
+
   function setSelectedFiberLayerNames(
     lineId: FiberLocatorLineId,
     selectedLayerNames: readonly string[]
@@ -167,7 +171,7 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
 
   async function refreshFiberLocatorLayersInView(): Promise<void> {
     const currentMap = options.map.value;
-    if (currentMap === null) {
+    if (currentMap === null || !hasVisibleFiberLayers()) {
       return;
     }
 
@@ -241,7 +245,11 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
       longhaul: getFiberLocatorSourceLayerOptions(result.data.layers, "longhaul"),
     };
 
-    await refreshFiberLocatorLayersInView();
+    if (hasVisibleFiberLayers()) {
+      await refreshFiberLocatorLayersInView();
+    } else {
+      applyFiberSourceLayerOptions(fiberCatalogSourceLayerOptions.value);
+    }
   }
 
   function setFiberLayerVisibility(lineId: FiberLocatorLineId, visible: boolean): void {
@@ -254,6 +262,12 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
 
     if (visible) {
       setAllFiberSourceLayers(lineId, true);
+      refreshFiberLocatorLayersInView().catch((error: unknown) => {
+        console.error("Fiber locator layers/inview refresh failed", error);
+      });
+    } else if (!hasVisibleFiberLayers()) {
+      fiberInViewAbortController.value?.abort();
+      fiberInViewAbortController.value = null;
     }
 
     clearFiberHover();

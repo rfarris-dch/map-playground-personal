@@ -31,6 +31,7 @@ export function buildAppShellUrlStateQuery(
     targetSurface: options.currentSurface.value,
     visiblePerspectives: options.visiblePerspectives.value,
     waterVisible: options.waterVisible.value,
+    mapFilters: options.mapFilters.value,
   });
 
   const activeContextToken =

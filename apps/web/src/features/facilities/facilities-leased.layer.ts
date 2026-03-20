@@ -204,16 +204,13 @@ export function mountHyperscaleLeasedLayer(
     ensureLayers();
     sourceReady = true;
     applyVisibility();
-    map.on("moveend", onMoveEnd);
     if (visible) {
       onMoveEnd();
     }
   }
 
   map.on("load", onLoad);
-  if ((map.getStyle()?.layers?.length ?? 0) > 0) {
-    onLoad();
-  }
+  map.on("moveend", onMoveEnd);
 
   return {
     perspective: "hyperscale-leased",

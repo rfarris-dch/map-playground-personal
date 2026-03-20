@@ -112,6 +112,8 @@ export function useAppShell() {
     setGasPipelineVisible: visibility.setGasPipelineVisible,
     setHydroBasinsVisible: visibility.setHydroBasinsVisible,
     setParcelsVisible: visibility.setParcelsVisible,
+    mapFilters: mapFilters.state,
+    setMapFiltersState: mapFilters.setState,
     setPerspectiveViewMode,
     setPerspectiveVisibility: visibility.setPerspectiveVisibility,
     setPowerLayerVisible: visibility.setPowerLayerVisible,
@@ -175,6 +177,7 @@ export function useAppShell() {
       targetSurface: "global-map",
       visiblePerspectives: visibility.visiblePerspectives.value,
       waterVisible: visibility.waterVisible.value,
+      ...(mapFilters.state.value ? { mapFilters: mapFilters.state.value } : {}),
     });
   }
 

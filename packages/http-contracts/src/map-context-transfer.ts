@@ -28,6 +28,25 @@ export const MapContextFacilityViewModeSchema = z.enum([
 
 export const MapContextViewportSchema = MapViewportSchema;
 
+export const MapContextFiltersSchema = z.object({
+  activeMarkets: z.array(z.string().min(1)).optional(),
+  activeUsers: z.array(z.string().min(1)).optional(),
+  facilityProviders: z.array(z.string().min(1)).optional(),
+  facilityStatuses: z
+    .array(z.enum(["commissioned", "under-construction", "planned", "unknown"]))
+    .optional(),
+  floodZones: z.array(z.string().min(1)).optional(),
+  gasCapacities: z.array(z.string().min(1)).optional(),
+  gasStatuses: z.array(z.string().min(1)).optional(),
+  interconnectivityHub: z.boolean().optional(),
+  parcelDataset: z.string().optional(),
+  parcelDavPercent: z.string().optional(),
+  parcelStyleAcres: z.string().optional(),
+  powerTypes: z.array(z.string().min(1)).optional(),
+  transmissionMinVoltage: z.number().finite().nonnegative().optional(),
+  zoningTypes: z.array(z.string().min(1)).optional(),
+});
+
 export const MapContextTransferSchema = z.object({
   schemaVersion: z.literal(MAP_CONTEXT_TRANSFER_SCHEMA_VERSION),
   sourceSurface: MapContextSurfaceSchema,
@@ -62,9 +81,11 @@ export const MapContextTransferSchema = z.object({
   selectionGeometryToken: z.string().min(1).optional(),
   highlightTarget: MapContextHighlightTargetSchema.optional(),
   contextToken: z.string().min(1).optional(),
+  mapFilters: MapContextFiltersSchema.optional(),
 });
 
 export type MapContextSurface = z.infer<typeof MapContextSurfaceSchema>;
 export type MapContextHighlightTarget = z.infer<typeof MapContextHighlightTargetSchema>;
 export type MapContextViewport = z.infer<typeof MapContextViewportSchema>;
 export type MapContextTransfer = z.infer<typeof MapContextTransferSchema>;
+export type MapContextFilters = z.infer<typeof MapContextFiltersSchema>;

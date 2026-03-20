@@ -85,9 +85,9 @@ SELECT
   NULL::text AS lease_or_own,
   NULL::text AS status_label,
   NULLIF(BTRIM(c.provider_slug), '') AS facility_code,
-  NULLIF(BTRIM(COALESCE(pts_id.address, pts_near.address)), '') AS address,
-  NULLIF(BTRIM(COALESCE(pts_id.city, pts_near.city)), '') AS city,
-  NULLIF(BTRIM(COALESCE(pts_id.state, pts_near.state)), '') AS state,
+  NULLIF(BTRIM(pts_id.address), '') AS address,
+  NULLIF(BTRIM(pts_id.city), '') AS city,
+  NULLIF(BTRIM(pts_id.state), '') AS state,
   mkt.name AS market_name,
   ST_AsGeoJSON(c.geom)::jsonb AS geom_json
 FROM candidates AS c
@@ -95,14 +95,6 @@ LEFT JOIN facility_current.providers AS provider
   ON provider.provider_id = c.provider_id
 LEFT JOIN spatial.colo_facility_points pts_id
   ON 'colo:' || pts_id.id::text = c.facility_id
-LEFT JOIN LATERAL (
-  SELECT p.address, p.city, p.state
-  FROM spatial.colo_facility_points p
-  WHERE pts_id.id IS NULL
-    AND ST_DWithin(p.geom, c.geom, 0.001)
-  ORDER BY p.geom <-> c.geom
-  LIMIT 1
-) pts_near ON pts_id.id IS NULL
 LEFT JOIN market_current.market_boundaries mb ON ST_Contains(mb.geom, c.geom)
 LEFT JOIN market_current.markets mkt ON mkt.market_id = mb.market_id;`,
   },
@@ -344,9 +336,9 @@ SELECT
   NULL::text AS lease_or_own,
   NULL::text AS status_label,
   NULLIF(BTRIM(c.provider_slug), '') AS facility_code,
-  NULLIF(BTRIM(COALESCE(pts_id.address, pts_near.address)), '') AS address,
-  NULLIF(BTRIM(COALESCE(pts_id.city, pts_near.city)), '') AS city,
-  NULLIF(BTRIM(COALESCE(pts_id.state, pts_near.state)), '') AS state,
+  NULLIF(BTRIM(pts_id.address), '') AS address,
+  NULLIF(BTRIM(pts_id.city), '') AS city,
+  NULLIF(BTRIM(pts_id.state), '') AS state,
   mkt.name AS market_name,
   ST_AsGeoJSON(c.geom)::jsonb AS geom_json
 FROM candidates AS c
@@ -354,14 +346,6 @@ LEFT JOIN facility_current.providers AS provider
   ON provider.provider_id = c.provider_id
 LEFT JOIN spatial.colo_facility_points pts_id
   ON 'colo:' || pts_id.id::text = c.facility_id
-LEFT JOIN LATERAL (
-  SELECT p.address, p.city, p.state
-  FROM spatial.colo_facility_points p
-  WHERE pts_id.id IS NULL
-    AND ST_DWithin(p.geom, c.geom, 0.001)
-  ORDER BY p.geom <-> c.geom
-  LIMIT 1
-) pts_near ON pts_id.id IS NULL
 LEFT JOIN market_current.market_boundaries mb ON ST_Contains(mb.geom, c.geom)
 LEFT JOIN market_current.markets mkt ON mkt.market_id = mb.market_id;`,
   },

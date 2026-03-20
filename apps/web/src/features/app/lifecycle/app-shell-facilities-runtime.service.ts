@@ -12,7 +12,12 @@ import { mountHyperscaleLeasedLayer } from "@/features/facilities/facilities-lea
 import { mountFacilitiesHover } from "@/features/facilities/hover";
 
 const FACILITIES_LAYER_MIN_ZOOM = 2.5;
-const FACILITIES_LAYER_LIMIT = 50_000;
+const FACILITIES_LIMIT_BY_PERSPECTIVE: Record<string, number> = {
+  colocation: 15_000,
+  hyperscale: 50_000,
+  "hyperscale-leased": 10_000,
+  enterprise: 10_000,
+};
 const FACILITIES_LAYER_DEBOUNCE_MS = 350;
 
 function setPerspectiveStatus(
@@ -48,7 +53,7 @@ function mountPerspectiveLayer({
   if (perspective === "hyperscale-leased") {
     const leasedController = mountHyperscaleLeasedLayer(map, {
       perspective,
-      limit: FACILITIES_LAYER_LIMIT,
+      limit: FACILITIES_LIMIT_BY_PERSPECTIVE[perspective] ?? 10_000,
       onStatusChange: (status) => {
         setPerspectiveStatus(options, perspective, status);
       },
@@ -68,7 +73,7 @@ function mountPerspectiveLayer({
     debounceMs: FACILITIES_LAYER_DEBOUNCE_MS,
     filterPredicate: () => options.filters.facilitiesPredicate.value ?? null,
     initialViewMode: options.state.perspectiveViewModes.value[perspective],
-    limit: FACILITIES_LAYER_LIMIT,
+    limit: FACILITIES_LIMIT_BY_PERSPECTIVE[perspective] ?? 15_000,
     minZoom: FACILITIES_LAYER_MIN_ZOOM,
     perspective,
     isInteractionEnabled: () => options.areFacilityInteractionsEnabled.value,

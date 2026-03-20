@@ -4,7 +4,7 @@ import { FacilitiesFeatureCollectionSchema } from "@map-migration/http-contracts
 import type { FacilitiesBboxRequest } from "@/features/facilities/facilities.types";
 import { buildApiRequestInit } from "@/lib/api/api-request-init.service";
 
-export function fetchFacilitiesByBboxEffect(args: FacilitiesBboxRequest) {
+export function fetchFacilitiesByBboxEffect(args: FacilitiesBboxRequest, signal?: AbortSignal) {
   return apiRequestJsonEffect(
     buildFacilitiesBboxRoute({
       bbox: args.bbox,
@@ -12,6 +12,6 @@ export function fetchFacilitiesByBboxEffect(args: FacilitiesBboxRequest) {
       limit: args.limit,
     }),
     FacilitiesFeatureCollectionSchema,
-    buildApiRequestInit()
+    buildApiRequestInit({ signal })
   );
 }

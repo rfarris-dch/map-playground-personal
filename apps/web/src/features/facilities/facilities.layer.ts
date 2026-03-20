@@ -119,7 +119,6 @@ export function mountFacilitiesLayer(
   const sourceId = toFacilitiesCatalogLayerId(perspective);
   const styleLayerIds = getFacilitiesStyleLayerIds(sourceId);
   const clusterLayerId = styleLayerIds.clusterLayerId;
-  const clusterCountLayerId = styleLayerIds.clusterCountLayerId;
   const pointLayerId = styleLayerIds.pointLayerId;
   const minZoom = options.minZoom ?? 4;
   const limit = options.limit ?? 2000;
@@ -139,6 +138,8 @@ export function mountFacilitiesLayer(
   const LOGO_SIZE = 128;
   const logoPrefix = "logo-";
   const LOGO_LOAD_DEFER_MS = 180;
+  const ICON_SYMBOL_MAX_VIEWPORT_FEATURES = 1500;
+  const ICON_LOGO_MAX_VIEWPORT_FEATURES = 600;
 
   const replacingImages = new Set<string>();
   const viewportFeaturesCache: ViewportFeaturesCache = {
@@ -315,6 +316,13 @@ export function mountFacilitiesLayer(
     visible: true,
   };
 
+  let activeRefreshAbortController: AbortController | null = null;
+
+  const abortActiveRefresh = (): void => {
+    activeRefreshAbortController?.abort();
+    activeRefreshAbortController = null;
+  };
+
   const isInteractionEnabled = (): boolean => {
     return options.isInteractionEnabled?.() ?? true;
   };
@@ -385,6 +393,22 @@ export function mountFacilitiesLayer(
     logoLoadTimer = null;
   };
 
+  const applyIconDensityMode = (viewportCount: number): void => {
+    if (state.viewMode !== "icons") {
+      return;
+    }
+
+    const showSymbols = viewportCount <= ICON_SYMBOL_MAX_VIEWPORT_FEATURES;
+
+    if (map.hasLayer(pointLayerId)) {
+      map.setLayerVisibility(pointLayerId, showSymbols);
+    }
+
+    if (map.hasLayer(iconFallbackLayerId)) {
+      map.setLayerVisibility(iconFallbackLayerId, true);
+    }
+  };
+
   const scheduleLogoLoad = (features: FacilitiesFeatureCollection["features"]): void => {
     clearScheduledLogoLoad();
     logoLoadTimer = setTimeout(() => {
@@ -444,13 +468,7 @@ export function mountFacilitiesLayer(
   const removeFacilitiesLayers = (): void => {
     clearClusterMarkers();
 
-    for (const layerId of [
-      heatmapLayerId,
-      clusterCountLayerId,
-      clusterLayerId,
-      pointLayerId,
-      iconFallbackLayerId,
-    ]) {
+    for (const layerId of [heatmapLayerId, clusterLayerId, pointLayerId, iconFallbackLayerId]) {
       if (map.hasLayer(layerId)) {
         map.removeLayer(layerId);
       }
@@ -611,22 +629,6 @@ export function mountFacilitiesLayer(
         "circle-stroke-color": "#111827",
         "circle-stroke-width": 1,
         "circle-radius": ["step", ["get", "point_count"], 16, 10, 22, 25, 28, 50, 36, 100, 44],
-      },
-    });
-    map.addLayer({
-      id: clusterCountLayerId,
-      type: "symbol",
-      source: sourceId,
-      minzoom: minZoom,
-      filter: ["has", "point_count"],
-      layout: {
-        "text-field": ["get", "point_count_abbreviated"],
-        "text-font": ["Noto Sans Bold"],
-        "text-size": 12,
-      },
-      paint: {
-        "text-color": "#ffffff",
-        "text-opacity": 0.001,
       },
     });
     map.addLayer({
@@ -1188,7 +1190,12 @@ export function mountFacilitiesLayer(
     });
 
     if (state.viewMode === "icons") {
-      scheduleLogoLoad(filtered);
+      applyIconDensityMode(viewportFeatures.length);
+      if (viewportFeatures.length <= ICON_LOGO_MAX_VIEWPORT_FEATURES) {
+        scheduleLogoLoad(viewportFeatures);
+      } else {
+        clearScheduledLogoLoad();
+      }
     }
   };
 
@@ -1266,6 +1273,10 @@ export function mountFacilitiesLayer(
     state.requestSequence += 1;
     const sequence = state.requestSequence;
 
+    abortActiveRefresh();
+    const abortController = new AbortController();
+    activeRefreshAbortController = abortController;
+
     setStatus({
       state: "loading",
       perspective,
@@ -1273,13 +1284,20 @@ export function mountFacilitiesLayer(
 
     const result = await runEffectPromise(
       Effect.either(
-        fetchFacilitiesByBboxEffect({
-          bbox: fetchBbox,
-          perspective,
-          limit,
-        })
+        fetchFacilitiesByBboxEffect(
+          {
+            bbox: fetchBbox,
+            perspective,
+            limit,
+          },
+          abortController.signal
+        )
       )
     );
+
+    if (activeRefreshAbortController === abortController) {
+      activeRefreshAbortController = null;
+    }
 
     if (sequence !== state.requestSequence) {
       return;
@@ -1327,6 +1345,7 @@ export function mountFacilitiesLayer(
       window.clearTimeout(state.debounceTimer);
     }
     state.debounceTimer = null;
+    abortActiveRefresh();
 
     if (!state.ready) {
       if (!visible) {
@@ -1381,7 +1400,14 @@ export function mountFacilitiesLayer(
         syncSelectionForFeatures(filtered);
 
         if (mode === "icons") {
-          scheduleLogoLoad(filtered);
+          const bbox = quantizeBbox(map.getBounds(), VIEWPORT_BBOX_DECIMALS);
+          const viewportFeatures = getViewportFeatures(filtered, bbox);
+          applyIconDensityMode(viewportFeatures.length);
+          if (viewportFeatures.length <= ICON_LOGO_MAX_VIEWPORT_FEATURES) {
+            scheduleLogoLoad(viewportFeatures);
+          } else {
+            clearScheduledLogoLoad();
+          }
         }
       } else {
         clearClusterMarkers();
@@ -1441,6 +1467,7 @@ export function mountFacilitiesLayer(
         window.clearTimeout(state.debounceTimer);
       }
       state.debounceTimer = null;
+      abortActiveRefresh();
       clearScheduledLogoLoad();
 
       if (pendingClick !== null) {

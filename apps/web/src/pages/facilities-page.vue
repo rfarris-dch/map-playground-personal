@@ -5,12 +5,18 @@
   import Tabs from "@/components/ui/tabs/tabs.vue";
   import TabsList from "@/components/ui/tabs/tabs-list.vue";
   import TabsTrigger from "@/components/ui/tabs/tabs-trigger.vue";
-  import { facilityNavigationItems } from "@/features/navigation/navigation.service";
+  import { readMapContextTransferFromRoute } from "@/features/map-context-transfer/map-context-transfer.service";
+  import {
+    buildFacilitiesPerspectivePageRoute,
+    facilityNavigationItems,
+  } from "@/features/navigation/navigation.service";
 
   type FacilityTab = "hyperscale" | "colocation";
 
   const route = useRoute();
   const router = useRouter();
+
+  const currentMapContext = computed(() => readMapContextTransferFromRoute({ route }) ?? undefined);
 
   const activeTab = computed<FacilityTab>(() =>
     route.name === "facilities-colocation" ? "colocation" : "hyperscale"
@@ -25,9 +31,7 @@
       return;
     }
 
-    const routePath =
-      nextTab === "hyperscale" ? "/facilities/hyperscale" : "/facilities/colocation";
-    await router.push(routePath);
+    await router.push(buildFacilitiesPerspectivePageRoute(nextTab, currentMapContext.value));
   }
 </script>
 

@@ -3,7 +3,14 @@
   import { useRoute } from "vue-router";
   import ErrorBoundary from "@/components/error-boundary.vue";
   import Separator from "@/components/ui/separator/separator.vue";
-  import { appNavigationItems } from "@/features/navigation/navigation.service";
+  import { readMapContextTransferFromRoute } from "@/features/map-context-transfer/map-context-transfer.service";
+  import {
+    appNavigationItems,
+    buildFacilitiesPageRoute,
+    buildGlobalMapRoute,
+    buildMarketsPageRoute,
+    buildProvidersPageRoute,
+  } from "@/features/navigation/navigation.service";
   import type { AppNavigationId } from "@/features/navigation/navigation.types";
 
   const route = useRoute();
@@ -16,9 +23,26 @@
     );
   });
 
+  const currentMapContext = computed(() => readMapContextTransferFromRoute({ route }) ?? undefined);
+
+  const navigationTargets = computed(() =>
+    appNavigationItems.map((item) => {
+      switch (item.navigationId) {
+        case "map":
+          return { ...item, to: buildGlobalMapRoute(currentMapContext.value) };
+        case "markets":
+          return { ...item, to: buildMarketsPageRoute(currentMapContext.value) };
+        case "providers":
+          return { ...item, to: buildProvidersPageRoute(currentMapContext.value) };
+        case "facilities":
+          return { ...item, to: buildFacilitiesPageRoute(currentMapContext.value) };
+      }
+    })
+  );
+
   const routerViewKey = computed(() => {
     const activeNavigationId = route.meta.navigationId;
-    return activeNavigationId === "map" ? route.fullPath : String(route.name ?? route.path);
+    return activeNavigationId === "map" ? route.path : String(route.name ?? route.path);
   });
 
   function isNavItemActive(navigationId: AppNavigationId): boolean {
@@ -37,7 +61,7 @@
         <Separator orientation="vertical" class="hidden h-6 md:block" />
 
         <nav class="flex flex-wrap items-center gap-2" aria-label="Primary">
-          <RouterLink v-for="item in appNavigationItems" :key="item.routeName" :to="item.to" custom>
+          <RouterLink v-for="item in navigationTargets" :key="item.routeName" :to="item.to" custom>
             <template #default="{ href, navigate }">
               <a
                 :href="href"

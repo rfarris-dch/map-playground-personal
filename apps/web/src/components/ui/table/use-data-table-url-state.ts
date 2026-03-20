@@ -6,6 +6,8 @@ import type {
 } from "@tanstack/vue-table";
 import { computed, type Ref, shallowRef, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { normalizeMapContextTransferQuery } from "@/features/map-context-transfer/map-context-transfer.service";
+import { deriveTableSeedStateFromRoute } from "./data-table-map-context.service";
 import {
   createColumnVisibilityState,
   createRowSelectionState,
@@ -14,6 +16,7 @@ import {
   serializeTableState,
   sortingStatesEqual,
 } from "./data-table.service";
+import type { PersistedDataTableState } from "./data-table.types";
 
 interface UseDataTableUrlStateOptions {
   readonly activeFacets: Ref<Record<string, readonly string[]>>;
@@ -51,9 +54,27 @@ export function useDataTableUrlState(options: UseDataTableUrlStateOptions): void
     }
   }
 
+  function applyPersistedTableState(parsedState: PersistedDataTableState): void {
+    options.globalQuery.value = typeof parsedState.q === "string" ? parsedState.q : "";
+    options.activeFacets.value = parsedState.f ? { ...parsedState.f } : {};
+    options.grouping.value = parsedState.g ? [...parsedState.g] : [];
+    options.columnVisibility.value = createColumnVisibilityState(parsedState.v ?? []);
+    options.rowSelection.value = createRowSelectionState(parsedState.x ?? []);
+
+    const nextSortingState = parsedState.s ?? initialSortingState;
+    if (!sortingStatesEqual(nextSortingState, options.sorting.value)) {
+      options.onSortingChange(nextSortingState.map((entry) => ({ ...entry })));
+    }
+  }
+
+  const lastAppliedSeedSignature = shallowRef<string | null>(null);
+  const normalizedMapContextSignature = computed(() =>
+    JSON.stringify(normalizeMapContextTransferQuery(route.query))
+  );
+
   watch(
-    () => route.query[urlStateParamKey.value],
-    (queryValue) => {
+    () => [route.query[urlStateParamKey.value], normalizedMapContextSignature.value],
+    ([queryValue]) => {
       if (!options.enableUrlState.value) {
         return;
       }
@@ -64,21 +85,26 @@ export function useDataTableUrlState(options: UseDataTableUrlStateOptions): void
 
       applyingUrlState.value = true;
       try {
-        if (parsedState === null) {
-          applyInitialTableState();
+        if (parsedState !== null) {
+          applyPersistedTableState(parsedState);
           return;
         }
 
-        options.globalQuery.value = typeof parsedState.q === "string" ? parsedState.q : "";
-        options.activeFacets.value = parsedState.f ? { ...parsedState.f } : {};
-        options.grouping.value = parsedState.g ? [...parsedState.g] : [];
-        options.columnVisibility.value = createColumnVisibilityState(parsedState.v ?? []);
-        options.rowSelection.value = createRowSelectionState(parsedState.x ?? []);
+        const seededState = deriveTableSeedStateFromRoute(options.tableId.value, route);
+        const seededStateSignature =
+          seededState === null ? null : JSON.stringify(seededState);
 
-        const nextSortingState = parsedState.s ?? initialSortingState;
-        if (!sortingStatesEqual(nextSortingState, options.sorting.value)) {
-          options.onSortingChange(nextSortingState.map((entry) => ({ ...entry })));
+        if (
+          seededState !== null &&
+          seededStateSignature !== null &&
+          seededStateSignature !== lastAppliedSeedSignature.value
+        ) {
+          applyPersistedTableState(seededState);
+          lastAppliedSeedSignature.value = seededStateSignature;
+          return;
         }
+
+        applyInitialTableState();
       } finally {
         applyingUrlState.value = false;
       }

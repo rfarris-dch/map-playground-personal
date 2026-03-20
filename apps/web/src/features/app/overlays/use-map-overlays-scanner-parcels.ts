@@ -45,6 +45,8 @@ import { listenToMapEvent } from "@/lib/effect/scoped-listener";
 const SCANNER_PARCELS_REFRESH_DEBOUNCE_MS = 260;
 const SCANNER_PARCELS_MAX_BBOX_WIDTH_DEGREES = 2;
 const SCANNER_PARCELS_MAX_BBOX_HEIGHT_DEGREES = 2;
+const SCANNER_PARCELS_MAX_VIEWPORT_PAGE_COUNT = 2;
+const SCANNER_PARCELS_MAX_ANCHOR_PAGE_COUNT = 1;
 
 type ScannerParcelsPagesSuccess = Extract<SpatialAnalysisParcelsPagesResult, { ok: true }>;
 
@@ -164,6 +166,7 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
     const request = createScannerBboxRequest(scope.mapBounds);
     return fetchSpatialAnalysisParcelsPagesEffect({
       expectedIngestionRunId: options.expectedParcelsIngestionRunId.value,
+      maxPageCount: SCANNER_PARCELS_MAX_VIEWPORT_PAGE_COUNT,
       request,
       cursorRepeatLogContext: "scanner-viewport",
     }).pipe(
@@ -172,6 +175,7 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
         () =>
           fetchSpatialAnalysisParcelsPagesEffect({
             expectedIngestionRunId: options.expectedParcelsIngestionRunId.value,
+            maxPageCount: SCANNER_PARCELS_MAX_VIEWPORT_PAGE_COUNT,
             request: createScannerBboxRequest(buildCenterLimitedBbox(scope.mapBounds)),
             cursorRepeatLogContext: "scanner-fallback-bbox",
           })
@@ -199,6 +203,7 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
       for (const anchorRequest of selectionArgs.anchorRequests) {
         yield* fetchSpatialAnalysisParcelsPagesEffect({
           expectedIngestionRunId: options.expectedParcelsIngestionRunId.value,
+          maxPageCount: SCANNER_PARCELS_MAX_ANCHOR_PAGE_COUNT,
           request: anchorRequest,
           cursorRepeatLogContext: "scanner-anchor-bbox",
         }).pipe(

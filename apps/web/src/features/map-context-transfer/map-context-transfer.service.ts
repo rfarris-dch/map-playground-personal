@@ -29,6 +29,11 @@ import {
   powerLayerId,
   WATER_FEATURES_LAYER_ID,
 } from "@/features/app/core/app-shell.constants";
+import type { MapFiltersState } from "@/features/app/filters/map-filters.types";
+import {
+  createDefaultMapFiltersState,
+  isFacilityStatusFilterId,
+} from "@/features/app/filters/map-filters.types";
 import { basemapLayerIds } from "@/features/basemap/basemap.service";
 import type { BoundaryLayerId } from "@/features/boundaries/boundaries.types";
 import type { FacilitiesViewMode } from "@/features/facilities/facilities.types";
@@ -538,6 +543,11 @@ function buildMergedOptionalMapContextFields(
     "contextToken",
     shortContext.contextToken ?? storedContext?.contextToken
   );
+  assignMapContextField(
+    mergedFields,
+    "mapFilters",
+    shortContext.mapFilters ?? storedContext?.mapFilters
+  );
 
   return mergedFields;
 }
@@ -928,6 +938,7 @@ export function buildMapContextTransferQuery(
     context.selectedFiberSourceLayerNames?.longhaul
   );
   const requiresStoredContext =
+    typeof context.mapFilters !== "undefined" ||
     inlineMarketIds !== context.marketIds ||
     inlineCompanyIds !== context.companyIds ||
     inlineProviderIds !== context.providerIds ||
@@ -1055,7 +1066,7 @@ function buildSelectedBoundaryIds(
 }
 
 function roundViewportValue(value: number): number {
-  return Number(value.toFixed(6));
+  return Number(value.toFixed(5));
 }
 
 function resolveVisibleLayerIds(
@@ -1246,6 +1257,115 @@ function resolveFacilityViewModes(
   };
 }
 
+function resolveTransferableMapFilters(
+  state: BuildMapContextTransferFromAppShellArgs["mapFilters"]
+): MapContextTransfer["mapFilters"] | undefined {
+  if (typeof state === "undefined") {
+    return undefined;
+  }
+
+  const nextFilters: NonNullable<MapContextTransfer["mapFilters"]> = {};
+
+  const activeMarkets = [...state.activeMarkets].sort((a, b) => a.localeCompare(b));
+  if (activeMarkets.length > 0) {
+    nextFilters.activeMarkets = activeMarkets;
+  }
+
+  const activeUsers = [...state.activeUsers].sort((a, b) => a.localeCompare(b));
+  if (activeUsers.length > 0) {
+    nextFilters.activeUsers = activeUsers;
+  }
+
+  const facilityProviders = [...state.facilityProviders].sort((a, b) => a.localeCompare(b));
+  if (facilityProviders.length > 0) {
+    nextFilters.facilityProviders = facilityProviders;
+  }
+
+  const facilityStatuses = [...state.facilityStatuses].sort((a, b) => a.localeCompare(b));
+  if (facilityStatuses.length > 0) {
+    nextFilters.facilityStatuses = facilityStatuses;
+  }
+
+  const floodZones = [...state.floodZones].sort((a, b) => a.localeCompare(b));
+  if (floodZones.length > 0) {
+    nextFilters.floodZones = floodZones;
+  }
+
+  const gasCapacities = [...state.gasCapacities].sort((a, b) => a.localeCompare(b));
+  if (gasCapacities.length > 0) {
+    nextFilters.gasCapacities = gasCapacities;
+  }
+
+  const gasStatuses = [...state.gasStatuses].sort((a, b) => a.localeCompare(b));
+  if (gasStatuses.length > 0) {
+    nextFilters.gasStatuses = gasStatuses;
+  }
+
+  if (state.interconnectivityHub) {
+    nextFilters.interconnectivityHub = true;
+  }
+
+  if (state.parcelDataset.trim().length > 0) {
+    nextFilters.parcelDataset = state.parcelDataset;
+  }
+
+  if (state.parcelDavPercent.trim().length > 0) {
+    nextFilters.parcelDavPercent = state.parcelDavPercent;
+  }
+
+  if (state.parcelStyleAcres.trim().length > 0) {
+    nextFilters.parcelStyleAcres = state.parcelStyleAcres;
+  }
+
+  const powerTypes = [...state.powerTypes].sort((a, b) => a.localeCompare(b));
+  if (powerTypes.length > 0) {
+    nextFilters.powerTypes = powerTypes;
+  }
+
+  if (typeof state.transmissionMinVoltage === "number") {
+    nextFilters.transmissionMinVoltage = state.transmissionMinVoltage;
+  }
+
+  const zoningTypes = [...state.zoningTypes].sort((a, b) => a.localeCompare(b));
+  if (zoningTypes.length > 0) {
+    nextFilters.zoningTypes = zoningTypes;
+  }
+
+  return Object.keys(nextFilters).length > 0 ? nextFilters : undefined;
+}
+
+function restoreMapFilters(
+  filters: MapContextTransfer["mapFilters"] | undefined
+): MapFiltersState | null {
+  if (typeof filters === "undefined") {
+    return null;
+  }
+
+  return {
+    activeMarkets: new Set(filters.activeMarkets ?? []),
+    activeUsers: new Set(filters.activeUsers ?? []),
+    facilityProviders: new Set(filters.facilityProviders ?? []),
+    facilityStatuses: new Set(
+      (filters.facilityStatuses ?? []).filter(isFacilityStatusFilterId)
+    ),
+    floodZones: new Set(filters.floodZones ?? []),
+    gasCapacities: new Set(filters.gasCapacities ?? []),
+    gasStatuses: new Set(filters.gasStatuses ?? []),
+    interconnectivityHub: filters.interconnectivityHub ?? false,
+    parcelAcresMax: null,
+    parcelAcresMin: null,
+    parcelDataset: filters.parcelDataset ?? "",
+    parcelDavPercent: filters.parcelDavPercent ?? "",
+    parcelStyleAcres: filters.parcelStyleAcres ?? "",
+    powerTypes: new Set(filters.powerTypes ?? []),
+    transmissionMinVoltage:
+      typeof filters.transmissionMinVoltage === "number"
+        ? filters.transmissionMinVoltage
+        : null,
+    zoningTypes: new Set(filters.zoningTypes ?? []),
+  };
+}
+
 export function buildMapContextTransferFromAppShell(
   args: BuildMapContextTransferFromAppShellArgs
 ): MapContextTransfer {
@@ -1316,6 +1436,11 @@ export function buildMapContextTransferFromAppShell(
 
   if (typeof args.highlightTarget !== "undefined") {
     context.highlightTarget = args.highlightTarget;
+  }
+
+  const mapFilters = resolveTransferableMapFilters(args.mapFilters);
+  if (typeof mapFilters !== "undefined") {
+    context.mapFilters = mapFilters;
   }
 
   return context;
@@ -1441,6 +1566,14 @@ function applySelectedBoundaryIdsContext(args: ApplyMapContextTransferToAppShell
   }
 }
 
+function applyMapFiltersContext(args: ApplyMapContextTransferToAppShellArgs): void {
+  if (typeof args.setMapFiltersState !== "function") {
+    return;
+  }
+
+  args.setMapFiltersState(restoreMapFilters(args.context?.mapFilters) ?? createDefaultMapFiltersState());
+}
+
 export function applyMapContextTransferToAppShell(
   args: ApplyMapContextTransferToAppShellArgs
 ): void {
@@ -1460,6 +1593,7 @@ export function applyMapContextTransferToAppShell(
   applyLayerVisibilityContext(args);
   applyFiberSourceLayerSelectionContext(args);
   applySelectedBoundaryIdsContext(args);
+  applyMapFiltersContext(args);
 }
 
 export function inferMapContextSurfaceFromRoute(

@@ -12,6 +12,7 @@ import type {
 import type { BasemapLayerId, BasemapVisibilityState } from "@/features/basemap/basemap.types";
 import type { BoundaryLayerId } from "@/features/boundaries/boundaries.types";
 import type { FacilitiesViewMode } from "@/features/facilities/facilities.types";
+import type { MapFiltersState } from "@/features/app/filters/map-filters.types";
 import type { LayerRuntimeSnapshot } from "@/features/layers/layer-runtime.types";
 import type { PowerLayerId } from "@/features/power/power.types";
 
@@ -26,6 +27,7 @@ export interface UseAppShellUrlStateOptions {
   readonly hydroBasinsVisible: ShallowRef<boolean>;
   readonly layerRuntimeSnapshot: ShallowRef<LayerRuntimeSnapshot | null>;
   readonly map: ShallowRef<import("@map-migration/map-engine").IMap | null>;
+  readonly mapFilters: Readonly<ShallowRef<MapFiltersState>>;
   readonly parcelsVisible: ShallowRef<boolean>;
   readonly perspectiveViewModes: ShallowRef<{
     readonly colocation: FacilitiesViewMode;
@@ -50,6 +52,7 @@ export interface UseAppShellUrlStateOptions {
   readonly setFloodLayerVisible: (layerId: "flood100" | "flood500", visible: boolean) => void;
   readonly setGasPipelineVisible: (visible: boolean) => void;
   readonly setHydroBasinsVisible: (visible: boolean) => void;
+  readonly setMapFiltersState: (nextState: MapFiltersState) => void;
   readonly setParcelsVisible: (visible: boolean) => void;
   readonly setPerspectiveViewMode: (
     perspective: FacilityPerspective,

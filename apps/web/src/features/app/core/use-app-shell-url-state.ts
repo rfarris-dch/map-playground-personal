@@ -2,7 +2,7 @@ import type { MapContextTransfer } from "@map-migration/http-contracts/map-conte
 import { Effect } from "effect";
 import { onBeforeUnmount, shallowRef, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { useLatestEffectTask } from "@/composables/use-latest-effect-task";
+import { useDebouncedLatestEffectTask } from "@/composables/use-debounced-latest-effect-task";
 import {
   applyMapContextTransferToAppShell,
   readMapContextTransferFromRoute,
@@ -35,6 +35,8 @@ function normalizeViewportForMap(
   };
 }
 
+const URL_STATE_SYNC_DEBOUNCE_MS = 180;
+
 export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
   const route = useRoute();
   const router = useRouter();
@@ -43,7 +45,8 @@ export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
   );
   const lastWrittenQuerySignature = shallowRef<string | null>(null);
   const viewportVersion = shallowRef(0);
-  const replaceTask = useLatestEffectTask({
+  const replaceTask = useDebouncedLatestEffectTask({
+    debounceMs: URL_STATE_SYNC_DEBOUNCE_MS,
     onUnexpectedError(error) {
       console.error("[map] url state sync failed", error);
     },
@@ -60,22 +63,25 @@ export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
       contextToken.value ?? undefined
     );
     const nextSignature = serializeNormalizedMapContextQuery(nextQuery);
+    const currentSignature = serializeNormalizedMapContextQuery(route.query);
+
     contextToken.value = readMapContextTransferTokenFromQuery(nextQuery) ?? null;
+
+    if (currentSignature === nextSignature) {
+      return Promise.resolve();
+    }
+
     lastWrittenQuerySignature.value = nextSignature;
 
     return replaceTask.start(
-      Effect.sync(() => {
-        if (typeof window === "undefined") {
-          return;
-        }
-
-        const nextHref = router.resolve({ query: nextQuery }).fullPath;
-        const currentHref = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-        if (currentHref === nextHref) {
-          return;
-        }
-
-        window.history.replaceState(window.history.state, "", nextHref);
+      Effect.tryPromise({
+        try: async () => {
+          await router.replace({ query: nextQuery });
+        },
+        catch: (error) => {
+          lastWrittenQuerySignature.value = null;
+          throw error;
+        },
       })
     );
   }
@@ -108,6 +114,7 @@ export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
         setPerspectiveViewMode: options.setPerspectiveViewMode,
         setPerspectiveVisibility: options.setPerspectiveVisibility,
         setPowerLayerVisible: options.setPowerLayerVisible,
+        setMapFiltersState: options.setMapFiltersState,
         setWaterVisible: options.setWaterVisible,
       });
     },
@@ -158,6 +165,7 @@ export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
       options.visiblePerspectives.value,
       viewportVersion.value,
       options.waterVisible.value,
+      options.mapFilters.value,
     ],
     () => {
       syncRouteToUrlState().catch(() => undefined);
