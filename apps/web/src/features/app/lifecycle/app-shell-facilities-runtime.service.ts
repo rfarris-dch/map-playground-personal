@@ -18,7 +18,7 @@ const ALL_FACILITY_PERSPECTIVES: readonly FacilityPerspective[] = [
   "enterprise",
 ];
 const EAGER_FACILITY_PERSPECTIVES: readonly FacilityPerspective[] = ["colocation", "hyperscale"];
-const FACILITIES_LAYER_MIN_ZOOM = 2.5;
+const FACILITIES_LAYER_MIN_ZOOM = 0;
 const FACILITIES_LIMIT_BY_PERSPECTIVE: Record<string, number> = {
   colocation: 5000,
   hyperscale: 25_000,

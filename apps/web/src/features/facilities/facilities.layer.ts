@@ -127,7 +127,7 @@ export function mountFacilitiesLayer(
   const styleLayerIds = getFacilitiesStyleLayerIds(sourceId);
   const clusterLayerId = styleLayerIds.clusterLayerId;
   const pointLayerId = styleLayerIds.pointLayerId;
-  const minZoom = options.minZoom ?? 4;
+  const minZoom = options.minZoom ?? 0;
   const limit = options.limit ?? 2000;
   const debounceMs = options.debounceMs ?? 250;
   const maxViewportWidthKm = options.maxViewportWidthKm ?? Number.POSITIVE_INFINITY;
@@ -1224,22 +1224,6 @@ export function mountFacilitiesLayer(
     });
   };
 
-  const hideFacilitiesForZoom = (zoom: number): void => {
-    state.requestSequence += 1;
-    clearCachedViewport();
-    resetVisibleFacilitiesData();
-    clearSelection();
-    state.lastFetchKey = null;
-    emitViewportUpdate([], "n/a", false);
-    setStatus({
-      state: "hidden",
-      perspective,
-      reason: "zoom",
-      zoom,
-      minZoom,
-    });
-  };
-
   const getFetchKey = (bbox: BBox): string => {
     return `${perspective}:${bbox.west},${bbox.south},${bbox.east},${bbox.north}:${limit}`;
   };
@@ -1403,12 +1387,6 @@ export function mountFacilitiesLayer(
     readonly fetchBbox: BBox;
     readonly fetchKey: string;
   } | null => {
-    const zoom = map.getZoom();
-    if (zoom < minZoom) {
-      hideFacilitiesForZoom(zoom);
-      return null;
-    }
-
     const bbox = quantizeBbox(map.getBounds(), VIEWPORT_BBOX_DECIMALS);
     const guardrailResult = evaluateFacilitiesGuardrails({
       bounds: bbox,
