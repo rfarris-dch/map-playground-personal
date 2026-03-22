@@ -26,8 +26,10 @@ export interface FacilityDetailRow {
   readonly facility_code: string | null | undefined;
   readonly facility_id: string;
   readonly facility_name: string | null | undefined;
-  readonly geom_json: unknown;
+  readonly geom_json?: unknown;
+  readonly latitude?: number | string | null | undefined;
   readonly lease_or_own: string | null | undefined;
+  readonly longitude?: number | string | null | undefined;
   readonly market_name: string | null | undefined;
   readonly planned_power_mw: number | string | null | undefined;
   readonly provider_id: string | null | undefined;
@@ -49,8 +51,10 @@ export interface FacilitiesBboxRow {
   readonly facility_code: string | null | undefined;
   readonly facility_id: string;
   readonly facility_name: string | null | undefined;
-  readonly geom_json: unknown;
+  readonly geom_json?: unknown;
+  readonly latitude?: number | string | null | undefined;
   readonly lease_or_own: string | null | undefined;
+  readonly longitude?: number | string | null | undefined;
   readonly market_name: string | null | undefined;
   readonly planned_power_mw: number | string | null | undefined;
   readonly provider_id: string | null | undefined;

@@ -1,4 +1,9 @@
 import { parsePositiveIntFlag } from "@/config/env-parsing.service";
+import {
+  recordFacilitiesDbClientAbort,
+  recordFacilitiesDbQueueWait,
+  recordFacilitiesDbStatementTimeout,
+} from "@/geo/facilities/route/facilities-performance.service";
 import { readApiRequestContextStorage } from "@/http/api-request-context-storage.service";
 import type { BunReservedSqlClient, BunSqlClient } from "./postgres.types";
 
@@ -9,13 +14,24 @@ declare const Bun: {
 };
 
 const CONNECTION_CLOSED_RE = /connection closed/i;
+const STATEMENT_TIMEOUT_RE = /statement timeout/i;
 const POSTGRES_READY_QUERY = "select 1 as db_ready";
 const MAX_CONCURRENT_QUERIES = parsePositiveIntFlag(process.env.API_DB_MAX_CONCURRENT_QUERIES, 8);
+const MAX_CONCURRENT_FACILITIES_INTERACTIVE_QUERIES = parsePositiveIntFlag(
+  process.env.API_DB_MAX_CONCURRENT_FACILITIES_INTERACTIVE_QUERIES,
+  4
+);
+const MAX_CONCURRENT_FACILITIES_HEAVY_QUERIES = parsePositiveIntFlag(
+  process.env.API_DB_MAX_CONCURRENT_FACILITIES_HEAVY_QUERIES,
+  2
+);
 
 interface QuerySlotLimiter {
   readonly acquire: () => Promise<void>;
   readonly release: () => void;
 }
+
+export type QueryClass = "default" | "facilities-heavy" | "facilities-interactive";
 
 export function createQuerySlotLimiter(maxConcurrentQueries: number): QuerySlotLimiter {
   let activeQueries = 0;
@@ -49,7 +65,11 @@ export function createQuerySlotLimiter(maxConcurrentQueries: number): QuerySlotL
   };
 }
 
-const querySlotLimiter = createQuerySlotLimiter(MAX_CONCURRENT_QUERIES);
+const querySlotLimiters: Record<QueryClass, QuerySlotLimiter> = {
+  default: createQuerySlotLimiter(MAX_CONCURRENT_QUERIES),
+  "facilities-heavy": createQuerySlotLimiter(MAX_CONCURRENT_FACILITIES_HEAVY_QUERIES),
+  "facilities-interactive": createQuerySlotLimiter(MAX_CONCURRENT_FACILITIES_INTERACTIVE_QUERIES),
+};
 const DEFAULT_DB_STATEMENT_TIMEOUT_MS = parsePositiveIntFlag(
   process.env.API_DB_STATEMENT_TIMEOUT_MS,
   180_000
@@ -58,12 +78,14 @@ const DEFAULT_DB_LOCK_TIMEOUT_MS = parsePositiveIntFlag(process.env.API_DB_LOCK_
 
 export interface RunQueryOptions {
   readonly lockTimeoutMs?: number;
+  readonly queryClass?: QueryClass;
   readonly signal?: AbortSignal;
   readonly statementTimeoutMs?: number;
 }
 
 interface ResolvedRunQueryOptions {
   readonly lockTimeoutMs: number;
+  readonly queryClass: QueryClass;
   readonly signal: AbortSignal | null;
   readonly statementTimeoutMs: number;
 }
@@ -116,6 +138,19 @@ export function isConnectionClosedError(error: unknown): boolean {
   return typeof message === "string" && CONNECTION_CLOSED_RE.test(message);
 }
 
+function isStatementTimeoutError(error: unknown): boolean {
+  if (error instanceof Error) {
+    return STATEMENT_TIMEOUT_RE.test(error.message);
+  }
+
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+
+  const message = Reflect.get(error, "message");
+  return typeof message === "string" && STATEMENT_TIMEOUT_RE.test(message);
+}
+
 function runQueryWithClient<T extends object>(
   sqlClient: BunSqlClient,
   text: string,
@@ -139,6 +174,7 @@ function resolveRunQueryOptions(options: RunQueryOptions | undefined): ResolvedR
       options?.lockTimeoutMs ?? DEFAULT_DB_LOCK_TIMEOUT_MS,
       DEFAULT_DB_LOCK_TIMEOUT_MS
     ),
+    queryClass: options?.queryClass ?? "default",
     signal: options?.signal ?? requestContext?.signal ?? null,
     statementTimeoutMs: sanitizeTimeoutMs(
       options?.statementTimeoutMs ?? DEFAULT_DB_STATEMENT_TIMEOUT_MS,
@@ -214,10 +250,24 @@ export async function runQuery<T extends object>(
   values: readonly SqlParameterValue[],
   options?: RunQueryOptions
 ): Promise<T[]> {
+  const resolvedOptions = resolveRunQueryOptions(options);
+  const querySlotLimiter = querySlotLimiters[resolvedOptions.queryClass];
+  const queueWaitStartedAt = globalThis.performance.now();
   await querySlotLimiter.acquire();
+  if (resolvedOptions.queryClass !== "default") {
+    recordFacilitiesDbQueueWait(globalThis.performance.now() - queueWaitStartedAt);
+  }
   try {
     const sqlClient = getSqlClient();
-    return await runQueryWithReconnect<T>(sqlClient, text, values, resolveRunQueryOptions(options));
+    return await runQueryWithReconnect<T>(sqlClient, text, values, resolvedOptions);
+  } catch (error) {
+    if (resolvedOptions.queryClass !== "default" && resolvedOptions.signal?.aborted) {
+      recordFacilitiesDbClientAbort();
+    }
+    if (resolvedOptions.queryClass !== "default" && isStatementTimeoutError(error)) {
+      recordFacilitiesDbStatementTimeout();
+    }
+    throw error;
   } finally {
     querySlotLimiter.release();
   }

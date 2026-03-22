@@ -12,6 +12,7 @@ import type {
   BoundaryFacetSelectionState,
   PerspectiveStatusState,
 } from "@/features/app/core/app-shell.types";
+import type { MapInteractionCoordinator } from "@/features/app/interaction/map-interaction.types";
 import type {
   BoundaryFetchErrorState,
   EnvironmentalStressController,
@@ -93,6 +94,7 @@ export interface UseAppShellStateResult {
   readonly hoveredPower: ShallowRef<PowerHoverState | null>;
   readonly hydroBasinsController: ShallowRef<HydroBasinsVisibilityController | null>;
   readonly hyperscaleViewportFeatures: ShallowRef<FacilitiesFeatureCollection["features"]>;
+  readonly interactionCoordinator: ShallowRef<MapInteractionCoordinator | null>;
   readonly isLayerPanelOpen: ComputedRef<boolean>;
   readonly isSelectionPanelOpen: ComputedRef<boolean>;
   readonly isSketchMeasurePanelOpen: ComputedRef<boolean>;

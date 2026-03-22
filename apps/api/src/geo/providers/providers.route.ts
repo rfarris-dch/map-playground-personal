@@ -57,7 +57,7 @@ export function registerProvidersRoute<E extends Env>(app: Hono<E>): void {
           honoContext.req.query("sortBy"),
           honoContext.req.query("sortOrder")
         );
-        const offset = (queryParams.page - 1) * queryParams.pageSize;
+        const offset = queryParams.page * queryParams.pageSize;
 
         const queryResult = await queryProvidersTable({
           limit: queryParams.pageSize,

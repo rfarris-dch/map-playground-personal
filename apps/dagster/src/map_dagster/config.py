@@ -232,6 +232,32 @@ DATASETS: tuple[DatasetConfig, ...] = (
         ),
     ),
     DatasetConfig(
+        dataset="facilities-read-models",
+        display_name="Facilities Read Models",
+        job_name="facilities_read_models_pipeline",
+        steps=(
+            AssetStepConfig(
+                asset_key="facility_providers_refresh",
+                commands=(
+                    shell(
+                        "bash",
+                        str(PROJECT_ROOT / "scripts/refresh-facility-providers.sh"),
+                    ),
+                ),
+            ),
+            AssetStepConfig(
+                asset_key="facilities_enriched_read_model",
+                deps=("facility_providers_refresh",),
+                commands=(
+                    shell(
+                        "bash",
+                        str(PROJECT_ROOT / "scripts/refresh-facilities-fast.sh"),
+                    ),
+                ),
+            ),
+        ),
+    ),
+    DatasetConfig(
         dataset="hydro-basins",
         display_name="Hydro Basins",
         job_name="hydro_basins_pipeline",

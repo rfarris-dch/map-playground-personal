@@ -1,6 +1,6 @@
 import type { ApiAppOptions } from "@/app.types";
 
-export type RouteTimeoutProfile = "default" | "parcels" | "selection";
+export type RouteTimeoutProfile = "default" | "facilities" | "parcels" | "selection";
 const routeTimeoutProfiles = new Map<string, Exclude<RouteTimeoutProfile, "default">>();
 
 export function resolveRouteTimeoutMs(
@@ -9,6 +9,10 @@ export function resolveRouteTimeoutMs(
 ): number {
   if (profile === "parcels") {
     return options.parcelsRequestTimeoutMs;
+  }
+
+  if (profile === "facilities") {
+    return options.facilitiesRequestTimeoutMs;
   }
 
   if (profile === "selection") {
@@ -27,5 +31,7 @@ export function registerRouteTimeoutProfile(
 
 export function readRouteTimeoutProfile(path: string): RouteTimeoutProfile {
   const profile = routeTimeoutProfiles.get(path);
-  return profile === "parcels" || profile === "selection" ? profile : "default";
+  return profile === "facilities" || profile === "parcels" || profile === "selection"
+    ? profile
+    : "default";
 }

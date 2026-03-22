@@ -23,20 +23,6 @@ function parseJsonObject(text: string): unknown {
   }
 }
 
-function readCoordinates(input: unknown): [number, number] {
-  if (!Array.isArray(input) || input.length !== 2) {
-    throw new Error("Invalid geom_json: expected [lng, lat]");
-  }
-
-  const lng = Number(input[0]);
-  const lat = Number(input[1]);
-  if (!(Number.isFinite(lng) && Number.isFinite(lat))) {
-    throw new Error("Invalid geom_json: coordinates are not finite numbers");
-  }
-
-  return [lng, lat];
-}
-
 function parseGeometry(input: unknown): Geometry {
   const value = typeof input === "string" ? parseJsonObject(input) : input;
   const parsed = GeometrySchema.safeParse(value);
@@ -52,6 +38,13 @@ function parsePointGeometry(input: unknown): PointGeometry {
     throw new Error("Invalid geom_json: geometry type must be Point");
   }
   return geom;
+}
+
+function buildPointGeometry(longitude: number, latitude: number): PointGeometry {
+  return {
+    type: "Point",
+    coordinates: [longitude, latitude],
+  };
 }
 
 function readNullableNumber(value: number | string | null | undefined): number | null {
@@ -140,6 +133,26 @@ function readProviderId(value: string | null | undefined): string {
   return readNullableText(value) ?? "unknown";
 }
 
+function resolveFeatureGeometry(row: FacilitiesBboxRow): Geometry {
+  const longitude = readNullableNumber(row.longitude);
+  const latitude = readNullableNumber(row.latitude);
+  if (longitude !== null && latitude !== null) {
+    return buildPointGeometry(longitude, latitude);
+  }
+
+  return parseGeometry(row.geom_json);
+}
+
+function resolveDetailGeometry(row: FacilityDetailRow): PointGeometry {
+  const longitude = readNullableNumber(row.longitude);
+  const latitude = readNullableNumber(row.latitude);
+  if (longitude !== null && latitude !== null) {
+    return buildPointGeometry(longitude, latitude);
+  }
+
+  return parsePointGeometry(row.geom_json);
+}
+
 export function mapFacilitiesRowsToFeatures(
   rows: readonly FacilitiesBboxRow[],
   perspective: FacilityPerspective
@@ -147,7 +160,7 @@ export function mapFacilitiesRowsToFeatures(
   return rows.map((row) => ({
     type: "Feature",
     id: row.facility_id,
-    geometry: parseGeometry(row.geom_json),
+    geometry: resolveFeatureGeometry(row),
     properties: {
       perspective,
       facilityId: row.facility_id,
@@ -185,7 +198,7 @@ export function mapFacilityDetailRowToFeature(
   return {
     type: "Feature",
     id: row.facility_id,
-    geometry: parsePointGeometry(row.geom_json),
+    geometry: resolveDetailGeometry(row),
     properties: {
       perspective,
       facilityId: row.facility_id,

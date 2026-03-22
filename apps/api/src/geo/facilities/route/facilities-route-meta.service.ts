@@ -4,18 +4,24 @@ import { buildResponseMeta } from "@/http/response-meta.service";
 import { getApiRuntimeConfig } from "@/http/runtime-config";
 
 export function buildFacilitiesRouteMeta(args: {
+  readonly dataVersion?: string;
+  readonly generatedAt?: string;
   readonly requestId: string;
   readonly recordCount: number;
   readonly truncated: boolean;
   readonly warnings: readonly Warning[];
 }): ResponseMeta {
   const runtimeConfig = getApiRuntimeConfig();
+  const generatedAtArg =
+    typeof args.generatedAt === "string" ? { generatedAt: args.generatedAt } : {};
+
   return buildResponseMeta({
-    dataVersion: runtimeConfig.dataVersion,
+    dataVersion: args.dataVersion ?? runtimeConfig.dataVersion,
     recordCount: args.recordCount,
     requestId: args.requestId,
     sourceMode: runtimeConfig.facilitiesSourceMode,
     truncated: args.truncated,
     warnings: args.warnings,
+    ...generatedAtArg,
   });
 }

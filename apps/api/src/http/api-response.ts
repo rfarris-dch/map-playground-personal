@@ -109,6 +109,19 @@ export function withRequestId(response: Response, requestId: string): Response {
   return response;
 }
 
+export function withHeaders(
+  response: Response,
+  headers: Readonly<Record<string, string | undefined>>
+): Response {
+  for (const [name, value] of Object.entries(headers)) {
+    if (typeof value === "string" && value.length > 0) {
+      response.headers.set(name, value);
+    }
+  }
+
+  return response;
+}
+
 export function jsonError(_c: Context, args: JsonErrorArgs): Response {
   return responseError(args);
 }

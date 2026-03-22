@@ -61,6 +61,100 @@ function toParcelFeatureTarget(feature: {
   };
 }
 
+interface ParcelViewportFacetAccumulator {
+  acresMax: number | null;
+  acresMin: number | null;
+  distTransmissionMax: number | null;
+  distTransmissionMin: number | null;
+  floodZones: Set<string>;
+  zoningTypes: Set<string>;
+}
+
+function createParcelViewportFacetAccumulator(): ParcelViewportFacetAccumulator {
+  return {
+    acresMax: null,
+    acresMin: null,
+    distTransmissionMax: null,
+    distTransmissionMin: null,
+    floodZones: new Set<string>(),
+    zoningTypes: new Set<string>(),
+  };
+}
+
+function isParcelFeatureProperties(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function addFacetValue(target: Set<string>, value: unknown, normalize = false): void {
+  if (typeof value !== "string" || value.length === 0) {
+    return;
+  }
+
+  target.add(normalize ? value.toLowerCase() : value);
+}
+
+function readNonNegativeNumberProperty(
+  properties: Record<string, unknown>,
+  propertyName: string
+): number | null {
+  const rawValue = Reflect.get(properties, propertyName);
+  const numericValue = typeof rawValue === "number" ? rawValue : Number(rawValue);
+  if (!Number.isFinite(numericValue) || numericValue < 0) {
+    return null;
+  }
+
+  return numericValue;
+}
+
+function updateFacetRange(args: {
+  readonly max: number | null;
+  readonly min: number | null;
+  readonly nextValue: number | null;
+}): {
+  readonly max: number | null;
+  readonly min: number | null;
+} {
+  if (args.nextValue === null) {
+    return {
+      min: args.min,
+      max: args.max,
+    };
+  }
+
+  return {
+    min: args.min === null ? args.nextValue : Math.min(args.min, args.nextValue),
+    max: args.max === null ? args.nextValue : Math.max(args.max, args.nextValue),
+  };
+}
+
+function appendParcelViewportFacetFeature(
+  accumulator: ParcelViewportFacetAccumulator,
+  properties: unknown
+): void {
+  if (!isParcelFeatureProperties(properties)) {
+    return;
+  }
+
+  addFacetValue(accumulator.zoningTypes, Reflect.get(properties, "zoning_type"), true);
+  addFacetValue(accumulator.floodZones, Reflect.get(properties, "fema_flood_zone"));
+
+  const acresRange = updateFacetRange({
+    min: accumulator.acresMin,
+    max: accumulator.acresMax,
+    nextValue: readNonNegativeNumberProperty(properties, "ll_gisacre"),
+  });
+  accumulator.acresMin = acresRange.min;
+  accumulator.acresMax = acresRange.max;
+
+  const transmissionRange = updateFacetRange({
+    min: accumulator.distTransmissionMin,
+    max: accumulator.distTransmissionMax,
+    nextValue: readNonNegativeNumberProperty(properties, "dist_transmission_mi"),
+  });
+  accumulator.distTransmissionMin = transmissionRange.min;
+  accumulator.distTransmissionMax = transmissionRange.max;
+}
+
 const FACILITIES_LAYER_IDS: readonly string[] = [
   ...Object.values(getFacilitiesStyleLayerIds("facilities.colocation")),
   ...Object.values(getFacilitiesStyleLayerIds("facilities.hyperscale")),
@@ -92,6 +186,7 @@ export function mountParcelsLayer(
   const maxPredictedTiles = options.maxPredictedTiles ?? 120;
   const maxTilePredictionZoom = options.maxTilePredictionZoom ?? 16;
   const state = initialState();
+  let unsubscribeInteractionCoordinator: (() => void) | null = null;
 
   const stressGovernor = createStressGovernor({
     onChange: (blocked) => {
@@ -517,49 +612,19 @@ export function mountParcelsLayer(
       ],
       { layers: [fillLayerId] }
     );
-    const zoningTypes = new Set<string>();
-    const floodZones = new Set<string>();
-    let acresMin: number | null = null;
-    let acresMax: number | null = null;
-    let distTransmissionMin: number | null = null;
-    let distTransmissionMax: number | null = null;
+    const accumulator = createParcelViewportFacetAccumulator();
 
     for (const feature of features) {
-      const props = feature.properties;
-      if (typeof props !== "object" || props === null) {
-        continue;
-      }
-      const zt = Reflect.get(props, "zoning_type");
-      if (typeof zt === "string" && zt.length > 0) {
-        zoningTypes.add(zt.toLowerCase());
-      }
-      const fz = Reflect.get(props, "fema_flood_zone");
-      if (typeof fz === "string" && fz.length > 0) {
-        floodZones.add(fz);
-      }
-      const rawAcres = Reflect.get(props, "ll_gisacre");
-      const acres = typeof rawAcres === "number" ? rawAcres : Number(rawAcres);
-      if (Number.isFinite(acres) && acres >= 0) {
-        acresMin = acresMin === null ? acres : Math.min(acresMin, acres);
-        acresMax = acresMax === null ? acres : Math.max(acresMax, acres);
-      }
-      const rawDist = Reflect.get(props, "dist_transmission_mi");
-      const dist = typeof rawDist === "number" ? rawDist : Number(rawDist);
-      if (Number.isFinite(dist) && dist >= 0) {
-        distTransmissionMin =
-          distTransmissionMin === null ? dist : Math.min(distTransmissionMin, dist);
-        distTransmissionMax =
-          distTransmissionMax === null ? dist : Math.max(distTransmissionMax, dist);
-      }
+      appendParcelViewportFacetFeature(accumulator, feature.properties);
     }
 
     options.onViewportFacets({
-      acresMin,
-      acresMax,
-      distTransmissionMin,
-      distTransmissionMax,
-      zoningTypes,
-      floodZones,
+      acresMin: accumulator.acresMin,
+      acresMax: accumulator.acresMax,
+      distTransmissionMin: accumulator.distTransmissionMin,
+      distTransmissionMax: accumulator.distTransmissionMax,
+      zoningTypes: accumulator.zoningTypes,
+      floodZones: accumulator.floodZones,
     });
   };
 
@@ -628,7 +693,20 @@ export function mountParcelsLayer(
     clearSelection();
   };
 
-  map.on("moveend", onMoveEnd);
+  if (
+    options.interactionCoordinator === null ||
+    typeof options.interactionCoordinator === "undefined"
+  ) {
+    map.on("moveend", onMoveEnd);
+  } else {
+    unsubscribeInteractionCoordinator = options.interactionCoordinator.subscribe((snapshot) => {
+      if (snapshot.eventType !== "moveend") {
+        return;
+      }
+
+      onMoveEnd();
+    });
+  }
   map.onClick(onClick);
 
   let currentFilter: import("@map-migration/map-engine").MapExpression | null = null;
@@ -709,7 +787,14 @@ export function mountParcelsLayer(
 
       stressGovernor.destroy();
 
-      map.off("moveend", onMoveEnd);
+      unsubscribeInteractionCoordinator?.();
+      unsubscribeInteractionCoordinator = null;
+      if (
+        options.interactionCoordinator === null ||
+        typeof options.interactionCoordinator === "undefined"
+      ) {
+        map.off("moveend", onMoveEnd);
+      }
       map.offClick(onClick);
       hoverController.destroy();
 

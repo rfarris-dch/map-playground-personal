@@ -42,6 +42,7 @@ export function mountBoundaryLayer(
   const styleLayerIds = getBoundaryStyleLayerIds(layerId);
   const fillLayerId = styleLayerIds.fillLayerId;
   const outlineLayerId = styleLayerIds.outlineLayerId;
+  const inactiveOutlineColor = layerId === "state" ? "#94a3b8" : "#0f172a";
   const state = initialBoundaryLayerState();
 
   function readStyleLayerId(layer: unknown): string | null {
@@ -153,7 +154,7 @@ export function mountBoundaryLayer(
                   "#0f172a",
                   boundaryOutlineColorExpression(),
                 ]
-              : "#0f172a",
+              : inactiveOutlineColor,
             "line-opacity": 0.9,
             "line-width": [
               "interpolate",
@@ -322,7 +323,7 @@ export function mountBoundaryLayer(
                 "#0f172a",
                 boundaryOutlineColorExpression(),
               ]
-            : "#0f172a"
+            : inactiveOutlineColor
         );
       }
       if (!enabled) {

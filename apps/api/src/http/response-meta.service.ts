@@ -4,6 +4,7 @@ import type { Context } from "hono";
 
 export function buildResponseMeta(args: {
   readonly dataVersion: string;
+  readonly generatedAt?: string;
   readonly recordCount: number;
   readonly requestId: string;
   readonly sourceMode: SourceMode;
@@ -12,7 +13,7 @@ export function buildResponseMeta(args: {
 }): ResponseMeta {
   return {
     dataVersion: args.dataVersion,
-    generatedAt: new Date().toISOString(),
+    generatedAt: args.generatedAt ?? new Date().toISOString(),
     recordCount: args.recordCount,
     requestId: args.requestId,
     sourceMode: args.sourceMode,

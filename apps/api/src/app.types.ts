@@ -1,4 +1,5 @@
 export interface CreateApiAppOptions {
+  readonly facilitiesRequestTimeoutMs?: number;
   readonly parcelsRequestTimeoutMs?: number;
   readonly readinessCheck?: (() => Promise<void>) | undefined;
   readonly requestBodyLimitBytes?: number;
@@ -7,6 +8,7 @@ export interface CreateApiAppOptions {
 }
 
 export interface ApiAppOptions {
+  readonly facilitiesRequestTimeoutMs: number;
   readonly parcelsRequestTimeoutMs: number;
   readonly readinessCheck: () => Promise<void>;
   readonly requestBodyLimitBytes: number;

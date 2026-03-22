@@ -53,6 +53,10 @@ const DEFAULT_SELECTION_REQUEST_TIMEOUT_MS = parsePositiveIntFlag(
   process.env.API_SELECTION_REQUEST_TIMEOUT_MS,
   180_000
 );
+const DEFAULT_FACILITIES_REQUEST_TIMEOUT_MS = parsePositiveIntFlag(
+  process.env.API_FACILITIES_REQUEST_TIMEOUT_MS,
+  45_000
+);
 const DEFAULT_PARCELS_REQUEST_TIMEOUT_MS = parsePositiveIntFlag(
   process.env.API_PARCELS_REQUEST_TIMEOUT_MS,
   180_000
@@ -80,6 +84,10 @@ function resolveApiAppOptions(options: CreateApiAppOptions): ApiAppOptions {
     selectionRequestTimeoutMs: resolvePositiveIntOverride(
       options.selectionRequestTimeoutMs,
       DEFAULT_SELECTION_REQUEST_TIMEOUT_MS
+    ),
+    facilitiesRequestTimeoutMs: resolvePositiveIntOverride(
+      options.facilitiesRequestTimeoutMs,
+      DEFAULT_FACILITIES_REQUEST_TIMEOUT_MS
     ),
     parcelsRequestTimeoutMs: resolvePositiveIntOverride(
       options.parcelsRequestTimeoutMs,

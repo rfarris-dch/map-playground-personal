@@ -54,6 +54,10 @@
       "types": "./dist/facilities-http.d.ts",
       "default": "./dist/facilities-http.js"
     },
+    "./facilities-performance-http": {
+      "types": "./dist/facilities-performance-http.d.ts",
+      "default": "./dist/facilities-performance-http.js"
+    },
     "./fiber-locator-http": {
       "types": "./dist/fiber-locator-http.d.ts",
       "default": "./dist/fiber-locator-http.js"

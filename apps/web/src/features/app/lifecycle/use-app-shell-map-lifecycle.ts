@@ -1,5 +1,7 @@
 import { onBeforeUnmount, onMounted, watch } from "vue";
 import { setBoundarySelectedRegionIds as applyBoundarySelectedRegionIds } from "@/features/app/boundary/app-shell-boundary-runtime.service";
+import { facilitiesLayerId } from "@/features/app/core/app-shell.constants";
+import { ensureFacilitiesPerspectiveMounted } from "@/features/app/lifecycle/app-shell-facilities-runtime.service";
 import {
   destroyMapLifecycleRuntime,
   initializeMapLifecycleRuntime,
@@ -56,6 +58,22 @@ export function useAppShellMapLifecycle(options: UseAppShellMapLifecycleOptions)
       controller.setFilter(filter ?? null);
     }
   });
+
+  watch(
+    () => options.state.layerRuntimeSnapshot.value,
+    () => {
+      for (const perspective of ["hyperscale-leased", "enterprise"] as const) {
+        if (
+          options.runtime.layerRuntime.value?.getUserVisible(facilitiesLayerId(perspective)) !==
+          true
+        ) {
+          continue;
+        }
+
+        ensureFacilitiesPerspectiveMounted(options, perspective);
+      }
+    }
+  );
 
   onMounted(() => {
     initializeMapLifecycleRuntime(options).catch((error: unknown) => {

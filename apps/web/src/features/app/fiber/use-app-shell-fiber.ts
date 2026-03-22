@@ -1,6 +1,6 @@
 import type { BBox } from "@map-migration/geo-kernel/geometry";
 import type { IMap } from "@map-migration/map-engine";
-import { computed, shallowRef } from "vue";
+import { computed, shallowRef, watch } from "vue";
 import { FIBER_MIN_ZOOM, fiberLayerId } from "@/features/app/core/app-shell.constants";
 import {
   initialFiberSourceLayerOptionsState,
@@ -12,6 +12,11 @@ import type {
   FiberSourceLayerSelectionState,
   FiberVisibilityState,
 } from "@/features/app/core/app-shell.types";
+import {
+  createAppPerformanceTimer,
+  recordAppPerformanceCounter,
+  recordAppPerformanceMeasurement,
+} from "@/features/app/diagnostics/app-performance.service";
 import {
   areAllFiberSourceLayersSelected,
   filterFiberSourceLayerOptionsByInView,
@@ -63,13 +68,34 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
   const hasInitializedFiberSourceLayerSelection = shallowRef<boolean>(false);
   const fiberInViewAbortController = shallowRef<AbortController | null>(null);
   const fiberInViewRequestVersion = shallowRef<number>(0);
-  const fiberMoveEndHandler = shallowRef<(() => void) | null>(null);
+  const fiberInteractionUnsubscribe = shallowRef<(() => void) | null>(null);
   const visibleFiberLayers = shallowRef<FiberVisibilityState>(initialFiberVisibilityState());
 
   const fiberStatusText = computed(() => formatFiberLocatorStatus(fiberStatus.value));
 
   function hasVisibleFiberLayers(): boolean {
     return visibleFiberLayers.value.metro || visibleFiberLayers.value.longhaul;
+  }
+
+  function syncFiberInteractionSubscription(): void {
+    fiberInteractionUnsubscribe.value?.();
+    fiberInteractionUnsubscribe.value = null;
+
+    const interactionCoordinator = options.interactionCoordinator.value;
+    if (!(interactionCoordinator !== null && hasVisibleFiberLayers())) {
+      return;
+    }
+
+    fiberInteractionUnsubscribe.value = interactionCoordinator.subscribe((snapshot) => {
+      if (!(snapshot.eventType === "load" || snapshot.eventType === "moveend")) {
+        return;
+      }
+
+      recordAppPerformanceCounter("map.moveend", { feature: "fiber" });
+      refreshFiberLocatorLayersInView().catch((error: unknown) => {
+        console.error("Fiber locator layers/inview refresh failed", error);
+      });
+    });
   }
 
   function setSelectedFiberLayerNames(
@@ -170,17 +196,21 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
   }
 
   async function refreshFiberLocatorLayersInView(): Promise<void> {
+    const stopRefreshTimer = createAppPerformanceTimer("fiber.layers-in-view.time");
     const currentMap = options.map.value;
     if (currentMap === null || !hasVisibleFiberLayers()) {
+      stopRefreshTimer();
       return;
     }
 
     if (currentMap.getZoom() < FIBER_MIN_ZOOM) {
+      stopRefreshTimer();
       return;
     }
 
     const allOptions = fiberCatalogSourceLayerOptions.value;
     if (allOptions.metro.length === 0 && allOptions.longhaul.length === 0) {
+      stopRefreshTimer();
       return;
     }
 
@@ -202,6 +232,7 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
     const result = await fetchFiberLocatorLayersInView(bbox, {
       signal: abortController.signal,
     });
+    stopRefreshTimer();
 
     if (requestVersion !== fiberInViewRequestVersion.value) {
       return;
@@ -209,11 +240,14 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
 
     if (!result.ok) {
       if (result.reason !== "aborted") {
+        recordAppPerformanceCounter("fiber.layers-in-view.failed");
         console.error("Fiber locator layers/inview failed", result);
       }
       return;
     }
 
+    recordAppPerformanceCounter("fiber.layers-in-view.succeeded");
+    recordAppPerformanceMeasurement("fiber.layers-in-view.layer-count", result.data.layers.length);
     applyFiberSourceLayerOptions(
       filterFiberSourceLayerOptionsByInView(allOptions, result.data.layers)
     );
@@ -368,16 +402,6 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
       longhaul: options.layerRuntime.value?.getUserVisible(fiberLayerId("longhaul")) ?? false,
     };
 
-    const onFiberMoveEnd = (): void => {
-      refreshFiberLocatorLayersInView().catch((error: unknown) => {
-        console.error("Fiber locator layers/inview refresh failed", error);
-      });
-    };
-
-    fiberMoveEndHandler.value = onFiberMoveEnd;
-    nextMap.on("load", onFiberMoveEnd);
-    nextMap.on("moveend", onFiberMoveEnd);
-
     loadFiberLocatorCatalogStatus().catch((error: unknown) => {
       console.error("Fiber locator catalog status failed", error);
     });
@@ -390,9 +414,11 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
         hoveredFiber.value = nextHover;
       },
     });
+
+    syncFiberInteractionSubscription();
   }
 
-  function destroy(currentMap: IMap | null): void {
+  function destroy(_currentMap: IMap | null): void {
     fiberInViewAbortController.value?.abort();
     fiberInViewAbortController.value = null;
 
@@ -405,13 +431,13 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
     }, 0);
     fiberControllers.value = [];
 
-    if (currentMap !== null && fiberMoveEndHandler.value !== null) {
-      currentMap.off("load", fiberMoveEndHandler.value);
-      currentMap.off("moveend", fiberMoveEndHandler.value);
-    }
-
-    fiberMoveEndHandler.value = null;
+    fiberInteractionUnsubscribe.value?.();
+    fiberInteractionUnsubscribe.value = null;
   }
+
+  watch([() => options.interactionCoordinator.value, visibleFiberLayers], () => {
+    syncFiberInteractionSubscription();
+  });
 
   return {
     hoveredFiber,

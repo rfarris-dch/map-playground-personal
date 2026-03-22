@@ -11,6 +11,7 @@ export function initializeParcelsRuntime(options: UseAppShellMapLifecycleOptions
 
   options.layers.parcelsController.value = mountParcelsLayer(currentMap, {
     disableGuardrails: resolveDisableParcelsGuardrails(),
+    interactionCoordinator: options.runtime.interactionCoordinator.value,
     maxViewportWidthKm: 500,
     maxPredictedTiles: 500,
     isInteractionEnabled: () => options.areFacilityInteractionsEnabled.value,

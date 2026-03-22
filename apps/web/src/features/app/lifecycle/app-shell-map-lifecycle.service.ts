@@ -7,6 +7,7 @@ import {
   initializeBoundaryRuntime,
   resetBoundaryRuntime,
 } from "@/features/app/boundary/app-shell-boundary-runtime.service";
+import { createMapInteractionCoordinator } from "@/features/app/interaction/map-interaction.service";
 import {
   AppShellMapInitError,
   type AppShellMapSetup,
@@ -50,7 +51,11 @@ export async function initializeMapLifecycleRuntime(
 
   options.runtime.disposeMapRuntime.value = mapSetup.dispose;
   options.runtime.map.value = mapSetup.value.map;
+  options.runtime.interactionCoordinator.value = createMapInteractionCoordinator(
+    mapSetup.value.map
+  );
   options.runtime.layerRuntime.value = createLayerRuntime(mapSetup.value.map, {
+    interactionCoordinator: options.runtime.interactionCoordinator.value,
     onSnapshot: (snapshot) => {
       options.state.layerRuntimeSnapshot.value = snapshot;
     },
@@ -88,6 +93,8 @@ export async function destroyMapLifecycleRuntime(
   destroyMarketBoundaryRuntime(options);
   destroyBoundaryRuntime(options);
 
+  options.runtime.interactionCoordinator.value?.destroy();
+  options.runtime.interactionCoordinator.value = null;
   options.runtime.layerRuntime.value?.destroy();
   options.runtime.layerRuntime.value = null;
   options.state.layerRuntimeSnapshot.value = null;

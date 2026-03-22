@@ -12,11 +12,17 @@ import type {
 } from "@map-migration/map-engine";
 import { getFacilitiesStyleLayerIds } from "@map-migration/map-style";
 import { Effect, Either } from "effect";
+import {
+  createAppPerformanceTimer,
+  recordAppPerformanceCounter,
+  recordAppPerformanceMeasurement,
+} from "@/features/app/diagnostics/app-performance.service";
 import { fetchFacilitiesByBboxEffect } from "@/features/facilities/api";
 import {
   applyFacilitiesFilter,
   bboxContains,
   emptyFacilitiesSourceData,
+  evaluateFacilitiesGuardrails,
   expandBbox,
   filterFacilitiesFeaturesToBbox,
   findFacilitiesBboxCacheEntry,
@@ -43,6 +49,7 @@ import {
 } from "@/features/facilities/facilities-cluster.service";
 import type { FacilityClusterMarkerModel } from "@/features/facilities/facilities-cluster.types";
 import providerLogoMap from "@/features/facilities/provider-logo-map.json";
+import { createStressGovernor } from "@/features/parcels/parcels.service";
 
 function defaultPerspective(): FacilityPerspective {
   return "colocation";
@@ -123,13 +130,15 @@ export function mountFacilitiesLayer(
   const minZoom = options.minZoom ?? 4;
   const limit = options.limit ?? 2000;
   const debounceMs = options.debounceMs ?? 250;
+  const maxViewportWidthKm = options.maxViewportWidthKm ?? Number.POSITIVE_INFINITY;
+  const maxViewportFeatureBudget = options.maxViewportFeatureBudget ?? Number.POSITIVE_INFINITY;
   const defaultCircleColor = perspective === "hyperscale" ? "#10b981" : "#3b82f6";
   const hoverCircleColor = perspective === "hyperscale" ? "#059669" : "#2563eb";
   const selectedCircleColor = perspective === "hyperscale" ? "#047857" : "#1d4ed8";
 
   const heatmapLayerId = `${sourceId}.heatmap`;
   const iconFallbackLayerId = `${sourceId}.icon-fallback`;
-  const logoBaseUrl = "https://d1cf1x3z5qnthi.cloudfront.net/provider-logos";
+  const logoBaseUrl = "/api/geo/facilities/provider-logos";
   const loadedLogos = new Set<string>();
   const failedLogos = new Set<string>();
   const providerNamesById = new Map<string, string>();
@@ -138,8 +147,6 @@ export function mountFacilitiesLayer(
   const LOGO_SIZE = 128;
   const logoPrefix = "logo-";
   const LOGO_LOAD_DEFER_MS = 180;
-  const ICON_SYMBOL_MAX_VIEWPORT_FEATURES = 1500;
-  const ICON_LOGO_MAX_VIEWPORT_FEATURES = 600;
 
   const replacingImages = new Set<string>();
   const viewportFeaturesCache: ViewportFeaturesCache = {
@@ -149,6 +156,8 @@ export function mountFacilitiesLayer(
   };
   let bboxCacheEntries: ReturnType<typeof upsertFacilitiesBboxCacheEntry> = [];
   let logoLoadTimer: ReturnType<typeof setTimeout> | null = null;
+  let lastMoveEndStartedAtMs: number | null = null;
+  let unsubscribeInteractionCoordinator: (() => void) | null = null;
 
   const toFallbackLogoText = (providerName: string | null): string => {
     if (providerName === null) {
@@ -251,10 +260,33 @@ export function mountFacilitiesLayer(
     return ctx.getImageData(0, 0, LOGO_SIZE, LOGO_SIZE);
   };
 
-  const loadProviderLogos = async (
-    features: FacilitiesFeatureCollection["features"]
+  const loadProviderLogoBatch = async (
+    batch: ReadonlyArray<{ providerId: string; url: string }>
   ): Promise<void> => {
-    const logoMap = providerLogoMap as Record<string, string>;
+    await Promise.allSettled(
+      batch.map(async ({ providerId, url }) => {
+        try {
+          if (loadedLogos.has(providerId) && map.hasImage(`${logoPrefix}${providerId}`)) {
+            return;
+          }
+          const raw = await map.loadImage(url);
+          const normalized = normalizeLogoImage(raw);
+          replaceLogoImage(`${logoPrefix}${providerId}`, normalized);
+          loadedLogos.add(providerId);
+          recordAppPerformanceCounter("facilities.logo-load.success", { perspective });
+        } catch {
+          failedLogos.add(providerId);
+          installFallbackLogo(providerId);
+          recordAppPerformanceCounter("facilities.logo-load.failure", { perspective });
+        }
+      })
+    );
+  };
+
+  const collectProviderLogosToLoad = (
+    features: FacilitiesFeatureCollection["features"],
+    logoMap: Readonly<Record<string, string>>
+  ): { providerId: string; url: string }[] => {
     const toLoad: { providerId: string; url: string }[] = [];
 
     for (const f of features) {
@@ -264,42 +296,54 @@ export function mountFacilitiesLayer(
         providerNamesById.set(pid, providerName);
       }
 
-      if (!pid || loadedLogos.has(pid) || failedLogos.has(pid)) {
+      if (!pid || failedLogos.has(pid)) {
         continue;
       }
+      const imageId = `${logoPrefix}${pid}`;
+      if (loadedLogos.has(pid) && map.hasImage(imageId)) {
+        continue;
+      }
+
       const filename = logoMap[pid];
       if (!filename) {
         failedLogos.add(pid);
         installFallbackLogo(pid);
+        recordAppPerformanceCounter("facilities.logo-load.fallback", { perspective });
         continue;
       }
+
       toLoad.push({
         providerId: pid,
         url: `${logoBaseUrl}/${pid}/${encodeURIComponent(filename)}`,
       });
     }
 
+    return toLoad;
+  };
+
+  const loadProviderLogos = async (
+    features: FacilitiesFeatureCollection["features"]
+  ): Promise<void> => {
+    const stopLogoLoadTimer = createAppPerformanceTimer("facilities.logo-load.time", {
+      perspective,
+    });
+    const logoMap = providerLogoMap as Record<string, string>;
+    const toLoad = collectProviderLogosToLoad(features, logoMap);
+
     if (toLoad.length === 0) {
+      stopLogoLoadTimer();
       return;
     }
 
-    const batch = toLoad.slice(0, 50);
-    await Promise.allSettled(
-      batch.map(async ({ providerId, url }) => {
-        try {
-          if (loadedLogos.has(providerId)) {
-            return;
-          }
-          const raw = await map.loadImage(url);
-          const normalized = normalizeLogoImage(raw);
-          replaceLogoImage(`${logoPrefix}${providerId}`, normalized);
-          loadedLogos.add(providerId);
-        } catch {
-          failedLogos.add(providerId);
-          installFallbackLogo(providerId);
-        }
-      })
-    );
+    const batchSize = 50;
+    recordAppPerformanceMeasurement("facilities.logo-load.batch-size", toLoad.length, {
+      perspective,
+    });
+    for (let index = 0; index < toLoad.length; index += batchSize) {
+      const batch = toLoad.slice(index, index + batchSize);
+      await loadProviderLogoBatch(batch);
+    }
+    stopLogoLoadTimer();
   };
 
   const state: FacilitiesLayerState = {
@@ -312,6 +356,7 @@ export function mountFacilitiesLayer(
     lastFetchKey: null,
     requestSequence: 0,
     selectedFeatureId: null,
+    stressBlocked: false,
     viewMode: options.initialViewMode ?? "icons",
     visible: true,
   };
@@ -331,11 +376,44 @@ export function mountFacilitiesLayer(
     options.onStatus?.(status);
   };
 
+  const stressGovernor = createStressGovernor({
+    onChange: (blocked) => {
+      state.stressBlocked = blocked;
+      options.onStressBlockedChange?.(blocked);
+      if (!blocked) {
+        return;
+      }
+
+      abortActiveRefresh();
+      clearScheduledLogoLoad();
+      clearClusterMarkers();
+      setStatus({
+        state: "hidden",
+        perspective,
+        reason: "stress",
+      });
+    },
+  });
+  stressGovernor.setEnabled(state.visible);
+
   const emitViewportUpdate = (
     features: FacilitiesFeatureCollection["features"],
     requestId: string,
     truncated: boolean
   ): void => {
+    if (lastMoveEndStartedAtMs !== null) {
+      recordAppPerformanceMeasurement(
+        "facilities.moveend-to-viewport-update.time",
+        globalThis.performance.now() - lastMoveEndStartedAtMs,
+        { perspective, truncated }
+      );
+      lastMoveEndStartedAtMs = null;
+    }
+
+    recordAppPerformanceMeasurement("facilities.viewport-feature-count", features.length, {
+      perspective,
+      truncated,
+    });
     options.onViewportUpdate?.({
       perspective,
       features,
@@ -398,10 +476,8 @@ export function mountFacilitiesLayer(
       return;
     }
 
-    const showSymbols = viewportCount <= ICON_SYMBOL_MAX_VIEWPORT_FEATURES;
-
     if (map.hasLayer(pointLayerId)) {
-      map.setLayerVisibility(pointLayerId, showSymbols);
+      map.setLayerVisibility(pointLayerId, viewportCount > 0);
     }
 
     if (map.hasLayer(iconFallbackLayerId)) {
@@ -580,8 +656,12 @@ export function mountFacilitiesLayer(
   };
 
   const syncClusterMarkers = (): void => {
+    const stopClusterSyncTimer = createAppPerformanceTimer("facilities.cluster-sync.time", {
+      perspective,
+    });
     if (!canRenderClusterMarkers()) {
       clearClusterMarkers();
+      stopClusterSyncTimer();
       return;
     }
 
@@ -589,6 +669,14 @@ export function mountFacilitiesLayer(
       current: getCurrentClusterMarkerSignatures(),
       nextModels: getVisibleClusterMarkerModels(),
     });
+    recordAppPerformanceMeasurement(
+      "facilities.cluster-sync.reconciled-count",
+      reconciliation.removals.length +
+        reconciliation.moves.length +
+        reconciliation.replacements.length +
+        reconciliation.additions.length,
+      { perspective }
+    );
 
     for (const clusterId of reconciliation.removals) {
       removeClusterMarker(clusterId);
@@ -597,6 +685,7 @@ export function mountFacilitiesLayer(
     moveClusterMarkers(reconciliation.moves);
     replaceClusterMarkers(reconciliation.replacements);
     addClusterMarkers(reconciliation.additions);
+    stopClusterSyncTimer();
   };
 
   const addSourceForMode = (mode: FacilitiesViewMode): void => {
@@ -926,6 +1015,11 @@ export function mountFacilitiesLayer(
   };
 
   const onMoveEnd = (): void => {
+    recordAppPerformanceCounter("map.moveend", {
+      feature: "facilities",
+      perspective,
+    });
+    lastMoveEndStartedAtMs = globalThis.performance.now();
     if (!(state.ready && state.visible)) {
       clearClusterMarkers();
       return;
@@ -1139,6 +1233,8 @@ export function mountFacilitiesLayer(
     emitViewportUpdate([], "n/a", false);
     setStatus({
       state: "hidden",
+      perspective,
+      reason: "zoom",
       zoom,
       minZoom,
     });
@@ -1148,15 +1244,43 @@ export function mountFacilitiesLayer(
     return `${perspective}:${bbox.west},${bbox.south},${bbox.east},${bbox.north}:${limit}`;
   };
 
+  const applyViewportStatus = (args: {
+    readonly count: number;
+    readonly requestId: string;
+    readonly truncated: boolean;
+  }): void => {
+    if (args.truncated || args.count > maxViewportFeatureBudget) {
+      setStatus({
+        state: "degraded",
+        perspective,
+        requestId: args.requestId,
+        count: args.count,
+        truncated: args.truncated,
+        reason: "feature-budget",
+      });
+      return;
+    }
+
+    setStatus({
+      state: "ok",
+      perspective,
+      requestId: args.requestId,
+      count: args.count,
+      truncated: args.truncated,
+    });
+  };
+
   const emitCoveredViewportStatus = (bbox: BBox): void => {
     const filtered = getFilteredCachedFeatures();
     const viewportFeatures = getViewportFeatures(filtered, bbox);
     emitViewportUpdate(viewportFeatures, state.lastRequestId ?? "n/a", state.lastTruncated);
-    setStatus({
-      state: "ok",
-      perspective,
-      requestId: state.lastRequestId ?? "n/a",
+    if (state.viewMode === "icons") {
+      applyIconDensityMode(viewportFeatures.length);
+      scheduleLogoLoad(viewportFeatures);
+    }
+    applyViewportStatus({
       count: viewportFeatures.length,
+      requestId: state.lastRequestId ?? "n/a",
       truncated: state.lastTruncated,
     });
   };
@@ -1175,27 +1299,25 @@ export function mountFacilitiesLayer(
     options.onCachedFeaturesUpdate?.(state.cachedFeatures);
 
     const filtered = getFilteredCachedFeatures();
+    const stopSourceUpdateTimer = createAppPerformanceTimer("facilities.source-update.time", {
+      perspective,
+    });
     map.setGeoJSONSourceData(sourceId, { type: "FeatureCollection", features: filtered });
+    stopSourceUpdateTimer();
     syncClusterMarkers();
     syncSelectionForFeatures(filtered);
     const viewportFeatures = getViewportFeatures(filtered, args.bbox);
     emitViewportUpdate(viewportFeatures, args.requestId, args.truncated);
 
-    setStatus({
-      state: "ok",
-      perspective,
-      requestId: args.requestId,
+    applyViewportStatus({
       count: viewportFeatures.length,
+      requestId: args.requestId,
       truncated: args.truncated,
     });
 
     if (state.viewMode === "icons") {
       applyIconDensityMode(viewportFeatures.length);
-      if (viewportFeatures.length <= ICON_LOGO_MAX_VIEWPORT_FEATURES) {
-        scheduleLogoLoad(viewportFeatures);
-      } else {
-        clearScheduledLogoLoad();
-      }
+      scheduleLogoLoad(viewportFeatures);
     }
   };
 
@@ -1217,6 +1339,8 @@ export function mountFacilitiesLayer(
       return;
     }
 
+    abortActiveRefresh();
+
     if (state.debounceTimer) {
       window.clearTimeout(state.debounceTimer);
     }
@@ -1231,6 +1355,110 @@ export function mountFacilitiesLayer(
     }, debounceMs);
   };
 
+  const applySuccessfulRefresh = (args: {
+    readonly bbox: BBox;
+    readonly fetchBbox: BBox;
+    readonly result: {
+      readonly data: FacilitiesFeatureCollection;
+      readonly requestId: string;
+    };
+  }): void => {
+    recordAppPerformanceCounter("facilities.request.succeeded", { perspective });
+    recordAppPerformanceMeasurement(
+      "facilities.response.feature-count",
+      args.result.data.features.length,
+      { perspective, truncated: args.result.data.meta.truncated }
+    );
+    recordAppPerformanceMeasurement(
+      "facilities.response.bytes",
+      JSON.stringify(args.result.data).length,
+      { perspective, truncated: args.result.data.meta.truncated }
+    );
+
+    applyRefreshResult({
+      bbox: args.bbox,
+      fetchBbox: args.fetchBbox,
+      features: args.result.data.features,
+      requestId: args.result.requestId,
+      truncated: args.result.data.meta.truncated,
+    });
+    bboxCacheEntries = upsertFacilitiesBboxCacheEntry(bboxCacheEntries, {
+      bbox: args.fetchBbox,
+      features: args.result.data.features,
+      requestId: args.result.requestId,
+      truncated: args.result.data.meta.truncated,
+    });
+  };
+
+  const handleFailedRefreshResult = (error: {
+    readonly requestId: string;
+    readonly reason: string;
+  }): void => {
+    recordAppPerformanceCounter("facilities.request.failed", { perspective });
+    handleRefreshFailure(error);
+  };
+
+  const getRefreshViewportContext = (): {
+    readonly bbox: BBox;
+    readonly fetchBbox: BBox;
+    readonly fetchKey: string;
+  } | null => {
+    const zoom = map.getZoom();
+    if (zoom < minZoom) {
+      hideFacilitiesForZoom(zoom);
+      return null;
+    }
+
+    const bbox = quantizeBbox(map.getBounds(), VIEWPORT_BBOX_DECIMALS);
+    const guardrailResult = evaluateFacilitiesGuardrails({
+      bounds: bbox,
+      isStressBlocked: state.stressBlocked,
+      maxViewportWidthKm,
+    });
+    if (guardrailResult.blocked) {
+      state.requestSequence += 1;
+      clearCachedViewport();
+      resetVisibleFacilitiesData();
+      clearSelection();
+      state.lastFetchKey = null;
+      emitViewportUpdate([], "n/a", false);
+      setStatus({
+        state: "hidden",
+        perspective,
+        reason: guardrailResult.reason ?? "viewport-span",
+        viewportWidthKm: guardrailResult.viewportWidthKm,
+        maxViewportWidthKm,
+      });
+      return null;
+    }
+
+    if (state.fetchedBbox !== null && bboxContains(state.fetchedBbox, bbox)) {
+      recordAppPerformanceCounter("facilities.covered-viewport", { perspective });
+      emitCoveredViewportStatus(bbox);
+      return null;
+    }
+
+    const fetchBbox = expandBbox(bbox, 0.3);
+    const fetchKey = getFetchKey(fetchBbox);
+    const cachedEntry = findFacilitiesBboxCacheEntry(bboxCacheEntries, fetchBbox);
+    if (cachedEntry !== null) {
+      recordAppPerformanceCounter("facilities.bbox-cache.hit", { perspective });
+      state.lastFetchKey = fetchKey;
+      applyCachedRefreshResult({
+        bbox,
+        entry: cachedEntry,
+      });
+      return null;
+    }
+
+    recordAppPerformanceCounter("facilities.bbox-cache.miss", { perspective });
+    return {
+      bbox,
+      fetchBbox,
+      fetchKey,
+    };
+  };
+
   const refresh = async (): Promise<void> => {
     if (!state.visible) {
       return;
@@ -1241,29 +1469,11 @@ export function mountFacilitiesLayer(
       return;
     }
 
-    const zoom = map.getZoom();
-    if (zoom < minZoom) {
-      hideFacilitiesForZoom(zoom);
+    const viewportContext = getRefreshViewportContext();
+    if (viewportContext === null) {
       return;
     }
-
-    const bbox = quantizeBbox(map.getBounds(), VIEWPORT_BBOX_DECIMALS);
-    if (state.fetchedBbox !== null && bboxContains(state.fetchedBbox, bbox)) {
-      emitCoveredViewportStatus(bbox);
-      return;
-    }
-
-    const fetchBbox = expandBbox(bbox, 0.3);
-    const fetchKey = getFetchKey(fetchBbox);
-    const cachedEntry = findFacilitiesBboxCacheEntry(bboxCacheEntries, fetchBbox);
-    if (cachedEntry !== null) {
-      state.lastFetchKey = fetchKey;
-      applyCachedRefreshResult({
-        bbox,
-        entry: cachedEntry,
-      });
-      return;
-    }
+    const { bbox, fetchBbox, fetchKey } = viewportContext;
 
     if (state.lastFetchKey === fetchKey) {
       return;
@@ -1279,6 +1489,10 @@ export function mountFacilitiesLayer(
 
     setStatus({
       state: "loading",
+      perspective,
+    });
+    recordAppPerformanceCounter("facilities.request.started", { perspective });
+    const stopRequestTimer = createAppPerformanceTimer("facilities.request.time", {
       perspective,
     });
 
@@ -1298,6 +1512,7 @@ export function mountFacilitiesLayer(
     if (activeRefreshAbortController === abortController) {
       activeRefreshAbortController = null;
     }
+    stopRequestTimer();
 
     if (sequence !== state.requestSequence) {
       return;
@@ -1305,28 +1520,21 @@ export function mountFacilitiesLayer(
 
     if (Either.isLeft(result)) {
       if (getApiErrorReason(result.left) === "aborted") {
+        recordAppPerformanceCounter("facilities.request.aborted", { perspective });
         return;
       }
 
-      handleRefreshFailure({
+      handleFailedRefreshResult({
         requestId: result.left.requestId,
         reason: getApiErrorMessage(result.left, "refresh failed"),
       });
       return;
     }
 
-    applyRefreshResult({
+    applySuccessfulRefresh({
       bbox,
       fetchBbox,
-      features: result.right.data.features,
-      requestId: result.right.requestId,
-      truncated: result.right.data.meta.truncated,
-    });
-    bboxCacheEntries = upsertFacilitiesBboxCacheEntry(bboxCacheEntries, {
-      bbox: fetchBbox,
-      features: result.right.data.features,
-      requestId: result.right.requestId,
-      truncated: result.right.data.meta.truncated,
+      result: result.right,
     });
   };
 
@@ -1337,6 +1545,7 @@ export function mountFacilitiesLayer(
 
     state.visible = visible;
     state.requestSequence += 1;
+    stressGovernor.setEnabled(visible);
     clearCachedViewport();
     state.lastFetchKey = null;
     clearScheduledLogoLoad();
@@ -1374,7 +1583,20 @@ export function mountFacilitiesLayer(
   };
 
   map.on("load", onLoad);
-  map.on("moveend", onMoveEnd);
+  if (
+    options.interactionCoordinator === null ||
+    typeof options.interactionCoordinator === "undefined"
+  ) {
+    map.on("moveend", onMoveEnd);
+  } else {
+    unsubscribeInteractionCoordinator = options.interactionCoordinator.subscribe((snapshot) => {
+      if (snapshot.eventType !== "moveend") {
+        return;
+      }
+
+      onMoveEnd();
+    });
+  }
   map.onClick(onClick);
 
   const setViewMode = (mode: FacilitiesViewMode): void => {
@@ -1403,11 +1625,7 @@ export function mountFacilitiesLayer(
           const bbox = quantizeBbox(map.getBounds(), VIEWPORT_BBOX_DECIMALS);
           const viewportFeatures = getViewportFeatures(filtered, bbox);
           applyIconDensityMode(viewportFeatures.length);
-          if (viewportFeatures.length <= ICON_LOGO_MAX_VIEWPORT_FEATURES) {
-            scheduleLogoLoad(viewportFeatures);
-          } else {
-            clearScheduledLogoLoad();
-          }
+          scheduleLogoLoad(viewportFeatures);
         }
       } else {
         clearClusterMarkers();
@@ -1436,11 +1654,9 @@ export function mountFacilitiesLayer(
     const viewportFeatures = getViewportFeatures(filtered, bbox);
     emitViewportUpdate(viewportFeatures, state.lastRequestId ?? "n/a", state.lastTruncated);
 
-    setStatus({
-      state: "ok",
-      perspective,
-      requestId: state.lastRequestId ?? "n/a",
+    applyViewportStatus({
       count: viewportFeatures.length,
+      requestId: state.lastRequestId ?? "n/a",
       truncated: state.lastTruncated,
     });
   };
@@ -1469,6 +1685,7 @@ export function mountFacilitiesLayer(
       state.debounceTimer = null;
       abortActiveRefresh();
       clearScheduledLogoLoad();
+      stressGovernor.destroy();
 
       if (pendingClick !== null) {
         clearTimeout(pendingClick.timer);
@@ -1476,7 +1693,14 @@ export function mountFacilitiesLayer(
       }
 
       map.off("load", onLoad);
-      map.off("moveend", onMoveEnd);
+      unsubscribeInteractionCoordinator?.();
+      unsubscribeInteractionCoordinator = null;
+      if (
+        options.interactionCoordinator === null ||
+        typeof options.interactionCoordinator === "undefined"
+      ) {
+        map.off("moveend", onMoveEnd);
+      }
       map.offClick(onClick);
       map.offStyleImageMissing(handleStyleImageMissing);
     },

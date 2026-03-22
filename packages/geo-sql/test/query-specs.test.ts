@@ -14,7 +14,8 @@ const ENDPOINT_CLASSES = new Set([
   "boundary-aggregation",
   "proximity-enrichment",
 ]);
-const LOCAL_FACILITY_TABLE_RE = /serve\.(facility_site|hyperscale_site)/;
+const LOCAL_FACILITY_TABLE_RE =
+  /serve\.(facility_site|facility_site_fast|hyperscale_site|hyperscale_site_fast)/;
 
 describe("geo-sql query specs", () => {
   it("keeps each public query spec internally consistent", () => {
@@ -47,7 +48,9 @@ describe("geo-sql query specs", () => {
     });
 
     expect(query.params).toEqual([-100, 30, -90, 40, 250]);
-    expect(query.sql).toContain("serve.facility_site");
+    expect(query.sql).toContain("serve.facility_site_fast");
+    expect(query.sql).toContain("facility.longitude");
+    expect(query.sql).toContain("facility.latitude");
     expect(query.sql).toContain("LIMIT $5");
   });
 
@@ -97,10 +100,14 @@ describe("geo-sql query specs", () => {
     });
 
     expect(polygonQuery.params).toEqual(['{"type":"Polygon","coordinates":[]}', 100]);
-    expect(polygonQuery.sql).toContain("serve.hyperscale_site");
+    expect(polygonQuery.sql).toContain("serve.hyperscale_site_fast");
+    expect(polygonQuery.sql).toContain("facility.longitude");
+    expect(polygonQuery.sql).toContain("facility.latitude");
     expect(polygonQuery.sql).toContain("LIMIT $2");
     expect(detailQuery.params).toEqual(["facility-123"]);
-    expect(detailQuery.sql).toContain("serve.hyperscale_site");
+    expect(detailQuery.sql).toContain("serve.hyperscale_site_fast");
+    expect(detailQuery.sql).toContain("facility.longitude");
+    expect(detailQuery.sql).toContain("facility.latitude");
   });
 
   it("filters facilities queries to rows with provider ids and safe provider names", () => {
@@ -115,14 +122,14 @@ describe("geo-sql query specs", () => {
 
     for (const spec of specs) {
       expect(spec.sql).toContain("provider_id IS NOT NULL");
-      expect(spec.sql).toContain("provider.provider_name");
-      if (spec.sql.includes("serve.hyperscale_site")) {
+      expect(spec.sql).toContain("provider_name");
+      if (spec.sql.includes("serve.hyperscale_site_fast")) {
         expect(spec.sql).toContain("facility_name");
         expect(spec.sql).not.toContain("INITCAP(REPLACE(");
         continue;
       }
 
-      expect(spec.sql).toContain("INITCAP(REPLACE(");
+      expect(spec.sql).not.toContain("provider.provider_name");
     }
   });
 });

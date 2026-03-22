@@ -56,6 +56,7 @@ export function useAppShellRuntime(
   const mapFilters = useMapFilters();
 
   const fiber = useAppShellFiber({
+    interactionCoordinator: state.interactionCoordinator,
     map: state.map,
     layerRuntime: state.layerRuntime,
     isInteractionEnabled: () => areFacilityInteractionsEnabled.value,
@@ -63,6 +64,7 @@ export function useAppShellRuntime(
 
   const mapOverlays = useMapOverlays({
     map: state.map,
+    interactionCoordinator: state.interactionCoordinator,
     expectedParcelsIngestionRunId: status.expectedParcelsIngestionRunId,
     facilitiesStatus: state.facilitiesStatus,
     visiblePerspectives: visibility.visiblePerspectives,
@@ -123,6 +125,7 @@ export function useAppShellRuntime(
     runtime: {
       basemapLayerController: state.basemapLayerController,
       disposeMapRuntime: state.disposeMapRuntime,
+      interactionCoordinator: state.interactionCoordinator,
       layerRuntime: state.layerRuntime,
       map: state.map,
       mapContainer: state.mapContainer,

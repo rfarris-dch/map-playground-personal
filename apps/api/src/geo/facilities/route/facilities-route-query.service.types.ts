@@ -76,6 +76,10 @@ export type QueryFacilitiesByBboxResult =
       readonly ok: true;
       readonly value: {
         readonly features: FacilitiesFeatureCollection["features"];
+        readonly timing: {
+          readonly mappingTimeMs: number;
+          readonly sqlTimeMs: number;
+        };
         readonly truncated: boolean;
         readonly warnings: readonly Warning[];
       };

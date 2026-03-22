@@ -5,12 +5,14 @@ import type {
 } from "@map-migration/http-contracts/parcels-http";
 import type { IMap } from "@map-migration/map-engine";
 import type { Ref, ShallowRef } from "vue";
+import type { MapInteractionCoordinator } from "@/features/app/interaction/map-interaction.types";
 import type { MapBounds } from "@/features/app/overlays/map-overlays.types";
 
 export interface UseMapOverlaysScannerParcelsOptions {
   readonly colocationViewportFeatures: ShallowRef<FacilitiesFeatureCollection["features"]>;
   readonly expectedParcelsIngestionRunId: ShallowRef<string | null>;
   readonly hyperscaleViewportFeatures: ShallowRef<FacilitiesFeatureCollection["features"]>;
+  readonly interactionCoordinator: ShallowRef<MapInteractionCoordinator | null>;
   readonly map: ShallowRef<IMap | null>;
   readonly scannerActive: ShallowRef<boolean>;
   readonly scannerFetchEnabled: Readonly<Ref<boolean>>;

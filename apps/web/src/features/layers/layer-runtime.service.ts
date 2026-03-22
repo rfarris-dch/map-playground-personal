@@ -6,6 +6,10 @@ import {
   type LayerId,
   validateLayerCatalog,
 } from "@map-migration/map-layer-catalog";
+import {
+  createAppPerformanceTimer,
+  recordAppPerformanceCounter,
+} from "@/features/app/diagnostics/app-performance.service";
 import type {
   LayerRuntimeController,
   LayerRuntimeOptions,
@@ -132,6 +136,7 @@ export function createLayerRuntime(
   let lastMapZoom: number | null = null;
   let lastSnapshotSignature: string | null = null;
   let visibilityDirty = true;
+  let unsubscribeInteractionCoordinator: (() => void) | null = null;
 
   const applyVisibility = (force = false): void => {
     if (state.destroyed) {
@@ -182,7 +187,10 @@ export function createLayerRuntime(
   };
 
   const onMoveEnd = (): void => {
+    recordAppPerformanceCounter("map.moveend", { feature: "layer-runtime" });
+    const stopMoveEndTimer = createAppPerformanceTimer("layer-runtime.moveend-handler.time");
     applyVisibility();
+    stopMoveEndTimer();
   };
 
   const onLoad = (): void => {
@@ -194,8 +202,22 @@ export function createLayerRuntime(
     visibilityDirty = true;
   };
 
-  map.on("moveend", onMoveEnd);
-  map.on("load", onLoad);
+  if (
+    options.interactionCoordinator === null ||
+    typeof options.interactionCoordinator === "undefined"
+  ) {
+    map.on("moveend", onMoveEnd);
+    map.on("load", onLoad);
+  } else {
+    unsubscribeInteractionCoordinator = options.interactionCoordinator.subscribe((snapshot) => {
+      if (snapshot.eventType === "load") {
+        onLoad();
+        return;
+      }
+
+      onMoveEnd();
+    });
+  }
 
   return {
     registerLayerController(layerId: LayerId, controller: LayerVisibilityController): void {
@@ -262,8 +284,15 @@ export function createLayerRuntime(
       }
 
       state.destroyed = true;
-      map.off("moveend", onMoveEnd);
-      map.off("load", onLoad);
+      unsubscribeInteractionCoordinator?.();
+      unsubscribeInteractionCoordinator = null;
+      if (
+        options.interactionCoordinator === null ||
+        typeof options.interactionCoordinator === "undefined"
+      ) {
+        map.off("moveend", onMoveEnd);
+        map.off("load", onLoad);
+      }
       state.controllers.clear();
       state.effectiveVisibility.clear();
       state.stressBlocked.clear();

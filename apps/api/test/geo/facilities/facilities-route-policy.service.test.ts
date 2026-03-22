@@ -40,7 +40,7 @@ describe("facilities route policy service", () => {
     expect(facilitiesSelectionBboxExceedsLimits(resolved.bbox)).toBe(false);
   });
 
-  it("flags oversized polygon bbox spans", () => {
+  it("does not reject oversized polygon bbox spans", () => {
     const geometry = buildGeometry([
       [
         [-120, 30],
@@ -52,7 +52,7 @@ describe("facilities route policy service", () => {
     ]);
 
     const resolved = resolveFacilitiesSelectionGeometry(geometry);
-    expect(facilitiesSelectionBboxExceedsLimits(resolved.bbox)).toBe(true);
+    expect(facilitiesSelectionBboxExceedsLimits(resolved.bbox)).toBe(false);
   });
 
   it("provides serialized geometry text for payload-size enforcement", () => {

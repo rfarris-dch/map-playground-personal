@@ -4,6 +4,10 @@ import { onBeforeUnmount, shallowRef, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useDebouncedLatestEffectTask } from "@/composables/use-debounced-latest-effect-task";
 import {
+  createAppPerformanceTimer,
+  recordAppPerformanceCounter,
+} from "@/features/app/diagnostics/app-performance.service";
+import {
   applyMapContextTransferToAppShell,
   readMapContextTransferFromRoute,
   readMapContextTransferTokenFromQuery,
@@ -53,7 +57,9 @@ export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
   });
 
   function syncRouteToUrlState(): Promise<void> {
+    const stopSyncTimer = createAppPerformanceTimer("url-state.sync.time");
     if (options.map.value === null) {
+      stopSyncTimer();
       return Promise.resolve();
     }
 
@@ -68,6 +74,7 @@ export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
     contextToken.value = readMapContextTransferTokenFromQuery(nextQuery) ?? null;
 
     if (currentSignature === nextSignature) {
+      stopSyncTimer();
       return Promise.resolve();
     }
 
@@ -77,9 +84,11 @@ export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
       Effect.tryPromise({
         try: async () => {
           await router.replace({ query: nextQuery });
+          stopSyncTimer();
         },
         catch: (error) => {
           lastWrittenQuerySignature.value = null;
+          stopSyncTimer();
           throw error;
         },
       })
@@ -123,7 +132,7 @@ export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
 
   watch(
     () => options.map.value,
-    (map, previousMap, onCleanup) => {
+    (map, previousMap) => {
       if (previousMap === map || map === null) {
         return;
       }
@@ -133,16 +142,26 @@ export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
         map.setViewport(normalizeViewportForMap(initialMapContext.viewport));
       }
 
-      const onMoveEnd = (): void => {
-        viewportVersion.value += 1;
-      };
+      syncRouteToUrlState().catch(() => undefined);
+    },
+    { immediate: true }
+  );
 
-      map.on("moveend", onMoveEnd);
-      onCleanup(() => {
-        map.off("moveend", onMoveEnd);
+  watch(
+    () => options.interactionCoordinator.value,
+    (nextCoordinator, _previousCoordinator, onCleanup) => {
+      const unsubscribeInteractionCoordinator = nextCoordinator?.subscribe((snapshot) => {
+        if (snapshot.eventType !== "moveend") {
+          return;
+        }
+
+        recordAppPerformanceCounter("map.moveend", { feature: "url-state" });
+        viewportVersion.value += 1;
       });
 
-      syncRouteToUrlState().catch(() => undefined);
+      onCleanup(() => {
+        unsubscribeInteractionCoordinator?.();
+      });
     },
     { immediate: true }
   );

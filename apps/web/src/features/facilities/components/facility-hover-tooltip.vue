@@ -62,10 +62,36 @@
   );
 
   const codeText = computed(() => {
-    if (displayState.value === null) {
+    const state = displayState.value;
+    if (state === null) {
       return null;
     }
-    return displayState.value.facilityCode;
+    const code = state.facilityCode;
+    if (code === null || code.toLowerCase() === "null") {
+      return null;
+    }
+    if (code.toLowerCase() === state.providerName.toLowerCase()) {
+      return null;
+    }
+    return code;
+  });
+
+  const addressText = computed(() => {
+    const state = displayState.value;
+    if (state === null) {
+      return null;
+    }
+    const parts: string[] = [];
+    if (state.address) {
+      parts.push(state.address);
+    }
+    if (state.city) {
+      parts.push(state.city);
+    }
+    if (state.stateAbbrev) {
+      parts.push(state.stateAbbrev);
+    }
+    return parts.length > 0 ? parts.join(", ") : null;
   });
 
   function formatCompact(value: number): string {
@@ -82,24 +108,25 @@
     }
 
     const result: Metric[] = [];
+    const isHyperscale = state.perspective === "hyperscale";
 
-    if (state.leaseOrOwn !== null && state.leaseOrOwn !== "unknown") {
+    if (!isHyperscale && state.leaseOrOwn !== null && state.leaseOrOwn !== "unknown") {
       result.push({
         label: state.leaseOrOwn === "own" ? "Own." : "Lease",
         value: state.leaseOrOwn === "own" ? "O" : "L",
       });
     }
 
-    if (state.commissionedPowerMw !== null) {
-      result.push({ label: "Comm.", value: formatCompact(state.commissionedPowerMw) });
+    if (state.commissionedPowerMw !== null && state.commissionedPowerMw > 0) {
+      result.push({ label: isHyperscale ? "Own." : "Comm.", value: formatCompact(state.commissionedPowerMw) });
     }
-    if (state.underConstructionPowerMw !== null) {
+    if (state.underConstructionPowerMw !== null && state.underConstructionPowerMw > 0) {
       result.push({ label: "UC", value: formatCompact(state.underConstructionPowerMw) });
     }
-    if (state.plannedPowerMw !== null) {
+    if (state.plannedPowerMw !== null && state.plannedPowerMw > 0) {
       result.push({ label: "Plan.", value: formatCompact(state.plannedPowerMw) });
     }
-    if (state.availablePowerMw !== null) {
+    if (state.availablePowerMw !== null && state.availablePowerMw > 0) {
       result.push({ label: "Avail.", value: formatCompact(state.availablePowerMw) });
     }
 
@@ -112,11 +139,11 @@
     ariaLabel="Facility hover details"
     :screen-point="displayState?.screenPoint ?? null"
     :show="displayState !== null"
-    :surface-class="`pointer-events-auto absolute z-30 flex flex-col items-center justify-center rounded-[8px] border border-solid p-1 shadow-md ${accentBorder}`"
+    :surface-class="`pointer-events-auto absolute z-30 flex flex-col items-center justify-center rounded-[8px] border-2 border-solid bg-white shadow-md ${accentBorder}`"
   >
     <div
       v-if="displayState !== null"
-      class="flex flex-col items-start justify-center gap-2 rounded-[8px] bg-white p-2 shadow-md leading-normal whitespace-nowrap"
+      class="flex flex-col items-start justify-center gap-2 p-2 leading-normal whitespace-nowrap"
       @mouseenter="onTooltipEnter"
       @mouseleave="onTooltipLeave"
     >
@@ -128,6 +155,10 @@
           {{ codeText }}
         </span>
       </div>
+
+      <span v-if="addressText" class="text-[12px] font-normal leading-none text-[#94a3b8]">
+        {{ addressText }}
+      </span>
 
       <div v-if="metrics.length > 0" class="flex items-start gap-2">
         <div

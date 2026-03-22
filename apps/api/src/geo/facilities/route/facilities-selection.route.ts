@@ -1,4 +1,4 @@
-import { ApiRoutes } from "@map-migration/http-contracts/api-routes";
+import { ApiHeaders, ApiRoutes } from "@map-migration/http-contracts/api-routes";
 import {
   FacilitiesSelectionRequestSchema,
   type FacilitiesSelectionResponse,
@@ -6,11 +6,31 @@ import {
 } from "@map-migration/http-contracts/facilities-http";
 import type { Context, Env, Hono } from "hono";
 import { queryFacilitiesSelection } from "@/geo/facilities/facilities-selection.service";
+import {
+  buildFacilitiesCacheEntry,
+  createFacilitiesCacheHeaders,
+  resolveFacilitiesCachedEntry,
+} from "@/geo/facilities/route/facilities-cache.service";
+import type { FacilitiesSelectionCacheBody } from "@/geo/facilities/route/facilities-cache.types";
+import {
+  buildFacilitiesSelectionCacheKey,
+  hashFacilitiesCachePayload,
+} from "@/geo/facilities/route/facilities-cache-key.service";
 import { buildFacilitiesRouteMeta } from "@/geo/facilities/route/facilities-route-meta.service";
-import { jsonOk, toDebugDetails } from "@/http/api-response";
+import { jsonOk, toDebugDetails, withHeaders } from "@/http/api-response";
 import { fromApiRequest, routeError, runEffectRoute } from "@/http/effect-route";
 import { readJsonBody } from "@/http/json-request.service";
 import { registerRouteTimeoutProfile } from "@/http/route-timeout-profile.service";
+import { getApiRuntimeConfig } from "@/http/runtime-config";
+
+function isStaleEligibleFacilitiesSelectionError(error: unknown): boolean {
+  if (typeof error !== "object" || error === null || !("httpStatus" in error)) {
+    return true;
+  }
+
+  const httpStatus = Reflect.get(error, "httpStatus");
+  return typeof httpStatus === "number" && httpStatus >= 500;
+}
 
 async function readFacilitiesSelectionRequest(c: Context, requestId: string) {
   const bodyResult = await readJsonBody(c, {
@@ -76,33 +96,76 @@ async function handleFacilitiesSelectionRequest(args: {
     return requestResult.response;
   }
 
-  const selectionResult = await queryFacilitiesSelection({
-    geometry: requestResult.value.geometry,
-    limitPerPerspective: requestResult.value.limitPerPerspective,
-    perspectives: requestResult.value.perspectives,
+  const runtimeConfig = getApiRuntimeConfig();
+  const cacheResult = await resolveFacilitiesCachedEntry<FacilitiesSelectionCacheBody>({
+    allowStaleOnError: isStaleEligibleFacilitiesSelectionError,
+    key: await buildFacilitiesSelectionCacheKey({
+      dataVersion: runtimeConfig.dataVersion,
+      geometry: requestResult.value.geometry,
+      limitPerPerspective: requestResult.value.limitPerPerspective,
+      perspectives: requestResult.value.perspectives,
+    }),
+    buildFreshEntry: async () => {
+      const selectionResult = await queryFacilitiesSelection({
+        geometry: requestResult.value.geometry,
+        limitPerPerspective: requestResult.value.limitPerPerspective,
+        perspectives: requestResult.value.perspectives,
+      });
+      if (!selectionResult.ok) {
+        throw toFacilitiesSelectionRouteError(selectionResult.value);
+      }
+
+      const payloadBody: FacilitiesSelectionCacheBody = {
+        features: selectionResult.value.features,
+        selection: {
+          countsByPerspective: selectionResult.value.countsByPerspective,
+          truncatedByPerspective: selectionResult.value.truncatedByPerspective,
+        },
+        truncated:
+          selectionResult.value.truncatedByPerspective.colocation ||
+          selectionResult.value.truncatedByPerspective.hyperscale,
+        warnings: [...selectionResult.value.warnings],
+      };
+
+      return buildFacilitiesCacheEntry({
+        dataVersion: runtimeConfig.dataVersion,
+        etag: `"${hashFacilitiesCachePayload(JSON.stringify(payloadBody))}"`,
+        generatedAt: new Date().toISOString(),
+        originRequestId: args.requestId,
+        payload: payloadBody,
+      });
+    },
   });
-  if (!selectionResult.ok) {
-    throw toFacilitiesSelectionRouteError(selectionResult.value);
-  }
 
   const payload: FacilitiesSelectionResponse = {
     type: "FeatureCollection",
-    features: selectionResult.value.features,
+    features: cacheResult.entry.payload.features,
     meta: buildFacilitiesRouteMeta({
+      dataVersion: cacheResult.entry.dataVersion,
+      generatedAt: cacheResult.entry.generatedAt,
       requestId: args.requestId,
-      recordCount: selectionResult.value.features.length,
-      truncated:
-        selectionResult.value.truncatedByPerspective.colocation ||
-        selectionResult.value.truncatedByPerspective.hyperscale,
-      warnings: selectionResult.value.warnings,
+      recordCount: cacheResult.entry.payload.features.length,
+      truncated: cacheResult.entry.payload.truncated,
+      warnings: cacheResult.entry.payload.warnings,
     }),
-    selection: {
-      countsByPerspective: selectionResult.value.countsByPerspective,
-      truncatedByPerspective: selectionResult.value.truncatedByPerspective,
-    },
+    selection: cacheResult.entry.payload.selection,
   };
+  const responseHeaders = createFacilitiesCacheHeaders({
+    cacheStatus: cacheResult.cacheStatus,
+    dataVersion: cacheResult.entry.dataVersion,
+    etag: cacheResult.entry.etag,
+    originRequestId: cacheResult.entry.originRequestId,
+  });
 
-  return jsonOk(args.honoContext, FacilitiesSelectionResponseSchema, payload, args.requestId);
+  return withHeaders(
+    jsonOk(args.honoContext, FacilitiesSelectionResponseSchema, payload, args.requestId),
+    {
+      [ApiHeaders.cacheStatus]: responseHeaders.cacheStatus,
+      [ApiHeaders.dataVersion]: responseHeaders.dataVersion,
+      [ApiHeaders.originRequestId]: responseHeaders.originRequestId,
+      ETag: responseHeaders.etag,
+    }
+  );
 }
 
 export function registerFacilitiesSelectionRoute<E extends Env>(app: Hono<E>): void {

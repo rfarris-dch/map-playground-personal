@@ -57,6 +57,7 @@ export interface ApiRoutesTable {
   readonly countyScoresStatus: string;
   readonly effectMetrics: string;
   readonly facilities: string;
+  readonly facilitiesPerformanceDebug: string;
   readonly facilitiesSelection: string;
   readonly facilitiesTable: string;
   readonly fiberLocatorLayers: string;
@@ -75,6 +76,9 @@ export interface ApiRoutesTable {
 }
 
 export interface ApiHeadersTable {
+  readonly cacheStatus: string;
+  readonly dataVersion: string;
+  readonly originRequestId: string;
   readonly parcelIngestionRunId: string;
   readonly requestId: string;
 }
@@ -119,6 +123,7 @@ export const ApiRoutes = Object.freeze<ApiRoutesTable>({
   countyScores: "/api/geo/counties/scores",
   countyScoresStatus: "/api/geo/counties/scores/status",
   effectMetrics: "/api/debug/effect/issues",
+  facilitiesPerformanceDebug: "/api/debug/facilities/performance",
   fiberLocatorLayers: "/api/geo/fiber-locator/layers",
   fiberLocatorLayersInView: "/api/geo/fiber-locator/layers/inview",
   fiberLocatorTile: "/api/geo/fiber-locator/tile",
@@ -333,6 +338,9 @@ export function buildUsgsWaterTileRoute(
 }
 
 export const ApiHeaders = Object.freeze<ApiHeadersTable>({
+  cacheStatus: "x-cache-status",
+  dataVersion: "x-data-version",
+  originRequestId: "x-origin-request-id",
   parcelIngestionRunId: "x-parcel-ingestion-run-id",
   requestId: "x-request-id",
 });

@@ -83,12 +83,18 @@ export function buildQuickViewLayout(input: QuickViewLayoutInput): QuickViewLayo
     placedRects.push(fit);
     cards.push({
       id: `${facility.perspective}:${facility.facilityId}`,
-      perspective: facility.perspective,
-      facilityName: facility.facilityName,
-      providerName: facility.providerName,
+      address: facility.address,
+      availablePowerMw: facility.availablePowerMw,
+      city: facility.city,
       commissionedPowerMw: facility.commissionedPowerMw,
+      facilityName: facility.facilityName,
+      perspective: facility.perspective,
+      plannedPowerMw: facility.plannedPowerMw,
+      providerName: facility.providerName,
       screenX: fit.x,
       screenY: fit.y,
+      stateAbbrev: facility.stateAbbrev,
+      underConstructionPowerMw: facility.underConstructionPowerMw,
     });
   }
 

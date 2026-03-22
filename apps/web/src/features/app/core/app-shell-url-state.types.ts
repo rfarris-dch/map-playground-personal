@@ -9,10 +9,11 @@ import type {
   FloodVisibilityState,
   PerspectiveVisibilityState,
 } from "@/features/app/core/app-shell.types";
+import type { MapFiltersState } from "@/features/app/filters/map-filters.types";
+import type { MapInteractionCoordinator } from "@/features/app/interaction/map-interaction.types";
 import type { BasemapLayerId, BasemapVisibilityState } from "@/features/basemap/basemap.types";
 import type { BoundaryLayerId } from "@/features/boundaries/boundaries.types";
 import type { FacilitiesViewMode } from "@/features/facilities/facilities.types";
-import type { MapFiltersState } from "@/features/app/filters/map-filters.types";
 import type { LayerRuntimeSnapshot } from "@/features/layers/layer-runtime.types";
 import type { PowerLayerId } from "@/features/power/power.types";
 
@@ -25,6 +26,7 @@ export interface UseAppShellUrlStateOptions {
   readonly floodVisibility: ShallowRef<FloodVisibilityState>;
   readonly gasPipelineVisible: ShallowRef<boolean>;
   readonly hydroBasinsVisible: ShallowRef<boolean>;
+  readonly interactionCoordinator: ShallowRef<MapInteractionCoordinator | null>;
   readonly layerRuntimeSnapshot: ShallowRef<LayerRuntimeSnapshot | null>;
   readonly map: ShallowRef<import("@map-migration/map-engine").IMap | null>;
   readonly mapFilters: Readonly<ShallowRef<MapFiltersState>>;

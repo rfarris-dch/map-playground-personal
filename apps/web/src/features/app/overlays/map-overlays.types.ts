@@ -6,6 +6,7 @@ import type {
   PerspectiveStatusState,
   PerspectiveVisibilityState,
 } from "@/features/app/core/app-shell.types";
+import type { MapInteractionCoordinator } from "@/features/app/interaction/map-interaction.types";
 import type { ParcelsStatus } from "@/features/parcels/parcels.types";
 import type {
   SketchMeasureMode,
@@ -28,6 +29,7 @@ export interface UseMapOverlaysArgs {
   readonly facilitiesStatus: ShallowRef<PerspectiveStatusState>;
   readonly finishSketchMeasureArea: () => void;
   readonly hyperscaleViewportFeatures: ShallowRef<FacilitiesFeatureCollection["features"]>;
+  readonly interactionCoordinator: ShallowRef<MapInteractionCoordinator | null>;
   readonly isSketchMeasurePanelOpen: ComputedRef<boolean>;
   readonly map: ShallowRef<IMap | null>;
   readonly parcelsStatus: ShallowRef<ParcelsStatus>;

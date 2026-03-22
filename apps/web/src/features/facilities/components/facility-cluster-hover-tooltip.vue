@@ -127,11 +127,11 @@
     ariaLabel="Facility cluster details"
     :screen-point="displayState?.screenPoint ?? null"
     :show="displayState !== null"
-    :surface-class="`pointer-events-auto absolute z-30 flex flex-col items-center justify-center rounded-[8px] border border-solid p-1 shadow-md ${accentBorder}`"
+    :surface-class="`pointer-events-auto absolute z-30 flex flex-col items-center justify-center rounded-[8px] border-2 border-solid bg-white shadow-md ${accentBorder}`"
   >
     <div
       v-if="displayState !== null"
-      class="flex flex-col items-start justify-center gap-2 rounded-[8px] bg-white p-2 shadow-md leading-normal whitespace-nowrap"
+      class="flex flex-col items-start justify-center gap-2 p-2 leading-normal whitespace-nowrap"
       @mouseenter="onMouseEnter"
       @mouseleave="onMouseLeave"
     >

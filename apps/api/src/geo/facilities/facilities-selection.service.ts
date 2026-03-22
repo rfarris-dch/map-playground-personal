@@ -23,13 +23,15 @@ export type {
 } from "./facilities-selection.service.types";
 
 function dedupePerspectives(perspectives: readonly FacilityPerspective[]): FacilityPerspective[] {
-  return perspectives.reduce<FacilityPerspective[]>((next, perspective) => {
-    if (!next.includes(perspective)) {
-      next.push(perspective);
-    }
+  return perspectives
+    .reduce<FacilityPerspective[]>((next, perspective) => {
+      if (!next.includes(perspective)) {
+        next.push(perspective);
+      }
 
-    return next;
-  }, []);
+      return next;
+    }, [])
+    .sort((left, right) => left.localeCompare(right));
 }
 
 function policyRejected(

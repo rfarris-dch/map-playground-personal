@@ -2,6 +2,7 @@ import type { BBox } from "@map-migration/geo-kernel/geometry";
 import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts/facilities-http";
 import type {
   FacilitiesFeatureFilterPredicate,
+  FacilitiesGuardrailResult,
   FacilitiesSourceData,
   FacilitiesStatus,
 } from "@/features/facilities/facilities.types";
@@ -41,6 +42,38 @@ function clamp(value: number, min: number, max: number): number {
   }
 
   return value;
+}
+
+function toRadians(value: number): number {
+  return (value * Math.PI) / 180;
+}
+
+function haversineDistanceKm(latA: number, lonA: number, latB: number, lonB: number): number {
+  const earthRadiusKm = 6371;
+  const deltaLat = toRadians(latB - latA);
+  const deltaLon = toRadians(lonB - lonA);
+  const latARadians = toRadians(latA);
+  const latBRadians = toRadians(latB);
+
+  const sinLat = Math.sin(deltaLat / 2);
+  const sinLon = Math.sin(deltaLon / 2);
+  const a = sinLat * sinLat + Math.cos(latARadians) * Math.cos(latBRadians) * sinLon * sinLon;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return earthRadiusKm * c;
+}
+
+function normalizeEastLongitude(west: number, east: number): number {
+  if (east >= west) {
+    return east;
+  }
+
+  return east + 360;
+}
+
+function estimateViewportWidthKm(bounds: BBox): number {
+  const midpointLatitude = (bounds.north + bounds.south) / 2;
+  const eastLongitude = normalizeEastLongitude(bounds.west, bounds.east);
+  return haversineDistanceKm(midpointLatitude, bounds.west, midpointLatitude, eastLongitude);
 }
 
 function padRange(
@@ -127,6 +160,36 @@ export function expandBbox(bounds: BBox, paddingFactor = 0.5): BBox {
     east: clamp(longitudeRange.max, -180, 180),
     south: clamp(latitudeRange.min, -90, 90),
     north: clamp(latitudeRange.max, -90, 90),
+  };
+}
+
+export function evaluateFacilitiesGuardrails(args: {
+  readonly bounds: BBox;
+  readonly isStressBlocked: boolean;
+  readonly maxViewportWidthKm: number;
+}): FacilitiesGuardrailResult {
+  const viewportWidthKm = estimateViewportWidthKm(args.bounds);
+
+  if (args.isStressBlocked) {
+    return {
+      blocked: true,
+      reason: "stress",
+      viewportWidthKm,
+    };
+  }
+
+  if (viewportWidthKm > args.maxViewportWidthKm) {
+    return {
+      blocked: true,
+      reason: "viewport-span",
+      viewportWidthKm,
+    };
+  }
+
+  return {
+    blocked: false,
+    reason: null,
+    viewportWidthKm,
   };
 }
 
@@ -245,11 +308,23 @@ export function formatFacilitiesStatus(status: FacilitiesStatus): string {
   }
 
   if (status.state === "hidden") {
-    return `Facilities: hidden (zoom ${status.zoom.toFixed(2)} < ${status.minZoom})`;
+    if (status.reason === "zoom") {
+      return `Facilities (${status.perspective}): hidden (zoom ${(status.zoom ?? 0).toFixed(2)} < ${status.minZoom ?? 0})`;
+    }
+
+    if (status.reason === "stress") {
+      return `Facilities (${status.perspective}): hidden by stress governor`;
+    }
+
+    return `Facilities (${status.perspective}): hidden by viewport span (${(status.viewportWidthKm ?? 0).toFixed(1)}km > ${status.maxViewportWidthKm ?? 0}km)`;
   }
 
   if (status.state === "loading") {
     return `Facilities (${status.perspective}): loading...`;
+  }
+
+  if (status.state === "degraded") {
+    return `Facilities (${status.perspective}): degraded (${status.reason}, count=${status.count}, truncated=${String(status.truncated)})`;
   }
 
   if (status.state === "error") {

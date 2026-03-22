@@ -48,6 +48,7 @@ export function useMapOverlays(args: UseMapOverlaysArgs) {
     colocationViewportFeatures: args.colocationViewportFeatures,
     expectedParcelsIngestionRunId: args.expectedParcelsIngestionRunId,
     hyperscaleViewportFeatures: args.hyperscaleViewportFeatures,
+    interactionCoordinator: args.interactionCoordinator,
     map: args.map,
     scannerActive: overlayShortcuts.scannerActive,
     scannerFetchEnabled: computed(
@@ -60,6 +61,7 @@ export function useMapOverlays(args: UseMapOverlaysArgs) {
     ),
   });
   const scannerMarkets = useMapOverlaysScannerMarkets({
+    interactionCoordinator: args.interactionCoordinator,
     map: args.map,
     scannerFetchEnabled: computed(
       () =>

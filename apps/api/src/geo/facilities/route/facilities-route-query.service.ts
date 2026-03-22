@@ -59,14 +59,20 @@ function mapFacilitiesFeatureResult(args: {
   readonly limit: number;
   readonly perspective: FacilityPerspective;
   readonly rows: readonly FacilitiesBboxRow[];
+  readonly sqlTimeMs: number;
 }): QueryFacilitiesByBboxResult {
   try {
+    const mappingStartedAt = globalThis.performance.now();
     const truncated = args.rows.length > args.limit;
     const rowsWithinLimit = truncated ? args.rows.slice(0, args.limit) : args.rows;
     return {
       ok: true,
       value: {
         features: mapFacilitiesRowsToFeatures(rowsWithinLimit, args.perspective),
+        timing: {
+          mappingTimeMs: globalThis.performance.now() - mappingStartedAt,
+          sqlTimeMs: args.sqlTimeMs,
+        },
         truncated,
         warnings: truncated
           ? [
@@ -87,6 +93,7 @@ export async function queryFacilitiesByBbox(
   args: QueryFacilitiesByBboxArgs
 ): Promise<QueryFacilitiesByBboxResult> {
   try {
+    const sqlStartedAt = globalThis.performance.now();
     const rows = await listFacilitiesByBbox({
       ...args.bbox,
       limit: args.limit + 1,
@@ -96,6 +103,7 @@ export async function queryFacilitiesByBbox(
       rows,
       limit: args.limit,
       perspective: args.perspective,
+      sqlTimeMs: globalThis.performance.now() - sqlStartedAt,
     });
   } catch (error) {
     return queryFailure(error);
@@ -106,6 +114,7 @@ export async function queryFacilitiesByPolygon(
   args: QueryFacilitiesByPolygonArgs
 ): Promise<QueryFacilitiesByPolygonResult> {
   try {
+    const sqlStartedAt = globalThis.performance.now();
     const rows = await listFacilitiesByPolygon({
       geometryGeoJson: args.geometryGeoJson,
       limit: args.limit + 1,
@@ -115,6 +124,7 @@ export async function queryFacilitiesByPolygon(
       rows,
       limit: args.limit,
       perspective: args.perspective,
+      sqlTimeMs: globalThis.performance.now() - sqlStartedAt,
     });
   } catch (error) {
     return queryFailure(error);

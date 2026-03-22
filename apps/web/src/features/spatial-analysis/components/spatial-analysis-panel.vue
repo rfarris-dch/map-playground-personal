@@ -6,6 +6,7 @@
   import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";
   import SpatialAnalysisCountyScoresSection from "@/features/spatial-analysis/components/spatial-analysis-county-scores-section.vue";
   import SpatialAnalysisFacilitiesTable from "@/features/spatial-analysis/components/spatial-analysis-facilities-table.vue";
+  import SpatialAnalysisHistoryChart from "@/features/spatial-analysis/components/spatial-analysis-history-chart.vue";
   import type { SpatialAnalysisPanelProps } from "@/features/spatial-analysis/components/spatial-analysis-panel.types";
   import SpatialAnalysisParcelTable from "@/features/spatial-analysis/components/spatial-analysis-parcel-table.vue";
   import SpatialAnalysisPerspectiveCard from "@/features/spatial-analysis/components/spatial-analysis-perspective-card.vue";
@@ -35,6 +36,8 @@
     hasColocation,
     hasCountyScores,
     hasFacilities,
+    hasHistory,
+    history,
     hasHyperscale,
     hasMarkets,
     hasParcels,
@@ -349,6 +352,13 @@
           </section>
         </div>
       </div>
+    </section>
+
+    <section
+      v-else-if="hasHistory && activeTab === 'history'"
+      class="flex-1 overflow-auto rounded-sm border border-border bg-card p-2 shadow-xs"
+    >
+      <SpatialAnalysisHistoryChart :history="history" :format-power="props.formatPower" />
     </section>
 
     <section

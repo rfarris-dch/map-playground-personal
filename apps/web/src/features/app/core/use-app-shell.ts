@@ -97,6 +97,7 @@ export function useAppShell() {
     floodVisibility: visibility.floodVisibility,
     gasPipelineVisible: visibility.gasPipelineVisible,
     hydroBasinsVisible: visibility.hydroBasinsVisible,
+    interactionCoordinator: state.interactionCoordinator,
     layerRuntimeSnapshot: state.layerRuntimeSnapshot,
     map: state.map,
     parcelsVisible: visibility.parcelsVisible,

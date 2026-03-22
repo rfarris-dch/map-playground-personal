@@ -14,6 +14,7 @@ import type {
 } from "@/features/app/core/app-shell.types";
 import type { PerspectiveViewModeState } from "@/features/app/core/use-app-shell-state.types";
 import type { FacilitiesFilterPredicate } from "@/features/app/filters/map-filters.types";
+import type { MapInteractionCoordinator } from "@/features/app/interaction/map-interaction.types";
 import type {
   MarketBoundaryControllerState,
   MarketBoundaryHoverByLayerState,
@@ -79,6 +80,7 @@ export interface EnvironmentalStressController {
 export interface AppShellMapLifecycleRuntimeRefs {
   readonly basemapLayerController: ShallowRef<BasemapLayerVisibilityController | null>;
   readonly disposeMapRuntime: ShallowRef<(() => Promise<void>) | null>;
+  readonly interactionCoordinator: ShallowRef<MapInteractionCoordinator | null>;
   readonly layerRuntime: ShallowRef<LayerRuntimeController | null>;
   readonly map: ShallowRef<IMap | null>;
   readonly mapContainer: Readonly<ShallowRef<HTMLDivElement | null>>;

@@ -24,6 +24,7 @@ import type {
   BoundaryFacetSelectionState,
   PerspectiveStatusState,
 } from "@/features/app/core/app-shell.types";
+import type { MapInteractionCoordinator } from "@/features/app/interaction/map-interaction.types";
 import type {
   BoundaryFetchErrorState,
   EnvironmentalStressController,
@@ -122,6 +123,7 @@ export function useAppShellState(): UseAppShellStateResult {
   });
   const layerRuntime = shallowRef<LayerRuntimeController | null>(null);
   const layerRuntimeSnapshot = shallowRef<LayerRuntimeSnapshot | null>(null);
+  const interactionCoordinator = shallowRef<MapInteractionCoordinator | null>(null);
   const environmentalStressController = shallowRef<EnvironmentalStressController | null>(null);
   const facilitiesHoverController = shallowRef<FacilitiesHoverController | null>(null);
   const powerHoverController = shallowRef<PowerHoverController | null>(null);
@@ -276,6 +278,7 @@ export function useAppShellState(): UseAppShellStateResult {
     parcelsController,
     layerRuntime,
     layerRuntimeSnapshot,
+    interactionCoordinator,
     facilitiesHoverController,
     powerHoverController,
     sketchMeasureController,

@@ -33,7 +33,14 @@
   );
 
   const codeText = computed(() => {
-    return props.state.facilityCode ?? null;
+    const code = props.state.facilityCode;
+    if (code === null || code.toLowerCase() === "null") {
+      return null;
+    }
+    if (code.toLowerCase() === props.state.providerName.toLowerCase()) {
+      return null;
+    }
+    return code;
   });
 
   const marketLine = computed(() => {
@@ -158,11 +165,11 @@
 <template>
   <Transition enter-active-class="transition-opacity duration-100" enter-from-class="opacity-0">
     <aside
-      class="pointer-events-auto fixed right-[52px] top-[120px] z-30 flex flex-col items-start rounded-[8px] border border-solid p-1 shadow-md"
+      class="pointer-events-auto fixed right-[52px] top-[120px] z-30 flex flex-col items-start rounded-[8px] border-2 border-solid bg-white shadow-md"
       :class="accentBorder"
       aria-label="Facility details"
     >
-      <div class="flex min-w-[376px] flex-col gap-4 rounded-[8px] bg-white p-4 shadow-md">
+      <div class="flex min-w-[376px] flex-col gap-4 p-4">
         <!-- Top Section -->
         <div class="flex flex-col gap-2">
           <!-- Title row -->

@@ -47,10 +47,8 @@ function readBooleanSearchParam(key: string): boolean {
   return value === "true" || value === "1";
 }
 
-function isZoomHiddenStatus(
-  status: FacilitiesStatus
-): status is Extract<FacilitiesStatus, { state: "hidden" }> {
-  return status.state === "hidden";
+function isZoomHiddenStatus(status: FacilitiesStatus): boolean {
+  return status.state === "hidden" && status.reason === "zoom";
 }
 
 function isParcelsHiddenStatus(
@@ -76,14 +74,17 @@ export function resolveMapOverlaysBlockedReason(args: {
     return "Enable a facility layer to use scanner and quick view.";
   }
 
-  const hiddenStatuses = visibleStatuses.filter((status) => isZoomHiddenStatus(status));
-  if (hiddenStatuses.length !== visibleStatuses.length) {
-    return null;
-  }
+  let requiredMinZoom = 0;
+  for (const status of visibleStatuses) {
+    if (!isZoomHiddenStatus(status)) {
+      return null;
+    }
 
-  const requiredMinZoom = hiddenStatuses.reduce((maxMinZoom, status) => {
-    return Math.max(maxMinZoom, status.minZoom);
-  }, 0);
+    requiredMinZoom = Math.max(
+      requiredMinZoom,
+      "minZoom" in status && typeof status.minZoom === "number" ? status.minZoom : 0
+    );
+  }
 
   return `Zoom in to at least ${requiredMinZoom.toFixed(1)} to load facilities.`;
 }

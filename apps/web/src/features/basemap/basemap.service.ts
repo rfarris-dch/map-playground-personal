@@ -69,6 +69,7 @@ const LANDMARKS_POI_LAYER_ID = "basemap.landmarks.poi";
 const LANDMARKS_PEAK_LAYER_ID = "basemap.landmarks.peak";
 const STATE_BOUNDARY_LAYER_ID = "boundary_3";
 const STATE_LABELS_LAYER_ID = "basemap.state-labels";
+const BASEMAP_BOUNDARY_LINE_COLOR = "#cbd5e1";
 const MISSING_SPRITE_SHIELD_LAYER_IDS = [
   "highway-shield-non-us",
   "highway-shield-us-interstate",
@@ -658,6 +659,28 @@ function ensureLandmarkLayers(map: IMap): void {
 function ensureStateBoundaryVisible(map: IMap): void {
   if (map.hasLayer(STATE_BOUNDARY_LAYER_ID)) {
     map.setLayerVisibility(STATE_BOUNDARY_LAYER_ID, true);
+    map.setPaintProperty(STATE_BOUNDARY_LAYER_ID, "line-color", BASEMAP_BOUNDARY_LINE_COLOR);
+  }
+}
+
+function lightenBasemapBoundaryLines(map: IMap): void {
+  const style = map.getStyle();
+  const styleLayers = style.layers ?? [];
+
+  for (const layer of styleLayers) {
+    const layerId = readLayerId(layer);
+    const layerType = readLayerType(layer);
+    const sourceLayerId = readSourceLayerId(layer);
+    if (layerId === null || layerType === null) {
+      continue;
+    }
+
+    if (
+      layerId === STATE_BOUNDARY_LAYER_ID ||
+      isBoundaryGroupLayer(layerId, layerType, sourceLayerId)
+    ) {
+      map.setPaintProperty(layerId, "line-color", BASEMAP_BOUNDARY_LINE_COLOR);
+    }
   }
 }
 
@@ -1006,6 +1029,7 @@ export function mountBasemapLayerVisibility(
 
     try {
       ensureStateBoundaryVisible(map);
+      lightenBasemapBoundaryLines(map);
       ensureStateLabels(map);
     } catch (boundaryError: unknown) {
       console.warn("[basemap] state boundaries/labels unavailable", boundaryError);

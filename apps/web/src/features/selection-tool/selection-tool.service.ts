@@ -282,7 +282,7 @@ export function querySelectionToolSummaryEffect(
     const request: SpatialAnalysisSummaryRequest = {
       geometry: selectionGeometryFromRing(args.selectionRing),
       includeFacilities: true,
-      includeFlood: true,
+      includeFlood: false,
       includeParcels,
       limitPerPerspective: 5000,
       minimumMarketSelectionOverlapPercent: args.minimumMarketSelectionOverlapPercent ?? 0,

@@ -3,19 +3,18 @@ import {
   type ApiEffectError,
   getApiErrorReason,
 } from "@map-migration/core-runtime/api";
-import type { BrowserEffectFiber } from "@map-migration/core-runtime/browser";
-import {
-  forkScopedBrowserEffect,
-  interruptBrowserFiber,
-} from "@map-migration/core-runtime/browser";
 import type {
   ParcelEnrichRequest,
   ParcelsFeatureCollection,
 } from "@map-migration/http-contracts/parcels-http";
-import type { IMap } from "@map-migration/map-engine";
 import { Effect } from "effect";
 import { onBeforeUnmount, shallowRef, watch } from "vue";
 import { useDebouncedLatestEffectTask } from "@/composables/use-debounced-latest-effect-task";
+import {
+  createAppPerformanceTimer,
+  recordAppPerformanceCounter,
+  recordAppPerformanceMeasurement,
+} from "@/features/app/diagnostics/app-performance.service";
 import {
   buildCenterLimitedBbox,
   buildFacilityAnchorParcelRequests,
@@ -40,7 +39,6 @@ import {
   fetchSpatialAnalysisParcelsPagesEffect,
   type SpatialAnalysisParcelsPagesResult,
 } from "@/features/spatial-analysis/spatial-analysis-parcels-query.service";
-import { listenToMapEvent } from "@/lib/effect/scoped-listener";
 
 const SCANNER_PARCELS_REFRESH_DEBOUNCE_MS = 260;
 const SCANNER_PARCELS_MAX_BBOX_WIDTH_DEGREES = 2;
@@ -96,7 +94,7 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
       console.error("[map] scanner parcels refresh failed", error);
     },
   });
-  let moveendListenerFiber: BrowserEffectFiber<void, never> | null = null;
+  let unsubscribeInteractionCoordinator: (() => void) | null = null;
   let scannerParcelsLastFetchKey: string | null = null;
 
   function logScannerParcelsError(context: string, error: unknown): void {
@@ -272,10 +270,14 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
 
   function refreshScannerParcelsEffect(): Effect.Effect<void, ApiEffectError, never> {
     return Effect.gen(function* () {
+      const stopRefreshTimer = createAppPerformanceTimer("scanner.parcels.refresh.time");
       const scope = yield* Effect.sync(() => startScannerParcelsRefresh());
       if (scope === null) {
+        stopRefreshTimer();
         return;
       }
+
+      recordAppPerformanceCounter("scanner.parcels.request.started");
 
       yield* fetchScannerParcelsFromBboxEffect(scope).pipe(
         Effect.tap(() =>
@@ -300,6 +302,13 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
             scannerParcelFeatures.value = selection.features;
             scannerParcelTruncated.value = selection.truncated;
             scannerParcelNextCursor.value = selection.nextCursor;
+            recordAppPerformanceCounter("scanner.parcels.request.succeeded");
+            recordAppPerformanceMeasurement(
+              "scanner.parcels.feature-count",
+              selection.features.length,
+              { truncated: selection.truncated }
+            );
+            stopRefreshTimer();
           })
         ),
         Effect.catchAll((error) => {
@@ -314,6 +323,8 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
 
           return Effect.sync(() => {
             applyFailedScannerParcelsFetch(error);
+            recordAppPerformanceCounter("scanner.parcels.request.failed");
+            stopRefreshTimer();
           });
         })
       );
@@ -333,30 +344,30 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
   }
 
   const onMapMoveEnd = (): void => {
+    recordAppPerformanceCounter("map.moveend", { feature: "scanner-parcels" });
     scheduleScannerParcelsRefresh();
   };
 
-  async function bindMoveendMap(nextMap: IMap | null): Promise<void> {
-    await interruptBrowserFiber(moveendListenerFiber);
-    moveendListenerFiber = null;
-
-    if (nextMap === null) {
-      return;
-    }
-
-    moveendListenerFiber = forkScopedBrowserEffect(
-      Effect.gen(function* () {
-        yield* listenToMapEvent(nextMap, "moveend", onMapMoveEnd);
-        yield* Effect.never;
-      })
-    );
-  }
-
   watch(
-    () => options.map.value,
-    (nextMap) => {
-      bindMoveendMap(nextMap).catch((error: unknown) => {
-        logScannerParcelsError("bind moveend", error);
+    [
+      () => options.interactionCoordinator.value,
+      options.scannerFetchEnabled,
+      () => options.map.value,
+    ],
+    ([nextCoordinator, nextScannerFetchEnabled, currentMap]) => {
+      unsubscribeInteractionCoordinator?.();
+      unsubscribeInteractionCoordinator = null;
+
+      if (!(nextScannerFetchEnabled && currentMap !== null && nextCoordinator !== null)) {
+        return;
+      }
+
+      unsubscribeInteractionCoordinator = nextCoordinator.subscribe((snapshot) => {
+        if (snapshot.eventType !== "moveend") {
+          return;
+        }
+
+        onMapMoveEnd();
       });
     },
     { immediate: true }
@@ -403,9 +414,8 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
     scannerParcelsTask.dispose().catch((error: unknown) => {
       logScannerParcelsError("dispose", error);
     });
-    bindMoveendMap(null).catch((error: unknown) => {
-      logScannerParcelsError("unbind moveend", error);
-    });
+    unsubscribeInteractionCoordinator?.();
+    unsubscribeInteractionCoordinator = null;
   });
 
   return {

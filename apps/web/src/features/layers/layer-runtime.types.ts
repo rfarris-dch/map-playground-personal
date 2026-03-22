@@ -1,4 +1,5 @@
 import type { LayerCatalog, LayerId } from "@map-migration/map-layer-catalog";
+import type { MapInteractionCoordinator } from "@/features/app/interaction/map-interaction.types";
 
 export type LayerStatus =
   | { readonly state: "idle" }
@@ -23,6 +24,7 @@ export interface LayerRuntimeSnapshot {
 
 export interface LayerRuntimeOptions {
   readonly catalog?: LayerCatalog;
+  readonly interactionCoordinator?: MapInteractionCoordinator | null;
   readonly onSnapshot?: (snapshot: LayerRuntimeSnapshot) => void;
 }
 
