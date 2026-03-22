@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { extname } from "node:path";
 
 const DEFAULT_PROVIDER_LOGO_BUCKET = process.env.PROVIDER_LOGO_BUCKET ?? "dch-playground-tiles";
-const DEFAULT_AWS_PROFILE = process.env.AWS_PROFILE ?? "nonprod";
+const DEFAULT_AWS_PROFILE = (process.env.AWS_PROFILE ?? "").trim();
 const DEFAULT_CACHE_CONTROL = "public, max-age=86400";
 
 interface ProviderLogoObject {
