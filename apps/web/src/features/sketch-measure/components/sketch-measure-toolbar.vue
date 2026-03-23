@@ -1,4 +1,13 @@
 <script setup lang="ts">
+  import {
+    Check,
+    CircleDot,
+    MousePointerClick,
+    Pentagon,
+    Ruler,
+    Square,
+    Trash2,
+  } from "lucide-vue-next";
   import { computed } from "vue";
   import { formatArea, formatDistance } from "@/features/sketch-measure/sketch-measure.service";
   import type {
@@ -6,7 +15,6 @@
     SketchMeasureMode,
     SketchMeasureState,
   } from "@/features/sketch-measure/sketch-measure.types";
-  import { CircleDot, Pentagon, Ruler, Square, Trash2, Check, MousePointerClick } from "lucide-vue-next";
 
   interface SketchMeasureToolbarProps {
     readonly state: SketchMeasureState;
@@ -77,7 +85,9 @@
     class="pointer-events-auto absolute bottom-8 left-1/2 z-20 -translate-x-1/2"
     aria-label="Sketch and measure tools"
   >
-    <div class="map-glass-elevated flex items-center gap-1 whitespace-nowrap rounded-xl px-1.5 py-1.5">
+    <div
+      class="map-glass-elevated flex items-center gap-1 whitespace-nowrap rounded-xl px-1.5 py-1.5"
+    >
       <!-- Tool buttons -->
       <div class="flex items-center gap-px rounded-lg bg-black/[0.03] p-px">
         <button
@@ -92,11 +102,7 @@
           "
           @click="tool.action()"
         >
-          <component
-            :is="tool.icon"
-            :size="12"
-            :stroke-width="tool.active ? 2.25 : 1.75"
-          />
+          <component :is="tool.icon" :size="12" :stroke-width="tool.active ? 2.25 : 1.75" />
           <span>{{ tool.label }}</span>
         </button>
       </div>
@@ -105,19 +111,20 @@
       <div v-if="hasMetrics" class="mx-0.5 h-5 w-px bg-white/40" />
 
       <!-- Metrics -->
-      <div
-        v-if="hasMetrics"
-        class="flex items-center gap-2 px-1.5"
-      >
+      <div v-if="hasMetrics" class="flex items-center gap-2 px-1.5">
         <div v-if="hasDistance" class="flex items-baseline gap-1">
-          <span class="text-[9px] font-semibold uppercase tracking-widest text-slate-400">Dist</span>
+          <span class="text-[9px] font-semibold uppercase tracking-widest text-slate-400"
+            >Dist</span
+          >
           <span class="text-[11px] font-semibold tabular-nums text-slate-700">
             {{ formatDistance(props.state.distanceKm) }}
           </span>
         </div>
         <div v-if="hasDistance && hasArea" class="h-3 w-px bg-slate-200/60" />
         <div v-if="hasArea" class="flex items-baseline gap-1">
-          <span class="text-[9px] font-semibold uppercase tracking-widest text-slate-400">Area</span>
+          <span class="text-[9px] font-semibold uppercase tracking-widest text-slate-400"
+            >Area</span
+          >
           <span class="text-[11px] font-semibold tabular-nums text-slate-700">
             {{ formatArea(props.state.areaSqKm) }}
           </span>

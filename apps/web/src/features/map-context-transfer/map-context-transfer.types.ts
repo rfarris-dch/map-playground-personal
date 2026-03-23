@@ -14,12 +14,12 @@ import type {
   FloodVisibilityState,
   PerspectiveVisibilityState,
 } from "@/features/app/core/app-shell.types";
+import type { MapFiltersState } from "@/features/app/filters/map-filters.types";
 import type { BasemapVisibilityState } from "@/features/basemap/basemap.types";
 import type { BoundaryLayerId } from "@/features/boundaries/boundaries.types";
 import type { FacilitiesViewMode } from "@/features/facilities/facilities.types";
 import type { FiberLocatorLineId } from "@/features/fiber-locator/fiber-locator.types";
 import type { LayerRuntimeSnapshot } from "@/features/layers/layer-runtime.types";
-import type { MapFiltersState } from "@/features/app/filters/map-filters.types";
 import type { PowerLayerId } from "@/features/power/power.types";
 
 export interface MapContextTransferStore {

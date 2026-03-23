@@ -127,7 +127,10 @@
     const isHyperscale = card.perspective === "hyperscale";
 
     if (card.commissionedPowerMw !== null && card.commissionedPowerMw > 0) {
-      result.push({ label: isHyperscale ? "Own." : "Comm.", value: formatCompact(card.commissionedPowerMw) });
+      result.push({
+        label: isHyperscale ? "Own." : "Comm.",
+        value: formatCompact(card.commissionedPowerMw),
+      });
     }
     if (card.underConstructionPowerMw !== null && card.underConstructionPowerMw > 0) {
       result.push({ label: "UC", value: formatCompact(card.underConstructionPowerMw) });

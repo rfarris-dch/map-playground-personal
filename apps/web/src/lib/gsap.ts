@@ -1,6 +1,9 @@
-import { gsap } from "gsap";
-import { Flip } from "gsap/Flip";
+import { gsap as gsapCore } from "gsap";
+import { Flip as flipPlugin } from "gsap/Flip";
 
-gsap.registerPlugin(Flip);
+gsapCore.registerPlugin(flipPlugin);
+
+const gsap = gsapCore;
+const Flip = flipPlugin;
 
 export { Flip, gsap };

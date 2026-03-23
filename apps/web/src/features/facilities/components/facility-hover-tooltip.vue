@@ -118,7 +118,10 @@
     }
 
     if (state.commissionedPowerMw !== null && state.commissionedPowerMw > 0) {
-      result.push({ label: isHyperscale ? "Own." : "Comm.", value: formatCompact(state.commissionedPowerMw) });
+      result.push({
+        label: isHyperscale ? "Own." : "Comm.",
+        value: formatCompact(state.commissionedPowerMw),
+      });
     }
     if (state.underConstructionPowerMw !== null && state.underConstructionPowerMw > 0) {
       result.push({ label: "UC", value: formatCompact(state.underConstructionPowerMw) });

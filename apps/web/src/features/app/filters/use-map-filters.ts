@@ -21,8 +21,8 @@ import type {
 import {
   cloneMapFiltersState,
   createDefaultMapFiltersState,
+  VOLTAGE_THRESHOLDS,
 } from "./map-filters.types";
-import { VOLTAGE_THRESHOLDS } from "./map-filters.types";
 
 type ToggleSetField = Extract<
   keyof MapFiltersState,
@@ -40,12 +40,9 @@ type FacilitiesFeatures = FacilitiesFeatureCollection["features"];
 export interface UseMapFiltersResult {
   /** Sorted unique market names seen across all viewport updates. */
   readonly availableMarkets: Ref<readonly string[]>;
-
   /** Sorted unique provider names seen across all viewport updates. */
   readonly availableProviders: Ref<readonly string[]>;
   clearAll(): void;
-  setState(nextState: MapFiltersState): void;
-
   readonly facilitiesPredicate: Readonly<
     ReturnType<typeof shallowRef<FacilitiesFilterPredicate | null>>
   >;
@@ -54,49 +51,27 @@ export interface UseMapFiltersResult {
   readonly parcelViewportFacets: Readonly<
     ReturnType<typeof shallowRef<ParcelsViewportFacets | null>>
   >;
-
   /** Feed raw (unfiltered) cached features to update available filter options. */
   setAvailableFeatures(features: FacilitiesFeatures): void;
   setInterconnectivityHub(enabled: boolean): void;
+  setParcelAcresRange(min: number | null, max: number | null): void;
   setParcelDataset(value: string): void;
   setParcelDavPercent(value: string): void;
   setParcelStyleAcres(value: string): void;
   setParcelViewportFacets(facets: ParcelsViewportFacets): void;
+  setState(nextState: MapFiltersState): void;
   setTransmissionVoltage(id: TransmissionVoltageFilterId | null): void;
   readonly state: Readonly<ShallowRef<MapFiltersState>>;
   toggleFacilityProvider(providerName: string): void;
-
   toggleFacilityStatus(id: FacilityStatusFilterId): void;
   toggleFloodZone(id: string): void;
   toggleGasCapacity(id: string): void;
   toggleGasStatus(id: string): void;
   toggleMarket(id: string): void;
-
   togglePowerType(id: string): void;
   toggleUser(id: string): void;
   toggleZoningType(id: string): void;
   readonly transmissionFilter: Readonly<ReturnType<typeof shallowRef<MapExpression | null>>>;
-}
-
-function createInitialState(): MapFiltersState {
-  return {
-    facilityStatuses: new Set(),
-    facilityProviders: new Set(),
-    transmissionMinVoltage: null,
-    activeMarkets: new Set(),
-    activeUsers: new Set(),
-    interconnectivityHub: false,
-    powerTypes: new Set(),
-    gasCapacities: new Set(),
-    gasStatuses: new Set(),
-    parcelAcresMin: null,
-    parcelAcresMax: null,
-    parcelDataset: "",
-    parcelStyleAcres: "",
-    parcelDavPercent: "",
-    zoningTypes: new Set(),
-    floodZones: new Set(),
-  };
 }
 
 export function useMapFilters(): UseMapFiltersResult {
@@ -146,8 +121,8 @@ export function useMapFilters(): UseMapFiltersResult {
       if (names.size > 0) {
         knownMarkets.value = new Set([...knownMarkets.value, ...names]);
       }
-    } catch (_) {
-      _;
+    } catch {
+      // Ignore market preload failures and keep the interactive filters usable.
     }
   }
 

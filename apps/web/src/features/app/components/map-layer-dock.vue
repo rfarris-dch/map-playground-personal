@@ -133,14 +133,14 @@
 
   const userOptions = computed<readonly { id: string; label: string }[]>(() => []);
 
-  type LayerDef = {
+  interface LayerDef {
+    readonly dot: string;
+    readonly hasDrawer: boolean;
     readonly id: string;
     readonly label: string;
-    readonly visible: () => boolean;
     readonly toggle: () => void;
-    readonly hasDrawer: boolean;
-    readonly dot: string;
-  };
+    readonly visible: () => boolean;
+  }
 
   type SectionItem =
     | { readonly kind: "header"; readonly label: string }
@@ -472,10 +472,7 @@
 
         <div class="mx-4 h-px shrink-0 bg-border/40" />
 
-        <div
-          ref="layerListRef"
-          class="min-h-0 flex-1 overflow-y-auto scrollbar-hide pb-2"
-        >
+        <div ref="layerListRef" class="min-h-0 flex-1 overflow-y-auto scrollbar-hide pb-2">
           <template v-for="(item, idx) in sections" :key="idx">
             <div
               v-if="item.kind === 'header'"

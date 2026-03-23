@@ -31,6 +31,21 @@ type SpatialAnalysisParcelsPagesSuccessResult = Extract<
 >;
 type ParcelsSelectionPage = ApiEffectSuccess<ParcelsFeatureCollection>;
 
+interface SpatialAnalysisParcelsPaginationState {
+  cursor: string | null;
+  dataVersion: string;
+  ingestionRunId: string | null;
+  readonly maxPageCount: number | null;
+  nextCursor: string | null;
+  pageCount: number;
+  readonly parcelsById: Map<string, ParcelsFeatureCollection["features"][number]>;
+  requestId: string;
+  readonly seenCursors: Set<string>;
+  sourceMode: SourceMode;
+  truncated: boolean;
+  readonly warnings: Map<string, Warning>;
+}
+
 function appendWarnings(warnings: Map<string, Warning>, nextWarnings: readonly Warning[]): void {
   for (const warning of nextWarnings) {
     warnings.set(`${warning.code}:${warning.message}`, warning);
@@ -66,6 +81,137 @@ function getNextPageCursor(pageResult: ParcelsSelectionPage): string | null {
   return pageResult.data.meta.truncated && pageNextCursor !== null ? pageNextCursor : null;
 }
 
+function resolveMaxPageCount(maxPageCount: number | undefined): number | null {
+  if (typeof maxPageCount !== "number" || !Number.isFinite(maxPageCount) || maxPageCount <= 0) {
+    return null;
+  }
+
+  return Math.floor(maxPageCount);
+}
+
+function createPaginationState(
+  args: FetchSpatialAnalysisParcelsPagesArgs
+): SpatialAnalysisParcelsPaginationState {
+  return {
+    cursor: args.request.cursor ?? null,
+    dataVersion: "",
+    maxPageCount: resolveMaxPageCount(args.maxPageCount),
+    ingestionRunId: null,
+    nextCursor: null,
+    pageCount: 0,
+    parcelsById: new Map<string, ParcelsFeatureCollection["features"][number]>(),
+    requestId: "",
+    seenCursors: new Set<string>(),
+    sourceMode: "postgis",
+    truncated: false,
+    warnings: new Map<string, Warning>(),
+  };
+}
+
+function readIngestionRunMismatchError(
+  state: SpatialAnalysisParcelsPaginationState,
+  pageResult: ParcelsSelectionPage
+): ApiIngestionRunMismatchError | null {
+  const pageMeta = pageResult.data.meta;
+  if (state.requestId.length === 0) {
+    const initialMeta = initializeSpatialAnalysisMeta(pageResult);
+    state.requestId = initialMeta.requestId;
+    state.dataVersion = initialMeta.dataVersion;
+    state.sourceMode = initialMeta.sourceMode;
+    state.ingestionRunId = initialMeta.ingestionRunId;
+    return null;
+  }
+
+  const pageIngestionRunId = pageMeta.ingestionRunId ?? null;
+  if (pageIngestionRunId === state.ingestionRunId) {
+    return null;
+  }
+
+  return new ApiIngestionRunMismatchError({
+    requestId: pageMeta.requestId,
+    expectedIngestionRunId: state.ingestionRunId,
+    actualIngestionRunId: pageIngestionRunId,
+  });
+}
+
+function appendPageFeatures(
+  state: SpatialAnalysisParcelsPaginationState,
+  pageResult: ParcelsSelectionPage
+): void {
+  appendWarnings(state.warnings, pageResult.data.meta.warnings);
+
+  for (const feature of pageResult.data.features) {
+    state.parcelsById.set(feature.properties.parcelId, feature);
+  }
+}
+
+function reportPageProgress(
+  args: FetchSpatialAnalysisParcelsPagesArgs,
+  state: SpatialAnalysisParcelsPaginationState,
+  pageNextCursor: string | null
+): void {
+  const hasMore = pageNextCursor !== null;
+  args.onPage?.({
+    pageCount: state.pageCount,
+    parcelCount: state.parcelsById.size,
+    truncated: hasMore,
+  });
+}
+
+function finishPaginationWithNextCursor(
+  state: SpatialAnalysisParcelsPaginationState,
+  pageNextCursor: string
+): void {
+  state.truncated = true;
+  state.nextCursor = pageNextCursor;
+}
+
+function advancePaginationState(
+  state: SpatialAnalysisParcelsPaginationState,
+  pageNextCursor: string | null,
+  cursorRepeatLogContext: string
+): boolean {
+  if (pageNextCursor === null) {
+    state.truncated = false;
+    state.nextCursor = null;
+    return true;
+  }
+
+  if (state.maxPageCount !== null && state.pageCount >= state.maxPageCount) {
+    finishPaginationWithNextCursor(state, pageNextCursor);
+    return true;
+  }
+
+  if (state.seenCursors.has(pageNextCursor)) {
+    finishPaginationWithNextCursor(state, pageNextCursor);
+    console.error("[map] parcels cursor repeated while paginating", {
+      context: cursorRepeatLogContext,
+      cursor: pageNextCursor,
+    });
+    return true;
+  }
+
+  state.seenCursors.add(pageNextCursor);
+  state.cursor = pageNextCursor;
+  return false;
+}
+
+function buildSpatialAnalysisParcelsSuccessResult(
+  state: SpatialAnalysisParcelsPaginationState
+): SpatialAnalysisParcelsPagesSuccessResult {
+  return {
+    ok: true,
+    dataVersion: state.dataVersion,
+    features: [...state.parcelsById.values()],
+    ingestionRunId: state.ingestionRunId,
+    truncated: state.truncated,
+    nextCursor: state.nextCursor,
+    requestId: state.requestId,
+    sourceMode: state.sourceMode,
+    warnings: [...state.warnings.values()],
+  };
+}
+
 export function fetchSpatialAnalysisParcelsPagesEffect(
   args: FetchSpatialAnalysisParcelsPagesArgs
 ): Effect.Effect<
@@ -74,26 +220,10 @@ export function fetchSpatialAnalysisParcelsPagesEffect(
   never
 > {
   return Effect.gen(function* () {
-    const parcelsById = new Map<string, ParcelsFeatureCollection["features"][number]>();
-    const seenCursors = new Set<string>();
-    let cursor = args.request.cursor ?? null;
-    let truncated = false;
-    let nextCursor: string | null = null;
-    let requestId = "";
-    let dataVersion = "";
-    let sourceMode: SourceMode = "postgis";
-    let ingestionRunId: string | null = null;
-    let pageCount = 0;
-    const warnings = new Map<string, Warning>();
-    const maxPageCount =
-      typeof args.maxPageCount === "number" &&
-      Number.isFinite(args.maxPageCount) &&
-      args.maxPageCount > 0
-        ? Math.floor(args.maxPageCount)
-        : null;
+    const state = createPaginationState(args);
 
     while (true) {
-      const pageRequest = createPageRequest(args, cursor);
+      const pageRequest = createPageRequest(args, state.cursor);
       const pageResult: ParcelsSelectionPage = yield* fetchParcelsBySelectionEffect(
         pageRequest,
         args.signal,
@@ -101,75 +231,22 @@ export function fetchSpatialAnalysisParcelsPagesEffect(
           expectedIngestionRunId: args.expectedIngestionRunId,
         }
       );
-      const pageMeta = pageResult.data.meta;
-      if (requestId.length === 0) {
-        const initialMeta = initializeSpatialAnalysisMeta(pageResult);
-        requestId = initialMeta.requestId;
-        dataVersion = initialMeta.dataVersion;
-        sourceMode = initialMeta.sourceMode;
-        ingestionRunId = initialMeta.ingestionRunId;
-      } else if ((pageMeta.ingestionRunId ?? null) !== ingestionRunId) {
-        yield* Effect.fail(
-          new ApiIngestionRunMismatchError({
-            requestId: pageMeta.requestId,
-            expectedIngestionRunId: ingestionRunId,
-            actualIngestionRunId: pageMeta.ingestionRunId ?? null,
-          })
-        );
+      const ingestionRunMismatchError = readIngestionRunMismatchError(state, pageResult);
+      if (ingestionRunMismatchError !== null) {
+        yield* Effect.fail(ingestionRunMismatchError);
       }
 
-      appendWarnings(warnings, pageMeta.warnings);
-
-      for (const feature of pageResult.data.features) {
-        parcelsById.set(feature.properties.parcelId, feature);
-      }
-
-      pageCount += 1;
+      appendPageFeatures(state, pageResult);
+      state.pageCount += 1;
       const pageNextCursor = getNextPageCursor(pageResult);
-      const hasMore = pageNextCursor !== null;
-      args.onPage?.({
-        pageCount,
-        parcelCount: parcelsById.size,
-        truncated: hasMore,
-      });
+      reportPageProgress(args, state, pageNextCursor);
 
-      if (hasMore && maxPageCount !== null && pageCount >= maxPageCount) {
-        truncated = true;
-        nextCursor = pageNextCursor;
+      if (advancePaginationState(state, pageNextCursor, args.cursorRepeatLogContext)) {
         break;
       }
-
-      if (!hasMore) {
-        truncated = false;
-        nextCursor = null;
-        break;
-      }
-
-      if (seenCursors.has(pageNextCursor)) {
-        truncated = true;
-        nextCursor = pageNextCursor;
-        console.error("[map] parcels cursor repeated while paginating", {
-          context: args.cursorRepeatLogContext,
-          cursor: pageNextCursor,
-        });
-        break;
-      }
-
-      seenCursors.add(pageNextCursor);
-      cursor = pageNextCursor;
     }
 
-    return {
-      ok: true,
-      dataVersion,
-      features: [...parcelsById.values()],
-      ingestionRunId,
-      truncated,
-      nextCursor,
-      requestId,
-      sourceMode,
-      warnings: [...warnings.values()],
-    } satisfies SpatialAnalysisParcelsPagesSuccessResult;
+    return buildSpatialAnalysisParcelsSuccessResult(state);
   });
 }
 

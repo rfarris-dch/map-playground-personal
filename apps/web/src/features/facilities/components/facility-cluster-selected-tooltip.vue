@@ -79,7 +79,7 @@
             aria-label="Close"
             @click="onClose"
           >
-            <svg width="8" height="10" viewBox="0 0 8 10" fill="none">
+            <svg width="8" height="10" viewBox="0 0 8 10" fill="none" aria-hidden="true">
               <line x1="1" y1="1" x2="7" y2="9" stroke="currentColor" stroke-width="1.2" />
               <line x1="7" y1="1" x2="1" y2="9" stroke="currentColor" stroke-width="1.2" />
             </svg>
@@ -162,7 +162,14 @@
           :class="accentText"
           @click="onZoom"
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="text-[#94a3b8]">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+            class="text-[#94a3b8]"
+            aria-hidden="true"
+          >
             <circle cx="7" cy="7" r="4" stroke="currentColor" stroke-width="1.2" fill="none" />
             <line
               x1="10"

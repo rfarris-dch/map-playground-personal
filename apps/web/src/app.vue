@@ -36,6 +36,8 @@
           return { ...item, to: buildProvidersPageRoute(currentMapContext.value) };
         case "facilities":
           return { ...item, to: buildFacilitiesPageRoute(currentMapContext.value) };
+        default:
+          return item;
       }
     })
   );

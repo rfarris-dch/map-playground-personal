@@ -58,6 +58,19 @@ function defaultPerspective(): FacilityPerspective {
 }
 
 const providerNameTokenPattern = /[^A-Za-z0-9]+/;
+const textEncoder = new TextEncoder();
+
+function measureResponseBodyBytes(rawBody: unknown): number {
+  if (typeof rawBody === "string") {
+    return textEncoder.encode(rawBody).length;
+  }
+
+  try {
+    return textEncoder.encode(JSON.stringify(rawBody) ?? "").length;
+  } catch {
+    return 0;
+  }
+}
 
 function toFacilitiesCatalogLayerId(
   perspective: FacilityPerspective
@@ -1812,6 +1825,7 @@ export function mountFacilitiesLayer(
     readonly fetchBbox: BBox;
     readonly result: {
       readonly data: FacilitiesFeatureCollection;
+      readonly rawBody: unknown;
       readonly requestId: string;
     };
   }): void => {
@@ -1821,10 +1835,14 @@ export function mountFacilitiesLayer(
       args.result.data.features.length,
       { perspective, truncated: args.result.data.meta.truncated }
     );
-    recordAppPerformanceMeasurement("facilities.response.bytes", args.result.rawBody.length, {
-      perspective,
-      truncated: args.result.data.meta.truncated,
-    });
+    recordAppPerformanceMeasurement(
+      "facilities.response.bytes",
+      measureResponseBodyBytes(args.result.rawBody),
+      {
+        perspective,
+        truncated: args.result.data.meta.truncated,
+      }
+    );
 
     applyRefreshResult({
       bbox: args.bbox,

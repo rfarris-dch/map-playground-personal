@@ -89,6 +89,7 @@
         <MapNavViewModes
           :active-mode="props.activeViewMode"
           stacked
+          transparent
           @update:active-mode="emit('update:view-mode', $event)"
         />
       </div>
@@ -354,22 +355,5 @@
     box-shadow: none !important;
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
-  }
-
-  .dock-view-modes :deep(> div) {
-    background: transparent;
-  }
-
-  .dock-view-modes :deep(> div > div) {
-    background: transparent;
-    border: none;
-    box-shadow: none;
-  }
-
-  .dock-view-modes :deep(button) {
-    border: none;
-    box-shadow: none;
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
   }
 </style>

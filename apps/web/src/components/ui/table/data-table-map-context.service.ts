@@ -4,6 +4,8 @@ import { FACILITY_STATUS_TO_SEMANTIC } from "@/features/app/filters/map-filters.
 import { readMapContextTransferFromRoute } from "@/features/map-context-transfer/map-context-transfer.service";
 import type { PersistedDataTableState } from "./data-table.types";
 
+const stateAbbrevPattern = /^[A-Z]{2}$/;
+
 function singleValue(values: readonly string[] | undefined): string | undefined {
   return Array.isArray(values) && values.length === 1 ? values[0] : undefined;
 }
@@ -32,7 +34,7 @@ function readStateFacetValues(context: MapContextTransfer): readonly string[] | 
   }
 
   const nextValues = [...new Set(stateIds.map((value) => value.trim().toUpperCase()))].filter(
-    (value) => /^[A-Z]{2}$/.test(value)
+    (value) => stateAbbrevPattern.test(value)
   );
 
   return nextValues.length === stateIds.length
@@ -56,9 +58,7 @@ function buildFacilitiesSeed(context: MapContextTransfer): PersistedDataTableSta
   const facilityStatuses = context.mapFilters?.facilityStatuses;
   if (Array.isArray(facilityStatuses) && facilityStatuses.length > 0) {
     facets.commissionedSemantic = [
-      ...new Set(
-        facilityStatuses.flatMap((status) => FACILITY_STATUS_TO_SEMANTIC[status])
-      ),
+      ...new Set(facilityStatuses.flatMap((status) => FACILITY_STATUS_TO_SEMANTIC[status])),
     ].sort((left, right) => left.localeCompare(right));
   }
 

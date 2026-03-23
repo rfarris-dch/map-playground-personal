@@ -7,6 +7,8 @@ const FIBER_METRO_SOURCE_ID = "fiber-locator.metro";
 const FIBER_LONGHAUL_SOURCE_ID = "fiber-locator.longhaul";
 const MAX_DISTANCE_KM = 25;
 const MAX_ITEMS_PER_CATEGORY = 3;
+const sourceLayerPrefixPattern = /^(metro_|longhaul_|l_)/;
+const underscorePattern = /_/g;
 
 const POWER_LAYER_IDS = ["power.transmission", "power.substations", "power.plants"];
 
@@ -50,10 +52,14 @@ function str(value: unknown): string | null {
   return null;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
 function props(feature: MapSourceFeature): Record<string, unknown> {
   const p = feature.properties;
-  if (typeof p === "object" && p !== null) {
-    return p as Record<string, unknown>;
+  if (isRecord(p)) {
+    return p;
   }
   return {};
 }
@@ -70,31 +76,86 @@ function readPair(arr: unknown): [number, number] | null {
   return [x, y];
 }
 
+function extractLineCoords(feature: MapSourceFeature): [number, number] | null {
+  const geom = feature.geometry;
+  if (geom.type === "LineString") {
+    if (geom.coordinates.length === 0) {
+      return null;
+    }
+
+    return readPair(geom.coordinates[Math.floor(geom.coordinates.length / 2)]);
+  }
+
+  if (geom.type !== "MultiLineString") {
+    return null;
+  }
+
+  const coords = geom.coordinates[0];
+  if (!Array.isArray(coords) || coords.length === 0) {
+    return null;
+  }
+
+  return readPair(coords[Math.floor(coords.length / 2)]);
+}
+
+function averageCoordinates(points: readonly unknown[]): [number, number] | null {
+  let pointCount = 0;
+  let sumX = 0;
+  let sumY = 0;
+
+  for (const point of points) {
+    const pair = readPair(point);
+    if (pair === null) {
+      continue;
+    }
+
+    sumX += pair[0];
+    sumY += pair[1];
+    pointCount += 1;
+  }
+
+  if (pointCount === 0) {
+    return null;
+  }
+
+  return [sumX / pointCount, sumY / pointCount];
+}
+
+function extractPolygonCoords(feature: MapSourceFeature): [number, number] | null {
+  const geom = feature.geometry;
+  if (geom.type === "Polygon") {
+    const ring = geom.coordinates[0];
+    if (!Array.isArray(ring) || ring.length === 0) {
+      return null;
+    }
+
+    return averageCoordinates(ring);
+  }
+
+  if (geom.type !== "MultiPolygon") {
+    return null;
+  }
+
+  const ring = geom.coordinates[0]?.[0];
+  if (!Array.isArray(ring) || ring.length === 0) {
+    return null;
+  }
+
+  return averageCoordinates(ring);
+}
+
 function extractCoords(feature: MapSourceFeature): [number, number] | null {
   const geom = feature.geometry;
   if (geom.type === "Point") {
     return readPair(geom.coordinates);
   }
   if (geom.type === "LineString" || geom.type === "MultiLineString") {
-    const coords = geom.type === "LineString" ? geom.coordinates : geom.coordinates[0];
-    if (Array.isArray(coords) && coords.length > 0) {
-      return readPair(coords[Math.floor(coords.length / 2)]);
-    }
+    return extractLineCoords(feature);
   }
   if (geom.type === "Polygon" || geom.type === "MultiPolygon") {
-    const ring = geom.type === "Polygon" ? geom.coordinates[0] : geom.coordinates[0]?.[0];
-    if (Array.isArray(ring) && ring.length > 0) {
-      let sumX = 0;
-      let sumY = 0;
-      for (const pt of ring) {
-        if (Array.isArray(pt)) {
-          sumX += pt[0] as number;
-          sumY += pt[1] as number;
-        }
-      }
-      return [sumX / ring.length, sumY / ring.length];
-    }
+    return extractPolygonCoords(feature);
   }
+
   return null;
 }
 
@@ -141,7 +202,7 @@ function buildGasLabel(feature: MapSourceFeature, fallback: string): string {
 }
 
 function prettifySourceLayerName(sourceLayer: string): string {
-  const cleaned = sourceLayer.replace(/^(metro_|longhaul_|l_)/, "").replace(/_/g, " ");
+  const cleaned = sourceLayer.replace(sourceLayerPrefixPattern, "").replace(underscorePattern, " ");
   return cleaned
     .split(" ")
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
@@ -155,7 +216,7 @@ function fiberTypeFromSourceLayer(sourceLayer: string): string {
   return "Metro";
 }
 
-function buildFiberLabel(sourceLayer: string, feature: MapSourceFeature, fallback: string): string {
+function buildFiberLabel(sourceLayer: string, feature: MapSourceFeature): string {
   const p = props(feature);
   const provider =
     str(p.provider) ??
@@ -315,9 +376,9 @@ export function queryNearbyInfrastructure(
       }
     }
 
-    const fiberLabel = (f: MapSourceFeature, fallback: string): string => {
+    const fiberLabel = (f: MapSourceFeature, _fallback: string): string => {
       const sl = featureSourceLayerMap.get(f) ?? "";
-      return buildFiberLabel(sl, f, fallback);
+      return buildFiberLabel(sl, f);
     };
 
     fiberRoutes = buildItems(

@@ -25,8 +25,8 @@ export function useGsapTimeline(defaults?: gsap.TimelineVars): UseGsapTimelineRe
     vars: gsap.TweenVars,
     position?: gsap.Position
   ): UseGsapTimelineReturn {
-    const resolvedDuration = prefersReducedMotion.value ? 0 : (vars.duration as number | undefined);
-    tl.to(target, { ...vars, duration: resolvedDuration }, position);
+    const resolvedVars = prefersReducedMotion.value ? { ...vars, duration: 0 } : vars;
+    tl.to(target, resolvedVars, position);
     return api;
   }
 

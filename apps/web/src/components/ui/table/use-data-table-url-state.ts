@@ -7,7 +7,6 @@ import type {
 import { computed, type Ref, shallowRef, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { normalizeMapContextTransferQuery } from "@/features/map-context-transfer/map-context-transfer.service";
-import { deriveTableSeedStateFromRoute } from "./data-table-map-context.service";
 import {
   createColumnVisibilityState,
   createRowSelectionState,
@@ -17,6 +16,7 @@ import {
   sortingStatesEqual,
 } from "./data-table.service";
 import type { PersistedDataTableState } from "./data-table.types";
+import { deriveTableSeedStateFromRoute } from "./data-table-map-context.service";
 
 interface UseDataTableUrlStateOptions {
   readonly activeFacets: Ref<Record<string, readonly string[]>>;
@@ -91,8 +91,7 @@ export function useDataTableUrlState(options: UseDataTableUrlStateOptions): void
         }
 
         const seededState = deriveTableSeedStateFromRoute(options.tableId.value, route);
-        const seededStateSignature =
-          seededState === null ? null : JSON.stringify(seededState);
+        const seededStateSignature = seededState === null ? null : JSON.stringify(seededState);
 
         if (
           seededState !== null &&

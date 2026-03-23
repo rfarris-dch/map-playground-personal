@@ -6,6 +6,7 @@
   interface MapNavViewModesProps {
     readonly activeMode: MapNavViewModeId;
     readonly stacked?: boolean;
+    readonly transparent?: boolean;
   }
 
   interface MapNavViewModesEmits {
@@ -14,6 +15,7 @@
 
   const props = withDefaults(defineProps<MapNavViewModesProps>(), {
     stacked: false,
+    transparent: false,
   });
   const emit = defineEmits<MapNavViewModesEmits>();
 
@@ -87,13 +89,16 @@
     </div>
   </div>
 
-  <div v-else class="flex flex-col gap-1 px-1">
-    <div class="flex items-center rounded-full bg-slate-50 p-1">
+  <div v-else class="map-nav-view-modes-stack flex flex-col gap-1 px-1">
+    <div
+      class="map-nav-view-modes-row flex items-center rounded-full p-1"
+      :class="props.transparent ? 'bg-transparent' : 'bg-slate-50'"
+    >
       <button
         v-for="mode in topRow"
         :key="mode.id"
         type="button"
-        class="flex h-[22px] cursor-pointer items-center gap-0.5 rounded-full px-1.5 py-0.5 transition-colors focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
+        class="map-nav-view-modes-button flex h-[22px] cursor-pointer items-center gap-0.5 rounded-full px-1.5 py-0.5 transition-colors focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
         :class="
           props.activeMode === mode.id
             ? 'bg-foreground/65 text-white'
@@ -105,12 +110,15 @@
         <span class="text-[10px] leading-none">{{ mode.label }}</span>
       </button>
     </div>
-    <div class="flex items-center rounded-full bg-slate-50 p-1">
+    <div
+      class="map-nav-view-modes-row flex items-center rounded-full p-1"
+      :class="props.transparent ? 'bg-transparent' : 'bg-slate-50'"
+    >
       <button
         v-for="mode in bottomRow"
         :key="mode.id"
         type="button"
-        class="flex h-[22px] cursor-pointer items-center gap-0.5 rounded-full px-1.5 py-0.5 transition-colors focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
+        class="map-nav-view-modes-button flex h-[22px] cursor-pointer items-center gap-0.5 rounded-full px-1.5 py-0.5 transition-colors focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
         :class="
           props.activeMode === mode.id
             ? 'bg-foreground/65 text-white'

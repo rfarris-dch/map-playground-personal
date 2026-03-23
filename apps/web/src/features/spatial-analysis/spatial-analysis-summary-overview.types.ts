@@ -26,13 +26,16 @@ export interface SpatialAnalysisOverviewMetrics {
   readonly colocationPipelinePowerMw: number;
   readonly colocationPlannedPowerMw: number;
   readonly colocationUnderConstructionPowerMw: number;
+  readonly hyperscaleCommissionedPowerMw: number;
   readonly hyperscaleCount: number;
   readonly hyperscaleOwnedPowerMw: number;
   readonly hyperscalePipelinePowerMw: number;
   readonly hyperscalePlannedPowerMw: number;
   readonly hyperscaleUnderConstructionPowerMw: number;
+  readonly totalCommissionedPowerMw: number;
   readonly totalFacilities: number;
   readonly totalMarketSizeMw: number;
+  readonly totalPipelinePowerMw: number;
   readonly totalSquareFootage: number;
 }
 

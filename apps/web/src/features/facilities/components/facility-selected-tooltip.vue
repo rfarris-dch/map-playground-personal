@@ -191,7 +191,7 @@
               aria-label="Close"
               @click="onClose"
             >
-              <svg width="8" height="10" viewBox="0 0 8 10" fill="none">
+              <svg width="8" height="10" viewBox="0 0 8 10" fill="none" aria-hidden="true">
                 <line x1="1" y1="1" x2="7" y2="9" stroke="currentColor" stroke-width="1.2" />
                 <line x1="7" y1="1" x2="1" y2="9" stroke="currentColor" stroke-width="1.2" />
               </svg>
@@ -236,7 +236,14 @@
           <div class="flex items-center gap-4">
             <div class="flex items-center gap-1">
               <!-- Power transmission tower icon -->
-              <svg class="text-[#94a3b8]" width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <svg
+                class="text-[#94a3b8]"
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                aria-hidden="true"
+              >
                 <path
                   d="M8 1v14M5 4h6M4.5 7h7M3 15l5-8 5 8M6 1l2 3 2-3"
                   stroke="currentColor"
@@ -315,7 +322,7 @@
             @click="onViewDetails"
           >
             <span class="text-[16px] font-normal leading-none">View Details</span>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
               <path
                 d="M6 4l4 4-4 4"
                 stroke="currentColor"

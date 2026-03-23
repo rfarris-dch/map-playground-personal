@@ -21,6 +21,7 @@ import {
   buildFacilityAnchorParcelRequests,
   buildMapOverlaysFetchKey,
 } from "@/features/app/overlays/map-overlays.service";
+import type { MapBounds } from "@/features/app/overlays/map-overlays.types";
 import {
   appendScannerAnchorFeatures,
   buildScannerSelectionFromAccumulator,
