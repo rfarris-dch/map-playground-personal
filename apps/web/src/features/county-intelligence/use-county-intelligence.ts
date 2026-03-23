@@ -13,7 +13,10 @@ import { createLatestRunner } from "@/lib/effect/latest-runner";
 
 interface UseCountyScoresOptions {
   readonly countyIds: Ref<readonly string[]>;
+  readonly enabled: Ref<boolean>;
 }
+
+const countyScoresCache = new Map<string, CountyScoresResponse>();
 
 function areCountyIdsEqual(left: readonly string[], right: readonly string[]): boolean {
   if (left.length !== right.length) {
@@ -29,8 +32,12 @@ function areCountyIdsEqual(left: readonly string[], right: readonly string[]): b
   return true;
 }
 
-function uniqueCountyIds(countyIds: readonly string[]): readonly string[] {
-  return [...new Set(countyIds)];
+function normalizeCountyIds(countyIds: readonly string[]): readonly string[] {
+  return [...new Set(countyIds)].sort();
+}
+
+function toCountyScoresCacheKey(countyIds: readonly string[]): string {
+  return countyIds.join(",");
 }
 
 export function useCountyScores(options: UseCountyScoresOptions) {
@@ -40,6 +47,7 @@ export function useCountyScores(options: UseCountyScoresOptions) {
   const countyScoresStatus = shallowRef<CountyScoresStatusResponse | null>(null);
   const countyScoresStatusError = shallowRef<string | null>(null);
   const countyScoresStatusLoading = shallowRef(false);
+  const countyScoresCacheKey = shallowRef<string | null>(null);
   const countyScoresRunner = createLatestRunner({
     onUnexpectedError(error) {
       countyScoresLoading.value = false;
@@ -61,9 +69,16 @@ export function useCountyScores(options: UseCountyScoresOptions) {
     console.error(`[county-intelligence] ${context} failed`, error);
   }
 
-  const normalizedCountyIds = computed(() => uniqueCountyIds(options.countyIds.value));
+  const normalizedCountyIds = computed(() => normalizeCountyIds(options.countyIds.value));
 
   async function refreshCountyScoresStatus(): Promise<void> {
+    if (!options.enabled.value) {
+      countyScoresStatusLoading.value = false;
+      countyScoresStatus.value = null;
+      countyScoresStatusError.value = null;
+      return;
+    }
+
     if (
       countyScoresStatusLoading.value ||
       countyScoresStatus.value !== null ||
@@ -103,13 +118,39 @@ export function useCountyScores(options: UseCountyScoresOptions) {
   }
 
   async function refreshCountyScores(): Promise<void> {
+    if (!options.enabled.value) {
+      await countyScoresRunner.interrupt();
+      countyScores.value = null;
+      countyScoresError.value = null;
+      countyScoresLoading.value = false;
+      countyScoresCacheKey.value = null;
+      return;
+    }
+
     const countyIds = normalizedCountyIds.value;
+    const nextCacheKey = toCountyScoresCacheKey(countyIds);
     await countyScoresRunner.interrupt();
 
     if (countyIds.length === 0) {
       countyScores.value = null;
       countyScoresError.value = null;
       countyScoresLoading.value = false;
+      countyScoresCacheKey.value = null;
+      return;
+    }
+
+    if (countyScoresCacheKey.value === nextCacheKey && countyScores.value !== null) {
+      countyScoresError.value = null;
+      countyScoresLoading.value = false;
+      return;
+    }
+
+    const cachedScores = countyScoresCache.get(nextCacheKey);
+    if (typeof cachedScores !== "undefined") {
+      countyScores.value = cachedScores;
+      countyScoresError.value = null;
+      countyScoresLoading.value = false;
+      countyScoresCacheKey.value = nextCacheKey;
       return;
     }
 
@@ -122,9 +163,11 @@ export function useCountyScores(options: UseCountyScoresOptions) {
     ).pipe(
       Effect.tap((result) =>
         Effect.sync(() => {
+          countyScoresCache.set(nextCacheKey, result.data);
           countyScoresLoading.value = false;
           countyScores.value = result.data;
           countyScoresError.value = null;
+          countyScoresCacheKey.value = nextCacheKey;
         })
       ),
       Effect.catchAll((error) =>
@@ -140,19 +183,27 @@ export function useCountyScores(options: UseCountyScoresOptions) {
             error,
             "Unable to load county market-pressure rows."
           );
+          countyScoresCacheKey.value = null;
         })
       )
     );
     await countyScoresRunner.run(countyScoresProgram);
   }
 
-  refreshCountyScoresStatus().catch((error: unknown) => {
-    logCountyScoresError("status fetch", error);
-  });
-
   watch(
-    () => normalizedCountyIds.value,
-    (nextCountyIds, previousCountyIds) => {
+    [options.enabled, () => normalizedCountyIds.value],
+    ([enabled, nextCountyIds], [, previousCountyIds]) => {
+      if (!enabled) {
+        countyScores.value = null;
+        countyScoresError.value = null;
+        countyScoresLoading.value = false;
+        countyScoresCacheKey.value = null;
+        countyScoresStatus.value = null;
+        countyScoresStatusError.value = null;
+        countyScoresStatusLoading.value = false;
+        return;
+      }
+
       const previous = previousCountyIds ?? [];
       if (areCountyIdsEqual(nextCountyIds, previous)) {
         return;
@@ -165,6 +216,20 @@ export function useCountyScores(options: UseCountyScoresOptions) {
     {
       immediate: true,
     }
+  );
+
+  watch(
+    options.enabled,
+    (enabled) => {
+      if (!enabled) {
+        return;
+      }
+
+      refreshCountyScoresStatus().catch((error: unknown) => {
+        logCountyScoresError("status fetch", error);
+      });
+    },
+    { immediate: true }
   );
 
   onBeforeUnmount(() => {

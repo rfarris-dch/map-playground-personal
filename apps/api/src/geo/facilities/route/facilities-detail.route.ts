@@ -9,6 +9,7 @@ import type { Env, Hono } from "hono";
 import {
   buildFacilitiesCacheEntry,
   createFacilitiesCacheHeaders,
+  getFacilitiesSharedCacheControl,
   resolveFacilitiesCachedEntry,
 } from "@/geo/facilities/route/facilities-cache.service";
 import type { FacilitiesDetailCacheBody } from "@/geo/facilities/route/facilities-cache.types";
@@ -23,6 +24,7 @@ import {
 import { buildFacilitiesRouteMeta } from "@/geo/facilities/route/facilities-route-meta.service";
 import { queryFacilityDetail } from "@/geo/facilities/route/facilities-route-query.service";
 import { jsonOk, toDebugDetails, withHeaders } from "@/http/api-response";
+import { matchesIfNoneMatch } from "@/http/conditional-request.service";
 import { fromApiRequest, routeError, runEffectRoute } from "@/http/effect-route";
 import { getApiRuntimeConfig } from "@/http/runtime-config";
 
@@ -68,7 +70,7 @@ export function registerFacilitiesDetailRoute<E extends Env>(app: Hono<E>): void
         const cacheResult = await resolveFacilitiesCachedEntry<FacilitiesDetailCacheBody>({
           allowStaleOnError: isStaleEligibleFacilitiesDetailError,
           key: buildFacilitiesDetailCacheKey({
-            dataVersion: runtimeConfig.dataVersion,
+            datasetVersion: runtimeConfig.facilitiesDatasetVersion,
             facilityId: path.data.facilityId,
             perspective: request.data.perspective,
           }),
@@ -97,6 +99,7 @@ export function registerFacilitiesDetailRoute<E extends Env>(app: Hono<E>): void
             };
             return buildFacilitiesCacheEntry({
               dataVersion: runtimeConfig.dataVersion,
+              datasetVersion: runtimeConfig.facilitiesDatasetVersion,
               etag: `"${hashFacilitiesCachePayload(JSON.stringify(payloadBody))}"`,
               generatedAt: new Date().toISOString(),
               originRequestId: requestId,
@@ -109,6 +112,7 @@ export function registerFacilitiesDetailRoute<E extends Env>(app: Hono<E>): void
           feature: cacheResult.entry.payload.feature,
           meta: buildFacilitiesRouteMeta({
             dataVersion: cacheResult.entry.dataVersion,
+            datasetVersion: cacheResult.entry.datasetVersion,
             generatedAt: cacheResult.entry.generatedAt,
             requestId,
             recordCount: 1,
@@ -119,15 +123,38 @@ export function registerFacilitiesDetailRoute<E extends Env>(app: Hono<E>): void
         const responseHeaders = createFacilitiesCacheHeaders({
           cacheStatus: cacheResult.cacheStatus,
           dataVersion: cacheResult.entry.dataVersion,
+          datasetVersion: cacheResult.entry.datasetVersion,
           etag: cacheResult.entry.etag,
           originRequestId: cacheResult.entry.originRequestId,
         });
+        const ifNoneMatchHeader = honoContext.req.header("if-none-match");
+        if (
+          matchesIfNoneMatch({
+            etag: responseHeaders.etag,
+            ifNoneMatchHeader,
+          })
+        ) {
+          return new Response(null, {
+            status: 304,
+            headers: {
+              "Cache-Control": getFacilitiesSharedCacheControl(),
+              [ApiHeaders.cacheStatus]: responseHeaders.cacheStatus,
+              [ApiHeaders.dataVersion]: responseHeaders.dataVersion,
+              [ApiHeaders.datasetVersion]: responseHeaders.datasetVersion,
+              [ApiHeaders.originRequestId]: responseHeaders.originRequestId,
+              [ApiHeaders.requestId]: requestId,
+              ETag: responseHeaders.etag,
+            },
+          });
+        }
 
         return withHeaders(
           jsonOk(honoContext, FacilitiesDetailResponseSchema, payload, requestId),
           {
+            "Cache-Control": getFacilitiesSharedCacheControl(),
             [ApiHeaders.cacheStatus]: responseHeaders.cacheStatus,
             [ApiHeaders.dataVersion]: responseHeaders.dataVersion,
+            [ApiHeaders.datasetVersion]: responseHeaders.datasetVersion,
             [ApiHeaders.originRequestId]: responseHeaders.originRequestId,
             ETag: responseHeaders.etag,
           }

@@ -11,6 +11,7 @@ import {
   recordAppPerformanceMeasurement,
 } from "@/features/app/diagnostics/app-performance.service";
 import type { MapInteractionCoordinator } from "@/features/app/interaction/map-interaction.types";
+import { shouldRefreshViewportData } from "@/features/app/interaction/map-interaction-policy.service";
 import { fetchFacilitiesByBboxEffect } from "@/features/facilities/api";
 import {
   bboxContains,
@@ -276,7 +277,7 @@ export function mountHyperscaleLeasedLayer(
     map.on("moveend", onMoveEnd);
   } else {
     unsubscribeInteractionCoordinator = options.interactionCoordinator.subscribe((snapshot) => {
-      if (snapshot.eventType !== "moveend") {
+      if (!shouldRefreshViewportData(snapshot)) {
         return;
       }
 

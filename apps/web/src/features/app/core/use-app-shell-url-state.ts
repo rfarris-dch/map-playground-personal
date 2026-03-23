@@ -7,6 +7,7 @@ import {
   createAppPerformanceTimer,
   recordAppPerformanceCounter,
 } from "@/features/app/diagnostics/app-performance.service";
+import { shouldRefreshViewportData } from "@/features/app/interaction/map-interaction-policy.service";
 import {
   applyMapContextTransferToAppShell,
   readMapContextTransferFromRoute,
@@ -48,6 +49,8 @@ export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
     readMapContextTransferTokenFromQuery(route.query) ?? null
   );
   const lastWrittenQuerySignature = shallowRef<string | null>(null);
+  const pendingQuerySignature = shallowRef<string | null>(null);
+  const lastViewportKey = shallowRef<string | null>(null);
   const viewportVersion = shallowRef(0);
   const replaceTask = useDebouncedLatestEffectTask({
     debounceMs: URL_STATE_SYNC_DEBOUNCE_MS,
@@ -74,19 +77,29 @@ export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
     contextToken.value = readMapContextTransferTokenFromQuery(nextQuery) ?? null;
 
     if (currentSignature === nextSignature) {
+      pendingQuerySignature.value = null;
+      lastWrittenQuerySignature.value = null;
       stopSyncTimer();
       return Promise.resolve();
     }
 
+    if (pendingQuerySignature.value === nextSignature) {
+      stopSyncTimer();
+      return Promise.resolve();
+    }
+
+    pendingQuerySignature.value = nextSignature;
     lastWrittenQuerySignature.value = nextSignature;
 
     return replaceTask.start(
       Effect.tryPromise({
         try: async () => {
           await router.replace({ query: nextQuery });
+          pendingQuerySignature.value = null;
           stopSyncTimer();
         },
         catch: (error) => {
+          pendingQuerySignature.value = null;
           lastWrittenQuerySignature.value = null;
           stopSyncTimer();
           throw error;
@@ -99,6 +112,9 @@ export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
     () => serializeNormalizedMapContextQuery(route.query),
     (routeQuerySignature) => {
       contextToken.value = readMapContextTransferTokenFromQuery(route.query) ?? null;
+      if (routeQuerySignature === pendingQuerySignature.value) {
+        pendingQuerySignature.value = null;
+      }
 
       if (routeQuerySignature === lastWrittenQuerySignature.value) {
         lastWrittenQuerySignature.value = null;
@@ -141,8 +157,6 @@ export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
       if (typeof initialMapContext?.viewport !== "undefined") {
         map.setViewport(normalizeViewportForMap(initialMapContext.viewport));
       }
-
-      syncRouteToUrlState().catch(() => undefined);
     },
     { immediate: true }
   );
@@ -151,10 +165,22 @@ export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
     () => options.interactionCoordinator.value,
     (nextCoordinator, _previousCoordinator, onCleanup) => {
       const unsubscribeInteractionCoordinator = nextCoordinator?.subscribe((snapshot) => {
-        if (snapshot.eventType !== "moveend") {
+        if (!shouldRefreshViewportData(snapshot)) {
           return;
         }
 
+        // The initial load snapshot reflects the current route state; writing it
+        // straight back to the router only adds startup churn.
+        if (lastViewportKey.value === null && snapshot.eventType === "load") {
+          lastViewportKey.value = snapshot.canonicalViewportKey;
+          return;
+        }
+
+        if (lastViewportKey.value === snapshot.canonicalViewportKey) {
+          return;
+        }
+
+        lastViewportKey.value = snapshot.canonicalViewportKey;
         recordAppPerformanceCounter("map.moveend", { feature: "url-state" });
         viewportVersion.value += 1;
       });

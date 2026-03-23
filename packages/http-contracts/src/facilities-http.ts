@@ -87,8 +87,21 @@ export const FacilitiesFeatureCollectionSchema = z.object({
 
 export const FacilitiesBboxRequestSchema = z.object({
   bbox: z.preprocess(parseBboxQuery, BBoxSchema),
+  datasetVersion: z.preprocess(trimValue, z.string().min(1)).optional(),
   perspective: z.preprocess(trimValue, FacilityPerspectiveSchema).default("colocation"),
   limit: z.preprocess(parsePositiveInteger, z.number().int().positive().max(100_000)).default(2000),
+});
+
+export const FacilitiesDatasetManifestEntrySchema = z.object({
+  version: z.string().min(1),
+  warmProfileVersion: z.string().min(1).optional(),
+});
+
+export const FacilitiesDatasetManifestSchema = z.object({
+  dataset: z.literal("facilities"),
+  publishedAt: z.string().datetime(),
+  current: FacilitiesDatasetManifestEntrySchema,
+  previous: FacilitiesDatasetManifestEntrySchema.optional(),
 });
 
 export const FacilitiesSelectionPolygonGeometrySchema = PolygonGeometrySchema;
@@ -167,6 +180,7 @@ export const FacilitiesDetailRequestSchema = z.object({
 export type FacilitiesFeature = z.infer<typeof FacilitiesFeatureSchema>;
 export type FacilitiesFeatureCollection = z.infer<typeof FacilitiesFeatureCollectionSchema>;
 export type FacilitiesBboxRequest = z.infer<typeof FacilitiesBboxRequestSchema>;
+export type FacilitiesDatasetManifest = z.infer<typeof FacilitiesDatasetManifestSchema>;
 export type FacilitiesSelectionRequest = z.infer<typeof FacilitiesSelectionRequestSchema>;
 export type FacilitiesSelectionResponse = z.infer<typeof FacilitiesSelectionResponseSchema>;
 export type FacilitiesDetailFeature = z.infer<typeof FacilitiesDetailFeatureSchema>;

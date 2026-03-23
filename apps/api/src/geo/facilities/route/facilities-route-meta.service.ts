@@ -5,6 +5,7 @@ import { getApiRuntimeConfig } from "@/http/runtime-config";
 
 export function buildFacilitiesRouteMeta(args: {
   readonly dataVersion?: string;
+  readonly datasetVersion?: string;
   readonly generatedAt?: string;
   readonly requestId: string;
   readonly recordCount: number;
@@ -17,6 +18,7 @@ export function buildFacilitiesRouteMeta(args: {
 
   return buildResponseMeta({
     dataVersion: args.dataVersion ?? runtimeConfig.dataVersion,
+    datasetVersion: args.datasetVersion ?? runtimeConfig.facilitiesDatasetVersion,
     recordCount: args.recordCount,
     requestId: args.requestId,
     sourceMode: runtimeConfig.facilitiesSourceMode,

@@ -1,0 +1,129 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - img "datacenterHawk" [ref=e7]
+      - navigation "Primary" [ref=e8]:
+        - link "Map" [ref=e9] [cursor=pointer]:
+          - /url: /map?mapContextVersion=1&mapSource=global-map&mapTarget=global-map&perspectives=colocation,hyperscale&colocationViewMode=icons&hyperscaleViewMode=icons&visibleLayerIds=facilities.colocation,facilities.hyperscale,state&basemapLayerIds=buildings3d,labels,roads&mapContextToken=4d832912-70e2-4c22-ba1e-ede5cdd186fe&map=3.2/39.8283/-98.5795/0/0
+        - link "Markets" [ref=e10] [cursor=pointer]:
+          - /url: /markets?mapContextVersion=1&mapSource=global-map&mapTarget=global-map&perspectives=colocation,hyperscale&colocationViewMode=icons&hyperscaleViewMode=icons&visibleLayerIds=facilities.colocation,facilities.hyperscale,state&basemapLayerIds=buildings3d,labels,roads&mapContextToken=4d832912-70e2-4c22-ba1e-ede5cdd186fe&map=3.2/39.8283/-98.5795/0/0
+        - link "Providers" [ref=e11] [cursor=pointer]:
+          - /url: /providers?mapContextVersion=1&mapSource=global-map&mapTarget=global-map&perspectives=colocation,hyperscale&colocationViewMode=icons&hyperscaleViewMode=icons&visibleLayerIds=facilities.colocation,facilities.hyperscale,state&basemapLayerIds=buildings3d,labels,roads&mapContextToken=4d832912-70e2-4c22-ba1e-ede5cdd186fe&map=3.2/39.8283/-98.5795/0/0
+        - link "Facilities" [ref=e12] [cursor=pointer]:
+          - /url: /facilities?mapContextVersion=1&mapSource=global-map&mapTarget=global-map&perspectives=colocation,hyperscale&colocationViewMode=icons&hyperscaleViewMode=icons&visibleLayerIds=facilities.colocation,facilities.hyperscale,state&basemapLayerIds=buildings3d,labels,roads&mapContextToken=4d832912-70e2-4c22-ba1e-ede5cdd186fe&map=3.2/39.8283/-98.5795/0/0
+  - main [ref=e13]:
+    - main [ref=e14]:
+      - region "Map preview" [ref=e15]:
+        - dialog "Map layers" [ref=e53]:
+          - generic [ref=e54]:
+            - generic [ref=e55]:
+              - img [ref=e56]
+              - generic [ref=e60]: Layers
+            - button "Close layers panel" [ref=e61] [cursor=pointer]:
+              - img [ref=e62]
+          - generic [ref=e65]:
+            - generic [ref=e66]: Facilities
+            - generic [ref=e67]:
+              - generic [ref=e70]: Colocation
+              - generic [ref=e71]:
+                - button "Show Colocation filters" [ref=e72] [cursor=pointer]:
+                  - img [ref=e73]
+                - switch "Hide Colocation" [checked] [ref=e75] [cursor=pointer]
+            - generic [ref=e76]:
+              - generic [ref=e79]: Hyperscale
+              - generic [ref=e80]:
+                - button "Show Hyperscale filters" [ref=e81] [cursor=pointer]:
+                  - img [ref=e82]
+                - switch "Hide Hyperscale" [checked] [ref=e84] [cursor=pointer]
+            - generic [ref=e85]:
+              - generic [ref=e88]: Hyperscale Leased
+              - switch "Show Hyperscale Leased" [ref=e90] [cursor=pointer]
+            - generic [ref=e91]:
+              - generic [ref=e94]: Enterprise
+              - switch "Show Enterprise" [ref=e96] [cursor=pointer]
+            - generic [ref=e98]: Infrastructure
+            - generic [ref=e99]:
+              - generic [ref=e102]: Fiber Routes
+              - generic [ref=e103]:
+                - button "Show Fiber Routes filters" [ref=e104] [cursor=pointer]:
+                  - img [ref=e105]
+                - switch "Show Fiber Routes" [ref=e107] [cursor=pointer]
+            - generic [ref=e108]:
+              - generic [ref=e111]: Transmission Lines
+              - generic [ref=e112]:
+                - button "Show Transmission Lines filters" [ref=e113] [cursor=pointer]:
+                  - img [ref=e114]
+                - switch "Show Transmission Lines" [ref=e116] [cursor=pointer]
+            - generic [ref=e117]:
+              - generic [ref=e120]: Natural Gas Pipelines
+              - generic [ref=e121]:
+                - button "Show Natural Gas Pipelines filters" [ref=e122] [cursor=pointer]:
+                  - img [ref=e123]
+                - switch "Show Natural Gas Pipelines" [ref=e125] [cursor=pointer]
+            - generic [ref=e126]:
+              - generic [ref=e129]: US Parcels
+              - generic [ref=e130]:
+                - button "Show US Parcels filters" [ref=e131] [cursor=pointer]:
+                  - img [ref=e132]
+                - switch "Show US Parcels" [ref=e134] [cursor=pointer]
+            - generic [ref=e135]:
+              - generic [ref=e138]: Substations
+              - switch "Show Substations" [ref=e140] [cursor=pointer]
+            - generic [ref=e141]:
+              - generic [ref=e144]: Power Plants
+              - switch "Show Power Plants" [ref=e146] [cursor=pointer]
+            - generic [ref=e148]: Environmental
+            - generic [ref=e149]:
+              - generic [ref=e152]: Flood Zones (100yr)
+              - switch "Show Flood Zones (100yr)" [ref=e154] [cursor=pointer]
+            - generic [ref=e155]:
+              - generic [ref=e158]: Flood Zones (500yr)
+              - switch "Show Flood Zones (500yr)" [ref=e160] [cursor=pointer]
+            - generic [ref=e161]:
+              - generic [ref=e164]: Hydro Basins
+              - switch "Show Hydro Basins" [ref=e166] [cursor=pointer]
+            - generic [ref=e167]:
+              - generic [ref=e170]: Water Features
+              - switch "Show Water Features" [ref=e172] [cursor=pointer]
+            - generic [ref=e174]: Markets
+            - generic [ref=e175]:
+              - generic [ref=e178]: Market Boundaries
+              - generic [ref=e179]:
+                - button "Show Market Boundaries filters" [ref=e180] [cursor=pointer]:
+                  - img [ref=e181]
+                - switch "Show Market Boundaries" [ref=e183] [cursor=pointer]
+            - generic [ref=e184]:
+              - generic [ref=e187]: Submarket Boundaries
+              - switch "Show Submarket Boundaries" [ref=e189] [cursor=pointer]
+            - generic [ref=e191]: Basemap
+            - generic [ref=e192]:
+              - generic [ref=e193]: Basemap Settings
+              - button "Toggle basemap settings" [ref=e195] [cursor=pointer]:
+                - img [ref=e196]
+        - generic [ref=e21]:
+          - button "Export" [ref=e22]:
+            - img [ref=e23]
+            - text: Export
+          - button "Quick View (G)" [ref=e199]:
+            - img [ref=e200]
+            - text: Quick View
+            - generic [ref=e203]: (G)
+          - button "Sketch / Measure" [ref=e26]:
+            - img [ref=e27]
+            - text: Sketch / Measure
+          - button "Selection" [disabled]:
+            - img
+            - text: Selection
+          - button "Scanner (V)" [ref=e32]:
+            - img [ref=e33]
+            - text: Scanner
+            - generic [ref=e40]: (V)
+        - region "Map" [ref=e41]
+        - generic:
+          - generic:
+            - generic [ref=e42]:
+              - button "Zoom in" [ref=e43] [cursor=pointer]
+              - button "Zoom out" [ref=e45] [cursor=pointer]
+              - button "Drag to rotate map, click to reset north" [ref=e47]
+            - button "Enter fullscreen" [ref=e50] [cursor=pointer]
+          - generic [ref=e52]: 500 mi

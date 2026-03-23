@@ -100,7 +100,7 @@ async function handleFacilitiesSelectionRequest(args: {
   const cacheResult = await resolveFacilitiesCachedEntry<FacilitiesSelectionCacheBody>({
     allowStaleOnError: isStaleEligibleFacilitiesSelectionError,
     key: await buildFacilitiesSelectionCacheKey({
-      dataVersion: runtimeConfig.dataVersion,
+      datasetVersion: runtimeConfig.facilitiesDatasetVersion,
       geometry: requestResult.value.geometry,
       limitPerPerspective: requestResult.value.limitPerPerspective,
       perspectives: requestResult.value.perspectives,
@@ -129,6 +129,7 @@ async function handleFacilitiesSelectionRequest(args: {
 
       return buildFacilitiesCacheEntry({
         dataVersion: runtimeConfig.dataVersion,
+        datasetVersion: runtimeConfig.facilitiesDatasetVersion,
         etag: `"${hashFacilitiesCachePayload(JSON.stringify(payloadBody))}"`,
         generatedAt: new Date().toISOString(),
         originRequestId: args.requestId,
@@ -142,6 +143,7 @@ async function handleFacilitiesSelectionRequest(args: {
     features: cacheResult.entry.payload.features,
     meta: buildFacilitiesRouteMeta({
       dataVersion: cacheResult.entry.dataVersion,
+      datasetVersion: cacheResult.entry.datasetVersion,
       generatedAt: cacheResult.entry.generatedAt,
       requestId: args.requestId,
       recordCount: cacheResult.entry.payload.features.length,
@@ -153,6 +155,7 @@ async function handleFacilitiesSelectionRequest(args: {
   const responseHeaders = createFacilitiesCacheHeaders({
     cacheStatus: cacheResult.cacheStatus,
     dataVersion: cacheResult.entry.dataVersion,
+    datasetVersion: cacheResult.entry.datasetVersion,
     etag: cacheResult.entry.etag,
     originRequestId: cacheResult.entry.originRequestId,
   });
@@ -160,8 +163,10 @@ async function handleFacilitiesSelectionRequest(args: {
   return withHeaders(
     jsonOk(args.honoContext, FacilitiesSelectionResponseSchema, payload, args.requestId),
     {
+      "Cache-Control": "no-store",
       [ApiHeaders.cacheStatus]: responseHeaders.cacheStatus,
       [ApiHeaders.dataVersion]: responseHeaders.dataVersion,
+      [ApiHeaders.datasetVersion]: responseHeaders.datasetVersion,
       [ApiHeaders.originRequestId]: responseHeaders.originRequestId,
       ETag: responseHeaders.etag,
     }

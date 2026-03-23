@@ -53,7 +53,7 @@ function perspectiveForClusterLayerId(
   return null;
 }
 
-function toHoverState(
+export function toFacilityHoverState(
   feature: {
     id: unknown;
     geometry?: { type: string; coordinates: unknown };
@@ -248,7 +248,7 @@ export function mountFacilitiesHover(
                 properties,
               }
             : { id: feature.id, properties };
-        const nextHover = toHoverState(hoverFeature, screenPoint);
+        const nextHover = toFacilityHoverState(hoverFeature, screenPoint);
         if (nextHover === null) {
           continue;
         }

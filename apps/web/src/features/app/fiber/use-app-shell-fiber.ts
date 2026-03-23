@@ -26,6 +26,7 @@ import {
   selectedFiberSourceLayers,
 } from "@/features/app/fiber/app-shell-fiber.service";
 import type { UseAppShellFiberOptions } from "@/features/app/fiber/use-app-shell-fiber.types";
+import { shouldRefreshViewportData } from "@/features/app/interaction/map-interaction-policy.service";
 import {
   fetchFiberLocatorCatalog,
   fetchFiberLocatorLayersInView,
@@ -67,8 +68,10 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
   );
   const hasInitializedFiberSourceLayerSelection = shallowRef<boolean>(false);
   const fiberInViewAbortController = shallowRef<AbortController | null>(null);
+  const fiberInViewFetchKey = shallowRef<string | null>(null);
   const fiberInViewRequestVersion = shallowRef<number>(0);
   const fiberInteractionUnsubscribe = shallowRef<(() => void) | null>(null);
+  const fiberViewportKey = shallowRef<string | null>(null);
   const visibleFiberLayers = shallowRef<FiberVisibilityState>(initialFiberVisibilityState());
 
   const fiberStatusText = computed(() => formatFiberLocatorStatus(fiberStatus.value));
@@ -77,25 +80,40 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
     return visibleFiberLayers.value.metro || visibleFiberLayers.value.longhaul;
   }
 
+  function toFiberInViewFetchKey(bbox: BBox): string {
+    return `${bbox.west},${bbox.south},${bbox.east},${bbox.north}`;
+  }
+
   function syncFiberInteractionSubscription(): void {
     fiberInteractionUnsubscribe.value?.();
     fiberInteractionUnsubscribe.value = null;
+    fiberViewportKey.value = null;
 
     const interactionCoordinator = options.interactionCoordinator.value;
     if (!(interactionCoordinator !== null && hasVisibleFiberLayers())) {
       return;
     }
 
-    fiberInteractionUnsubscribe.value = interactionCoordinator.subscribe((snapshot) => {
-      if (!(snapshot.eventType === "load" || snapshot.eventType === "moveend")) {
-        return;
-      }
+    fiberInteractionUnsubscribe.value = interactionCoordinator.subscribe(
+      (snapshot) => {
+        if (!shouldRefreshViewportData(snapshot)) {
+          return;
+        }
 
-      recordAppPerformanceCounter("map.moveend", { feature: "fiber" });
-      refreshFiberLocatorLayersInView().catch((error: unknown) => {
-        console.error("Fiber locator layers/inview refresh failed", error);
-      });
-    });
+        if (fiberViewportKey.value === snapshot.canonicalViewportKey) {
+          return;
+        }
+
+        fiberViewportKey.value = snapshot.canonicalViewportKey;
+        recordAppPerformanceCounter("map.moveend", { feature: "fiber" });
+        refreshFiberLocatorLayersInView({ bbox: snapshot.quantizedBbox }).catch(
+          (error: unknown) => {
+            console.error("Fiber locator layers/inview refresh failed", error);
+          }
+        );
+      },
+      { emitCurrent: true }
+    );
   }
 
   function setSelectedFiberLayerNames(
@@ -195,21 +213,43 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
     clearFiberHover();
   }
 
-  async function refreshFiberLocatorLayersInView(): Promise<void> {
+  async function refreshFiberLocatorLayersInView(
+    args: { readonly bbox?: BBox; readonly force?: boolean } = {}
+  ): Promise<void> {
     const stopRefreshTimer = createAppPerformanceTimer("fiber.layers-in-view.time");
     const currentMap = options.map.value;
     if (currentMap === null || !hasVisibleFiberLayers()) {
+      fiberInViewFetchKey.value = null;
       stopRefreshTimer();
       return;
     }
 
     if (currentMap.getZoom() < FIBER_MIN_ZOOM) {
+      fiberInViewFetchKey.value = null;
       stopRefreshTimer();
       return;
     }
 
     const allOptions = fiberCatalogSourceLayerOptions.value;
     if (allOptions.metro.length === 0 && allOptions.longhaul.length === 0) {
+      fiberInViewFetchKey.value = null;
+      stopRefreshTimer();
+      return;
+    }
+
+    const bounds =
+      args.bbox ??
+      (() => {
+        const currentBounds = currentMap.getBounds();
+        return {
+          west: currentBounds.west,
+          south: currentBounds.south,
+          east: currentBounds.east,
+          north: currentBounds.north,
+        };
+      })();
+    const fetchKey = toFiberInViewFetchKey(bounds);
+    if (!(args.force ?? false) && fiberInViewFetchKey.value === fetchKey) {
       stopRefreshTimer();
       return;
     }
@@ -217,19 +257,12 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
     fiberInViewAbortController.value?.abort();
     const abortController = new AbortController();
     fiberInViewAbortController.value = abortController;
+    fiberInViewFetchKey.value = fetchKey;
 
     fiberInViewRequestVersion.value += 1;
     const requestVersion = fiberInViewRequestVersion.value;
 
-    const bounds = currentMap.getBounds();
-    const bbox: BBox = {
-      west: bounds.west,
-      south: bounds.south,
-      east: bounds.east,
-      north: bounds.north,
-    };
-
-    const result = await fetchFiberLocatorLayersInView(bbox, {
+    const result = await fetchFiberLocatorLayersInView(bounds, {
       signal: abortController.signal,
     });
     stopRefreshTimer();
@@ -239,6 +272,7 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
     }
 
     if (!result.ok) {
+      fiberInViewFetchKey.value = null;
       if (result.reason !== "aborted") {
         recordAppPerformanceCounter("fiber.layers-in-view.failed");
         console.error("Fiber locator layers/inview failed", result);
@@ -280,7 +314,7 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
     };
 
     if (hasVisibleFiberLayers()) {
-      await refreshFiberLocatorLayersInView();
+      await refreshFiberLocatorLayersInView({ force: true });
     } else {
       applyFiberSourceLayerOptions(fiberCatalogSourceLayerOptions.value);
     }
@@ -296,12 +330,14 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
 
     if (visible) {
       setAllFiberSourceLayers(lineId, true);
-      refreshFiberLocatorLayersInView().catch((error: unknown) => {
+      refreshFiberLocatorLayersInView({ force: true }).catch((error: unknown) => {
         console.error("Fiber locator layers/inview refresh failed", error);
       });
     } else if (!hasVisibleFiberLayers()) {
       fiberInViewAbortController.value?.abort();
       fiberInViewAbortController.value = null;
+      fiberInViewFetchKey.value = null;
+      fiberViewportKey.value = null;
     }
 
     clearFiberHover();
@@ -421,6 +457,8 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
   function destroy(_currentMap: IMap | null): void {
     fiberInViewAbortController.value?.abort();
     fiberInViewAbortController.value = null;
+    fiberInViewFetchKey.value = null;
+    fiberViewportKey.value = null;
 
     fiberHoverController.value?.destroy();
     fiberHoverController.value = null;

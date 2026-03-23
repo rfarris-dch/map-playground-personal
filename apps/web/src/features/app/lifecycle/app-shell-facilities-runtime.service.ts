@@ -43,18 +43,18 @@ const FACILITIES_MAX_VIEWPORT_FEATURE_BUDGET_BY_PERSPECTIVE: Readonly<
   enterprise: 1000,
 };
 const FACILITIES_ICON_MIN_ZOOM_BY_PERSPECTIVE: Readonly<Record<FacilityPerspective, number>> = {
-  colocation: 7,
-  hyperscale: 6,
-  "hyperscale-leased": 6,
-  enterprise: 7,
+  colocation: 0,
+  hyperscale: 0,
+  "hyperscale-leased": 0,
+  enterprise: 0,
 };
 const FACILITIES_ICON_MAX_VIEWPORT_FEATURES_BY_PERSPECTIVE: Readonly<
   Record<FacilityPerspective, number>
 > = {
-  colocation: 250,
-  hyperscale: 600,
-  "hyperscale-leased": 400,
-  enterprise: 200,
+  colocation: Number.POSITIVE_INFINITY,
+  hyperscale: Number.POSITIVE_INFINITY,
+  "hyperscale-leased": Number.POSITIVE_INFINITY,
+  enterprise: Number.POSITIVE_INFINITY,
 };
 
 function setPerspectiveStatus(

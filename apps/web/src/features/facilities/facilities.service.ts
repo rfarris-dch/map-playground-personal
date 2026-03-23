@@ -70,6 +70,26 @@ function normalizeEastLongitude(west: number, east: number): number {
   return east + 360;
 }
 
+function getLongitudeIntervals(bbox: BBox): readonly [
+  Readonly<{
+    readonly east: number;
+    readonly west: number;
+  }>,
+  ...ReadonlyArray<{
+    readonly east: number;
+    readonly west: number;
+  }>,
+] {
+  if (bbox.east >= bbox.west) {
+    return [{ west: bbox.west, east: bbox.east }];
+  }
+
+  return [
+    { west: bbox.west, east: 180 },
+    { west: -180, east: bbox.east },
+  ];
+}
+
 function estimateViewportWidthKm(bounds: BBox): number {
   const midpointLatitude = (bounds.north + bounds.south) / 2;
   const eastLongitude = normalizeEastLongitude(bounds.west, bounds.east);
@@ -194,11 +214,19 @@ export function evaluateFacilitiesGuardrails(args: {
 }
 
 export function bboxContains(container: BBox, candidate: BBox): boolean {
-  return (
-    container.west <= candidate.west &&
-    container.south <= candidate.south &&
-    container.east >= candidate.east &&
-    container.north >= candidate.north
+  if (container.south > candidate.south || container.north < candidate.north) {
+    return false;
+  }
+
+  const containerIntervals = getLongitudeIntervals(container);
+  const candidateIntervals = getLongitudeIntervals(candidate);
+
+  return candidateIntervals.every((candidateInterval) =>
+    containerIntervals.some(
+      (containerInterval) =>
+        containerInterval.west <= candidateInterval.west &&
+        containerInterval.east >= candidateInterval.east
+    )
   );
 }
 
@@ -212,7 +240,10 @@ function bboxEquals(left: BBox, right: BBox): boolean {
 }
 
 function bboxArea(bbox: BBox): number {
-  return Math.max(0, bbox.east - bbox.west) * Math.max(0, bbox.north - bbox.south);
+  return (
+    Math.max(0, normalizeEastLongitude(bbox.west, bbox.east) - bbox.west) *
+    Math.max(0, bbox.north - bbox.south)
+  );
 }
 
 export function findFacilitiesBboxCacheEntry(
@@ -261,7 +292,13 @@ export function upsertFacilitiesBboxCacheEntry(
 
 function pointWithinBbox(coordinates: readonly [number, number], bbox: BBox): boolean {
   const [lng, lat] = coordinates;
-  return lng >= bbox.west && lng <= bbox.east && lat >= bbox.south && lat <= bbox.north;
+  if (!(lat >= bbox.south && lat <= bbox.north)) {
+    return false;
+  }
+
+  return getLongitudeIntervals(bbox).some(
+    (interval) => lng >= interval.west && lng <= interval.east
+  );
 }
 
 export function filterFacilitiesFeaturesToBbox(

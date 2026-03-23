@@ -8,6 +8,7 @@ export const ResponseMetaSchema = z.object({
   requestId: z.string().min(1),
   sourceMode: SourceModeSchema,
   dataVersion: z.string().min(1),
+  datasetVersion: z.string().min(1).optional(),
   generatedAt: z.string().datetime(),
   recordCount: z.number().int().nonnegative(),
   truncated: z.boolean(),
@@ -18,6 +19,7 @@ export const ResponseMetaSchema = z.object({
 export type ResponseMeta = z.infer<typeof ResponseMetaSchema>;
 
 export interface CreateResponseMetaArgs {
+  readonly datasetVersion?: string | undefined;
   readonly dataVersion: string;
   readonly generatedAt?: string;
   readonly ingestionRunId?: string | undefined;
@@ -33,6 +35,7 @@ export function createResponseMeta(args: CreateResponseMetaArgs): ResponseMeta {
     requestId: args.requestId,
     sourceMode: args.sourceMode,
     dataVersion: args.dataVersion,
+    ...(typeof args.datasetVersion === "string" ? { datasetVersion: args.datasetVersion } : {}),
     generatedAt: args.generatedAt ?? new Date().toISOString(),
     recordCount: args.recordCount,
     truncated: args.truncated ?? false,

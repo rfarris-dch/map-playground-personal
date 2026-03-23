@@ -142,6 +142,7 @@ export function useAppShell() {
     countyScoresStatus: scannerCountyScoresStatus,
     countyScoresStatusError: scannerCountyScoresStatusError,
   } = useCountyScores({
+    enabled: mapOverlays.isScannerVisible,
     countyIds: scannerCountyIds,
   });
   const isMapExporting = shallowRef(false);
@@ -279,6 +280,8 @@ export function useAppShell() {
     hoveredMarketBoundary: state.hoveredMarketBoundary,
     hoveredFiber: fiber.hoveredFiber,
     hoveredPower: state.hoveredPower,
+    colocationViewportFeatures: state.colocationViewportFeatures,
+    hyperscaleViewportFeatures: state.hyperscaleViewportFeatures,
     basemapVisibility: visibility.basemapVisibility,
     boundaryVisibility: visibility.boundaryVisibility,
     boundaryFacetOptions: state.boundaryFacetOptions,

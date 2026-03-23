@@ -1,0 +1,37 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - img "datacenterHawk" [ref=e7]
+      - navigation "Primary" [ref=e8]:
+        - link "Map" [ref=e9] [cursor=pointer]:
+          - /url: /map
+        - link "Markets" [ref=e10] [cursor=pointer]:
+          - /url: /markets
+        - link "Providers" [ref=e11] [cursor=pointer]:
+          - /url: /providers
+        - link "Facilities" [ref=e12] [cursor=pointer]:
+          - /url: /facilities
+  - main [ref=e13]:
+    - main [ref=e14]:
+      - region "Map preview" [ref=e15]:
+        - button "Open layers panel" [ref=e16]:
+          - img [ref=e17]
+        - generic [ref=e21]:
+          - button "Export" [disabled]:
+            - img
+            - text: Export
+          - button "Quick View (G)" [disabled]:
+            - img
+            - text: Quick View
+            - generic: (G)
+          - button "Sketch / Measure" [ref=e22]:
+            - img [ref=e23]
+            - text: Sketch / Measure
+          - button "Selection" [disabled]:
+            - img
+            - text: Selection
+          - button "Scanner (V)" [ref=e28]:
+            - img [ref=e29]
+            - text: Scanner
+            - generic [ref=e36]: (V)
+        - generic: no facilities in current viewport

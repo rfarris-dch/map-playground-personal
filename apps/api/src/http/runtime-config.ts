@@ -41,6 +41,19 @@ function readSourceMode(
   return parsed.data;
 }
 
+function readOptionalText(
+  env: Readonly<Record<string, string | undefined>>,
+  envKey: string
+): string | null {
+  const raw = env[envKey];
+  if (typeof raw !== "string") {
+    return null;
+  }
+
+  const normalized = raw.trim();
+  return normalized.length > 0 ? normalized : null;
+}
+
 function createApiRuntimeConfig(
   env: Readonly<Record<string, string | undefined>>
 ): ApiRuntimeConfig {
@@ -84,6 +97,20 @@ function createApiRuntimeConfig(
     "MARKETS_SOURCE_MODE",
     ApiDefaults.marketsSourceMode
   );
+  const dataVersion = resolveDataVersion({
+    env,
+    fallback: ApiDefaults.dataVersion,
+  });
+  const facilitiesDatasetVersion = resolveDataVersion({
+    env: {
+      ...env,
+      API_DATA_VERSION: env.API_FACILITIES_DATASET_VERSION,
+      DATA_VERSION: env.FACILITIES_DATASET_VERSION,
+      GIT_SHA: undefined,
+      MAP_DATA_VERSION: env.MAP_FACILITIES_DATASET_VERSION,
+    },
+    fallback: dataVersion,
+  });
 
   assertPostgisServingMode("ANALYSIS_SUMMARY_SOURCE_MODE", analysisSummarySourceMode);
   assertPostgisServingMode("BOUNDARIES_SOURCE_MODE", boundariesSourceMode);
@@ -98,11 +125,16 @@ function createApiRuntimeConfig(
     analysisSummarySourceMode,
     boundariesSourceMode,
     countyIntelligenceSourceMode,
-    dataVersion: resolveDataVersion({
+    dataVersion,
+    facilitiesDatasetPreviousVersion: readOptionalText(
       env,
-      fallback: ApiDefaults.dataVersion,
-    }),
+      "API_FACILITIES_DATASET_PREVIOUS_VERSION"
+    ),
+    facilitiesDatasetPublishedAt:
+      readOptionalText(env, "API_FACILITIES_DATASET_PUBLISHED_AT") ?? new Date().toISOString(),
+    facilitiesDatasetVersion,
     facilitiesSourceMode,
+    facilitiesWarmProfileVersion: readOptionalText(env, "API_FACILITIES_WARM_PROFILE_VERSION"),
     fiberLocatorSourceMode,
     marketBoundariesSourceMode,
     marketsSourceMode,

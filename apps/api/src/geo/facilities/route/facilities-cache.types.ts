@@ -26,6 +26,7 @@ export interface FacilitiesSelectionCacheBody {
 }
 
 export interface FacilitiesCacheEntry<TPayload> {
+  readonly datasetVersion: string;
   readonly dataVersion: string;
   readonly etag: string;
   readonly freshUntilEpochMs: number;
@@ -41,19 +42,19 @@ export interface FacilitiesBboxCacheKeyArgs {
     readonly south: number;
     readonly west: number;
   };
-  readonly dataVersion: string;
+  readonly datasetVersion: string;
   readonly limit: number;
   readonly perspective: FacilityPerspective;
 }
 
 export interface FacilitiesDetailCacheKeyArgs {
-  readonly dataVersion: string;
+  readonly datasetVersion: string;
   readonly facilityId: string;
   readonly perspective: FacilityPerspective;
 }
 
 export interface FacilitiesSelectionCacheKeyArgs {
-  readonly dataVersion: string;
+  readonly datasetVersion: string;
   readonly geometry: FacilitiesSelectionRequest["geometry"];
   readonly limitPerPerspective: number;
   readonly perspectives: readonly FacilityPerspective[];
@@ -61,6 +62,7 @@ export interface FacilitiesSelectionCacheKeyArgs {
 
 export interface FacilitiesCacheHeaders {
   readonly cacheStatus: FacilitiesCacheStatus;
+  readonly datasetVersion: string;
   readonly dataVersion: string;
   readonly etag: string;
   readonly originRequestId: string;

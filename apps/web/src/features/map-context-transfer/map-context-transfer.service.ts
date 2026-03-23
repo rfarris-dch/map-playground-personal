@@ -1203,18 +1203,19 @@ function resolveVisibleBasemapLayerIds(
 }
 
 function resolveSelectedFiberSourceLayerNames(
-  selectedFiberSourceLayerNames: BuildMapContextTransferFromAppShellArgs["selectedFiberSourceLayerNames"]
+  selectedFiberSourceLayerNames: BuildMapContextTransferFromAppShellArgs["selectedFiberSourceLayerNames"],
+  fiberVisibility: BuildMapContextTransferFromAppShellArgs["fiberVisibility"]
 ): MapContextTransfer["selectedFiberSourceLayerNames"] | undefined {
   if (typeof selectedFiberSourceLayerNames === "undefined") {
     return undefined;
   }
 
   const longhaul =
-    selectedFiberSourceLayerNames.longhaul.length > 0
+    fiberVisibility?.longhaul === true && selectedFiberSourceLayerNames.longhaul.length > 0
       ? [...selectedFiberSourceLayerNames.longhaul].sort((left, right) => left.localeCompare(right))
       : undefined;
   const metro =
-    selectedFiberSourceLayerNames.metro.length > 0
+    fiberVisibility?.metro === true && selectedFiberSourceLayerNames.metro.length > 0
       ? [...selectedFiberSourceLayerNames.metro].sort((left, right) => left.localeCompare(right))
       : undefined;
 
@@ -1345,9 +1346,7 @@ function restoreMapFilters(
     activeMarkets: new Set(filters.activeMarkets ?? []),
     activeUsers: new Set(filters.activeUsers ?? []),
     facilityProviders: new Set(filters.facilityProviders ?? []),
-    facilityStatuses: new Set(
-      (filters.facilityStatuses ?? []).filter(isFacilityStatusFilterId)
-    ),
+    facilityStatuses: new Set((filters.facilityStatuses ?? []).filter(isFacilityStatusFilterId)),
     floodZones: new Set(filters.floodZones ?? []),
     gasCapacities: new Set(filters.gasCapacities ?? []),
     gasStatuses: new Set(filters.gasStatuses ?? []),
@@ -1359,9 +1358,7 @@ function restoreMapFilters(
     parcelStyleAcres: filters.parcelStyleAcres ?? "",
     powerTypes: new Set(filters.powerTypes ?? []),
     transmissionMinVoltage:
-      typeof filters.transmissionMinVoltage === "number"
-        ? filters.transmissionMinVoltage
-        : null,
+      typeof filters.transmissionMinVoltage === "number" ? filters.transmissionMinVoltage : null,
     zoningTypes: new Set(filters.zoningTypes ?? []),
   };
 }
@@ -1377,7 +1374,8 @@ export function buildMapContextTransferFromAppShell(
   const facilityViewModes = resolveFacilityViewModes(args.perspectiveViewModes);
   const selectedBoundaryIds = buildSelectedBoundaryIds(args.boundaryFacetSelection);
   const selectedFiberSourceLayerNames = resolveSelectedFiberSourceLayerNames(
-    args.selectedFiberSourceLayerNames
+    args.selectedFiberSourceLayerNames,
+    args.fiberVisibility
   );
   const viewport = resolveViewportFromMap(args.map);
   const context: MapContextTransfer = {
@@ -1571,7 +1569,9 @@ function applyMapFiltersContext(args: ApplyMapContextTransferToAppShellArgs): vo
     return;
   }
 
-  args.setMapFiltersState(restoreMapFilters(args.context?.mapFilters) ?? createDefaultMapFiltersState());
+  args.setMapFiltersState(
+    restoreMapFilters(args.context?.mapFilters) ?? createDefaultMapFiltersState()
+  );
 }
 
 export function applyMapContextTransferToAppShell(

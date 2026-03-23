@@ -39,6 +39,10 @@ const FACILITIES_CACHE_CIRCUIT_BREAKER_MS = parsePositiveIntFlag(
   process.env.API_FACILITIES_CACHE_CIRCUIT_BREAKER_MS,
   30_000
 );
+const FACILITIES_SHARED_CACHE_MAX_AGE_SECONDS = parsePositiveIntFlag(
+  process.env.API_FACILITIES_SHARED_CACHE_MAX_AGE_SECONDS,
+  30
+);
 
 setFacilitiesCacheConfigured(REDIS_URL.length > 0);
 
@@ -80,12 +84,14 @@ function parseCacheEntry<TPayload>(serialized: string): FacilitiesCacheEntry<TPa
     }
 
     const dataVersion = parsed.dataVersion;
+    const datasetVersion = parsed.datasetVersion;
     const etag = parsed.etag;
     const freshUntilEpochMs = parsed.freshUntilEpochMs;
     const generatedAt = parsed.generatedAt;
     const originRequestId = parsed.originRequestId;
     if (
       typeof dataVersion !== "string" ||
+      typeof datasetVersion !== "string" ||
       typeof etag !== "string" ||
       typeof freshUntilEpochMs !== "number" ||
       typeof generatedAt !== "string" ||
@@ -97,6 +103,7 @@ function parseCacheEntry<TPayload>(serialized: string): FacilitiesCacheEntry<TPa
 
     return {
       dataVersion,
+      datasetVersion,
       etag,
       freshUntilEpochMs,
       generatedAt,
@@ -199,15 +206,27 @@ export async function assertFacilitiesCacheReachable(): Promise<boolean> {
 export function createFacilitiesCacheHeaders(args: {
   readonly cacheStatus: FacilitiesCacheStatus;
   readonly dataVersion: string;
+  readonly datasetVersion: string;
   readonly etag: string;
   readonly originRequestId: string;
 }): FacilitiesCacheHeaders {
   return {
     cacheStatus: args.cacheStatus,
     dataVersion: args.dataVersion,
+    datasetVersion: args.datasetVersion,
     etag: args.etag,
     originRequestId: args.originRequestId,
   };
+}
+
+export function getFacilitiesSharedCacheControl(): string {
+  return [
+    "public",
+    `max-age=${String(FACILITIES_SHARED_CACHE_MAX_AGE_SECONDS)}`,
+    `s-maxage=${String(FACILITIES_CACHE_TTL_SECONDS)}`,
+    `stale-while-revalidate=${String(FACILITIES_CACHE_STALE_TTL_SECONDS)}`,
+    `stale-if-error=${String(FACILITIES_CACHE_STALE_TTL_SECONDS)}`,
+  ].join(", ");
 }
 
 export async function resolveFacilitiesCachedEntry<TPayload>(args: {
@@ -267,6 +286,7 @@ export async function resolveFacilitiesCachedEntry<TPayload>(args: {
 
 export function buildFacilitiesCacheEntry<TPayload>(args: {
   readonly dataVersion: string;
+  readonly datasetVersion: string;
   readonly etag: string;
   readonly generatedAt: string;
   readonly originRequestId: string;
@@ -274,6 +294,7 @@ export function buildFacilitiesCacheEntry<TPayload>(args: {
 }): FacilitiesCacheEntry<TPayload> {
   return {
     dataVersion: args.dataVersion,
+    datasetVersion: args.datasetVersion,
     etag: args.etag,
     freshUntilEpochMs: nowEpochMs() + FACILITIES_CACHE_TTL_SECONDS * 1000,
     generatedAt: args.generatedAt,

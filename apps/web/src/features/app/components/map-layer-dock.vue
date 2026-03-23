@@ -441,12 +441,12 @@
       class="pointer-events-none absolute left-3 top-3 z-30 flex items-start gap-0"
     >
       <div
-        class="map-glass-elevated pointer-events-auto flex w-[300px] flex-col rounded-2xl"
-        style="max-height: calc(100vh - 6rem)"
+        class="map-glass-elevated pointer-events-auto flex w-[300px] flex-col overflow-hidden rounded-2xl"
+        style="max-height: calc(100vh - 100px)"
         role="dialog"
         aria-label="Map layers"
       >
-        <div class="flex h-14 items-center justify-between px-5">
+        <div class="flex h-14 shrink-0 items-center justify-between px-5">
           <div class="flex items-center gap-2.5">
             <MapNavIcon name="layers" class="h-[18px] w-[20px] text-foreground/70" />
             <span class="text-base font-bold tracking-tight text-foreground/90">Layers</span>
@@ -470,11 +470,11 @@
           </span>
         </div>
 
-        <div class="mx-4 h-px bg-border/40" />
+        <div class="mx-4 h-px shrink-0 bg-border/40" />
 
         <div
           ref="layerListRef"
-          class="max-h-[calc(100vh-8rem)] overflow-y-auto scrollbar-hide pb-2"
+          class="min-h-0 flex-1 overflow-y-auto scrollbar-hide pb-2"
         >
           <template v-for="(item, idx) in sections" :key="idx">
             <div

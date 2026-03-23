@@ -2,6 +2,7 @@ import { ApiHeaders } from "@map-migration/http-contracts/api-routes";
 import type { Env, Hono } from "hono";
 import { getProviderLogoObject } from "@/geo/facilities/route/facilities-provider-logo.service";
 import { resolveRequestId } from "@/http/api-response";
+import { matchesIfNoneMatch } from "@/http/conditional-request.service";
 
 export function registerFacilitiesProviderLogoRoute<E extends Env>(app: Hono<E>): void {
   app.get("/api/geo/facilities/provider-logos/:providerId/:fileName", async (c) => {
@@ -28,11 +29,30 @@ export function registerFacilitiesProviderLogoRoute<E extends Env>(app: Hono<E>)
       });
     }
 
+    const ifNoneMatchHeader = c.req.header("if-none-match");
+    if (
+      matchesIfNoneMatch({
+        etag: object.etag,
+        ifNoneMatchHeader,
+      })
+    ) {
+      return new Response(null, {
+        status: 304,
+        headers: {
+          "cache-control": object.cacheControl,
+          "content-type": object.contentType,
+          [ApiHeaders.requestId]: requestId,
+          ETag: object.etag,
+        },
+      });
+    }
+
     return new Response(Buffer.from(object.body), {
       headers: {
         "cache-control": object.cacheControl,
         "content-type": object.contentType,
         [ApiHeaders.requestId]: requestId,
+        ETag: object.etag,
       },
     });
   });

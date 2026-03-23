@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
+  import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts/facilities-http";
   import { computed, ref, shallowRef, watch } from "vue";
   import { useGsapTransition } from "@/composables/use-gsap-transition";
   import MapInitErrorOverlay from "@/features/app/components/map-init-error-overlay.vue";
@@ -10,6 +12,7 @@
   import FacilityClusterSelectedTooltip from "@/features/facilities/components/facility-cluster-selected-tooltip.vue";
   import FacilityHoverTooltip from "@/features/facilities/components/facility-hover-tooltip.vue";
   import FacilitySelectedTooltip from "@/features/facilities/components/facility-selected-tooltip.vue";
+  import { toFacilityHoverState } from "@/features/facilities/hover";
   import type {
     FacilityClusterHoverState,
     FacilityHoverState,
@@ -25,18 +28,65 @@
 
   const selectedFacilityState = shallowRef<FacilityHoverState | null>(null);
 
-  watch(
-    () => shell.selectedFacility.value,
-    (next) => {
-      if (next === null) {
-        selectedFacilityState.value = null;
-        return;
-      }
-      const hover = shell.hoveredFacility.value;
-      if (hover !== null && hover.facilityId === next.facilityId) {
-        selectedFacilityState.value = hover;
-      }
+  function readFacilityId(properties: unknown): string | null {
+    if (typeof properties !== "object" || properties === null) {
+      return null;
     }
+
+    const facilityId = Reflect.get(properties, "facilityId");
+    return typeof facilityId === "string" && facilityId.length > 0 ? facilityId : null;
+  }
+
+  function featuresForPerspective(
+    perspective: FacilityPerspective
+  ): FacilitiesFeatureCollection["features"] {
+    if (perspective === "colocation") {
+      return shell.colocationViewportFeatures.value;
+    }
+
+    if (perspective === "hyperscale") {
+      return shell.hyperscaleViewportFeatures.value;
+    }
+
+    return [];
+  }
+
+  function resolveSelectedFacilityState(): FacilityHoverState | null {
+    const selectedFacility = shell.selectedFacility.value;
+    if (selectedFacility === null) {
+      return null;
+    }
+
+    const hoveredFacility = shell.hoveredFacility.value;
+    if (
+      hoveredFacility !== null &&
+      hoveredFacility.facilityId === selectedFacility.facilityId &&
+      hoveredFacility.perspective === selectedFacility.perspective
+    ) {
+      return hoveredFacility;
+    }
+
+    const matchingFeature = featuresForPerspective(selectedFacility.perspective).find((feature) => {
+      return readFacilityId(feature.properties) === selectedFacility.facilityId;
+    });
+    if (typeof matchingFeature === "undefined") {
+      return null;
+    }
+
+    return toFacilityHoverState(matchingFeature, [0, 0]);
+  }
+
+  watch(
+    [
+      () => shell.selectedFacility.value,
+      () => shell.hoveredFacility.value,
+      () => shell.colocationViewportFeatures.value,
+      () => shell.hyperscaleViewportFeatures.value,
+    ],
+    () => {
+      selectedFacilityState.value = resolveSelectedFacilityState();
+    },
+    { immediate: true }
   );
 
   const suppressedHoverState = computed(() => {

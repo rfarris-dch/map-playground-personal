@@ -29,6 +29,7 @@ const preferredLogoNames = [
 ];
 const bucketLogoPathPattern = /provider-logos\/([^/]+)\/(.+)$/;
 const cmsStaticPrefixPattern = /^\/cmsstatic\//;
+const knownPlaceholderLogoUrls = new Set(["/img/eye.png"]);
 
 function run(command, args, options = {}) {
   return execFileSync(command, args, {
@@ -271,7 +272,7 @@ function main() {
     const sourceLogoUrl = sourceLogosByProviderId.get(providerId) ?? null;
 
     if (bucketFiles.length === 0) {
-      if (sourceLogoUrl === null || !sourceLogoUrl.startsWith("/cmsstatic/")) {
+      if (sourceLogoUrl === null || knownPlaceholderLogoUrls.has(sourceLogoUrl)) {
         missingSourceCount += 1;
         missingSourceProviderIds.push(providerId);
         continue;

@@ -15,6 +15,7 @@ import {
   recordAppPerformanceCounter,
   recordAppPerformanceMeasurement,
 } from "@/features/app/diagnostics/app-performance.service";
+import { shouldRefreshViewportData } from "@/features/app/interaction/map-interaction-policy.service";
 import {
   buildCenterLimitedBbox,
   buildFacilityAnchorParcelRequests,
@@ -74,17 +75,23 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
   const scannerParcelsBlockedReason = shallowRef<string | null>(null);
   const scannerParcelsError = shallowRef<string | null>(null);
   const isScannerParcelsLoading = shallowRef<boolean>(false);
+  const scannerParcelsViewportBounds = shallowRef<MapBounds | null>(null);
+  const scannerParcelsViewportKey = shallowRef<string | null>(null);
   const scannerParcelsTask = useDebouncedLatestEffectTask({
     debounceMs: SCANNER_PARCELS_REFRESH_DEBOUNCE_MS,
     onClear() {
       resetScannerParcelsSelection();
       scannerParcelsBlockedReason.value = null;
       scannerParcelsLastFetchKey = null;
+      scannerParcelsViewportBounds.value = null;
+      scannerParcelsViewportKey.value = null;
     },
     onDispose() {
       resetScannerParcelsSelection();
       scannerParcelsBlockedReason.value = null;
       scannerParcelsLastFetchKey = null;
+      scannerParcelsViewportBounds.value = null;
+      scannerParcelsViewportKey.value = null;
     },
     onUnexpectedError(error) {
       isScannerParcelsLoading.value = false;
@@ -113,22 +120,41 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
     await scannerParcelsTask.clear();
   }
 
-  function startScannerParcelsRefresh(): ScannerParcelsRefreshScope | null {
+  function resolveScannerParcelsBounds(): MapBounds | null {
+    if (scannerParcelsViewportBounds.value !== null) {
+      return scannerParcelsViewportBounds.value;
+    }
+
     const currentMap = options.map.value;
-    if (currentMap === null || !options.scannerFetchEnabled.value) {
+    if (currentMap === null) {
+      return null;
+    }
+
+    const bounds = currentMap.getBounds();
+    return {
+      west: bounds.west,
+      south: bounds.south,
+      east: bounds.east,
+      north: bounds.north,
+    };
+  }
+
+  function startScannerParcelsRefresh(): ScannerParcelsRefreshScope | null {
+    if (!options.scannerFetchEnabled.value) {
       resetScannerParcelsSelection();
       scannerParcelsBlockedReason.value = null;
       scannerParcelsLastFetchKey = null;
       return null;
     }
 
-    const bounds = currentMap.getBounds();
-    const mapBounds = {
-      west: bounds.west,
-      south: bounds.south,
-      east: bounds.east,
-      north: bounds.north,
-    };
+    const mapBounds = resolveScannerParcelsBounds();
+    if (mapBounds === null) {
+      resetScannerParcelsSelection();
+      scannerParcelsBlockedReason.value = null;
+      scannerParcelsLastFetchKey = null;
+      return null;
+    }
+
     const fetchKey = buildMapOverlaysFetchKey(
       mapBounds,
       options.expectedParcelsIngestionRunId.value
@@ -362,13 +388,22 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
         return;
       }
 
-      unsubscribeInteractionCoordinator = nextCoordinator.subscribe((snapshot) => {
-        if (snapshot.eventType !== "moveend") {
-          return;
-        }
+      unsubscribeInteractionCoordinator = nextCoordinator.subscribe(
+        (snapshot) => {
+          if (!shouldRefreshViewportData(snapshot)) {
+            return;
+          }
 
-        onMapMoveEnd();
-      });
+          if (scannerParcelsViewportKey.value === snapshot.canonicalViewportKey) {
+            return;
+          }
+
+          scannerParcelsViewportBounds.value = snapshot.quantizedBbox;
+          scannerParcelsViewportKey.value = snapshot.canonicalViewportKey;
+          onMapMoveEnd();
+        },
+        { emitCurrent: true }
+      );
     },
     { immediate: true }
   );
@@ -405,6 +440,10 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
       }
 
       scannerParcelsLastFetchKey = null;
+      if (options.interactionCoordinator.value !== null) {
+        return;
+      }
+
       scheduleScannerParcelsRefresh();
     },
     { immediate: true }

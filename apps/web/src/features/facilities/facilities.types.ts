@@ -6,6 +6,7 @@ import type { MapInteractionCoordinator } from "@/features/app/interaction/map-i
 
 export interface FacilitiesBboxRequest {
   readonly bbox: BBox;
+  readonly datasetVersion?: string;
   limit?: number;
   readonly perspective: FacilityPerspective;
 }

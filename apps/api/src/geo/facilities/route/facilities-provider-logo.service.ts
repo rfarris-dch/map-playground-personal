@@ -1,14 +1,17 @@
 import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import { extname } from "node:path";
 
 const DEFAULT_PROVIDER_LOGO_BUCKET = process.env.PROVIDER_LOGO_BUCKET ?? "dch-playground-tiles";
 const DEFAULT_AWS_PROFILE = (process.env.AWS_PROFILE ?? "").trim();
-const DEFAULT_CACHE_CONTROL = "public, max-age=86400";
+const DEFAULT_CACHE_CONTROL =
+  "public, max-age=604800, s-maxage=2592000, stale-while-revalidate=86400, stale-if-error=86400, immutable";
 
 interface ProviderLogoObject {
   readonly body: Uint8Array;
   readonly cacheControl: string;
   readonly contentType: string;
+  readonly etag: string;
 }
 
 const providerLogoCache = new Map<string, ProviderLogoObject>();
@@ -84,6 +87,7 @@ export async function getProviderLogoObject(
       body,
       contentType: resolveContentType(fileName),
       cacheControl: DEFAULT_CACHE_CONTROL,
+      etag: `"${createHash("sha1").update(body).digest("hex")}"`,
     };
     providerLogoCache.set(objectKey, nextObject);
     return nextObject;

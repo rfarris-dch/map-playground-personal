@@ -7,8 +7,10 @@ import {
   createAppPerformanceTimer,
   recordAppPerformanceCounter,
 } from "@/features/app/diagnostics/app-performance.service";
+import { shouldRefreshViewportData } from "@/features/app/interaction/map-interaction-policy.service";
 import { fetchMarketsBySelectionEffect } from "@/features/selection-tool/selection-tool.api";
 import { buildMapOverlaysFetchKey } from "./map-overlays.service";
+import type { MapBounds } from "./map-overlays.types";
 import {
   buildEmptyScannerMarketSelectionSummary,
   buildScannerMarketSelectionSummary,
@@ -25,14 +27,20 @@ export function useMapOverlaysScannerMarkets(
   options: UseMapOverlaysScannerMarketsOptions
 ): UseMapOverlaysScannerMarketsResult {
   const scannerMarketSelection = shallowRef(buildEmptyScannerMarketSelectionSummary());
+  const scannerMarketsViewportBounds = shallowRef<MapBounds | null>(null);
+  const scannerMarketsViewportKey = shallowRef<string | null>(null);
   const scannerMarketsTask = useDebouncedLatestEffectTask({
     debounceMs: SCANNER_MARKETS_REFRESH_DEBOUNCE_MS,
     onClear() {
       scannerMarketsLastFetchKey = null;
+      scannerMarketsViewportBounds.value = null;
+      scannerMarketsViewportKey.value = null;
       scannerMarketSelection.value = buildEmptyScannerMarketSelectionSummary();
     },
     onDispose() {
       scannerMarketsLastFetchKey = null;
+      scannerMarketsViewportBounds.value = null;
+      scannerMarketsViewportKey.value = null;
       scannerMarketSelection.value = buildEmptyScannerMarketSelectionSummary();
     },
     onUnexpectedError(error) {
@@ -54,21 +62,39 @@ export function useMapOverlaysScannerMarkets(
     await scannerMarketsTask.clear();
   }
 
-  function startScannerMarketsRefresh(): ReturnType<typeof buildScannerMarketsRequest> {
+  function resolveScannerMarketsBounds(): MapBounds | null {
+    if (scannerMarketsViewportBounds.value !== null) {
+      return scannerMarketsViewportBounds.value;
+    }
+
     const currentMap = options.map.value;
-    if (currentMap === null || !options.scannerFetchEnabled.value) {
-      scannerMarketsLastFetchKey = null;
-      scannerMarketSelection.value = buildEmptyScannerMarketSelectionSummary();
+    if (currentMap === null) {
       return null;
     }
 
     const bounds = currentMap.getBounds();
-    const mapBounds = {
+    return {
       west: bounds.west,
       south: bounds.south,
       east: bounds.east,
       north: bounds.north,
     };
+  }
+
+  function startScannerMarketsRefresh(): ReturnType<typeof buildScannerMarketsRequest> {
+    if (!options.scannerFetchEnabled.value) {
+      scannerMarketsLastFetchKey = null;
+      scannerMarketSelection.value = buildEmptyScannerMarketSelectionSummary();
+      return null;
+    }
+
+    const mapBounds = resolveScannerMarketsBounds();
+    if (mapBounds === null) {
+      scannerMarketsLastFetchKey = null;
+      scannerMarketSelection.value = buildEmptyScannerMarketSelectionSummary();
+      return null;
+    }
+
     const fetchKey = buildMapOverlaysFetchKey(mapBounds, "markets");
     if (fetchKey === scannerMarketsLastFetchKey) {
       return null;
@@ -166,13 +192,22 @@ export function useMapOverlaysScannerMarkets(
         return;
       }
 
-      unsubscribeInteractionCoordinator = nextCoordinator.subscribe((snapshot) => {
-        if (snapshot.eventType !== "moveend") {
-          return;
-        }
+      unsubscribeInteractionCoordinator = nextCoordinator.subscribe(
+        (snapshot) => {
+          if (!shouldRefreshViewportData(snapshot)) {
+            return;
+          }
 
-        onMapMoveEnd();
-      });
+          if (scannerMarketsViewportKey.value === snapshot.canonicalViewportKey) {
+            return;
+          }
+
+          scannerMarketsViewportBounds.value = snapshot.quantizedBbox;
+          scannerMarketsViewportKey.value = snapshot.canonicalViewportKey;
+          onMapMoveEnd();
+        },
+        { emitCurrent: true }
+      );
     },
     { immediate: true }
   );
@@ -188,6 +223,10 @@ export function useMapOverlaysScannerMarkets(
       }
 
       scannerMarketsLastFetchKey = null;
+      if (options.interactionCoordinator.value !== null) {
+        return;
+      }
+
       scheduleScannerMarketsRefresh();
     },
     { immediate: true }

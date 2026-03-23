@@ -9,6 +9,7 @@ import { getFacilitiesBboxMaxRows } from "@/geo/facilities/facilities.repo";
 import {
   buildFacilitiesCacheEntry,
   createFacilitiesCacheHeaders,
+  getFacilitiesSharedCacheControl,
   resolveFacilitiesCachedEntry,
 } from "@/geo/facilities/route/facilities-cache.service";
 import type { FacilitiesBboxCacheBody } from "@/geo/facilities/route/facilities-cache.types";
@@ -25,6 +26,7 @@ import { buildFacilitiesRouteMeta } from "@/geo/facilities/route/facilities-rout
 import { clampLimit } from "@/geo/facilities/route/facilities-route-param.service";
 import { queryFacilitiesByBbox } from "@/geo/facilities/route/facilities-route-query.service";
 import { jsonOk, toDebugDetails, withHeaders } from "@/http/api-response";
+import { matchesIfNoneMatch } from "@/http/conditional-request.service";
 import { fromApiRequest, routeError, runEffectRoute } from "@/http/effect-route";
 import { registerRouteTimeoutProfile } from "@/http/route-timeout-profile.service";
 import { getApiRuntimeConfig } from "@/http/runtime-config";
@@ -39,6 +41,7 @@ export function registerFacilitiesBboxRoute<E extends Env>(app: Hono<E>): void {
         const routeStartedAt = globalThis.performance.now();
         const request = FacilitiesBboxRequestSchema.safeParse({
           bbox: honoContext.req.query("bbox"),
+          datasetVersion: honoContext.req.query("v") ?? honoContext.req.query("datasetVersion"),
           limit: honoContext.req.query("limit"),
           perspective: honoContext.req.query("perspective"),
         });
@@ -65,13 +68,15 @@ export function registerFacilitiesBboxRoute<E extends Env>(app: Hono<E>): void {
           request.data.bbox.north,
         ].join(",");
         const runtimeConfig = getApiRuntimeConfig();
+        const effectiveDatasetVersion =
+          request.data.datasetVersion ?? runtimeConfig.facilitiesDatasetVersion;
         let freshMappingTimeMs = 0;
         let freshSqlTimeMs = 0;
         const cacheResult = await resolveFacilitiesCachedEntry<FacilitiesBboxCacheBody>({
           allowStaleOnError: () => true,
           key: buildFacilitiesBboxCacheKey({
             bbox: request.data.bbox,
-            dataVersion: runtimeConfig.dataVersion,
+            datasetVersion: effectiveDatasetVersion,
             limit,
             perspective,
           }),
@@ -97,6 +102,7 @@ export function registerFacilitiesBboxRoute<E extends Env>(app: Hono<E>): void {
             };
             return buildFacilitiesCacheEntry({
               dataVersion: runtimeConfig.dataVersion,
+              datasetVersion: effectiveDatasetVersion,
               etag: `"${hashFacilitiesCachePayload(JSON.stringify(payloadBody))}"`,
               generatedAt: new Date().toISOString(),
               originRequestId: requestId,
@@ -124,6 +130,7 @@ export function registerFacilitiesBboxRoute<E extends Env>(app: Hono<E>): void {
           features: cacheResult.entry.payload.features,
           meta: buildFacilitiesRouteMeta({
             dataVersion: cacheResult.entry.dataVersion,
+            datasetVersion: cacheResult.entry.datasetVersion,
             generatedAt: cacheResult.entry.generatedAt,
             requestId,
             recordCount: cacheResult.entry.payload.features.length,
@@ -134,9 +141,30 @@ export function registerFacilitiesBboxRoute<E extends Env>(app: Hono<E>): void {
         const responseHeaders = createFacilitiesCacheHeaders({
           cacheStatus: cacheResult.cacheStatus,
           dataVersion: cacheResult.entry.dataVersion,
+          datasetVersion: cacheResult.entry.datasetVersion,
           etag: cacheResult.entry.etag,
           originRequestId: cacheResult.entry.originRequestId,
         });
+        const ifNoneMatchHeader = honoContext.req.header("if-none-match");
+        if (
+          matchesIfNoneMatch({
+            etag: responseHeaders.etag,
+            ifNoneMatchHeader,
+          })
+        ) {
+          return new Response(null, {
+            status: 304,
+            headers: {
+              "Cache-Control": getFacilitiesSharedCacheControl(),
+              [ApiHeaders.cacheStatus]: responseHeaders.cacheStatus,
+              [ApiHeaders.dataVersion]: responseHeaders.dataVersion,
+              [ApiHeaders.datasetVersion]: responseHeaders.datasetVersion,
+              [ApiHeaders.originRequestId]: responseHeaders.originRequestId,
+              [ApiHeaders.requestId]: requestId,
+              ETag: responseHeaders.etag,
+            },
+          });
+        }
         const responseBytes = JSON.stringify(payload).length;
         recordFacilitiesBboxMetrics({
           canonicalBboxKey,
@@ -154,8 +182,10 @@ export function registerFacilitiesBboxRoute<E extends Env>(app: Hono<E>): void {
         return withHeaders(
           jsonOk(honoContext, FacilitiesFeatureCollectionSchema, payload, requestId),
           {
+            "Cache-Control": getFacilitiesSharedCacheControl(),
             [ApiHeaders.cacheStatus]: responseHeaders.cacheStatus,
             [ApiHeaders.dataVersion]: responseHeaders.dataVersion,
+            [ApiHeaders.datasetVersion]: responseHeaders.datasetVersion,
             [ApiHeaders.originRequestId]: responseHeaders.originRequestId,
             ETag: responseHeaders.etag,
           }

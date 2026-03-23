@@ -32,6 +32,7 @@ export interface SortedPaginatedRouteArgs<TSortBy extends string> extends Pagina
 
 export interface FacilitiesBboxRouteArgs {
   readonly bbox: BBox;
+  readonly datasetVersion?: string | undefined;
   readonly limit?: number | undefined;
   readonly perspective?: FacilityPerspective | undefined;
 }
@@ -57,6 +58,7 @@ export interface ApiRoutesTable {
   readonly countyScoresStatus: string;
   readonly effectMetrics: string;
   readonly facilities: string;
+  readonly facilitiesManifest: string;
   readonly facilitiesPerformanceDebug: string;
   readonly facilitiesSelection: string;
   readonly facilitiesTable: string;
@@ -77,6 +79,7 @@ export interface ApiRoutesTable {
 
 export interface ApiHeadersTable {
   readonly cacheStatus: string;
+  readonly datasetVersion: string;
   readonly dataVersion: string;
   readonly originRequestId: string;
   readonly parcelIngestionRunId: string;
@@ -129,6 +132,7 @@ export const ApiRoutes = Object.freeze<ApiRoutesTable>({
   fiberLocatorTile: "/api/geo/fiber-locator/tile",
   fiberLocatorVectorTile: "/api/geo/fiber-locator/vector-tile",
   facilities: "/api/geo/facilities",
+  facilitiesManifest: "/api/geo/facilities/manifest",
   facilitiesSelection: "/api/geo/facilities/selection",
   facilitiesTable: "/api/geo/facilities/table",
   marketBoundaries: "/api/geo/market-boundaries",
@@ -184,7 +188,12 @@ export function buildFacilitiesBboxRoute(args: FacilitiesBboxRouteArgs): string 
     ["bbox", formatBboxParam(args.bbox)],
     ["perspective", args.perspective ?? ApiQueryDefaults.facilities.perspective],
     ["limit", typeof args.limit === "number" ? String(args.limit) : undefined],
+    ["v", args.datasetVersion],
   ]);
+}
+
+export function buildFacilitiesManifestRoute(): string {
+  return ApiRoutes.facilitiesManifest;
 }
 
 export function buildFacilitiesSelectionRoute(): string {
@@ -340,6 +349,7 @@ export function buildUsgsWaterTileRoute(
 export const ApiHeaders = Object.freeze<ApiHeadersTable>({
   cacheStatus: "x-cache-status",
   dataVersion: "x-data-version",
+  datasetVersion: "x-dataset-version",
   originRequestId: "x-origin-request-id",
   parcelIngestionRunId: "x-parcel-ingestion-run-id",
   requestId: "x-request-id",

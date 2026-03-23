@@ -99,7 +99,7 @@ export function buildFacilitiesBboxCacheKey(args: FacilitiesBboxCacheKeyArgs): s
   const canonicalBbox = formatBboxParam(quantizeFacilitiesBbox(args.bbox));
   return [
     "facilities:bbox:v2",
-    args.dataVersion,
+    args.datasetVersion,
     args.perspective,
     String(args.limit),
     canonicalBbox,
@@ -109,7 +109,7 @@ export function buildFacilitiesBboxCacheKey(args: FacilitiesBboxCacheKeyArgs): s
 export function buildFacilitiesDetailCacheKey(args: FacilitiesDetailCacheKeyArgs): string {
   return [
     "facilities:detail:v1",
-    args.dataVersion,
+    args.datasetVersion,
     args.perspective,
     encodeURIComponent(args.facilityId),
   ].join(":");
@@ -126,7 +126,7 @@ export async function buildFacilitiesSelectionCacheKey(
 
   return [
     "facilities:selection:v1",
-    args.dataVersion,
+    args.datasetVersion,
     perspectivesHash,
     String(args.limitPerPerspective),
     geometryHash,

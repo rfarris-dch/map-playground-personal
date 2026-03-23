@@ -10,6 +10,7 @@ import {
   createAppPerformanceTimer,
   recordAppPerformanceCounter,
 } from "@/features/app/diagnostics/app-performance.service";
+import { shouldRefreshViewportData } from "@/features/app/interaction/map-interaction-policy.service";
 import type {
   LayerRuntimeController,
   LayerRuntimeOptions,
@@ -134,6 +135,7 @@ export function createLayerRuntime(
   };
   const controllerVisibility = new Map<LayerId, boolean>();
   let lastMapZoom: number | null = null;
+  let lastInteractionViewportKey: string | null = null;
   let lastSnapshotSignature: string | null = null;
   let visibilityDirty = true;
   let unsubscribeInteractionCoordinator: (() => void) | null = null;
@@ -194,6 +196,7 @@ export function createLayerRuntime(
   };
 
   const onLoad = (): void => {
+    lastInteractionViewportKey = null;
     applyVisibility(true);
     // Style reload: other controllers may recreate their map layers in their
     // own "load" handlers that fire AFTER this one (registration order).
@@ -215,6 +218,15 @@ export function createLayerRuntime(
         return;
       }
 
+      if (!shouldRefreshViewportData(snapshot)) {
+        return;
+      }
+
+      if (lastInteractionViewportKey === snapshot.canonicalViewportKey) {
+        return;
+      }
+
+      lastInteractionViewportKey = snapshot.canonicalViewportKey;
       onMoveEnd();
     });
   }
@@ -299,6 +311,7 @@ export function createLayerRuntime(
       state.userVisibility.clear();
       controllerVisibility.clear();
       lastMapZoom = null;
+      lastInteractionViewportKey = null;
       lastSnapshotSignature = null;
       visibilityDirty = false;
     },
