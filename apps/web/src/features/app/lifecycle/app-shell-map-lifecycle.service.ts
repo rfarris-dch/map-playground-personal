@@ -55,6 +55,7 @@ export async function initializeMapLifecycleRuntime(
     mapSetup.value.map
   );
   options.runtime.layerRuntime.value = createLayerRuntime(mapSetup.value.map, {
+    initialUserVisibleLayerIds: options.readInitialUserVisibleLayerIds(),
     interactionCoordinator: options.runtime.interactionCoordinator.value,
     onSnapshot: (snapshot) => {
       options.state.layerRuntimeSnapshot.value = snapshot;

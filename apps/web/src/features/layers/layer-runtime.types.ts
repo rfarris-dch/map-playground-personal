@@ -24,6 +24,7 @@ export interface LayerRuntimeSnapshot {
 
 export interface LayerRuntimeOptions {
   readonly catalog?: LayerCatalog;
+  readonly initialUserVisibleLayerIds?: readonly LayerId[] | null;
   readonly interactionCoordinator?: MapInteractionCoordinator | null;
   readonly onSnapshot?: (snapshot: LayerRuntimeSnapshot) => void;
 }

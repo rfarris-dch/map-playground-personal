@@ -2,6 +2,7 @@ import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-per
 import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts/facilities-http";
 import type { MapContextTransfer } from "@map-migration/http-contracts/map-context-transfer";
 import type { IMap, MapExpression } from "@map-migration/map-engine";
+import type { LayerId } from "@map-migration/map-layer-catalog";
 import type { ComputedRef, ShallowRef } from "vue";
 import type {
   BoundaryControllerState,
@@ -179,6 +180,7 @@ export interface UseAppShellMapLifecycleOptions {
   readonly filters: AppShellMapFiltersRefs;
   readonly initialViewport?: MapContextTransfer["viewport"];
   readonly layers: AppShellMapLifecycleLayerRefs;
+  readonly readInitialUserVisibleLayerIds: () => readonly LayerId[];
   readonly runtime: AppShellMapLifecycleRuntimeRefs;
   readonly state: AppShellMapLifecycleStateRefs;
   readonly visibility: AppShellVisibilityLifecycleController;

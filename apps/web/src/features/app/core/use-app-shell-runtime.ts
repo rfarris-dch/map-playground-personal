@@ -7,6 +7,7 @@ import { resolveScannerParcelsBlockedReason } from "@/features/app/overlays/map-
 import { useMapOverlays } from "@/features/app/overlays/use-map-overlays";
 import { useAppShellSelection } from "@/features/app/selection/use-app-shell-selection";
 import { useAppShellSelectionAnalysis } from "@/features/app/selection/use-app-shell-selection-analysis";
+import { resolveUserVisibleLayerIds } from "@/features/app/visibility/app-shell-visibility.service";
 import { useAppShellVisibility } from "@/features/app/visibility/use-app-shell-visibility";
 import type { UseAppShellRuntimeResult } from "./use-app-shell.types";
 import { useAppShellState } from "./use-app-shell-state";
@@ -107,6 +108,19 @@ export function useAppShellRuntime(
       gasFilter: mapFilters.gasFilter,
     },
     initialViewport: options.initialViewport,
+    readInitialUserVisibleLayerIds: () =>
+      resolveUserVisibleLayerIds({
+        boundaryVisibility: visibility.boundaryVisibility.value,
+        fiberVisibility: fiber.visibleFiberLayers.value,
+        floodVisibility: visibility.floodVisibility.value,
+        gasPipelineVisible: visibility.gasPipelineVisible.value,
+        hydroBasinsVisible: visibility.hydroBasinsVisible.value,
+        marketBoundaryVisibility: visibility.marketBoundaryVisibility.value,
+        parcelsVisible: visibility.parcelsVisible.value,
+        powerVisibility: visibility.powerVisibility.value,
+        visiblePerspectives: visibility.visiblePerspectives.value,
+        waterVisible: visibility.waterVisible.value,
+      }),
     layers: {
       boundaryControllers: state.boundaryControllers,
       marketBoundaryControllers: state.marketBoundaryControllers,

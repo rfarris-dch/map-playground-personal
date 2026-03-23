@@ -48,6 +48,21 @@ function readCatalogVisibilityDefaults(catalog: LayerCatalog): Map<LayerId, bool
   }, new Map<LayerId, boolean>());
 }
 
+function readInitialUserVisibility(
+  catalog: LayerCatalog,
+  initialUserVisibleLayerIds?: readonly LayerId[] | null
+): Map<LayerId, boolean> {
+  if (initialUserVisibleLayerIds === null || typeof initialUserVisibleLayerIds === "undefined") {
+    return readCatalogVisibilityDefaults(catalog);
+  }
+
+  const visibleLayerIds = new Set(initialUserVisibleLayerIds);
+  return LAYER_IDS.reduce((visibility, layerId) => {
+    visibility.set(layerId, visibleLayerIds.has(layerId));
+    return visibility;
+  }, new Map<LayerId, boolean>());
+}
+
 function computeLayerVisibility(args: {
   readonly catalog: LayerCatalog;
   readonly effectiveVisibility: ReadonlyMap<LayerId, boolean>;
@@ -131,7 +146,7 @@ export function createLayerRuntime(
     destroyed: false,
     effectiveVisibility: new Map(),
     stressBlocked: new Map(),
-    userVisibility: readCatalogVisibilityDefaults(catalog),
+    userVisibility: readInitialUserVisibility(catalog, options.initialUserVisibleLayerIds),
   };
   const controllerVisibility = new Map<LayerId, boolean>();
   let lastMapZoom: number | null = null;

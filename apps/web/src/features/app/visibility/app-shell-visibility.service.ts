@@ -1,9 +1,15 @@
-import { DEFAULT_LAYER_CATALOG, type LayerCatalog } from "@map-migration/map-layer-catalog";
+import {
+  DEFAULT_LAYER_CATALOG,
+  type LayerCatalog,
+  type LayerId,
+} from "@map-migration/map-layer-catalog";
+import type { MarketBoundaryVisibilityState } from "@/features/app/components/map-layer-controls-panel.types";
 import {
   FLOOD_100_LAYER_ID,
   FLOOD_500_LAYER_ID,
   facilitiesLayerId,
   fiberLayerId,
+  GAS_PIPELINES_LAYER_ID,
   HYDRO_BASINS_LAYER_ID,
   PARCELS_LAYER_ID,
   powerLayerId,
@@ -105,6 +111,93 @@ export function buildInitialHydroBasinsVisible(
 
 export function buildInitialBasemapVisibilityState(): BasemapVisibilityState {
   return defaultBasemapVisibilityState();
+}
+
+interface ResolveUserVisibleLayerIdsArgs {
+  readonly boundaryVisibility: BoundaryVisibilityState;
+  readonly fiberVisibility: FiberVisibilityState;
+  readonly floodVisibility: FloodVisibilityState;
+  readonly gasPipelineVisible: boolean;
+  readonly hydroBasinsVisible: boolean;
+  readonly marketBoundaryVisibility: MarketBoundaryVisibilityState;
+  readonly parcelsVisible: boolean;
+  readonly powerVisibility: PowerVisibilityState;
+  readonly visiblePerspectives: PerspectiveVisibilityState;
+  readonly waterVisible: boolean;
+}
+
+export function resolveUserVisibleLayerIds(
+  args: ResolveUserVisibleLayerIdsArgs
+): readonly LayerId[] {
+  const visibleLayerIds: LayerId[] = [];
+
+  if (args.boundaryVisibility.county) {
+    visibleLayerIds.push("county");
+  }
+  if (args.boundaryVisibility.state) {
+    visibleLayerIds.push("state");
+  }
+  if (args.boundaryVisibility.country) {
+    visibleLayerIds.push("country");
+  }
+
+  if (args.visiblePerspectives.colocation) {
+    visibleLayerIds.push(facilitiesLayerId("colocation"));
+  }
+  if (args.visiblePerspectives.hyperscale) {
+    visibleLayerIds.push(facilitiesLayerId("hyperscale"));
+  }
+  if (args.visiblePerspectives["hyperscale-leased"]) {
+    visibleLayerIds.push(facilitiesLayerId("hyperscale-leased"));
+  }
+  if (args.visiblePerspectives.enterprise) {
+    visibleLayerIds.push(facilitiesLayerId("enterprise"));
+  }
+
+  if (args.marketBoundaryVisibility.market) {
+    visibleLayerIds.push("markets.market");
+  }
+  if (args.marketBoundaryVisibility.submarket) {
+    visibleLayerIds.push("markets.submarket");
+  }
+
+  if (args.floodVisibility.flood100) {
+    visibleLayerIds.push(FLOOD_100_LAYER_ID);
+  }
+  if (args.floodVisibility.flood500) {
+    visibleLayerIds.push(FLOOD_500_LAYER_ID);
+  }
+  if (args.hydroBasinsVisible) {
+    visibleLayerIds.push(HYDRO_BASINS_LAYER_ID);
+  }
+  if (args.parcelsVisible) {
+    visibleLayerIds.push(PARCELS_LAYER_ID);
+  }
+  if (args.waterVisible) {
+    visibleLayerIds.push(WATER_FEATURES_LAYER_ID);
+  }
+  if (args.gasPipelineVisible) {
+    visibleLayerIds.push(GAS_PIPELINES_LAYER_ID);
+  }
+
+  if (args.powerVisibility.transmission) {
+    visibleLayerIds.push(powerLayerId("transmission"));
+  }
+  if (args.powerVisibility.substations) {
+    visibleLayerIds.push(powerLayerId("substations"));
+  }
+  if (args.powerVisibility.plants) {
+    visibleLayerIds.push(powerLayerId("plants"));
+  }
+
+  if (args.fiberVisibility.metro) {
+    visibleLayerIds.push(fiberLayerId("metro"));
+  }
+  if (args.fiberVisibility.longhaul) {
+    visibleLayerIds.push(fiberLayerId("longhaul"));
+  }
+
+  return visibleLayerIds;
 }
 
 export function syncPerspectiveVisibilityState(args: {
