@@ -12,12 +12,12 @@ import {
   buildFacilitiesManifestRoute,
 } from "@map-migration/http-contracts/api-routes";
 import {
+  type FacilitiesDatasetManifest,
   FacilitiesDatasetManifestSchema,
   type FacilitiesFeatureCollection,
   FacilitiesFeatureCollectionSchema,
 } from "@map-migration/http-contracts/facilities-http";
 import { Effect } from "effect";
-import { z } from "zod";
 import { recordAppPerformanceCounter } from "@/features/app/diagnostics/app-performance.service";
 import type { FacilitiesBboxRequest } from "@/features/facilities/facilities.types";
 import { buildApiRequestInit } from "@/lib/api/api-request-init.service";
@@ -33,19 +33,63 @@ declare global {
 const FACILITIES_DATASET_MANIFEST_CACHE_TTL_MS = 30_000;
 const facilitiesDatasetManifestStorageKey = "map:facilities-dataset-manifest";
 
-const FacilitiesDatasetManifestCacheRecordSchema = z.object({
-  etag: z.string().min(1).optional(),
-  expiresAtEpochMs: z.number().finite(),
-  manifest: FacilitiesDatasetManifestSchema,
-});
-
-type FacilitiesDatasetManifestCacheRecord = z.infer<
-  typeof FacilitiesDatasetManifestCacheRecordSchema
->;
+interface FacilitiesDatasetManifestCacheRecord {
+  readonly etag?: string;
+  readonly expiresAtEpochMs: number;
+  readonly manifest: FacilitiesDatasetManifest;
+}
 type FacilitiesBboxEffectSuccess = ApiEffectSuccess<FacilitiesFeatureCollection>;
 
 function nowEpochMs(): number {
   return Date.now();
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function readFiniteNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function readNonEmptyString(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+function readFacilitiesDatasetManifestCacheRecord(
+  value: unknown
+): FacilitiesDatasetManifestCacheRecord | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const expiresAtEpochMs = readFiniteNumber(value.expiresAtEpochMs);
+  if (expiresAtEpochMs === null) {
+    return null;
+  }
+
+  const manifestResult = FacilitiesDatasetManifestSchema.safeParse(value.manifest);
+  if (!manifestResult.success) {
+    return null;
+  }
+
+  if (typeof value.etag === "undefined") {
+    return {
+      expiresAtEpochMs,
+      manifest: manifestResult.data,
+    };
+  }
+
+  const etag = readNonEmptyString(value.etag);
+  if (etag === null) {
+    return null;
+  }
+
+  return {
+    etag,
+    expiresAtEpochMs,
+    manifest: manifestResult.data,
+  };
 }
 
 function isFacilitiesDatasetManifestCacheFresh(
@@ -73,11 +117,9 @@ function readPersistedFacilitiesDatasetManifestCache(): FacilitiesDatasetManifes
   }
 
   try {
-    const parsedCacheRecord = FacilitiesDatasetManifestCacheRecordSchema.safeParse(
-      JSON.parse(rawCacheRecord)
-    );
-    if (parsedCacheRecord.success) {
-      return parsedCacheRecord.data;
+    const parsedCacheRecord = readFacilitiesDatasetManifestCacheRecord(JSON.parse(rawCacheRecord));
+    if (parsedCacheRecord !== null) {
+      return parsedCacheRecord;
     }
   } catch {
     // Drop corrupted persisted manifest cache and refetch.

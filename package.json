@@ -13,7 +13,7 @@
     "dev:api:sync-worker": "bun run --cwd apps/api dev:sync-worker",
     "dev:web": "turbo run dev --filter=@map-migration/web",
     "build": "turbo run build",
-    "build:deploy:app": "turbo run build --filter=@map-migration/api... --filter=@map-migration/web...",
+    "build:deploy:app": "TURBO_DAEMON=false turbo run build --filter=@map-migration/api... --filter=@map-migration/web...",
     "build:affected": "turbo run build --affected",
     "test": "turbo run test",
     "test:affected": "turbo run test --affected",
