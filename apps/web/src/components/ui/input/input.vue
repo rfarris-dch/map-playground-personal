@@ -24,11 +24,29 @@
     return "";
   }
 
+  interface InputProps {
+    readonly modelValue?: number | string | null;
+  }
+
+  const props = defineProps<InputProps>();
+
+  const emit = defineEmits<{
+    "update:modelValue": [value: string];
+  }>();
+
   const attrs = useAttrs();
 
   const forwardedAttrs = computed(() => {
     const { class: _class, ...rest } = attrs;
     return rest;
+  });
+
+  const inputValue = computed(() => {
+    if (typeof props.modelValue === "number") {
+      return String(props.modelValue);
+    }
+
+    return props.modelValue ?? undefined;
   });
 
   const className = computed(() =>
@@ -40,8 +58,17 @@
       normalizeClassValue(attrs.class)
     )
   );
+
+  function handleInput(event: Event): void {
+    const eventTarget = event.target;
+    if (!(eventTarget instanceof HTMLInputElement)) {
+      return;
+    }
+
+    emit("update:modelValue", eventTarget.value);
+  }
 </script>
 
 <template>
-  <input :class="className" v-bind="forwardedAttrs">
+  <input :value="inputValue" :class="className" v-bind="forwardedAttrs" @input="handleInput">
 </template>
