@@ -12,6 +12,7 @@ import { bodyLimit } from "hono/body-limit";
 import { HTTPException } from "hono/http-exception";
 import { requestId } from "hono/request-id";
 import { timeout } from "hono/timeout";
+import { createMapAppAuthMiddleware, registerAuthRoute } from "@/auth/auth-route.service";
 import { parsePositiveIntFlag } from "@/config/env-parsing.service";
 import { assertPostgresReady } from "@/db/postgres";
 import { registerEffectMetricsRoute } from "@/effect/effect-metrics.route";
@@ -176,6 +177,8 @@ export function createApiApp(options: CreateApiAppOptions = {}): Hono {
     return timeoutMiddleware(c, next);
   });
 
+  app.use("/api/geo/*", createMapAppAuthMiddleware());
+
   app.onError((error, c) => {
     const requestIdValue = resolveRequestId(c, "api");
     if (error instanceof HTTPException) {
@@ -215,6 +218,7 @@ export function createApiApp(options: CreateApiAppOptions = {}): Hono {
     runEffectRoute(c, healthRouteProgram(resolvedOptions.readinessCheck))
   );
 
+  registerAuthRoute(app);
   registerEffectMetricsRoute(app);
   registerPipelineStatusRoute(app);
   registerFacilitiesRoute(app);

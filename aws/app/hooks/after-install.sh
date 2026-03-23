@@ -24,6 +24,10 @@ read_env_value() {
   printf '%s' "${line#*=}"
 }
 
+escape_sed_replacement() {
+  printf '%s' "${1}" | sed -e 's/[\/&|]/\\&/g'
+}
+
 if ! id -u deploy >/dev/null 2>&1; then
   echo "[deploy] deploy user is required before CodeDeploy runs" >&2
   exit 1
@@ -63,7 +67,14 @@ if [[ "${configured_fiber_locator_source_mode}" != "${required_fiber_locator_sou
   exit 1
 fi
 
-for required_var in DATABASE_URL FIBER_LOCATOR_SOURCE_MODE FIBERLOCATOR_API_BASE_URL FIBERLOCATOR_STATIC_TOKEN FIBERLOCATOR_LINE_IDS; do
+origin_auth_value="$(read_env_value "MAP_ORIGIN_AUTH_HEADER_VALUE" || true)"
+origin_auth_value="$(printf '%s' "${origin_auth_value}" | tr -d '\r')"
+if [[ -z "${origin_auth_value}" ]]; then
+  echo "[deploy] ${env_file} is missing required runtime value: MAP_ORIGIN_AUTH_HEADER_VALUE" >&2
+  exit 1
+fi
+
+for required_var in DATABASE_URL FIBER_LOCATOR_SOURCE_MODE FIBERLOCATOR_API_BASE_URL FIBERLOCATOR_STATIC_TOKEN FIBERLOCATOR_LINE_IDS MAP_APP_AUTH_ALLOWED_EMAIL_DOMAIN MAP_APP_AUTH_IAM_BASE_URL MAP_APP_AUTH_SESSION_COOKIE_NAME MAP_APP_AUTH_SESSION_SECRET MAP_ORIGIN_AUTH_HEADER_VALUE; do
   if [[ -z "$(read_env_value "${required_var}" || true)" ]]; then
     echo "[deploy] ${env_file} is missing required runtime value: ${required_var}" >&2
     exit 1
@@ -72,7 +83,10 @@ done
 
 cd "${deploy_root}"
 install -m 0644 "${service_source}" "${service_target}"
-install -m 0644 "${nginx_conf_source}" "${nginx_conf_target}"
+sed \
+  "s|__MAP_ORIGIN_AUTH_HEADER_VALUE__|$(escape_sed_replacement "${origin_auth_value}")|g" \
+  "${nginx_conf_source}" > "${nginx_conf_target}"
+chmod 0644 "${nginx_conf_target}"
 
 find "${deploy_root}/scripts" -type f -name '*.sh' -exec chmod 755 {} +
 chown -R deploy:deploy "${deploy_root}"

@@ -66,6 +66,8 @@ export class ApiSchemaError extends TaggedError("ApiSchemaError")<{
 
 export type ApiEffectError = ApiAbortedError | ApiHttpError | ApiNetworkError | ApiSchemaError;
 
+export const MapAppAuthRequiredEventName = "map-app:auth-required";
+
 // ---------------------------------------------------------------------------
 // Retry profiles
 // ---------------------------------------------------------------------------
@@ -219,6 +221,14 @@ function parseApiError(details: unknown): ParsedApiError | null {
   };
 }
 
+function notifyMapAppAuthRequired(status: number): void {
+  if (status !== 401 || typeof window === "undefined") {
+    return;
+  }
+
+  window.dispatchEvent(new CustomEvent(MapAppAuthRequiredEventName));
+}
+
 export function getApiErrorMessage(error: ApiEffectError, fallbackMessage: string): string {
   if ("message" in error && typeof error.message === "string" && error.message.length > 0) {
     return error.message;
@@ -353,6 +363,7 @@ export function apiRequestJsonEffect<TValue>(
         case "RequestHttpError": {
           const apiError = parseApiError(error.details);
           if (apiError !== null) {
+            notifyMapAppAuthRequired(error.status);
             return fail(
               new ApiHttpError({
                 requestId: apiError.requestId,
@@ -366,6 +377,7 @@ export function apiRequestJsonEffect<TValue>(
             );
           }
 
+          notifyMapAppAuthRequired(error.status);
           return fail(
             new ApiHttpError({
               requestId: error.requestId,

@@ -22,6 +22,10 @@
       "types": "./dist/api-error.d.ts",
       "default": "./dist/api-error.js"
     },
+    "./auth-http": {
+      "types": "./dist/auth-http.d.ts",
+      "default": "./dist/auth-http.js"
+    },
     "./api-response-meta": {
       "types": "./dist/api-response-meta.d.ts",
       "default": "./dist/api-response-meta.js"

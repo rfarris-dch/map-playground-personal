@@ -58,6 +58,9 @@ export interface CountyScoresRouteArgs {
 export interface ApiRoutesTable {
   readonly analysisHistory: string;
   readonly analysisSummary: string;
+  readonly authLogin: string;
+  readonly authLogout: string;
+  readonly authSession: string;
   readonly boundariesPower: string;
   readonly countyScores: string;
   readonly countyScoresStatus: string;
@@ -127,6 +130,9 @@ export const HealthSchema = z.object({
 export type HealthResponse = z.infer<typeof HealthSchema>;
 
 export const ApiRoutes = Object.freeze<ApiRoutesTable>({
+  authLogin: "/api/auth/login",
+  authLogout: "/api/auth/logout",
+  authSession: "/api/auth/session",
   health: "/api/health",
   healthAlias: "/health",
   analysisHistory: "/api/geo/analysis/history",
@@ -204,6 +210,18 @@ export function buildFacilitiesBboxRoute(args: FacilitiesBboxRouteArgs): string 
 
 export function buildFacilitiesManifestRoute(): string {
   return ApiRoutes.facilitiesManifest;
+}
+
+export function buildAuthLoginRoute(): string {
+  return ApiRoutes.authLogin;
+}
+
+export function buildAuthLogoutRoute(): string {
+  return ApiRoutes.authLogout;
+}
+
+export function buildAuthSessionRoute(): string {
+  return ApiRoutes.authSession;
 }
 
 export function buildFacilitiesSelectionRoute(): string {

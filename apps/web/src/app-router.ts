@@ -2,6 +2,7 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router"
 import FacilitiesColocationPage from "@/pages/facilities-colocation-page.vue";
 import FacilitiesHyperscalePage from "@/pages/facilities-hyperscale-page.vue";
 import FacilitiesPage from "@/pages/facilities-page.vue";
+import LoginPage from "@/pages/login-page.vue";
 import MapPage from "@/pages/map-page.vue";
 import MarketsPage from "@/pages/markets-page.vue";
 import NotFoundPage from "@/pages/not-found-page.vue";
@@ -12,6 +13,14 @@ const appRoutes: readonly RouteRecordRaw[] = [
   {
     path: "/",
     redirect: "/map",
+  },
+  {
+    path: "/login",
+    name: "login",
+    component: LoginPage,
+    meta: {
+      public: true,
+    },
   },
   {
     path: "/map",
@@ -113,4 +122,33 @@ const appRoutes: readonly RouteRecordRaw[] = [
 export const appRouter = createRouter({
   history: createWebHistory(),
   routes: [...appRoutes],
+});
+
+function readRedirectQueryValue(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+appRouter.beforeEach(async (to) => {
+  const { ensureMapAppAuthSessionLoaded } = await import("@/features/auth/auth-session.service");
+  const session = await ensureMapAppAuthSessionLoaded();
+  const isPublicRoute = to.meta.public === true;
+
+  if (session === null) {
+    if (isPublicRoute) {
+      return true;
+    }
+
+    return {
+      name: "login",
+      query: {
+        redirect: to.fullPath,
+      },
+    };
+  }
+
+  if (isPublicRoute) {
+    return readRedirectQueryValue(to.query.redirect) ?? "/map";
+  }
+
+  return true;
 });
