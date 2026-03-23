@@ -1,5 +1,7 @@
-import type { ApiEffectError, ApiEffectSuccess } from "@map-migration/core-runtime/api";
 import {
+  type ApiEffectError,
+  type ApiEffectSuccess,
+  ApiNetworkError,
   type ApiResult,
   apiRequestJson,
   apiRequestJsonEffect,
@@ -10,9 +12,11 @@ import {
   type SpatialAnalysisSummaryResponse,
   SpatialAnalysisSummaryResponseSchema,
 } from "@map-migration/http-contracts/spatial-analysis-summary-http";
-import type { Effect } from "effect";
+import { Effect } from "effect";
+import { resolveFacilitiesDatasetVersionPromise } from "@/features/facilities/api";
 import {
   buildJsonPostRequestInit,
+  withDatasetVersionHeader,
   withParcelIngestionRunIdHeader,
 } from "@/lib/api/api-request-init.service";
 
@@ -23,16 +27,34 @@ export interface FetchSpatialAnalysisSummaryOptions {
 
 export type SpatialAnalysisSummaryResult = ApiResult<SpatialAnalysisSummaryResponse>;
 
+function withFacilitiesDatasetVersion(
+  request: SpatialAnalysisSummaryRequest,
+  facilitiesDatasetVersion: string
+): SpatialAnalysisSummaryRequest {
+  if (request.facilitiesDatasetVersion === facilitiesDatasetVersion) {
+    return request;
+  }
+
+  return {
+    ...request,
+    facilitiesDatasetVersion,
+  };
+}
+
 function buildSpatialAnalysisSummaryRequestInit(
   request: SpatialAnalysisSummaryRequest,
-  options: FetchSpatialAnalysisSummaryOptions
+  options: FetchSpatialAnalysisSummaryOptions,
+  facilitiesDatasetVersion: string
 ): RequestInit {
-  return withParcelIngestionRunIdHeader(
-    buildJsonPostRequestInit({
-      body: request,
-      signal: options.signal,
-    }),
-    options.expectedParcelIngestionRunId
+  return withDatasetVersionHeader(
+    withParcelIngestionRunIdHeader(
+      buildJsonPostRequestInit({
+        body: withFacilitiesDatasetVersion(request, facilitiesDatasetVersion),
+        signal: options.signal,
+      }),
+      options.expectedParcelIngestionRunId
+    ),
+    facilitiesDatasetVersion
   );
 }
 
@@ -40,10 +62,12 @@ export function fetchSpatialAnalysisSummary(
   request: SpatialAnalysisSummaryRequest,
   options: FetchSpatialAnalysisSummaryOptions
 ): Promise<SpatialAnalysisSummaryResult> {
-  return apiRequestJson(
-    buildSpatialAnalysisSummaryRoute(),
-    SpatialAnalysisSummaryResponseSchema,
-    buildSpatialAnalysisSummaryRequestInit(request, options)
+  return resolveFacilitiesDatasetVersionPromise().then((facilitiesDatasetVersion) =>
+    apiRequestJson(
+      buildSpatialAnalysisSummaryRoute(),
+      SpatialAnalysisSummaryResponseSchema,
+      buildSpatialAnalysisSummaryRequestInit(request, options, facilitiesDatasetVersion)
+    )
   );
 }
 
@@ -51,9 +75,20 @@ export function fetchSpatialAnalysisSummaryEffect(
   request: SpatialAnalysisSummaryRequest,
   options: FetchSpatialAnalysisSummaryOptions
 ): Effect.Effect<ApiEffectSuccess<SpatialAnalysisSummaryResponse>, ApiEffectError, never> {
-  return apiRequestJsonEffect(
-    buildSpatialAnalysisSummaryRoute(),
-    SpatialAnalysisSummaryResponseSchema,
-    buildSpatialAnalysisSummaryRequestInit(request, options)
+  return Effect.tryPromise({
+    try: () => resolveFacilitiesDatasetVersionPromise(),
+    catch: (error) =>
+      new ApiNetworkError({
+        cause: error,
+        requestId: "",
+      }),
+  }).pipe(
+    Effect.flatMap((facilitiesDatasetVersion) =>
+      apiRequestJsonEffect(
+        buildSpatialAnalysisSummaryRoute(),
+        SpatialAnalysisSummaryResponseSchema,
+        buildSpatialAnalysisSummaryRequestInit(request, options, facilitiesDatasetVersion)
+      )
+    )
   );
 }

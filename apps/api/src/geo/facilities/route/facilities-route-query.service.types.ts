@@ -1,5 +1,6 @@
 import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
 import type { Warning } from "@map-migration/geo-kernel/warning";
+import type { FacilitiesDatasetSqlTables } from "@map-migration/geo-sql";
 import type {
   FacilitiesDetailResponse,
   FacilitiesFeatureCollection,
@@ -43,6 +44,7 @@ export type QueryFacilityDetailResult =
 export interface QueryFacilityDetailArgs {
   readonly facilityId: string;
   readonly perspective: FacilityPerspective;
+  readonly tables: FacilitiesDatasetSqlTables;
 }
 
 export type QueryFacilitiesTableResult =
@@ -67,6 +69,7 @@ export interface QueryFacilitiesTableArgs {
   readonly perspective: FacilityPerspective;
   readonly sortBy: FacilitySortBy;
   readonly sortOrder: SortDirection;
+  readonly tables: FacilitiesDatasetSqlTables;
 }
 
 export type QueryFacilitiesByPolygonResult = QueryFacilitiesByBboxResult;
@@ -96,6 +99,7 @@ export interface QueryFacilitiesByPolygonArgs {
   readonly geometryGeoJson: string;
   readonly limit: number;
   readonly perspective: FacilityPerspective;
+  readonly tables: FacilitiesDatasetSqlTables;
 }
 
 export interface QueryFacilitiesByBboxArgs {
@@ -107,4 +111,5 @@ export interface QueryFacilitiesByBboxArgs {
   };
   readonly limit: number;
   readonly perspective: FacilityPerspective;
+  readonly tables: FacilitiesDatasetSqlTables;
 }

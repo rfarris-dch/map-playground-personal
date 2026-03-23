@@ -2,13 +2,24 @@ import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-per
 import type { BBox } from "@map-migration/geo-kernel/geometry";
 import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts/facilities-http";
 import type { LayerId } from "@map-migration/map-layer-catalog";
-import type { MapInteractionCoordinator } from "@/features/app/interaction/map-interaction.types";
+import type {
+  MapInteractionCoordinator,
+  MapInteractionType,
+} from "@/features/app/interaction/map-interaction.types";
+
+export interface FacilitiesViewportRequestContext {
+  readonly activeViewMode: FacilitiesViewMode;
+  readonly interactionType: MapInteractionType;
+  readonly viewportKey: string;
+  readonly zoomBucket: number;
+}
 
 export interface FacilitiesBboxRequest {
   readonly bbox: BBox;
   readonly datasetVersion?: string;
   limit?: number;
   readonly perspective: FacilityPerspective;
+  readonly requestContext?: FacilitiesViewportRequestContext;
 }
 
 export type FacilitiesHiddenReason = "stress" | "viewport-span" | "zoom";

@@ -81,3 +81,21 @@ export function withParcelIngestionRunIdHeader(
     },
   };
 }
+
+export function withDatasetVersionHeader(
+  requestInit: RequestInit,
+  datasetVersion: string | null | undefined
+): RequestInit {
+  const normalizedDatasetVersion = normalizeOptionalHeaderValue(datasetVersion);
+  if (normalizedDatasetVersion === null) {
+    return requestInit;
+  }
+
+  return {
+    ...requestInit,
+    headers: {
+      ...toHeadersRecord(requestInit.headers),
+      [ApiHeaders.datasetVersion]: normalizedDatasetVersion,
+    },
+  };
+}

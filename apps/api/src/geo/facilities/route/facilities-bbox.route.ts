@@ -17,6 +17,10 @@ import {
   buildFacilitiesBboxCacheKey,
   hashFacilitiesCachePayload,
 } from "@/geo/facilities/route/facilities-cache-key.service";
+import {
+  bindFacilitiesDatasetVersion,
+  readRequestedFacilitiesDatasetVersion,
+} from "@/geo/facilities/route/facilities-dataset-version.service";
 import { recordFacilitiesBboxMetrics } from "@/geo/facilities/route/facilities-performance.service";
 import {
   buildFacilitiesMappingRouteError,
@@ -31,6 +35,24 @@ import { fromApiRequest, routeError, runEffectRoute } from "@/http/effect-route"
 import { registerRouteTimeoutProfile } from "@/http/route-timeout-profile.service";
 import { getApiRuntimeConfig } from "@/http/runtime-config";
 
+function readOptionalHeaderValue(value: string | undefined): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : null;
+}
+
+function readOptionalNumericHeader(value: string | undefined): number | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const parsed = Number(value.trim());
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 export function registerFacilitiesBboxRoute<E extends Env>(app: Hono<E>): void {
   registerRouteTimeoutProfile(ApiRoutes.facilities, "facilities");
 
@@ -39,9 +61,13 @@ export function registerFacilitiesBboxRoute<E extends Env>(app: Hono<E>): void {
       c,
       fromApiRequest(async ({ honoContext, requestId, signal }) => {
         const routeStartedAt = globalThis.performance.now();
+        const requestedDatasetVersion = readRequestedFacilitiesDatasetVersion({
+          headerValue: honoContext.req.header(ApiHeaders.datasetVersion),
+          queryValue: honoContext.req.query("v") ?? honoContext.req.query("datasetVersion"),
+        });
         const request = FacilitiesBboxRequestSchema.safeParse({
           bbox: honoContext.req.query("bbox"),
-          datasetVersion: honoContext.req.query("v") ?? honoContext.req.query("datasetVersion"),
+          datasetVersion: requestedDatasetVersion ?? undefined,
           limit: honoContext.req.query("limit"),
           perspective: honoContext.req.query("perspective"),
         });
@@ -67,9 +93,24 @@ export function registerFacilitiesBboxRoute<E extends Env>(app: Hono<E>): void {
           request.data.bbox.east,
           request.data.bbox.north,
         ].join(",");
+        const versionBinding = await bindFacilitiesDatasetVersion(
+          request.data.datasetVersion ?? null,
+          signal
+        );
         const runtimeConfig = getApiRuntimeConfig();
-        const effectiveDatasetVersion =
-          request.data.datasetVersion ?? runtimeConfig.facilitiesDatasetVersion;
+        const effectiveDatasetVersion = versionBinding.actualDatasetVersion;
+        const interactionType = readOptionalHeaderValue(
+          honoContext.req.header(ApiHeaders.facilitiesInteractionType)
+        );
+        const viewMode = readOptionalHeaderValue(
+          honoContext.req.header(ApiHeaders.facilitiesViewMode)
+        );
+        const viewportKey = readOptionalHeaderValue(
+          honoContext.req.header(ApiHeaders.facilitiesViewportKey)
+        );
+        const zoomBucket = readOptionalNumericHeader(
+          honoContext.req.header(ApiHeaders.facilitiesZoomBucket)
+        );
         let freshMappingTimeMs = 0;
         let freshSqlTimeMs = 0;
         const cacheResult = await resolveFacilitiesCachedEntry<FacilitiesBboxCacheBody>({
@@ -85,6 +126,7 @@ export function registerFacilitiesBboxRoute<E extends Env>(app: Hono<E>): void {
               bbox: request.data.bbox,
               limit,
               perspective,
+              tables: versionBinding.tables,
             });
 
             if (!queryResult.ok) {
@@ -113,16 +155,22 @@ export function registerFacilitiesBboxRoute<E extends Env>(app: Hono<E>): void {
           },
         }).catch((error) => {
           recordFacilitiesBboxMetrics({
+            boundDatasetVersion: effectiveDatasetVersion,
             canonicalBboxKey,
             effectiveLimit: limit,
+            interactionType,
             mappingTimeMs: 0,
             outcome: signal.aborted ? "aborted" : "failed",
             perspective,
+            requestedDatasetVersion: versionBinding.requestedDatasetVersion,
             responseBytes: 0,
             routeLatencyMs: globalThis.performance.now() - routeStartedAt,
             rowCount: 0,
             sqlTimeMs: 0,
             truncated: false,
+            viewMode,
+            viewportKey,
+            zoomBucket,
           });
           throw error;
         });
@@ -168,16 +216,22 @@ export function registerFacilitiesBboxRoute<E extends Env>(app: Hono<E>): void {
           });
         }
         recordFacilitiesBboxMetrics({
+          boundDatasetVersion: effectiveDatasetVersion,
           canonicalBboxKey,
           effectiveLimit: limit,
+          interactionType,
           mappingTimeMs: cacheResult.cacheStatus === "miss" ? freshMappingTimeMs : 0,
           outcome: "completed",
           perspective,
+          requestedDatasetVersion: versionBinding.requestedDatasetVersion,
           responseBytes: cacheResult.entry.payloadBytes,
           routeLatencyMs: globalThis.performance.now() - routeStartedAt,
           rowCount: cacheResult.entry.payload.features.length,
           sqlTimeMs: cacheResult.cacheStatus === "miss" ? freshSqlTimeMs : 0,
           truncated: cacheResult.entry.payload.truncated,
+          viewMode,
+          viewportKey,
+          zoomBucket,
         });
 
         return withHeaders(

@@ -3,6 +3,7 @@ import {
   buildFacilitiesBboxQuery,
   buildFacilitiesPolygonQuery,
   buildFacilityDetailQuery,
+  type FacilitiesDatasetSqlTables,
   getFacilitiesBboxQuerySpec,
   getFacilitiesPolygonQuerySpec,
 } from "@map-migration/geo-sql";
@@ -72,11 +73,13 @@ export function listFacilitiesByPolygon(
 
 export async function getFacilityById(
   facilityId: string,
-  perspective: FacilityPerspective
+  perspective: FacilityPerspective,
+  tables: FacilitiesDatasetSqlTables
 ): Promise<FacilityDetailRow | null> {
   const sqlQuery = buildFacilityDetailQuery({
     facilityId,
     perspective,
+    tables,
   });
   const rows = await runQuery<FacilityDetailRow>(sqlQuery.sql, sqlQuery.params, {
     queryClass: "facilities-interactive",
@@ -90,13 +93,29 @@ export async function getFacilityById(
   return firstRow;
 }
 
-export async function countFacilitiesTableRows(perspective: FacilityPerspective): Promise<number> {
-  if (perspective === "hyperscale") {
+function resolveFacilitiesTableName(
+  perspective: FacilityPerspective,
+  tables: FacilitiesDatasetSqlTables
+): string {
+  if (perspective === "hyperscale" || perspective === "hyperscale-leased") {
+    return tables.hyperscaleFastTable;
+  }
+
+  return tables.colocationFastTable;
+}
+
+export async function countFacilitiesTableRows(
+  perspective: FacilityPerspective,
+  tables: FacilitiesDatasetSqlTables
+): Promise<number> {
+  const tableName = resolveFacilitiesTableName(perspective, tables);
+
+  if (perspective === "hyperscale" || perspective === "hyperscale-leased") {
     const rows = await runQuery<FacilityTableCountRow>(
       `
 SELECT
   COUNT(*)::bigint AS total_count
-FROM serve.hyperscale_site_fast;
+FROM ${tableName};
 `,
       []
     );
@@ -112,7 +131,7 @@ FROM serve.hyperscale_site_fast;
     `
 SELECT
   COUNT(*)::bigint AS total_count
-FROM serve.facility_site_fast;
+FROM ${tableName};
 `,
     []
   );
@@ -140,8 +159,9 @@ const facilitySortSqlByField: Record<FacilitySortBy, string> = {
 export function listFacilitiesTableRows(query: FacilitiesTableQuery): Promise<FacilityTableRow[]> {
   const sortColumn = facilitySortSqlByField[query.sortBy];
   const sortDirection = query.sortOrder === "desc" ? "DESC" : "ASC";
+  const tableName = resolveFacilitiesTableName(query.perspective, query.tables);
 
-  if (query.perspective === "hyperscale") {
+  if (query.perspective === "hyperscale" || query.perspective === "hyperscale-leased") {
     return runQuery<FacilityTableRow>(
       `
 SELECT
@@ -157,7 +177,7 @@ SELECT
   facility.under_construction_power_mw,
   facility.available_power_mw,
   facility.freshness_ts AS updated_at
-FROM serve.hyperscale_site_fast AS facility
+FROM ${tableName} AS facility
 ORDER BY ${sortColumn} ${sortDirection} NULLS LAST, facility_name ASC, facility_id ASC
 LIMIT $1
 OFFSET $2;
@@ -181,7 +201,7 @@ SELECT
   facility.under_construction_power_mw,
   facility.available_power_mw,
   facility.freshness_ts AS updated_at
-FROM serve.facility_site_fast AS facility
+FROM ${tableName} AS facility
 ORDER BY ${sortColumn} ${sortDirection} NULLS LAST, facility_name ASC, facility_id ASC
 LIMIT $1
 OFFSET $2;

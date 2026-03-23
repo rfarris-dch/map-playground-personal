@@ -5,6 +5,7 @@ import {
   SpatialAnalysisSummaryResponseSchema,
 } from "@map-migration/http-contracts/spatial-analysis-summary-http";
 import type { Context, Env, Hono } from "hono";
+import { bindFacilitiesDatasetVersion } from "@/geo/facilities/route/facilities-dataset-version.service";
 import { readExpectedIngestionRunId } from "@/geo/parcels/route/parcels-route-meta.service";
 import { jsonOk, toDebugDetails } from "@/http/api-response";
 import { fromApiRequest, routeError, runEffectRoute } from "@/http/effect-route";
@@ -27,6 +28,7 @@ function buildMeta(
 
   return buildResponseMeta({
     dataVersion: runtimeConfig.dataVersion,
+    datasetVersion: payload.provenance.facilities.dataVersion,
     recordCount: payload.summary.totalCount,
     requestId,
     sourceMode: runtimeConfig.analysisSummarySourceMode,
@@ -108,7 +110,12 @@ export function registerAnalysisSummaryRoute<E extends Env>(app: Hono<E>): void 
         }
         const request = requestOrResponse;
 
-        const ports = createAnalysisSummaryPorts();
+        const facilitiesDatasetVersionBinding = await bindFacilitiesDatasetVersion(
+          request.facilitiesDatasetVersion ?? null
+        );
+        const ports = createAnalysisSummaryPorts({
+          facilitiesDatasetVersionBinding,
+        });
         const result = await querySpatialAnalysisSummary(
           {
             expectedParcelIngestionRunId: readExpectedIngestionRunId(honoContext),

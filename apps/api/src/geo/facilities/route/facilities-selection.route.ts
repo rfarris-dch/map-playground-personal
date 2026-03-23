@@ -16,6 +16,10 @@ import {
   buildFacilitiesSelectionCacheKey,
   hashFacilitiesCachePayload,
 } from "@/geo/facilities/route/facilities-cache-key.service";
+import {
+  bindFacilitiesDatasetVersion,
+  readRequestedFacilitiesDatasetVersion,
+} from "@/geo/facilities/route/facilities-dataset-version.service";
 import { buildFacilitiesRouteMeta } from "@/geo/facilities/route/facilities-route-meta.service";
 import { jsonOk, toDebugDetails, withHeaders } from "@/http/api-response";
 import { fromApiRequest, routeError, runEffectRoute } from "@/http/effect-route";
@@ -90,6 +94,7 @@ function toFacilitiesSelectionRouteError(error: {
 async function handleFacilitiesSelectionRequest(args: {
   readonly honoContext: Context;
   readonly requestId: string;
+  readonly signal?: AbortSignal;
 }) {
   const requestResult = await readFacilitiesSelectionRequest(args.honoContext, args.requestId);
   if (!requestResult.ok) {
@@ -97,10 +102,17 @@ async function handleFacilitiesSelectionRequest(args: {
   }
 
   const runtimeConfig = getApiRuntimeConfig();
+  const versionBinding = await bindFacilitiesDatasetVersion(
+    readRequestedFacilitiesDatasetVersion({
+      headerValue: args.honoContext.req.header(ApiHeaders.datasetVersion),
+      queryValue: args.honoContext.req.query("v") ?? args.honoContext.req.query("datasetVersion"),
+    }),
+    args.signal
+  );
   const cacheResult = await resolveFacilitiesCachedEntry<FacilitiesSelectionCacheBody>({
     allowStaleOnError: isStaleEligibleFacilitiesSelectionError,
     key: await buildFacilitiesSelectionCacheKey({
-      datasetVersion: runtimeConfig.facilitiesDatasetVersion,
+      datasetVersion: versionBinding.actualDatasetVersion,
       geometry: requestResult.value.geometry,
       limitPerPerspective: requestResult.value.limitPerPerspective,
       perspectives: requestResult.value.perspectives,
@@ -110,6 +122,7 @@ async function handleFacilitiesSelectionRequest(args: {
         geometry: requestResult.value.geometry,
         limitPerPerspective: requestResult.value.limitPerPerspective,
         perspectives: requestResult.value.perspectives,
+        tables: versionBinding.tables,
       });
       if (!selectionResult.ok) {
         throw toFacilitiesSelectionRouteError(selectionResult.value);
@@ -130,7 +143,7 @@ async function handleFacilitiesSelectionRequest(args: {
 
       return buildFacilitiesCacheEntry({
         dataVersion: runtimeConfig.dataVersion,
-        datasetVersion: runtimeConfig.facilitiesDatasetVersion,
+        datasetVersion: versionBinding.actualDatasetVersion,
         etag: `"${hashFacilitiesCachePayload(serializedPayloadBody)}"`,
         generatedAt: new Date().toISOString(),
         originRequestId: args.requestId,
@@ -181,8 +194,8 @@ export function registerFacilitiesSelectionRoute<E extends Env>(app: Hono<E>): v
   app.post(ApiRoutes.facilitiesSelection, (c) =>
     runEffectRoute(
       c,
-      fromApiRequest(({ honoContext, requestId }) =>
-        handleFacilitiesSelectionRequest({ honoContext, requestId })
+      fromApiRequest(({ honoContext, requestId, signal }) =>
+        handleFacilitiesSelectionRequest({ honoContext, requestId, signal })
       )
     )
   );

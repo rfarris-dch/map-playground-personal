@@ -21,20 +21,28 @@ export interface SqlQuerySpec {
   readonly sql: string;
 }
 
+export interface FacilitiesDatasetSqlTables {
+  readonly colocationFastTable: string;
+  readonly hyperscaleFastTable: string;
+}
+
 export interface FacilitiesBboxSqlQueryArgs extends BBox {
   readonly limit: number;
   readonly perspective: FacilityPerspective;
+  readonly tables?: FacilitiesDatasetSqlTables;
 }
 
 export interface FacilitiesPolygonSqlQueryArgs {
   readonly geometryGeoJson: string;
   readonly limit: number;
   readonly perspective: FacilityPerspective;
+  readonly tables?: FacilitiesDatasetSqlTables;
 }
 
 export interface FacilityDetailSqlQueryArgs {
   readonly facilityId: string;
   readonly perspective: FacilityPerspective;
+  readonly tables?: FacilitiesDatasetSqlTables;
 }
 
 export type ParcelBboxFilter = BBox;

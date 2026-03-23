@@ -98,6 +98,7 @@ export async function queryFacilitiesByBbox(
       ...args.bbox,
       limit: args.limit + 1,
       perspective: args.perspective,
+      tables: args.tables,
     });
     return mapFacilitiesFeatureResult({
       rows,
@@ -119,6 +120,7 @@ export async function queryFacilitiesByPolygon(
       geometryGeoJson: args.geometryGeoJson,
       limit: args.limit + 1,
       perspective: args.perspective,
+      tables: args.tables,
     });
     return mapFacilitiesFeatureResult({
       rows,
@@ -139,13 +141,14 @@ export async function queryFacilitiesTable(
 
   try {
     [totalCount, rows] = await Promise.all([
-      countFacilitiesTableRows(args.perspective),
+      countFacilitiesTableRows(args.perspective, args.tables),
       listFacilitiesTableRows({
         perspective: args.perspective,
         limit: args.limit,
         offset: args.offset,
         sortBy: args.sortBy,
         sortOrder: args.sortOrder,
+        tables: args.tables,
       }),
     ]);
   } catch (error) {
@@ -171,7 +174,7 @@ export async function queryFacilityDetail(
   let row: Awaited<ReturnType<typeof getFacilityById>>;
 
   try {
-    row = await getFacilityById(args.facilityId, args.perspective);
+    row = await getFacilityById(args.facilityId, args.perspective, args.tables);
   } catch (error) {
     return queryFailure(error);
   }

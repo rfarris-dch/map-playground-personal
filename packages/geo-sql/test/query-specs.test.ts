@@ -49,8 +49,10 @@ describe("geo-sql query specs", () => {
 
     expect(query.params).toEqual([-100, 30, -90, 40, 250]);
     expect(query.sql).toContain("serve.facility_site_fast");
+    expect(query.sql).toContain("/* facilities:bbox:colocation */");
     expect(query.sql).toContain("facility.longitude");
     expect(query.sql).toContain("facility.latitude");
+    expect(query.sql).toContain("ORDER BY");
     expect(query.sql).toContain("LIMIT $5");
   });
 
@@ -101,11 +103,14 @@ describe("geo-sql query specs", () => {
 
     expect(polygonQuery.params).toEqual(['{"type":"Polygon","coordinates":[]}', 100]);
     expect(polygonQuery.sql).toContain("serve.hyperscale_site_fast");
+    expect(polygonQuery.sql).toContain("/* facilities:polygon:hyperscale */");
     expect(polygonQuery.sql).toContain("facility.longitude");
     expect(polygonQuery.sql).toContain("facility.latitude");
+    expect(polygonQuery.sql).toContain("ORDER BY");
     expect(polygonQuery.sql).toContain("LIMIT $2");
     expect(detailQuery.params).toEqual(["facility-123"]);
     expect(detailQuery.sql).toContain("serve.hyperscale_site_fast");
+    expect(detailQuery.sql).toContain("/* facilities:detail:hyperscale */");
     expect(detailQuery.sql).toContain("facility.longitude");
     expect(detailQuery.sql).toContain("facility.latitude");
   });
@@ -131,5 +136,23 @@ describe("geo-sql query specs", () => {
 
       expect(spec.sql).not.toContain("provider.provider_name");
     }
+  });
+
+  it("binds custom physical facilities tables into generated SQL", () => {
+    const query = buildFacilitiesBboxQuery({
+      west: -100,
+      south: 30,
+      east: -90,
+      north: 40,
+      limit: 250,
+      perspective: "hyperscale",
+      tables: {
+        colocationFastTable: '"serve"."facility_site_fast__20260323.abc123"',
+        hyperscaleFastTable: '"serve"."hyperscale_site_fast__20260323.abc123"',
+      },
+    });
+
+    expect(query.sql).toContain('"serve"."hyperscale_site_fast__20260323.abc123"');
+    expect(query.sql).not.toContain("serve.hyperscale_site_fast AS facility");
   });
 });

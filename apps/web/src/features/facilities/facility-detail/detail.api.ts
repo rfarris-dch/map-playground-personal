@@ -1,32 +1,32 @@
+import { apiRequestJson } from "@map-migration/core-runtime/api";
 import { buildFacilityDetailRoute } from "@map-migration/http-contracts/api-routes";
 import {
   type FacilitiesDetailResponse,
   FacilitiesDetailResponseSchema,
 } from "@map-migration/http-contracts/facilities-http";
+import { resolveFacilitiesDatasetVersionPromise } from "@/features/facilities/api";
 import type {
   FacilityDetailRequest,
   FacilityDetailResult,
 } from "@/features/facilities/facility-detail/detail.types";
-import { buildApiRequestInit } from "@/lib/api/api-request-init.service";
-import { createTypedGetFetcher } from "@/lib/api/typed-get-fetcher.service";
+import { buildApiRequestInit, withDatasetVersionHeader } from "@/lib/api/api-request-init.service";
 
-const facilityDetailFetcher = createTypedGetFetcher<
-  FacilityDetailRequest,
-  FacilitiesDetailResponse
->({
-  buildRequestInit(request) {
-    return buildApiRequestInit({
-      signal: request.signal,
-    });
-  },
-  buildRoute(request) {
-    return buildFacilityDetailRoute(request.facilityId, {
+export async function fetchFacilityDetail(
+  request: FacilityDetailRequest
+): Promise<FacilityDetailResult> {
+  const datasetVersion = request.datasetVersion ?? (await resolveFacilitiesDatasetVersionPromise());
+
+  return apiRequestJson<FacilitiesDetailResponse>(
+    buildFacilityDetailRoute(request.facilityId, {
+      datasetVersion,
       perspective: request.perspective,
-    });
-  },
-  schema: FacilitiesDetailResponseSchema,
-});
-
-export function fetchFacilityDetail(request: FacilityDetailRequest): Promise<FacilityDetailResult> {
-  return facilityDetailFetcher(request);
+    }),
+    FacilitiesDetailResponseSchema,
+    withDatasetVersionHeader(
+      buildApiRequestInit({
+        signal: request.signal,
+      }),
+      datasetVersion
+    )
+  );
 }

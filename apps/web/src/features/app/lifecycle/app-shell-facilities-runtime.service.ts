@@ -6,6 +6,7 @@ import type {
   MountPerspectiveLayerArgs,
   UseAppShellMapLifecycleOptions,
 } from "@/features/app/lifecycle/use-app-shell-map-lifecycle.types";
+import { preloadFacilitiesDatasetManifest } from "@/features/facilities/api";
 import { mountFacilitiesLayer } from "@/features/facilities/facilities.layer";
 import type { FacilitiesStatus } from "@/features/facilities/facilities.types";
 import { mountHyperscaleLeasedLayer } from "@/features/facilities/facilities-leased.layer";
@@ -20,8 +21,8 @@ const ALL_FACILITY_PERSPECTIVES: readonly FacilityPerspective[] = [
 const EAGER_FACILITY_PERSPECTIVES: readonly FacilityPerspective[] = ["colocation", "hyperscale"];
 const FACILITIES_LAYER_MIN_ZOOM = 0;
 const FACILITIES_LIMIT_BY_PERSPECTIVE: Record<string, number> = {
-  colocation: 5000,
-  hyperscale: 25_000,
+  colocation: 2500,
+  hyperscale: 12_000,
   "hyperscale-leased": 7500,
   enterprise: 5000,
 };
@@ -37,10 +38,10 @@ const FACILITIES_MAX_VIEWPORT_WIDTH_KM_BY_PERSPECTIVE: Readonly<
 const FACILITIES_MAX_VIEWPORT_FEATURE_BUDGET_BY_PERSPECTIVE: Readonly<
   Record<FacilityPerspective, number>
 > = {
-  colocation: 1200,
-  hyperscale: 4000,
+  colocation: 700,
+  hyperscale: 2000,
   "hyperscale-leased": 2500,
-  enterprise: 1000,
+  enterprise: 800,
 };
 const FACILITIES_ICON_MIN_ZOOM_BY_PERSPECTIVE: Readonly<Record<FacilityPerspective, number>> = {
   colocation: 0,
@@ -225,6 +226,8 @@ export function ensureFacilitiesPerspectiveMounted(
 }
 
 export function initializeFacilitiesRuntime(options: UseAppShellMapLifecycleOptions): void {
+  preloadFacilitiesDatasetManifest();
+
   const currentMap = options.runtime.map.value;
   if (currentMap === null) {
     return;

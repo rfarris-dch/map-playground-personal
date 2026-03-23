@@ -2,7 +2,11 @@ import { parsePositiveIntFlag } from "@/config/env-parsing.service";
 import {
   recordFacilitiesCacheHit,
   recordFacilitiesCacheMiss,
+  recordFacilitiesCacheRedisUnavailable,
+  recordFacilitiesCacheSingleflightJoined,
   recordFacilitiesCacheStale,
+  recordFacilitiesCacheValueBytes,
+  recordFacilitiesCacheWriteSkippedPayloadTooLarge,
   setFacilitiesCacheConfigured,
 } from "@/geo/facilities/route/facilities-performance.service";
 import type {
@@ -66,6 +70,7 @@ function isCacheAvailable(): boolean {
 
 function markRedisUnavailable(): void {
   redisUnavailableUntilEpochMs = nowEpochMs() + FACILITIES_CACHE_CIRCUIT_BREAKER_MS;
+  recordFacilitiesCacheRedisUnavailable();
 }
 
 function clearRedisUnavailable(): void {
@@ -162,7 +167,9 @@ async function writeCacheEntry<TPayload>(
   }
 
   const serialized = JSON.stringify(entry);
+  recordFacilitiesCacheValueBytes(serialized.length);
   if (serialized.length > FACILITIES_CACHE_MAX_PAYLOAD_BYTES) {
+    recordFacilitiesCacheWriteSkippedPayloadTooLarge();
     return;
   }
 
@@ -177,6 +184,7 @@ async function writeCacheEntry<TPayload>(
 function joinCacheFill(key: string, loadFresh: () => Promise<string>): Promise<string> {
   const inFlight = cacheFillFlights.get(key);
   if (typeof inFlight !== "undefined") {
+    recordFacilitiesCacheSingleflightJoined();
     return inFlight;
   }
 

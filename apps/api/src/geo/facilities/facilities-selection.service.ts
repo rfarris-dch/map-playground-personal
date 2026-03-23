@@ -80,6 +80,7 @@ async function querySelectionPerspectives(args: {
   readonly geometryText: string;
   readonly limitPerPerspective: number;
   readonly perspectives: readonly FacilityPerspective[];
+  readonly tables: QueryFacilitiesSelectionArgs["tables"];
 }): Promise<QueryFacilitiesSelectionResult> {
   const countsByPerspective: Record<FacilityPerspective, number> = {
     colocation: 0,
@@ -103,6 +104,7 @@ async function querySelectionPerspectives(args: {
       geometryGeoJson: args.geometryText,
       limit,
       perspective,
+      tables: args.tables,
     });
 
     if (!queryResult.ok) {
@@ -163,6 +165,7 @@ export async function queryFacilitiesSelection(
     geometryText: normalizedGeometry.geometryText,
     limitPerPerspective: args.limitPerPerspective,
     perspectives,
+    tables: args.tables,
   });
   if (!selectionResult.ok) {
     return selectionResult.value.reason === "query_failed"

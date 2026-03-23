@@ -1,5 +1,6 @@
 import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
 import type { Warning } from "@map-migration/geo-kernel/warning";
+import type { FacilitiesDatasetSqlTables } from "@map-migration/geo-sql";
 import type {
   FacilitiesFeatureCollection,
   FacilitiesSelectionRequest,
@@ -9,6 +10,7 @@ export interface QueryFacilitiesSelectionArgs {
   readonly geometry: FacilitiesSelectionRequest["geometry"];
   readonly limitPerPerspective: number;
   readonly perspectives: readonly FacilityPerspective[];
+  readonly tables: FacilitiesDatasetSqlTables;
 }
 
 export type QueryFacilitiesSelectionResult =

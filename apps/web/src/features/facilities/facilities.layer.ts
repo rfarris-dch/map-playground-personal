@@ -17,7 +17,10 @@ import {
   recordAppPerformanceCounter,
   recordAppPerformanceMeasurement,
 } from "@/features/app/diagnostics/app-performance.service";
-import type { MapInteractionType } from "@/features/app/interaction/map-interaction.types";
+import type {
+  MapInteractionSnapshot,
+  MapInteractionType,
+} from "@/features/app/interaction/map-interaction.types";
 import { shouldRefreshViewportData } from "@/features/app/interaction/map-interaction-policy.service";
 import { fetchFacilitiesByBboxEffect } from "@/features/facilities/api";
 import {
@@ -40,6 +43,7 @@ import type {
   FacilitiesLayerState,
   FacilitiesStatus,
   FacilitiesViewMode,
+  FacilitiesViewportRequestContext,
   SelectedFacilityRef,
 } from "@/features/facilities/facilities.types";
 import {
@@ -211,6 +215,10 @@ export function mountFacilitiesLayer(
   let scheduledLogoViewportKey: string | null = null;
   let scheduledRefreshFetchKey: string | null = null;
   let unsubscribeInteractionCoordinator: (() => void) | null = null;
+  let lastInteractionSnapshot: MapInteractionSnapshot | null =
+    options.interactionCoordinator === null || typeof options.interactionCoordinator === "undefined"
+      ? null
+      : options.interactionCoordinator.getLastSnapshot();
 
   const toFallbackLogoText = (providerName: string | null): string => {
     if (providerName === null) {
@@ -1986,6 +1994,19 @@ export function mountFacilitiesLayer(
     request.stopRequestTimer();
   };
 
+  const getViewportRequestContext = (): FacilitiesViewportRequestContext | undefined => {
+    if (lastInteractionSnapshot === null) {
+      return undefined;
+    }
+
+    return {
+      activeViewMode: state.viewMode,
+      interactionType: lastInteractionSnapshot.interactionType,
+      viewportKey: lastInteractionSnapshot.canonicalViewportKey,
+      zoomBucket: lastInteractionSnapshot.zoomBucket,
+    };
+  };
+
   const refresh = async (): Promise<void> => {
     if (!state.visible) {
       recordAppPerformanceCounter("facilities.refresh.skipped", {
@@ -2013,14 +2034,16 @@ export function mountFacilitiesLayer(
     if (request === null) {
       return;
     }
+    const requestContext = getViewportRequestContext();
 
     const result = await runEffectPromise(
       Effect.either(
         fetchFacilitiesByBboxEffect(
           {
             bbox: fetchBbox,
-            perspective,
             limit,
+            perspective,
+            ...(typeof requestContext === "undefined" ? {} : { requestContext }),
           },
           request.abortController.signal
         )
@@ -2107,6 +2130,8 @@ export function mountFacilitiesLayer(
   } else {
     unsubscribeInteractionCoordinator = options.interactionCoordinator.subscribe(
       (snapshot) => {
+        lastInteractionSnapshot = snapshot;
+
         if (!shouldRefreshViewportData(snapshot)) {
           return;
         }

@@ -1,4 +1,5 @@
 import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
+import type { FacilitiesDatasetSqlTables } from "@map-migration/geo-sql";
 import type { FacilitySortBy, SortDirection } from "@map-migration/http-contracts/table-contracts";
 
 export interface FacilityTableRow {
@@ -74,6 +75,7 @@ export interface FacilitiesPolygonQuery {
   readonly geometryGeoJson: string;
   readonly limit: number;
   readonly perspective: FacilityPerspective;
+  readonly tables: FacilitiesDatasetSqlTables;
 }
 
 export interface FacilitiesTableQuery {
@@ -82,6 +84,7 @@ export interface FacilitiesTableQuery {
   readonly perspective: FacilityPerspective;
   readonly sortBy: FacilitySortBy;
   readonly sortOrder: SortDirection;
+  readonly tables: FacilitiesDatasetSqlTables;
 }
 
 export interface FacilitiesBboxQuery {
@@ -90,5 +93,6 @@ export interface FacilitiesBboxQuery {
   readonly north: number;
   readonly perspective: FacilityPerspective;
   readonly south: number;
+  readonly tables: FacilitiesDatasetSqlTables;
   readonly west: number;
 }

@@ -22,6 +22,7 @@ import {
   facilitiesSelectionBboxExceedsLimits,
   resolveFacilitiesSelectionGeometry,
 } from "@/geo/facilities/facilities-selection-policy.service";
+import type { BoundFacilitiesDatasetVersion } from "@/geo/facilities/route/facilities-dataset-version.service";
 import { queryFacilitiesByPolygon } from "@/geo/facilities/route/facilities-route-query.service";
 import { queryFloodAnalysis } from "@/geo/flood/flood.service";
 import { queryMarketsBySelection } from "@/geo/markets/markets-selection.service";
@@ -320,7 +321,9 @@ function resolveParcelPolicyWarningImpl(args: {
   return null;
 }
 
-export function createAnalysisSummaryPorts(): AnalysisSummaryPorts {
+export function createAnalysisSummaryPorts(options: {
+  readonly facilitiesDatasetVersionBinding: BoundFacilitiesDatasetVersion;
+}): AnalysisSummaryPorts {
   let statusRowPromise: Promise<CountyScoresStatusRow> | null = null;
   function getSharedStatusRow(): Promise<CountyScoresStatusRow> {
     if (statusRowPromise === null) {
@@ -372,7 +375,10 @@ export function createAnalysisSummaryPorts(): AnalysisSummaryPorts {
     },
 
     queryFacilitiesByPolygon(args) {
-      return queryFacilitiesByPolygon(args);
+      return queryFacilitiesByPolygon({
+        ...args,
+        tables: options.facilitiesDatasetVersionBinding.tables,
+      });
     },
 
     resolveParcelPolicyWarning(args) {
@@ -504,7 +510,7 @@ export function createAnalysisSummaryPorts(): AnalysisSummaryPorts {
 
       return {
         countyIntelligenceSourceMode: runtimeConfig.countyIntelligenceSourceMode,
-        facilitiesDataVersion: runtimeConfig.dataVersion,
+        facilitiesDataVersion: options.facilitiesDatasetVersionBinding.actualDatasetVersion,
         facilitiesSourceMode: runtimeConfig.facilitiesSourceMode,
         floodSourceMode: "postgis",
         marketsDataVersion: runtimeConfig.dataVersion,

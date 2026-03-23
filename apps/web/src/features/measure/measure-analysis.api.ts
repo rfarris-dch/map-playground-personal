@@ -1,6 +1,7 @@
 import {
   type ApiEffectError,
   type ApiEffectSuccess,
+  ApiNetworkError,
   apiRequestJson,
   apiRequestJsonEffect,
 } from "@map-migration/core-runtime/api";
@@ -18,7 +19,8 @@ import {
   type ParcelsFeatureCollection,
   ParcelsFeatureCollectionSchema,
 } from "@map-migration/http-contracts/parcels-http";
-import type { Effect } from "effect";
+import { Effect } from "effect";
+import { resolveFacilitiesDatasetVersionPromise } from "@/features/facilities/api";
 import type {
   FacilitiesSelectionResult,
   FetchParcelsBySelectionOptions,
@@ -26,6 +28,7 @@ import type {
 } from "@/features/measure/measure-analysis.api.types";
 import {
   buildJsonPostRequestInit,
+  withDatasetVersionHeader,
   withParcelIngestionRunIdHeader,
 } from "@/lib/api/api-request-init.service";
 
@@ -36,12 +39,16 @@ export type {
 
 function buildFacilitiesSelectionRequestInit(
   request: FacilitiesSelectionRequest,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  datasetVersion?: string
 ): RequestInit {
-  return buildJsonPostRequestInit({
-    body: request,
-    signal,
-  });
+  return withDatasetVersionHeader(
+    buildJsonPostRequestInit({
+      body: request,
+      signal,
+    }),
+    datasetVersion
+  );
 }
 
 function buildParcelsSelectionRequestInit(
@@ -62,10 +69,12 @@ export function fetchFacilitiesBySelection(
   request: FacilitiesSelectionRequest,
   signal?: AbortSignal
 ): Promise<FacilitiesSelectionResult> {
-  return apiRequestJson(
-    buildFacilitiesSelectionRoute(),
-    FacilitiesSelectionResponseSchema,
-    buildFacilitiesSelectionRequestInit(request, signal)
+  return resolveFacilitiesDatasetVersionPromise().then((datasetVersion) =>
+    apiRequestJson(
+      buildFacilitiesSelectionRoute(),
+      FacilitiesSelectionResponseSchema,
+      buildFacilitiesSelectionRequestInit(request, signal, datasetVersion)
+    )
   );
 }
 
@@ -73,10 +82,21 @@ export function fetchFacilitiesBySelectionEffect(
   request: FacilitiesSelectionRequest,
   signal?: AbortSignal
 ): Effect.Effect<ApiEffectSuccess<FacilitiesSelectionResponse>, ApiEffectError, never> {
-  return apiRequestJsonEffect(
-    buildFacilitiesSelectionRoute(),
-    FacilitiesSelectionResponseSchema,
-    buildFacilitiesSelectionRequestInit(request, signal)
+  return Effect.tryPromise({
+    try: () => resolveFacilitiesDatasetVersionPromise(),
+    catch: (error) =>
+      new ApiNetworkError({
+        requestId: "",
+        cause: error,
+      }),
+  }).pipe(
+    Effect.flatMap((datasetVersion) =>
+      apiRequestJsonEffect(
+        buildFacilitiesSelectionRoute(),
+        FacilitiesSelectionResponseSchema,
+        buildFacilitiesSelectionRequestInit(request, signal, datasetVersion)
+      )
+    )
   );
 }
 

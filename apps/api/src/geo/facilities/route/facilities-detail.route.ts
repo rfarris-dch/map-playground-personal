@@ -18,6 +18,10 @@ import {
   hashFacilitiesCachePayload,
 } from "@/geo/facilities/route/facilities-cache-key.service";
 import {
+  bindFacilitiesDatasetVersion,
+  readRequestedFacilitiesDatasetVersion,
+} from "@/geo/facilities/route/facilities-dataset-version.service";
+import {
   buildFacilitiesMappingRouteError,
   buildFacilitiesPostgisQueryRouteError,
 } from "@/geo/facilities/route/facilities-route-errors.service";
@@ -41,7 +45,7 @@ export function registerFacilitiesDetailRoute<E extends Env>(app: Hono<E>): void
   app.get(`${ApiRoutes.facilities}/:facility-id`, (c) =>
     runEffectRoute(
       c,
-      fromApiRequest(async ({ honoContext, requestId }) => {
+      fromApiRequest(async ({ honoContext, requestId, signal }) => {
         const request = FacilitiesDetailRequestSchema.safeParse({
           perspective: honoContext.req.query("perspective"),
         });
@@ -67,10 +71,17 @@ export function registerFacilitiesDetailRoute<E extends Env>(app: Hono<E>): void
         }
 
         const runtimeConfig = getApiRuntimeConfig();
+        const versionBinding = await bindFacilitiesDatasetVersion(
+          readRequestedFacilitiesDatasetVersion({
+            headerValue: honoContext.req.header(ApiHeaders.datasetVersion),
+            queryValue: honoContext.req.query("v") ?? honoContext.req.query("datasetVersion"),
+          }),
+          signal
+        );
         const cacheResult = await resolveFacilitiesCachedEntry<FacilitiesDetailCacheBody>({
           allowStaleOnError: isStaleEligibleFacilitiesDetailError,
           key: buildFacilitiesDetailCacheKey({
-            datasetVersion: runtimeConfig.facilitiesDatasetVersion,
+            datasetVersion: versionBinding.actualDatasetVersion,
             facilityId: path.data.facilityId,
             perspective: request.data.perspective,
           }),
@@ -78,6 +89,7 @@ export function registerFacilitiesDetailRoute<E extends Env>(app: Hono<E>): void
             const queryResult = await queryFacilityDetail({
               facilityId: path.data.facilityId,
               perspective: request.data.perspective,
+              tables: versionBinding.tables,
             });
 
             if (!queryResult.ok) {
@@ -100,7 +112,7 @@ export function registerFacilitiesDetailRoute<E extends Env>(app: Hono<E>): void
             const serializedPayloadBody = JSON.stringify(payloadBody);
             return buildFacilitiesCacheEntry({
               dataVersion: runtimeConfig.dataVersion,
-              datasetVersion: runtimeConfig.facilitiesDatasetVersion,
+              datasetVersion: versionBinding.actualDatasetVersion,
               etag: `"${hashFacilitiesCachePayload(serializedPayloadBody)}"`,
               generatedAt: new Date().toISOString(),
               originRequestId: requestId,

@@ -11,6 +11,7 @@ import { getApiRuntimeConfig } from "@/http/runtime-config";
 import {
   buildFacilitiesDatasetManifest,
   buildFacilitiesDatasetManifestEtag,
+  getFacilitiesDatasetManifestState,
 } from "./facilities-manifest.service";
 
 function getFacilitiesManifestCacheControl(): string {
@@ -21,9 +22,10 @@ export function registerFacilitiesManifestRoute<E extends Env>(app: Hono<E>): vo
   app.get(ApiRoutes.facilitiesManifest, (c) =>
     runEffectRoute(
       c,
-      fromApiRequest(({ honoContext, requestId }) => {
+      fromApiRequest(async ({ honoContext, requestId, signal }) => {
         const runtimeConfig = getApiRuntimeConfig();
-        const payload: FacilitiesDatasetManifest = buildFacilitiesDatasetManifest();
+        const manifestState = await getFacilitiesDatasetManifestState(signal);
+        const payload: FacilitiesDatasetManifest = buildFacilitiesDatasetManifest(manifestState);
         const etag = buildFacilitiesDatasetManifestEtag(payload);
         const cacheControl = getFacilitiesManifestCacheControl();
 
@@ -38,7 +40,7 @@ export function registerFacilitiesManifestRoute<E extends Env>(app: Hono<E>): vo
             headers: {
               "Cache-Control": cacheControl,
               [ApiHeaders.dataVersion]: runtimeConfig.dataVersion,
-              [ApiHeaders.datasetVersion]: runtimeConfig.facilitiesDatasetVersion,
+              [ApiHeaders.datasetVersion]: manifestState.currentVersion,
               [ApiHeaders.requestId]: requestId,
               ETag: etag,
             },
@@ -50,7 +52,7 @@ export function registerFacilitiesManifestRoute<E extends Env>(app: Hono<E>): vo
           {
             "Cache-Control": cacheControl,
             [ApiHeaders.dataVersion]: runtimeConfig.dataVersion,
-            [ApiHeaders.datasetVersion]: runtimeConfig.facilitiesDatasetVersion,
+            [ApiHeaders.datasetVersion]: manifestState.currentVersion,
             ETag: etag,
           }
         );

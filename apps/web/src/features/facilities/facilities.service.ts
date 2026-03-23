@@ -353,7 +353,12 @@ export function formatFacilitiesStatus(status: FacilitiesStatus): string {
       return `Facilities (${status.perspective}): hidden by stress governor`;
     }
 
-    return `Facilities (${status.perspective}): hidden by viewport span (${(status.viewportWidthKm ?? 0).toFixed(1)}km > ${status.maxViewportWidthKm ?? 0}km)`;
+    const zoomGuidance =
+      status.perspective === "colocation"
+        ? " Zoom in to load raw colocation facilities."
+        : " Zoom in to narrow the viewport.";
+
+    return `Facilities (${status.perspective}): hidden by viewport span (${(status.viewportWidthKm ?? 0).toFixed(1)}km > ${status.maxViewportWidthKm ?? 0}km).${zoomGuidance}`;
   }
 
   if (status.state === "loading") {

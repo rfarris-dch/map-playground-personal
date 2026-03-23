@@ -15,8 +15,10 @@ import {
 import { MarketSelectionMatchSchema } from "./markets-selection-http.js";
 
 const CountyFipsSchema = z.string().regex(/^[0-9]{5}$/);
+const trimValue = (value: unknown): unknown => (typeof value === "string" ? value.trim() : value);
 
 export const SpatialAnalysisSummaryRequestSchema = z.object({
+  facilitiesDatasetVersion: z.preprocess(trimValue, z.string().min(1)).optional(),
   geometry: PolygonGeometrySchema,
   includeFacilities: z.boolean().default(true),
   includeFlood: z.boolean().default(true),

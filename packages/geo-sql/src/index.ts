@@ -1,6 +1,7 @@
 import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
 import type {
   FacilitiesBboxSqlQueryArgs,
+  FacilitiesDatasetSqlTables,
   FacilitiesPolygonSqlQueryArgs,
   FacilityDetailSqlQueryArgs,
   ParcelBboxFilter,
@@ -12,6 +13,7 @@ import type {
 
 export type {
   FacilitiesBboxSqlQueryArgs,
+  FacilitiesDatasetSqlTables,
   FacilitiesPolygonSqlQueryArgs,
   FacilityDetailSqlQueryArgs,
   ParcelBboxFilter,
@@ -36,12 +38,20 @@ type RegisteredQuerySpec = SqlQuerySpec & {
   readonly name: QueryName;
 };
 
+const COLOCATION_FAST_TABLE_PLACEHOLDER = "__COLOCATION_FAST_TABLE__";
+const HYPERSCALE_FAST_TABLE_PLACEHOLDER = "__HYPERSCALE_FAST_TABLE__";
+const DEFAULT_FACILITIES_DATASET_SQL_TABLES: FacilitiesDatasetSqlTables = {
+  colocationFastTable: "serve.facility_site_fast",
+  hyperscaleFastTable: "serve.hyperscale_site_fast",
+};
+
 const QUERY_SPECS: Record<QueryName, RegisteredQuerySpec> = {
   facilities_bbox_colocation: {
     name: "facilities_bbox_colocation",
     endpointClass: "feature-collection",
     maxRows: 50_000,
     sql: `
+/* facilities:bbox:colocation */
 WITH bounds AS (
   SELECT ST_Transform(ST_MakeEnvelope($1, $2, $3, $4, 4326), 3857) AS bbox_3857
 ),
@@ -69,10 +79,13 @@ candidates AS (
     facility.longitude,
     facility.latitude,
     facility.geom_3857
-  FROM serve.facility_site_fast AS facility, bounds
+  FROM ${COLOCATION_FAST_TABLE_PLACEHOLDER} AS facility, bounds
   WHERE facility.geom_3857 && bounds.bbox_3857
     AND ST_Intersects(facility.geom_3857, bounds.bbox_3857)
     AND facility.provider_id IS NOT NULL
+  ORDER BY
+    facility.display_rank ASC,
+    facility.facility_id ASC
   LIMIT $5
 )
 SELECT
@@ -104,6 +117,7 @@ FROM candidates AS c;`,
     endpointClass: "feature-collection",
     maxRows: 50_000,
     sql: `
+/* facilities:bbox:hyperscale */
 WITH bounds AS (
   SELECT ST_Transform(ST_MakeEnvelope($1, $2, $3, $4, 4326), 3857) AS bbox_3857
 ),
@@ -131,10 +145,13 @@ candidates AS (
     facility.longitude,
     facility.latitude,
     facility.geom_3857
-  FROM serve.hyperscale_site_fast AS facility, bounds
+  FROM ${HYPERSCALE_FAST_TABLE_PLACEHOLDER} AS facility, bounds
   WHERE facility.geom_3857 && bounds.bbox_3857
     AND ST_Intersects(facility.geom_3857, bounds.bbox_3857)
     AND facility.provider_id IS NOT NULL
+  ORDER BY
+    facility.display_rank ASC,
+    facility.facility_id ASC
   LIMIT $5
 )
 SELECT
@@ -260,6 +277,7 @@ FROM clipped AS c;`,
     endpointClass: "feature-collection",
     maxRows: 50_000,
     sql: `
+/* facilities:bbox:enterprise */
 WITH bounds AS (
   SELECT ST_Transform(ST_MakeEnvelope($1, $2, $3, $4, 4326), 3857) AS bbox_3857
 )
@@ -287,6 +305,10 @@ SELECT
 FROM serve.enterprise_site AS facility, bounds
 WHERE facility.geom_3857 && bounds.bbox_3857
   AND ST_Intersects(facility.geom_3857, bounds.bbox_3857)
+ORDER BY
+  COALESCE(facility.facility_sf, 0) DESC,
+  COALESCE(NULLIF(BTRIM(facility.company), ''), facility.enterprise_name) ASC NULLS LAST,
+  facility.enterprise_site_id ASC
 LIMIT $5;`,
   },
   facilities_polygon_colocation: {
@@ -294,6 +316,7 @@ LIMIT $5;`,
     endpointClass: "feature-collection",
     maxRows: 50_000,
     sql: `
+/* facilities:polygon:colocation */
 WITH aoi AS (
   SELECT ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON($1), 4326), 3857) AS geom_3857
 ),
@@ -321,10 +344,13 @@ candidates AS (
     facility.longitude,
     facility.latitude,
     facility.geom_3857
-  FROM serve.facility_site_fast AS facility, aoi
+  FROM ${COLOCATION_FAST_TABLE_PLACEHOLDER} AS facility, aoi
   WHERE facility.geom_3857 && aoi.geom_3857
     AND ST_Intersects(facility.geom_3857, aoi.geom_3857)
     AND facility.provider_id IS NOT NULL
+  ORDER BY
+    facility.display_rank ASC,
+    facility.facility_id ASC
   LIMIT $2
 )
 SELECT
@@ -356,6 +382,7 @@ FROM candidates AS c;`,
     endpointClass: "feature-collection",
     maxRows: 50_000,
     sql: `
+/* facilities:polygon:hyperscale */
 WITH aoi AS (
   SELECT ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON($1), 4326), 3857) AS geom_3857
 ),
@@ -383,10 +410,13 @@ candidates AS (
     facility.longitude,
     facility.latitude,
     facility.geom_3857
-  FROM serve.hyperscale_site_fast AS facility, aoi
+  FROM ${HYPERSCALE_FAST_TABLE_PLACEHOLDER} AS facility, aoi
   WHERE facility.geom_3857 && aoi.geom_3857
     AND ST_Intersects(facility.geom_3857, aoi.geom_3857)
     AND facility.provider_id IS NOT NULL
+  ORDER BY
+    facility.display_rank ASC,
+    facility.facility_id ASC
   LIMIT $2
 )
 SELECT
@@ -418,6 +448,7 @@ FROM candidates AS c;`,
     endpointClass: "proximity-enrichment",
     maxRows: 1,
     sql: `
+/* facilities:detail:colocation */
 SELECT
   facility.facility_id,
   facility.facility_name,
@@ -440,7 +471,7 @@ SELECT
   facility.market_name,
   facility.longitude,
   facility.latitude
-FROM serve.facility_site_fast AS facility
+FROM ${COLOCATION_FAST_TABLE_PLACEHOLDER} AS facility
 WHERE facility.facility_id = $1
   AND facility.provider_id IS NOT NULL
 LIMIT 1;`,
@@ -450,6 +481,7 @@ LIMIT 1;`,
     endpointClass: "proximity-enrichment",
     maxRows: 1,
     sql: `
+/* facilities:detail:hyperscale */
 SELECT
   facility.facility_id,
   facility.facility_name,
@@ -472,7 +504,7 @@ SELECT
   facility.market_name,
   facility.longitude,
   facility.latitude
-FROM serve.hyperscale_site_fast AS facility
+FROM ${HYPERSCALE_FAST_TABLE_PLACEHOLDER} AS facility
 WHERE facility.facility_id = $1
   AND facility.provider_id IS NOT NULL
 LIMIT 1;`,
@@ -542,6 +574,26 @@ function getQuerySpec(name: QueryName): RegisteredQuerySpec {
   return QUERY_SPECS[name];
 }
 
+function materializeFacilitiesSql(
+  sql: string,
+  tables: FacilitiesDatasetSqlTables = DEFAULT_FACILITIES_DATASET_SQL_TABLES
+): string {
+  return sql
+    .replaceAll(COLOCATION_FAST_TABLE_PLACEHOLDER, tables.colocationFastTable)
+    .replaceAll(HYPERSCALE_FAST_TABLE_PLACEHOLDER, tables.hyperscaleFastTable);
+}
+
+function materializeFacilitiesQuerySpec(
+  spec: RegisteredQuerySpec,
+  tables?: FacilitiesDatasetSqlTables
+): SqlQuerySpec {
+  return {
+    endpointClass: spec.endpointClass,
+    maxRows: spec.maxRows,
+    sql: materializeFacilitiesSql(spec.sql, tables),
+  };
+}
+
 function getFacilitiesBboxQueryName(
   perspective: FacilityPerspective
 ):
@@ -583,15 +635,15 @@ function getFacilityDetailQueryName(
 }
 
 export function getFacilitiesBboxQuerySpec(perspective: FacilityPerspective): SqlQuerySpec {
-  return getQuerySpec(getFacilitiesBboxQueryName(perspective));
+  return materializeFacilitiesQuerySpec(getQuerySpec(getFacilitiesBboxQueryName(perspective)));
 }
 
 export function getFacilitiesPolygonQuerySpec(perspective: FacilityPerspective): SqlQuerySpec {
-  return getQuerySpec(getFacilitiesPolygonQueryName(perspective));
+  return materializeFacilitiesQuerySpec(getQuerySpec(getFacilitiesPolygonQueryName(perspective)));
 }
 
 export function getFacilityDetailQuerySpec(perspective: FacilityPerspective): SqlQuerySpec {
-  return getQuerySpec(getFacilityDetailQueryName(perspective));
+  return materializeFacilitiesQuerySpec(getQuerySpec(getFacilityDetailQueryName(perspective)));
 }
 
 export function getCountyMetricsQuerySpec(): SqlQuerySpec {
@@ -599,7 +651,10 @@ export function getCountyMetricsQuerySpec(): SqlQuerySpec {
 }
 
 export function buildFacilitiesBboxQuery(query: FacilitiesBboxSqlQueryArgs): ParcelSqlQuery {
-  const spec = getFacilitiesBboxQuerySpec(query.perspective);
+  const spec = materializeFacilitiesQuerySpec(
+    getQuerySpec(getFacilitiesBboxQueryName(query.perspective)),
+    query.tables
+  );
 
   return {
     sql: spec.sql,
@@ -608,7 +663,10 @@ export function buildFacilitiesBboxQuery(query: FacilitiesBboxSqlQueryArgs): Par
 }
 
 export function buildFacilitiesPolygonQuery(query: FacilitiesPolygonSqlQueryArgs): ParcelSqlQuery {
-  const spec = getFacilitiesPolygonQuerySpec(query.perspective);
+  const spec = materializeFacilitiesQuerySpec(
+    getQuerySpec(getFacilitiesPolygonQueryName(query.perspective)),
+    query.tables
+  );
 
   return {
     sql: spec.sql,
@@ -617,7 +675,10 @@ export function buildFacilitiesPolygonQuery(query: FacilitiesPolygonSqlQueryArgs
 }
 
 export function buildFacilityDetailQuery(query: FacilityDetailSqlQueryArgs): ParcelSqlQuery {
-  const spec = getFacilityDetailQuerySpec(query.perspective);
+  const spec = materializeFacilitiesQuerySpec(
+    getQuerySpec(getFacilityDetailQueryName(query.perspective)),
+    query.tables
+  );
 
   return {
     sql: spec.sql,

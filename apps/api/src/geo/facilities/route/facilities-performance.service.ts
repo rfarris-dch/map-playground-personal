@@ -10,14 +10,20 @@ interface MeasurementAccumulator {
 
 interface PerspectiveAccumulator {
   abortedCount: number;
+  boundDatasetVersion: string | null;
   completedCount: number;
   failedCount: number;
   lastCanonicalBboxKey: string | null;
   lastEffectiveLimit: number | null;
+  lastInteractionType: string | null;
   lastRowCount: number | null;
   lastTruncated: boolean | null;
+  lastViewMode: string | null;
+  lastViewportKey: string | null;
+  lastZoomBucket: number | null;
   mappingTimeMs: MeasurementAccumulator;
   requestCount: number;
+  requestedDatasetVersion: string | null;
   responseBytes: MeasurementAccumulator;
   routeLatencyMs: MeasurementAccumulator;
   sqlTimeMs: MeasurementAccumulator;
@@ -28,7 +34,11 @@ interface FacilitiesPerformanceState {
     configured: boolean;
     hitCount: number;
     missCount: number;
+    redisUnavailableCount: number;
+    singleflightJoinedCount: number;
     staleCount: number;
+    valueBytes: MeasurementAccumulator;
+    writeSkippedPayloadTooLargeCount: number;
   };
   readonly db: {
     clientAbortCount: number;
@@ -39,16 +49,22 @@ interface FacilitiesPerformanceState {
 }
 
 export interface RecordFacilitiesBboxMetricsArgs {
+  readonly boundDatasetVersion: string;
   readonly canonicalBboxKey: string;
   readonly effectiveLimit: number;
+  readonly interactionType: string | null;
   readonly mappingTimeMs: number;
   readonly outcome: "aborted" | "completed" | "failed";
   readonly perspective: string;
+  readonly requestedDatasetVersion: string | null;
   readonly responseBytes: number;
   readonly routeLatencyMs: number;
   readonly rowCount: number;
   readonly sqlTimeMs: number;
   readonly truncated: boolean;
+  readonly viewMode: string | null;
+  readonly viewportKey: string | null;
+  readonly zoomBucket: number | null;
 }
 
 function createMeasurementAccumulator(): MeasurementAccumulator {
@@ -64,13 +80,19 @@ function createMeasurementAccumulator(): MeasurementAccumulator {
 function createPerspectiveAccumulator(): PerspectiveAccumulator {
   return {
     abortedCount: 0,
+    boundDatasetVersion: null,
     completedCount: 0,
     failedCount: 0,
+    lastInteractionType: null,
     lastCanonicalBboxKey: null,
     lastEffectiveLimit: null,
     lastRowCount: null,
     lastTruncated: null,
+    lastViewMode: null,
+    lastViewportKey: null,
+    lastZoomBucket: null,
     mappingTimeMs: createMeasurementAccumulator(),
+    requestedDatasetVersion: null,
     requestCount: 0,
     responseBytes: createMeasurementAccumulator(),
     routeLatencyMs: createMeasurementAccumulator(),
@@ -83,7 +105,11 @@ const state: FacilitiesPerformanceState = {
     configured: false,
     hitCount: 0,
     missCount: 0,
+    redisUnavailableCount: 0,
+    singleflightJoinedCount: 0,
     staleCount: 0,
+    valueBytes: createMeasurementAccumulator(),
+    writeSkippedPayloadTooLargeCount: 0,
   },
   db: {
     clientAbortCount: 0,
@@ -133,7 +159,11 @@ export function resetFacilitiesPerformanceSnapshot(): void {
   state.cache.configured = false;
   state.cache.hitCount = 0;
   state.cache.missCount = 0;
+  state.cache.redisUnavailableCount = 0;
+  state.cache.singleflightJoinedCount = 0;
   state.cache.staleCount = 0;
+  state.cache.valueBytes = createMeasurementAccumulator();
+  state.cache.writeSkippedPayloadTooLargeCount = 0;
   state.db.clientAbortCount = 0;
   state.db.queueWaitMs = createMeasurementAccumulator();
   state.db.statementTimeoutCount = 0;
@@ -157,13 +187,35 @@ export function recordFacilitiesCacheStale(): void {
   state.cache.staleCount += 1;
 }
 
+export function recordFacilitiesCacheRedisUnavailable(): void {
+  state.cache.redisUnavailableCount += 1;
+}
+
+export function recordFacilitiesCacheSingleflightJoined(): void {
+  state.cache.singleflightJoinedCount += 1;
+}
+
+export function recordFacilitiesCacheValueBytes(valueBytes: number): void {
+  updateMeasurement(state.cache.valueBytes, valueBytes);
+}
+
+export function recordFacilitiesCacheWriteSkippedPayloadTooLarge(): void {
+  state.cache.writeSkippedPayloadTooLargeCount += 1;
+}
+
 export function recordFacilitiesBboxMetrics(args: RecordFacilitiesBboxMetricsArgs): void {
   const perspective = getPerspectiveAccumulator(args.perspective);
   perspective.requestCount += 1;
+  perspective.boundDatasetVersion = args.boundDatasetVersion;
   perspective.lastCanonicalBboxKey = args.canonicalBboxKey;
   perspective.lastEffectiveLimit = args.effectiveLimit;
+  perspective.lastInteractionType = args.interactionType;
   perspective.lastRowCount = args.rowCount;
   perspective.lastTruncated = args.truncated;
+  perspective.lastViewMode = args.viewMode;
+  perspective.lastViewportKey = args.viewportKey;
+  perspective.lastZoomBucket = args.zoomBucket;
+  perspective.requestedDatasetVersion = args.requestedDatasetVersion;
 
   if (args.outcome === "completed") {
     perspective.completedCount += 1;
@@ -197,13 +249,19 @@ export function getFacilitiesPerformanceSnapshot(): FacilitiesPerformanceSnapsho
       perspective,
       {
         abortedCount: accumulator.abortedCount,
+        boundDatasetVersion: accumulator.boundDatasetVersion,
         completedCount: accumulator.completedCount,
         failedCount: accumulator.failedCount,
+        lastInteractionType: accumulator.lastInteractionType,
         lastCanonicalBboxKey: accumulator.lastCanonicalBboxKey,
         lastEffectiveLimit: accumulator.lastEffectiveLimit,
         lastRowCount: accumulator.lastRowCount,
         lastTruncated: accumulator.lastTruncated,
+        lastViewMode: accumulator.lastViewMode,
+        lastViewportKey: accumulator.lastViewportKey,
+        lastZoomBucket: accumulator.lastZoomBucket,
         mappingTimeMs: toMeasurementSnapshot(accumulator.mappingTimeMs),
+        requestedDatasetVersion: accumulator.requestedDatasetVersion,
         requestCount: accumulator.requestCount,
         responseBytes: toMeasurementSnapshot(accumulator.responseBytes),
         routeLatencyMs: toMeasurementSnapshot(accumulator.routeLatencyMs),
@@ -220,7 +278,11 @@ export function getFacilitiesPerformanceSnapshot(): FacilitiesPerformanceSnapsho
       configured: state.cache.configured,
       hitCount: state.cache.hitCount,
       missCount: state.cache.missCount,
+      redisUnavailableCount: state.cache.redisUnavailableCount,
+      singleflightJoinedCount: state.cache.singleflightJoinedCount,
       staleCount: state.cache.staleCount,
+      valueBytes: toMeasurementSnapshot(state.cache.valueBytes),
+      writeSkippedPayloadTooLargeCount: state.cache.writeSkippedPayloadTooLargeCount,
     },
     db: {
       clientAbortCount: state.db.clientAbortCount,

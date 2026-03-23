@@ -37,7 +37,12 @@ export interface FacilitiesBboxRouteArgs {
   readonly perspective?: FacilityPerspective | undefined;
 }
 
+export interface FacilitiesTableRouteArgs extends SortedPaginatedRouteArgs<FacilitySortBy> {
+  readonly datasetVersion?: string | undefined;
+}
+
 export interface FacilityDetailRouteOptions {
+  readonly datasetVersion?: string | undefined;
   readonly perspective?: FacilityPerspective | undefined;
 }
 
@@ -81,6 +86,10 @@ export interface ApiHeadersTable {
   readonly cacheStatus: string;
   readonly datasetVersion: string;
   readonly dataVersion: string;
+  readonly facilitiesInteractionType: string;
+  readonly facilitiesViewMode: string;
+  readonly facilitiesViewportKey: string;
+  readonly facilitiesZoomBucket: string;
   readonly originRequestId: string;
   readonly parcelIngestionRunId: string;
   readonly requestId: string;
@@ -180,6 +189,7 @@ export function buildFacilityDetailRoute(
 ): string {
   return appendQueryToRoute(`${ApiRoutes.facilities}/${encodeURIComponent(facilityId)}`, [
     ["perspective", options.perspective ?? ApiQueryDefaults.facilities.perspective],
+    ["v", options.datasetVersion],
   ]);
 }
 
@@ -253,7 +263,7 @@ function buildPaginatedRoute(
   baseRoute: string,
   args: PaginatedRouteArgs,
   sortArgs?: { readonly sortBy: string; readonly sortOrder: SortDirection },
-  additionalParams: ReadonlyArray<readonly [string, string]> = []
+  additionalParams: ReadonlyArray<readonly [string, string | undefined]> = []
 ): string {
   const params = new URLSearchParams();
   params.set("page", String(args.page));
@@ -263,7 +273,9 @@ function buildPaginatedRoute(
     params.set("sortOrder", sortArgs.sortOrder);
   }
   additionalParams.reduce((nextParams, [key, value]) => {
-    nextParams.set(key, value);
+    if (typeof value === "string") {
+      nextParams.set(key, value);
+    }
     return nextParams;
   }, params);
 
@@ -290,7 +302,7 @@ export function buildProvidersRoute(args: SortedPaginatedRouteArgs<ProviderSortB
 
 export function buildFacilitiesTableRoute(
   perspective: FacilityPerspective,
-  args: SortedPaginatedRouteArgs<FacilitySortBy>
+  args: FacilitiesTableRouteArgs
 ): string {
   return buildPaginatedRoute(
     ApiRoutes.facilitiesTable,
@@ -299,7 +311,10 @@ export function buildFacilitiesTableRoute(
       sortBy: args.sortBy,
       sortOrder: args.sortOrder,
     },
-    [["perspective", perspective]]
+    [
+      ["perspective", perspective],
+      ["v", args.datasetVersion],
+    ]
   );
 }
 
@@ -350,6 +365,10 @@ export const ApiHeaders = Object.freeze<ApiHeadersTable>({
   cacheStatus: "x-cache-status",
   dataVersion: "x-data-version",
   datasetVersion: "x-dataset-version",
+  facilitiesInteractionType: "x-facilities-interaction-type",
+  facilitiesViewMode: "x-facilities-view-mode",
+  facilitiesViewportKey: "x-facilities-viewport-key",
+  facilitiesZoomBucket: "x-facilities-zoom-bucket",
   originRequestId: "x-origin-request-id",
   parcelIngestionRunId: "x-parcel-ingestion-run-id",
   requestId: "x-request-id",

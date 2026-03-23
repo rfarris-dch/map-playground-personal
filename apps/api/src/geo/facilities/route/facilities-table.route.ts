@@ -1,4 +1,4 @@
-import { ApiRoutes } from "@map-migration/http-contracts/api-routes";
+import { ApiHeaders, ApiRoutes } from "@map-migration/http-contracts/api-routes";
 import {
   type FacilitiesTableRequest,
   FacilitiesTableRequestSchema,
@@ -6,6 +6,10 @@ import {
   FacilitiesTableResponseSchema,
 } from "@map-migration/http-contracts/table-contracts";
 import type { Context, Env, Hono } from "hono";
+import {
+  bindFacilitiesDatasetVersion,
+  readRequestedFacilitiesDatasetVersion,
+} from "@/geo/facilities/route/facilities-dataset-version.service";
 import {
   buildFacilitiesMappingRouteError,
   buildFacilitiesTableQueryRouteError,
@@ -39,9 +43,16 @@ export function registerFacilitiesTableRoute<E extends Env>(app: Hono<E>): void 
   app.get(ApiRoutes.facilitiesTable, (c) =>
     runEffectRoute(
       c,
-      fromApiRequest(async ({ honoContext, requestId }) => {
+      fromApiRequest(async ({ honoContext, requestId, signal }) => {
         const query = resolveFacilitiesTableQuery(honoContext);
         const offset = query.page * query.pageSize;
+        const versionBinding = await bindFacilitiesDatasetVersion(
+          readRequestedFacilitiesDatasetVersion({
+            headerValue: honoContext.req.header(ApiHeaders.datasetVersion),
+            queryValue: honoContext.req.query("v") ?? honoContext.req.query("datasetVersion"),
+          }),
+          signal
+        );
 
         const queryResult = await queryFacilitiesTable({
           perspective: query.perspective,
@@ -49,6 +60,7 @@ export function registerFacilitiesTableRoute<E extends Env>(app: Hono<E>): void 
           offset,
           sortBy: query.sortBy,
           sortOrder: query.sortOrder,
+          tables: versionBinding.tables,
         });
 
         if (!queryResult.ok) {

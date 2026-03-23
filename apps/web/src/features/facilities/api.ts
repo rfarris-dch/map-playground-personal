@@ -8,6 +8,7 @@ import {
   apiRequestJsonEffect,
 } from "@map-migration/core-runtime/api";
 import {
+  ApiHeaders,
   buildFacilitiesBboxRoute,
   buildFacilitiesManifestRoute,
 } from "@map-migration/http-contracts/api-routes";
@@ -19,8 +20,11 @@ import {
 } from "@map-migration/http-contracts/facilities-http";
 import { Effect } from "effect";
 import { recordAppPerformanceCounter } from "@/features/app/diagnostics/app-performance.service";
-import type { FacilitiesBboxRequest } from "@/features/facilities/facilities.types";
-import { buildApiRequestInit } from "@/lib/api/api-request-init.service";
+import type {
+  FacilitiesBboxRequest,
+  FacilitiesViewportRequestContext,
+} from "@/features/facilities/facilities.types";
+import { buildApiRequestInit, withDatasetVersionHeader } from "@/lib/api/api-request-init.service";
 
 declare global {
   var __MAP_FACILITIES_BBOX_REQUESTS__:
@@ -237,6 +241,21 @@ function buildFacilitiesBboxRequestUrl(
   });
 }
 
+function buildFacilitiesViewportHeaders(
+  requestContext: FacilitiesViewportRequestContext | undefined
+): HeadersInit | undefined {
+  if (typeof requestContext === "undefined") {
+    return undefined;
+  }
+
+  return {
+    [ApiHeaders.facilitiesInteractionType]: requestContext.interactionType,
+    [ApiHeaders.facilitiesViewMode]: requestContext.activeViewMode,
+    [ApiHeaders.facilitiesViewportKey]: requestContext.viewportKey,
+    [ApiHeaders.facilitiesZoomBucket]: String(requestContext.zoomBucket),
+  };
+}
+
 function awaitInflightFacilitiesBboxRequestEffect(
   request: Promise<FacilitiesBboxEffectSuccess>,
   perspective: FacilitiesBboxRequest["perspective"],
@@ -307,9 +326,19 @@ function fetchFacilitiesByResolvedDatasetVersionEffect(
   });
 
   const nextRequest = Effect.runPromise(
-    apiRequestJsonEffect(url, FacilitiesFeatureCollectionSchema, buildApiRequestInit(), {
-      retryProfile: facilitiesInteractiveRetryProfile,
-    })
+    apiRequestJsonEffect(
+      url,
+      FacilitiesFeatureCollectionSchema,
+      withDatasetVersionHeader(
+        buildApiRequestInit({
+          headers: buildFacilitiesViewportHeaders(args.requestContext),
+        }),
+        datasetVersion
+      ),
+      {
+        retryProfile: facilitiesInteractiveRetryProfile,
+      }
+    )
   ).finally(() => {
     const activeRequest = readInflightFacilitiesBboxRequests().get(url);
     if (activeRequest === nextRequest) {
@@ -377,7 +406,7 @@ export function fetchFacilitiesDatasetManifestEffect() {
   });
 }
 
-function resolveFacilitiesDatasetVersionEffect() {
+export function resolveFacilitiesDatasetVersionEffect() {
   const cachedManifest = readCachedFacilitiesDatasetManifest();
   if (cachedManifest !== null) {
     return Effect.succeed(cachedManifest.manifest.current.version);
@@ -399,6 +428,14 @@ function resolveFacilitiesDatasetVersionEffect() {
   writeInflightFacilitiesDatasetVersionRequest(nextDatasetVersionRequest);
 
   return Effect.promise(() => nextDatasetVersionRequest);
+}
+
+export function resolveFacilitiesDatasetVersionPromise(): Promise<string> {
+  return Effect.runPromise(resolveFacilitiesDatasetVersionEffect());
+}
+
+export function preloadFacilitiesDatasetManifest(): void {
+  resolveFacilitiesDatasetVersionPromise().catch(() => undefined);
 }
 
 const facilitiesInteractiveRetryProfile = {

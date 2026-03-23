@@ -252,6 +252,7 @@ DATASETS: tuple[DatasetConfig, ...] = (
                     shell(
                         "bash",
                         str(PROJECT_ROOT / "scripts/refresh-facilities-fast.sh"),
+                        "{run_id}",
                     ),
                 ),
             ),
