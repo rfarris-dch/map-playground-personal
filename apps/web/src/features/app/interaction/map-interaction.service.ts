@@ -117,6 +117,17 @@ function createSnapshot(
   };
 }
 
+function isDuplicateMoveEndSnapshot(
+  previous: MapInteractionSnapshot | null,
+  next: MapInteractionSnapshot
+): boolean {
+  if (previous === null || next.eventType !== "moveend") {
+    return false;
+  }
+
+  return next.canonicalViewportKey === previous.canonicalViewportKey;
+}
+
 export function createMapInteractionCoordinator(map: IMap): MapInteractionCoordinator {
   const listeners = new Set<MapInteractionListener>();
   let destroyed = false;
@@ -128,6 +139,10 @@ export function createMapInteractionCoordinator(map: IMap): MapInteractionCoordi
     }
 
     const nextSnapshot = createSnapshot(map, eventType, lastSnapshot);
+    if (isDuplicateMoveEndSnapshot(lastSnapshot, nextSnapshot)) {
+      return;
+    }
+
     lastSnapshot = nextSnapshot;
 
     for (const listener of listeners) {

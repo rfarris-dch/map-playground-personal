@@ -126,14 +126,16 @@ async function handleFacilitiesSelectionRequest(args: {
           selectionResult.value.truncatedByPerspective.hyperscale,
         warnings: [...selectionResult.value.warnings],
       };
+      const serializedPayloadBody = JSON.stringify(payloadBody);
 
       return buildFacilitiesCacheEntry({
         dataVersion: runtimeConfig.dataVersion,
         datasetVersion: runtimeConfig.facilitiesDatasetVersion,
-        etag: `"${hashFacilitiesCachePayload(JSON.stringify(payloadBody))}"`,
+        etag: `"${hashFacilitiesCachePayload(serializedPayloadBody)}"`,
         generatedAt: new Date().toISOString(),
         originRequestId: args.requestId,
         payload: payloadBody,
+        payloadBytes: serializedPayloadBody.length,
       });
     },
   });

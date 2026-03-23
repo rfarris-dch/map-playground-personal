@@ -1,18 +1,31 @@
-import { apiRequestJsonEffect } from "@map-migration/core-runtime/api";
+import {
+  ApiAbortedError,
+  type ApiEffectError,
+  type ApiEffectSuccess,
+  ApiHttpError,
+  ApiNetworkError,
+  ApiSchemaError,
+  apiRequestJsonEffect,
+} from "@map-migration/core-runtime/api";
 import {
   buildFacilitiesBboxRoute,
   buildFacilitiesManifestRoute,
 } from "@map-migration/http-contracts/api-routes";
 import {
   FacilitiesDatasetManifestSchema,
+  type FacilitiesFeatureCollection,
   FacilitiesFeatureCollectionSchema,
 } from "@map-migration/http-contracts/facilities-http";
 import { Effect } from "effect";
 import { z } from "zod";
+import { recordAppPerformanceCounter } from "@/features/app/diagnostics/app-performance.service";
 import type { FacilitiesBboxRequest } from "@/features/facilities/facilities.types";
 import { buildApiRequestInit } from "@/lib/api/api-request-init.service";
 
 declare global {
+  var __MAP_FACILITIES_BBOX_REQUESTS__:
+    | Map<string, Promise<FacilitiesBboxEffectSuccess>>
+    | undefined;
   var __MAP_FACILITIES_DATASET_MANIFEST_CACHE__: FacilitiesDatasetManifestCacheRecord | undefined;
   var __MAP_FACILITIES_DATASET_VERSION_REQUEST__: Promise<string> | null | undefined;
 }
@@ -29,6 +42,7 @@ const FacilitiesDatasetManifestCacheRecordSchema = z.object({
 type FacilitiesDatasetManifestCacheRecord = z.infer<
   typeof FacilitiesDatasetManifestCacheRecordSchema
 >;
+type FacilitiesBboxEffectSuccess = ApiEffectSuccess<FacilitiesFeatureCollection>;
 
 function nowEpochMs(): number {
   return Date.now();
@@ -135,6 +149,136 @@ function writeInflightFacilitiesDatasetVersionRequest(request: Promise<string> |
   globalThis.__MAP_FACILITIES_DATASET_VERSION_REQUEST__ = request;
 }
 
+function readInflightFacilitiesBboxRequests(): Map<string, Promise<FacilitiesBboxEffectSuccess>> {
+  const requests = globalThis.__MAP_FACILITIES_BBOX_REQUESTS__;
+  if (typeof requests !== "undefined") {
+    return requests;
+  }
+
+  const nextRequests = new Map<string, Promise<FacilitiesBboxEffectSuccess>>();
+  globalThis.__MAP_FACILITIES_BBOX_REQUESTS__ = nextRequests;
+  return nextRequests;
+}
+
+function toApiEffectError(error: unknown): ApiEffectError {
+  if (
+    error instanceof ApiAbortedError ||
+    error instanceof ApiHttpError ||
+    error instanceof ApiNetworkError ||
+    error instanceof ApiSchemaError
+  ) {
+    return error;
+  }
+
+  return new ApiNetworkError({
+    requestId: "",
+    cause: error,
+  });
+}
+
+function createFacilitiesRequestAbortedError(): ApiAbortedError {
+  return new ApiAbortedError({
+    requestId: "",
+    details: "request aborted",
+  });
+}
+
+function buildFacilitiesBboxRequestUrl(
+  args: FacilitiesBboxRequest,
+  datasetVersion: string
+): string {
+  return buildFacilitiesBboxRoute({
+    bbox: args.bbox,
+    datasetVersion,
+    perspective: args.perspective,
+    limit: args.limit,
+  });
+}
+
+function awaitInflightFacilitiesBboxRequestEffect(
+  request: Promise<FacilitiesBboxEffectSuccess>,
+  perspective: FacilitiesBboxRequest["perspective"],
+  signal?: AbortSignal
+) {
+  return Effect.tryPromise({
+    try: () =>
+      new Promise<FacilitiesBboxEffectSuccess>((resolve, reject) => {
+        if (signal?.aborted === true) {
+          recordAppPerformanceCounter("facilities.request.singleflight.wait-aborted", {
+            perspective,
+          });
+          reject(createFacilitiesRequestAbortedError());
+          return;
+        }
+
+        const cleanup = () => {
+          signal?.removeEventListener("abort", handleAbort);
+        };
+
+        const handleAbort = () => {
+          cleanup();
+          recordAppPerformanceCounter("facilities.request.singleflight.wait-aborted", {
+            perspective,
+          });
+          reject(createFacilitiesRequestAbortedError());
+        };
+
+        signal?.addEventListener("abort", handleAbort, { once: true });
+
+        request.then(
+          (result) => {
+            cleanup();
+            resolve(result);
+          },
+          (error) => {
+            cleanup();
+            reject(error);
+          }
+        );
+      }),
+    catch: toApiEffectError,
+  });
+}
+
+function fetchFacilitiesByResolvedDatasetVersionEffect(
+  args: FacilitiesBboxRequest,
+  datasetVersion: string,
+  signal?: AbortSignal
+) {
+  if (signal?.aborted === true) {
+    return Effect.fail(createFacilitiesRequestAbortedError());
+  }
+
+  const url = buildFacilitiesBboxRequestUrl(args, datasetVersion);
+  const inflightRequests = readInflightFacilitiesBboxRequests();
+  const existingRequest = inflightRequests.get(url);
+
+  if (typeof existingRequest !== "undefined") {
+    recordAppPerformanceCounter("facilities.request.singleflight.joined", {
+      perspective: args.perspective,
+    });
+    return awaitInflightFacilitiesBboxRequestEffect(existingRequest, args.perspective, signal);
+  }
+
+  recordAppPerformanceCounter("facilities.request.singleflight.created", {
+    perspective: args.perspective,
+  });
+
+  const nextRequest = Effect.runPromise(
+    apiRequestJsonEffect(url, FacilitiesFeatureCollectionSchema, buildApiRequestInit(), {
+      retryProfile: facilitiesInteractiveRetryProfile,
+    })
+  ).finally(() => {
+    const activeRequest = readInflightFacilitiesBboxRequests().get(url);
+    if (activeRequest === nextRequest) {
+      readInflightFacilitiesBboxRequests().delete(url);
+    }
+  });
+
+  inflightRequests.set(url, nextRequest);
+  return awaitInflightFacilitiesBboxRequestEffect(nextRequest, args.perspective, signal);
+}
+
 export function fetchFacilitiesDatasetManifestEffect() {
   return Effect.tryPromise({
     try: async () => {
@@ -225,32 +369,12 @@ export function fetchFacilitiesByBboxEffect(args: FacilitiesBboxRequest, signal?
   const requestedDatasetVersion = args.datasetVersion;
 
   if (typeof requestedDatasetVersion === "string") {
-    return apiRequestJsonEffect(
-      buildFacilitiesBboxRoute({
-        bbox: args.bbox,
-        datasetVersion: requestedDatasetVersion,
-        perspective: args.perspective,
-        limit: args.limit,
-      }),
-      FacilitiesFeatureCollectionSchema,
-      buildApiRequestInit({ signal }),
-      { retryProfile: facilitiesInteractiveRetryProfile }
-    );
+    return fetchFacilitiesByResolvedDatasetVersionEffect(args, requestedDatasetVersion, signal);
   }
 
   return resolveFacilitiesDatasetVersionEffect().pipe(
     Effect.flatMap((datasetVersion) =>
-      apiRequestJsonEffect(
-        buildFacilitiesBboxRoute({
-          bbox: args.bbox,
-          datasetVersion,
-          perspective: args.perspective,
-          limit: args.limit,
-        }),
-        FacilitiesFeatureCollectionSchema,
-        buildApiRequestInit({ signal }),
-        { retryProfile: facilitiesInteractiveRetryProfile }
-      )
+      fetchFacilitiesByResolvedDatasetVersionEffect(args, datasetVersion, signal)
     )
   );
 }

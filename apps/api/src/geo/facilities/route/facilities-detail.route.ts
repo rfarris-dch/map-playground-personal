@@ -97,13 +97,15 @@ export function registerFacilitiesDetailRoute<E extends Env>(app: Hono<E>): void
             const payloadBody: FacilitiesDetailCacheBody = {
               feature: queryResult.value.feature,
             };
+            const serializedPayloadBody = JSON.stringify(payloadBody);
             return buildFacilitiesCacheEntry({
               dataVersion: runtimeConfig.dataVersion,
               datasetVersion: runtimeConfig.facilitiesDatasetVersion,
-              etag: `"${hashFacilitiesCachePayload(JSON.stringify(payloadBody))}"`,
+              etag: `"${hashFacilitiesCachePayload(serializedPayloadBody)}"`,
               generatedAt: new Date().toISOString(),
               originRequestId: requestId,
               payload: payloadBody,
+              payloadBytes: serializedPayloadBody.length,
             });
           },
         });

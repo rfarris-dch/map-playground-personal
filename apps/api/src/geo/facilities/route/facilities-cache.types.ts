@@ -33,6 +33,7 @@ export interface FacilitiesCacheEntry<TPayload> {
   readonly generatedAt: string;
   readonly originRequestId: string;
   readonly payload: TPayload;
+  readonly payloadBytes: number;
 }
 
 export interface FacilitiesBboxCacheKeyArgs {

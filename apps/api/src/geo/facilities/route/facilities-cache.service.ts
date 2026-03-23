@@ -89,6 +89,7 @@ function parseCacheEntry<TPayload>(serialized: string): FacilitiesCacheEntry<TPa
     const freshUntilEpochMs = parsed.freshUntilEpochMs;
     const generatedAt = parsed.generatedAt;
     const originRequestId = parsed.originRequestId;
+    const payloadBytes = parsed.payloadBytes;
     if (
       typeof dataVersion !== "string" ||
       typeof datasetVersion !== "string" ||
@@ -96,6 +97,7 @@ function parseCacheEntry<TPayload>(serialized: string): FacilitiesCacheEntry<TPa
       typeof freshUntilEpochMs !== "number" ||
       typeof generatedAt !== "string" ||
       typeof originRequestId !== "string" ||
+      typeof payloadBytes !== "number" ||
       !("payload" in parsed)
     ) {
       return null;
@@ -108,6 +110,7 @@ function parseCacheEntry<TPayload>(serialized: string): FacilitiesCacheEntry<TPa
       freshUntilEpochMs,
       generatedAt,
       originRequestId,
+      payloadBytes,
       payload: parsed.payload as TPayload,
     };
   } catch {
@@ -291,6 +294,7 @@ export function buildFacilitiesCacheEntry<TPayload>(args: {
   readonly generatedAt: string;
   readonly originRequestId: string;
   readonly payload: TPayload;
+  readonly payloadBytes: number;
 }): FacilitiesCacheEntry<TPayload> {
   return {
     dataVersion: args.dataVersion,
@@ -299,6 +303,7 @@ export function buildFacilitiesCacheEntry<TPayload>(args: {
     freshUntilEpochMs: nowEpochMs() + FACILITIES_CACHE_TTL_SECONDS * 1000,
     generatedAt: args.generatedAt,
     originRequestId: args.originRequestId,
+    payloadBytes: args.payloadBytes,
     payload: args.payload,
   };
 }

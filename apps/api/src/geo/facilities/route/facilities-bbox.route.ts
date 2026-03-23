@@ -100,13 +100,15 @@ export function registerFacilitiesBboxRoute<E extends Env>(app: Hono<E>): void {
               truncated: queryResult.value.truncated,
               warnings: [...queryResult.value.warnings],
             };
+            const serializedPayloadBody = JSON.stringify(payloadBody);
             return buildFacilitiesCacheEntry({
               dataVersion: runtimeConfig.dataVersion,
               datasetVersion: effectiveDatasetVersion,
-              etag: `"${hashFacilitiesCachePayload(JSON.stringify(payloadBody))}"`,
+              etag: `"${hashFacilitiesCachePayload(serializedPayloadBody)}"`,
               generatedAt: new Date().toISOString(),
               originRequestId: requestId,
               payload: payloadBody,
+              payloadBytes: serializedPayloadBody.length,
             });
           },
         }).catch((error) => {
@@ -165,14 +167,13 @@ export function registerFacilitiesBboxRoute<E extends Env>(app: Hono<E>): void {
             },
           });
         }
-        const responseBytes = JSON.stringify(payload).length;
         recordFacilitiesBboxMetrics({
           canonicalBboxKey,
           effectiveLimit: limit,
           mappingTimeMs: cacheResult.cacheStatus === "miss" ? freshMappingTimeMs : 0,
           outcome: "completed",
           perspective,
-          responseBytes,
+          responseBytes: cacheResult.entry.payloadBytes,
           routeLatencyMs: globalThis.performance.now() - routeStartedAt,
           rowCount: cacheResult.entry.payload.features.length,
           sqlTimeMs: cacheResult.cacheStatus === "miss" ? freshSqlTimeMs : 0,

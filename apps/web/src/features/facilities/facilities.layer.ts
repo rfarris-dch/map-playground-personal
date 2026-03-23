@@ -89,7 +89,16 @@ interface ViewportFeaturesCache {
   viewportFeatures: FacilitiesFeatureCollection["features"];
 }
 
+interface ViewportPresentationCache {
+  bboxKey: string | null;
+  features: FacilitiesFeatureCollection["features"] | null;
+  requestId: string | null;
+  truncated: boolean;
+  viewMode: FacilitiesViewMode | null;
+}
+
 interface ProviderLogoLoadRequest {
+  readonly facilityCount: number;
   readonly providerId: string;
   readonly url: string;
 }
@@ -172,7 +181,15 @@ export function mountFacilitiesLayer(
     features: null,
     viewportFeatures: [],
   };
+  const viewportPresentationCache: ViewportPresentationCache = {
+    bboxKey: null,
+    features: null,
+    requestId: null,
+    truncated: false,
+    viewMode: null,
+  };
   let bboxCacheEntries: ReturnType<typeof upsertFacilitiesBboxCacheEntry> = [];
+  let appliedSourceFeatures: FacilitiesFeatureCollection["features"] | null = null;
   let logoLoadTimer: ReturnType<typeof setTimeout> | null = null;
   let activeLogoLoadKey: string | null = null;
   let activeLogoViewportKey: string | null = null;
@@ -436,47 +453,101 @@ export function mountFacilitiesLayer(
     return [...providerIds].sort((left, right) => left.localeCompare(right)).join(",");
   };
 
+  const countViewportProviderFacilities = (
+    features: FacilitiesFeatureCollection["features"]
+  ): ReadonlyMap<string, number> => {
+    const providerFacilityCounts = new Map<string, number>();
+
+    for (const feature of features) {
+      const providerId = rememberProviderName(feature);
+      if (!providerId) {
+        continue;
+      }
+
+      providerFacilityCounts.set(providerId, (providerFacilityCounts.get(providerId) ?? 0) + 1);
+    }
+
+    return providerFacilityCounts;
+  };
+
+  const compareProviderLogoLoadRequests = (
+    left: ProviderLogoLoadRequest,
+    right: ProviderLogoLoadRequest
+  ): number => {
+    if (left.facilityCount !== right.facilityCount) {
+      return right.facilityCount - left.facilityCount;
+    }
+
+    return left.providerId.localeCompare(right.providerId);
+  };
+
+  const appendProviderLogoLoadRequest = (args: {
+    readonly feature: FacilitiesFeatureCollection["features"][number];
+    readonly logoMap: Readonly<Record<string, string>>;
+    readonly providerFacilityCounts: ReadonlyMap<string, number>;
+    readonly recordInflightSkips: boolean;
+    readonly requests: ProviderLogoLoadRequest[];
+    readonly seenProviderIds: Set<string>;
+    readonly viewportProviderIds: string[];
+  }): void => {
+    const providerId = rememberProviderName(args.feature);
+    if (!providerId || failedLogos.has(providerId) || args.seenProviderIds.has(providerId)) {
+      return;
+    }
+
+    args.seenProviderIds.add(providerId);
+    args.viewportProviderIds.push(providerId);
+
+    if (loadedLogos.has(providerId) && map.hasImage(`${logoPrefix}${providerId}`)) {
+      return;
+    }
+
+    if (inflightLogoLoads.has(providerId)) {
+      if (args.recordInflightSkips) {
+        recordAppPerformanceCounter("facilities.logo-load.skipped", {
+          perspective,
+          reason: "inflight",
+        });
+      }
+      return;
+    }
+
+    const filename = args.logoMap[providerId];
+    if (!filename) {
+      installMissingProviderFallbackLogo(providerId);
+      return;
+    }
+
+    args.requests.push({
+      facilityCount: args.providerFacilityCounts.get(providerId) ?? 1,
+      providerId,
+      url: `${logoBaseUrl}/${providerId}/${encodeURIComponent(filename)}`,
+    });
+  };
+
   const buildProviderLogoLoadPlan = (
     features: FacilitiesFeatureCollection["features"],
     logoMap: Readonly<Record<string, string>>,
     recordInflightSkips: boolean
   ): ProviderLogoLoadPlan => {
+    const providerFacilityCounts = countViewportProviderFacilities(features);
     const requests: ProviderLogoLoadRequest[] = [];
     const seenProviderIds = new Set<string>();
     const viewportProviderIds: string[] = [];
 
-    for (const f of features) {
-      const pid = rememberProviderName(f);
-
-      if (!pid || failedLogos.has(pid) || seenProviderIds.has(pid)) {
-        continue;
-      }
-      seenProviderIds.add(pid);
-      viewportProviderIds.push(pid);
-      if (loadedLogos.has(pid) && map.hasImage(`${logoPrefix}${pid}`)) {
-        continue;
-      }
-      if (inflightLogoLoads.has(pid)) {
-        if (recordInflightSkips) {
-          recordAppPerformanceCounter("facilities.logo-load.skipped", {
-            perspective,
-            reason: "inflight",
-          });
-        }
-        continue;
-      }
-
-      const filename = logoMap[pid];
-      if (!filename) {
-        installMissingProviderFallbackLogo(pid);
-        continue;
-      }
-
-      requests.push({
-        providerId: pid,
-        url: `${logoBaseUrl}/${pid}/${encodeURIComponent(filename)}`,
+    for (const feature of features) {
+      appendProviderLogoLoadRequest({
+        feature,
+        logoMap,
+        providerFacilityCounts,
+        recordInflightSkips,
+        requests,
+        seenProviderIds,
+        viewportProviderIds,
       });
     }
+
+    requests.sort(compareProviderLogoLoadRequests);
 
     return {
       requestKey: buildProviderLogoLoadKey(requests),
@@ -662,6 +733,18 @@ export function mountFacilitiesLayer(
     scheduledLogoViewportKey = null;
   };
 
+  const clearViewportPresentationCache = (): void => {
+    viewportPresentationCache.bboxKey = null;
+    viewportPresentationCache.features = null;
+    viewportPresentationCache.requestId = null;
+    viewportPresentationCache.truncated = false;
+    viewportPresentationCache.viewMode = null;
+  };
+
+  const clearAppliedSourceFeatures = (): void => {
+    appliedSourceFeatures = null;
+  };
+
   const resolveIconRenderBudget = (
     viewportCount: number
   ): {
@@ -707,6 +790,63 @@ export function mountFacilitiesLayer(
     }
 
     return renderBudget;
+  };
+
+  const applySourceDataIfNeeded = (features: FacilitiesFeatureCollection["features"]): boolean => {
+    if (appliedSourceFeatures === features) {
+      return false;
+    }
+
+    const stopSourceUpdateTimer = createAppPerformanceTimer("facilities.source-update.time", {
+      perspective,
+    });
+    map.setGeoJSONSourceData(sourceId, { type: "FeatureCollection", features });
+    stopSourceUpdateTimer();
+    appliedSourceFeatures = features;
+    syncSelectionForFeatures(features);
+    return true;
+  };
+
+  const applyViewportPresentation = (args: {
+    readonly bbox: BBox;
+    readonly features: FacilitiesFeatureCollection["features"];
+    readonly requestId: string;
+    readonly truncated: boolean;
+  }): void => {
+    const bboxKey = toBboxKey(args.bbox);
+    const shouldPresentViewport =
+      viewportPresentationCache.features !== args.features ||
+      viewportPresentationCache.bboxKey !== bboxKey ||
+      viewportPresentationCache.requestId !== args.requestId ||
+      viewportPresentationCache.truncated !== args.truncated ||
+      viewportPresentationCache.viewMode !== state.viewMode;
+
+    if (!shouldPresentViewport) {
+      return;
+    }
+
+    viewportPresentationCache.features = args.features;
+    viewportPresentationCache.bboxKey = bboxKey;
+    viewportPresentationCache.requestId = args.requestId;
+    viewportPresentationCache.truncated = args.truncated;
+    viewportPresentationCache.viewMode = state.viewMode;
+
+    emitViewportUpdate(args.features, args.requestId, args.truncated);
+    const renderBudget =
+      state.viewMode === "icons"
+        ? applyIconDensityMode(args.features.length)
+        : { degraded: false, renderSymbols: false, showFallback: false };
+
+    applyViewportStatus({
+      count: args.features.length,
+      displayBudgetDegraded: renderBudget.degraded,
+      requestId: args.requestId,
+      truncated: args.truncated,
+    });
+
+    if (state.viewMode === "icons") {
+      scheduleLogoLoad(args.features);
+    }
   };
 
   const scheduleLogoLoad = (features: FacilitiesFeatureCollection["features"]): void => {
@@ -806,6 +946,8 @@ export function mountFacilitiesLayer(
 
   const removeFacilitiesLayers = (): void => {
     clearClusterMarkers();
+    clearAppliedSourceFeatures();
+    clearViewportPresentationCache();
 
     for (const layerId of [heatmapLayerId, clusterLayerId, pointLayerId, iconFallbackLayerId]) {
       if (map.hasLayer(layerId)) {
@@ -1482,11 +1624,14 @@ export function mountFacilitiesLayer(
   const resetVisibleFacilitiesData = (): void => {
     clearScheduledLogoLoad();
     map.setGeoJSONSourceData(sourceId, emptyFacilitiesSourceData());
+    clearAppliedSourceFeatures();
+    clearViewportPresentationCache();
     clearClusterMarkers();
   };
 
   const clearRefreshState = (): void => {
     clearCachedViewport();
+    clearViewportPresentationCache();
     clearSelection();
     state.lastFetchKey = null;
   };
@@ -1506,17 +1651,12 @@ export function mountFacilitiesLayer(
       const filtered = getFilteredCachedFeatures();
       const bbox = quantizeBbox(map.getBounds(), VIEWPORT_BBOX_DECIMALS);
       const viewportFeatures = getViewportFeatures(filtered, bbox);
-
-      if (state.viewMode === "icons") {
-        applyIconDensityMode(viewportFeatures.length);
-        scheduleLogoLoad(viewportFeatures);
-      }
-
-      emitViewportUpdate(
-        viewportFeatures,
-        state.lastRequestId ?? args.requestId,
-        state.lastTruncated
-      );
+      applyViewportPresentation({
+        bbox,
+        features: viewportFeatures,
+        requestId: state.lastRequestId ?? args.requestId,
+        truncated: state.lastTruncated,
+      });
     }
 
     setStatus({
@@ -1577,17 +1717,9 @@ export function mountFacilitiesLayer(
     });
     const filtered = getFilteredCachedFeatures();
     const viewportFeatures = getViewportFeatures(filtered, bbox);
-    emitViewportUpdate(viewportFeatures, state.lastRequestId ?? "n/a", state.lastTruncated);
-    const renderBudget =
-      state.viewMode === "icons"
-        ? applyIconDensityMode(viewportFeatures.length)
-        : { degraded: false, renderSymbols: false, showFallback: false };
-    if (state.viewMode === "icons") {
-      scheduleLogoLoad(viewportFeatures);
-    }
-    applyViewportStatus({
-      count: viewportFeatures.length,
-      displayBudgetDegraded: renderBudget.degraded,
+    applyViewportPresentation({
+      bbox,
+      features: viewportFeatures,
       requestId: state.lastRequestId ?? "n/a",
       truncated: state.lastTruncated,
     });
@@ -1613,32 +1745,17 @@ export function mountFacilitiesLayer(
 
     if (shouldUpdateSourceData) {
       options.onCachedFeaturesUpdate?.(state.cachedFeatures);
-      const stopSourceUpdateTimer = createAppPerformanceTimer("facilities.source-update.time", {
-        perspective,
-      });
-      map.setGeoJSONSourceData(sourceId, { type: "FeatureCollection", features: filtered });
-      stopSourceUpdateTimer();
-      syncSelectionForFeatures(filtered);
+      applySourceDataIfNeeded(filtered);
     }
 
     syncClusterMarkers();
     const viewportFeatures = getViewportFeatures(filtered, args.bbox);
-    emitViewportUpdate(viewportFeatures, args.requestId, args.truncated);
-    const renderBudget =
-      state.viewMode === "icons"
-        ? applyIconDensityMode(viewportFeatures.length)
-        : { degraded: false, renderSymbols: false, showFallback: false };
-
-    applyViewportStatus({
-      count: viewportFeatures.length,
-      displayBudgetDegraded: renderBudget.degraded,
+    applyViewportPresentation({
+      bbox: args.bbox,
+      features: viewportFeatures,
       requestId: args.requestId,
       truncated: args.truncated,
     });
-
-    if (state.viewMode === "icons") {
-      scheduleLogoLoad(viewportFeatures);
-    }
   };
 
   const applyCachedRefreshResult = (args: {
@@ -1704,11 +1821,10 @@ export function mountFacilitiesLayer(
       args.result.data.features.length,
       { perspective, truncated: args.result.data.meta.truncated }
     );
-    recordAppPerformanceMeasurement(
-      "facilities.response.bytes",
-      JSON.stringify(args.result.data).length,
-      { perspective, truncated: args.result.data.meta.truncated }
-    );
+    recordAppPerformanceMeasurement("facilities.response.bytes", args.result.rawBody.length, {
+      perspective,
+      truncated: args.result.data.meta.truncated,
+    });
 
     applyRefreshResult({
       bbox: args.bbox,
@@ -2009,15 +2125,18 @@ export function mountFacilitiesLayer(
 
       if (state.visible && state.cachedFeatures.length > 0) {
         const filtered = getFilteredCachedFeatures();
-        map.setGeoJSONSourceData(sourceId, { type: "FeatureCollection", features: filtered });
+        applySourceDataIfNeeded(filtered);
         syncClusterMarkers();
-        syncSelectionForFeatures(filtered);
 
         if (mode === "icons") {
           const bbox = quantizeBbox(map.getBounds(), VIEWPORT_BBOX_DECIMALS);
           const viewportFeatures = getViewportFeatures(filtered, bbox);
-          applyIconDensityMode(viewportFeatures.length);
-          scheduleLogoLoad(viewportFeatures);
+          applyViewportPresentation({
+            bbox,
+            features: viewportFeatures,
+            requestId: state.lastRequestId ?? "n/a",
+            truncated: state.lastTruncated,
+          });
         }
       } else {
         clearClusterMarkers();
@@ -2038,28 +2157,17 @@ export function mountFacilitiesLayer(
     }
 
     const filtered = getFilteredCachedFeatures();
-    map.setGeoJSONSourceData(sourceId, { type: "FeatureCollection", features: filtered });
+    applySourceDataIfNeeded(filtered);
     syncClusterMarkers();
-    syncSelectionForFeatures(filtered);
 
     const bbox = quantizeBbox(map.getBounds(), VIEWPORT_BBOX_DECIMALS);
     const viewportFeatures = getViewportFeatures(filtered, bbox);
-    emitViewportUpdate(viewportFeatures, state.lastRequestId ?? "n/a", state.lastTruncated);
-
-    applyViewportStatus({
-      count: viewportFeatures.length,
-      displayBudgetDegraded:
-        state.viewMode === "icons"
-          ? resolveIconRenderBudget(viewportFeatures.length).degraded
-          : false,
+    applyViewportPresentation({
+      bbox,
+      features: viewportFeatures,
       requestId: state.lastRequestId ?? "n/a",
       truncated: state.lastTruncated,
     });
-
-    if (state.viewMode === "icons") {
-      applyIconDensityMode(viewportFeatures.length);
-      scheduleLogoLoad(viewportFeatures);
-    }
   };
 
   return {
