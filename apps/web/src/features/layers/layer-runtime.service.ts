@@ -215,9 +215,16 @@ export function createLayerRuntime(
     applyVisibility(true);
     // Style reload: other controllers may recreate their map layers in their
     // own "load" handlers that fire AFTER this one (registration order).
-    // Reset caches so the next moveend re-pushes visibility once those layers exist.
+    // Reset caches and push visibility again on a microtask once those layers exist.
     controllerVisibility.clear();
     visibilityDirty = true;
+    queueMicrotask(() => {
+      if (state.destroyed) {
+        return;
+      }
+
+      applyVisibility(true);
+    });
   };
 
   if (
