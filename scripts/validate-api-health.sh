@@ -20,15 +20,15 @@ if ! command -v curl >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! command -v node >/dev/null 2>&1; then
-  echo "[health] node is required for facilities smoke checks" >&2
+if ! command -v bun >/dev/null 2>&1; then
+  echo "[health] bun is required for facilities smoke checks" >&2
   exit 1
 fi
 
 json_eval() {
   local expression="$1"
 
-  node -e '
+  bun -e '
 const fs = require("node:fs");
 const input = fs.readFileSync(0, "utf8");
 const data = JSON.parse(input);
