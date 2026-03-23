@@ -240,6 +240,10 @@ export function getFacilitiesSharedCacheControl(): string {
   ].join(", ");
 }
 
+export function getFacilitiesProtectedCacheVary(): string {
+  return "Cookie";
+}
+
 export async function resolveFacilitiesCachedEntry<TPayload>(args: {
   readonly allowStaleOnError?: (error: unknown) => boolean;
   readonly buildFreshEntry: () => Promise<FacilitiesCacheEntry<TPayload>>;

@@ -4,6 +4,7 @@ import {
   FacilitiesDatasetManifestSchema,
 } from "@map-migration/http-contracts/facilities-http";
 import type { Env, Hono } from "hono";
+import { getFacilitiesProtectedCacheVary } from "@/geo/facilities/route/facilities-cache.service";
 import { jsonOk, withHeaders } from "@/http/api-response";
 import { matchesIfNoneMatch } from "@/http/conditional-request.service";
 import { fromApiRequest, runEffectRoute } from "@/http/effect-route";
@@ -43,6 +44,7 @@ export function registerFacilitiesManifestRoute<E extends Env>(app: Hono<E>): vo
               [ApiHeaders.datasetVersion]: manifestState.currentVersion,
               [ApiHeaders.requestId]: requestId,
               ETag: etag,
+              Vary: getFacilitiesProtectedCacheVary(),
             },
           });
         }
@@ -54,6 +56,7 @@ export function registerFacilitiesManifestRoute<E extends Env>(app: Hono<E>): vo
             [ApiHeaders.dataVersion]: runtimeConfig.dataVersion,
             [ApiHeaders.datasetVersion]: manifestState.currentVersion,
             ETag: etag,
+            Vary: getFacilitiesProtectedCacheVary(),
           }
         );
       })

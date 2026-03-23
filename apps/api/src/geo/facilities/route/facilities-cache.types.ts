@@ -5,6 +5,11 @@ import type {
   FacilitiesSelectionRequest,
   FacilitiesSelectionResponse,
 } from "@map-migration/http-contracts/facilities-http";
+import type {
+  FacilitiesTableResponse,
+  FacilitySortBy,
+  SortDirection,
+} from "@map-migration/http-contracts/table-contracts";
 
 export type FacilitiesCacheStatus = "miss" | "redis-hit" | "stale";
 
@@ -23,6 +28,11 @@ export interface FacilitiesSelectionCacheBody {
   readonly selection: FacilitiesSelectionResponse["selection"];
   readonly truncated: boolean;
   readonly warnings: FacilitiesSelectionResponse["meta"]["warnings"];
+}
+
+export interface FacilitiesTableCacheBody {
+  readonly rows: FacilitiesTableResponse["rows"];
+  readonly totalCount: number;
 }
 
 export interface FacilitiesCacheEntry<TPayload> {
@@ -59,6 +69,15 @@ export interface FacilitiesSelectionCacheKeyArgs {
   readonly geometry: FacilitiesSelectionRequest["geometry"];
   readonly limitPerPerspective: number;
   readonly perspectives: readonly FacilityPerspective[];
+}
+
+export interface FacilitiesTableCacheKeyArgs {
+  readonly datasetVersion: string;
+  readonly page: number;
+  readonly pageSize: number;
+  readonly perspective: FacilityPerspective;
+  readonly sortBy: FacilitySortBy;
+  readonly sortOrder: SortDirection;
 }
 
 export interface FacilitiesCacheHeaders {

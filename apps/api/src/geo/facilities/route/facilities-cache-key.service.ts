@@ -7,6 +7,7 @@ import type {
   FacilitiesBboxCacheKeyArgs,
   FacilitiesDetailCacheKeyArgs,
   FacilitiesSelectionCacheKeyArgs,
+  FacilitiesTableCacheKeyArgs,
 } from "./facilities-cache.types";
 
 const BBOX_DECIMALS = 4;
@@ -112,6 +113,18 @@ export function buildFacilitiesDetailCacheKey(args: FacilitiesDetailCacheKeyArgs
     args.datasetVersion,
     args.perspective,
     encodeURIComponent(args.facilityId),
+  ].join(":");
+}
+
+export function buildFacilitiesTableCacheKey(args: FacilitiesTableCacheKeyArgs): string {
+  return [
+    "facilities:table:v1",
+    args.datasetVersion,
+    args.perspective,
+    args.sortBy,
+    args.sortOrder,
+    String(args.page),
+    String(args.pageSize),
   ].join(":");
 }
 

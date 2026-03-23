@@ -9,6 +9,7 @@ import type { Env, Hono } from "hono";
 import {
   buildFacilitiesCacheEntry,
   createFacilitiesCacheHeaders,
+  getFacilitiesProtectedCacheVary,
   getFacilitiesSharedCacheControl,
   resolveFacilitiesCachedEntry,
 } from "@/geo/facilities/route/facilities-cache.service";
@@ -19,7 +20,7 @@ import {
 } from "@/geo/facilities/route/facilities-cache-key.service";
 import {
   bindFacilitiesDatasetVersion,
-  readRequestedFacilitiesDatasetVersion,
+  readRequestedFacilitiesDatasetVersionForCacheableGet,
 } from "@/geo/facilities/route/facilities-dataset-version.service";
 import {
   buildFacilitiesMappingRouteError,
@@ -72,7 +73,7 @@ export function registerFacilitiesDetailRoute<E extends Env>(app: Hono<E>): void
 
         const runtimeConfig = getApiRuntimeConfig();
         const versionBinding = await bindFacilitiesDatasetVersion(
-          readRequestedFacilitiesDatasetVersion({
+          readRequestedFacilitiesDatasetVersionForCacheableGet({
             headerValue: honoContext.req.header(ApiHeaders.datasetVersion),
             queryValue: honoContext.req.query("v") ?? honoContext.req.query("datasetVersion"),
           }),
@@ -158,6 +159,7 @@ export function registerFacilitiesDetailRoute<E extends Env>(app: Hono<E>): void
               [ApiHeaders.originRequestId]: responseHeaders.originRequestId,
               [ApiHeaders.requestId]: requestId,
               ETag: responseHeaders.etag,
+              Vary: getFacilitiesProtectedCacheVary(),
             },
           });
         }
@@ -171,6 +173,7 @@ export function registerFacilitiesDetailRoute<E extends Env>(app: Hono<E>): void
             [ApiHeaders.datasetVersion]: responseHeaders.datasetVersion,
             [ApiHeaders.originRequestId]: responseHeaders.originRequestId,
             ETag: responseHeaders.etag,
+            Vary: getFacilitiesProtectedCacheVary(),
           }
         );
       })

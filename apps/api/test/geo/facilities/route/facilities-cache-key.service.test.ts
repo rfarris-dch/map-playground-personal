@@ -3,6 +3,7 @@ import {
   buildFacilitiesBboxCacheKey,
   buildFacilitiesDetailCacheKey,
   buildFacilitiesSelectionCacheKey,
+  buildFacilitiesTableCacheKey,
 } from "@/geo/facilities/route/facilities-cache-key.service";
 
 describe("facilities cache key service", () => {
@@ -14,7 +15,7 @@ describe("facilities cache key service", () => {
         east: -97.743_01,
         north: 30.267_31,
       },
-      dataVersion: "dv-test",
+      datasetVersion: "dv-test",
       limit: 2000,
       perspective: "colocation",
     });
@@ -25,7 +26,7 @@ describe("facilities cache key service", () => {
         east: -97.743_09,
         north: 30.267_39,
       },
-      dataVersion: "dv-test",
+      datasetVersion: "dv-test",
       limit: 2000,
       perspective: "colocation",
     });
@@ -37,11 +38,24 @@ describe("facilities cache key service", () => {
   it("builds detail keys with perspective and facility id", () => {
     expect(
       buildFacilitiesDetailCacheKey({
-        dataVersion: "dv-test",
+        datasetVersion: "dv-test",
         facilityId: "colo:123",
         perspective: "colocation",
       })
     ).toBe("facilities:detail:v1:dv-test:colocation:colo%3A123");
+  });
+
+  it("builds table keys with dataset version and pagination inputs", () => {
+    expect(
+      buildFacilitiesTableCacheKey({
+        datasetVersion: "dv-test",
+        page: 2,
+        pageSize: 100,
+        perspective: "hyperscale",
+        sortBy: "updatedAt",
+        sortOrder: "desc",
+      })
+    ).toBe("facilities:table:v1:dv-test:hyperscale:updatedAt:desc:2:100");
   });
 
   it("normalizes selection keys across perspective ordering", async () => {
@@ -59,13 +73,13 @@ describe("facilities cache key service", () => {
     };
 
     const left = await buildFacilitiesSelectionCacheKey({
-      dataVersion: "dv-test",
+      datasetVersion: "dv-test",
       geometry,
       limitPerPerspective: 5000,
       perspectives: ["hyperscale", "colocation", "hyperscale"],
     });
     const right = await buildFacilitiesSelectionCacheKey({
-      dataVersion: "dv-test",
+      datasetVersion: "dv-test",
       geometry,
       limitPerPerspective: 5000,
       perspectives: ["colocation", "hyperscale"],

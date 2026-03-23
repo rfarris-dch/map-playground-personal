@@ -33,6 +33,47 @@ export function readRequestedFacilitiesDatasetVersion(args: {
   return normalizeDatasetVersion(args.queryValue) ?? normalizeDatasetVersion(args.headerValue);
 }
 
+export function readRequestedFacilitiesDatasetVersionForCacheableGet(args: {
+  readonly headerValue?: string | null | undefined;
+  readonly queryValue?: string | null | undefined;
+}): string | null {
+  const normalizedQueryValue = normalizeDatasetVersion(args.queryValue);
+  const normalizedHeaderValue = normalizeDatasetVersion(args.headerValue);
+
+  if (normalizedHeaderValue !== null && normalizedQueryValue === null) {
+    throw routeError({
+      httpStatus: 400,
+      code: "FACILITIES_DATASET_VERSION_QUERY_REQUIRED",
+      message:
+        "cacheable facilities GET requests must include the requested dataset version in the query string",
+      details: {
+        datasetVersionHeader: ApiHeaders.datasetVersion,
+        datasetVersionQueryParams: ["v", "datasetVersion"],
+      },
+    });
+  }
+
+  if (
+    normalizedHeaderValue !== null &&
+    normalizedQueryValue !== null &&
+    normalizedHeaderValue !== normalizedQueryValue
+  ) {
+    throw routeError({
+      httpStatus: 400,
+      code: "FACILITIES_DATASET_VERSION_MISMATCH",
+      message: "facilities dataset version header/query mismatch",
+      details: {
+        datasetVersionHeader: ApiHeaders.datasetVersion,
+        datasetVersionQueryParams: ["v", "datasetVersion"],
+        headerValue: normalizedHeaderValue,
+        queryValue: normalizedQueryValue,
+      },
+    });
+  }
+
+  return normalizedQueryValue;
+}
+
 interface FacilitiesDatasetRelationLookupRow {
   readonly colocation_exists: boolean;
   readonly hyperscale_exists: boolean;
