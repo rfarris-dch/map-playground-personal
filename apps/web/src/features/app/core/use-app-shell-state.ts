@@ -47,6 +47,11 @@ import {
 } from "@/features/app/market-boundary/app-shell-market-boundary-runtime.service";
 import type { BasemapLayerVisibilityController } from "@/features/basemap/basemap.types";
 import type { BoundaryHoverState } from "@/features/boundaries/boundaries.types";
+import type {
+  CountyPowerStoryHoverState,
+  CountyPowerStoryMountResult,
+  CountyPowerStoryVisibilityState,
+} from "@/features/county-power-story/county-power-story.types";
 import type { FacilitiesLayerController } from "@/features/facilities/facilities.types";
 import type {
   FacilitiesHoverController,
@@ -86,6 +91,7 @@ export function useAppShellState(): UseAppShellStateResult {
   const hoveredFacilityCluster = shallowRef<FacilityClusterHoverState | null>(null);
   const clusterClickSignal = shallowRef(0);
   const hoveredBoundary = shallowRef<BoundaryHoverState | null>(null);
+  const hoveredCountyPowerStory = shallowRef<CountyPowerStoryHoverState | null>(null);
   const boundaryHoverByLayer = shallowRef<BoundaryHoverByLayerState>(
     initialBoundaryHoverByLayerState()
   );
@@ -109,6 +115,17 @@ export function useAppShellState(): UseAppShellStateResult {
     submarket: false,
   });
   const marketBoundaryColorMode = shallowRef<MarketBoundaryColorMode>("power");
+  const countyPowerStoryController = shallowRef<CountyPowerStoryMountResult | null>(null);
+  const countyPowerStoryVisibility = shallowRef<CountyPowerStoryVisibilityState>({
+    animationEnabled: true,
+    chapterId: "operator-heartbeat",
+    chapterVisible: true,
+    seamHazeEnabled: false,
+    storyId: "grid-stress",
+    threeDimensional: false,
+    visible: false,
+    window: "live",
+  });
   const facilitiesControllers = shallowRef<readonly FacilitiesLayerController[]>([]);
   const floodLayersController = shallowRef<FloodLayerMountResult | null>(null);
   const gasPipelineController = shallowRef<GasPipelineLayerController | null>(null);
@@ -260,6 +277,7 @@ export function useAppShellState(): UseAppShellStateResult {
     hoveredFacilityCluster,
     clusterClickSignal,
     hoveredBoundary,
+    hoveredCountyPowerStory,
     boundaryHoverByLayer,
     hoveredPower,
     boundaryControllers,
@@ -270,6 +288,8 @@ export function useAppShellState(): UseAppShellStateResult {
     marketBoundaryFacetSelection,
     marketBoundaryFetchError,
     marketBoundaryColorMode,
+    countyPowerStoryController,
+    countyPowerStoryVisibility,
     facilitiesControllers,
     floodLayersController,
     gasPipelineController,

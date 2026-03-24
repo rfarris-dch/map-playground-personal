@@ -4,6 +4,7 @@ import { formatBboxParam } from "@map-migration/geo-kernel/geometry";
 import { z } from "zod";
 import type { SourceMode } from "./api-response-meta.js";
 import type { BoundaryPowerLevel } from "./boundaries-http.js";
+import type { CountyPowerStoryId, CountyPowerStoryWindow } from "./county-power-story-http.js";
 import type { MarketBoundaryLevel } from "./market-boundaries-http.js";
 import type { ParcelGeometryMode, ParcelProfile } from "./parcels-http.js";
 import { isPipelineDataset, type PipelineDataset } from "./pipeline-http.js";
@@ -55,14 +56,26 @@ export interface CountyScoresRouteArgs {
   readonly countyIds: readonly string[];
 }
 
+export interface CountyPowerStoryRouteArgs {
+  readonly publicationRunId?: string | undefined;
+  readonly window?: CountyPowerStoryWindow | undefined;
+}
+
 export interface ApiRoutesTable {
   readonly analysisHistory: string;
   readonly analysisSummary: string;
+  readonly appPerformanceDebug: string;
   readonly authLogin: string;
   readonly authLogout: string;
   readonly authSession: string;
   readonly boundariesPower: string;
+  readonly countyPowerStory: string;
+  readonly countyPowerStoryGeometry: string;
+  readonly countyPowerStoryTiles: string;
   readonly countyScores: string;
+  readonly countyScoresCoverage: string;
+  readonly countyScoresDebug: string;
+  readonly countyScoresResolution: string;
   readonly countyScoresStatus: string;
   readonly effectMetrics: string;
   readonly facilities: string;
@@ -90,6 +103,10 @@ export interface ApiHeadersTable {
   readonly datasetVersion: string;
   readonly dataVersion: string;
   readonly facilitiesInteractionType: string;
+  readonly facilitiesMappingTimeMs: string;
+  readonly facilitiesRequestedDatasetVersion: string;
+  readonly facilitiesResponseBytes: string;
+  readonly facilitiesSqlTimeMs: string;
   readonly facilitiesViewMode: string;
   readonly facilitiesViewportKey: string;
   readonly facilitiesZoomBucket: string;
@@ -130,6 +147,7 @@ export const HealthSchema = z.object({
 export type HealthResponse = z.infer<typeof HealthSchema>;
 
 export const ApiRoutes = Object.freeze<ApiRoutesTable>({
+  appPerformanceDebug: "/api/debug/app/performance",
   authLogin: "/api/auth/login",
   authLogout: "/api/auth/logout",
   authSession: "/api/auth/session",
@@ -138,6 +156,12 @@ export const ApiRoutes = Object.freeze<ApiRoutesTable>({
   analysisHistory: "/api/geo/analysis/history",
   analysisSummary: "/api/geo/analysis/summary",
   boundariesPower: "/api/geo/boundaries/power",
+  countyPowerStory: "/api/geo/county-power/story",
+  countyPowerStoryGeometry: "/api/geo/county-power/story/geometry",
+  countyPowerStoryTiles: "/api/geo/county-power/story/tiles",
+  countyScoresCoverage: "/api/geo/counties/scores/coverage",
+  countyScoresDebug: "/api/geo/counties/scores/debug",
+  countyScoresResolution: "/api/geo/counties/scores/resolution",
   countyScores: "/api/geo/counties/scores",
   countyScoresStatus: "/api/geo/counties/scores/status",
   effectMetrics: "/api/debug/effect/issues",
@@ -212,6 +236,10 @@ export function buildFacilitiesManifestRoute(): string {
   return ApiRoutes.facilitiesManifest;
 }
 
+export function buildAppPerformanceDebugRoute(): string {
+  return ApiRoutes.appPerformanceDebug;
+}
+
 export function buildAuthLoginRoute(): string {
   return ApiRoutes.authLogin;
 }
@@ -249,6 +277,42 @@ export function buildMarketBoundariesRoute(level: MarketBoundaryLevel): string {
   return `${ApiRoutes.marketBoundaries}?${params.toString()}`;
 }
 
+export function buildCountyPowerStoryGeometryRoute(): string {
+  return ApiRoutes.countyPowerStoryGeometry;
+}
+
+export function buildCountyPowerStoryVectorTileRoute(args: {
+  readonly x: number | string;
+  readonly y: number | string;
+  readonly z: number | string;
+}): string {
+  return `${ApiRoutes.countyPowerStoryTiles}/${String(args.z)}/${String(args.x)}/${String(args.y)}`;
+}
+
+export function buildCountyPowerStoryVectorTileTemplateRoute(): string {
+  return `${ApiRoutes.countyPowerStoryTiles}/{z}/{x}/{y}`;
+}
+
+export function buildCountyPowerStorySnapshotRoute(
+  storyId: CountyPowerStoryId,
+  args: CountyPowerStoryRouteArgs = {}
+): string {
+  return appendQueryToRoute(`${ApiRoutes.countyPowerStory}/${encodeURIComponent(storyId)}`, [
+    ["window", args.window],
+    ["publicationRunId", args.publicationRunId],
+  ]);
+}
+
+export function buildCountyPowerStoryTimelineRoute(
+  storyId: CountyPowerStoryId,
+  args: CountyPowerStoryRouteArgs = {}
+): string {
+  return appendQueryToRoute(
+    `${ApiRoutes.countyPowerStory}/${encodeURIComponent(storyId)}/timeline`,
+    [["publicationRunId", args.publicationRunId]]
+  );
+}
+
 export function buildCountyScoresRoute(args: CountyScoresRouteArgs): string {
   return appendQueryToRoute(ApiRoutes.countyScores, [
     ["countyIds", args.countyIds.length > 0 ? args.countyIds.join(",") : undefined],
@@ -257,6 +321,20 @@ export function buildCountyScoresRoute(args: CountyScoresRouteArgs): string {
 
 export function buildCountyScoresStatusRoute(): string {
   return ApiRoutes.countyScoresStatus;
+}
+
+export function buildCountyScoresCoverageRoute(): string {
+  return ApiRoutes.countyScoresCoverage;
+}
+
+export function buildCountyScoresResolutionRoute(): string {
+  return ApiRoutes.countyScoresResolution;
+}
+
+export function buildCountyScoresDebugRoute(args: CountyScoresRouteArgs): string {
+  return appendQueryToRoute(ApiRoutes.countyScoresDebug, [
+    ["countyIds", args.countyIds.length > 0 ? args.countyIds.join(",") : undefined],
+  ]);
 }
 
 export function buildParcelDetailRoute(
@@ -384,6 +462,10 @@ export const ApiHeaders = Object.freeze<ApiHeadersTable>({
   dataVersion: "x-data-version",
   datasetVersion: "x-dataset-version",
   facilitiesInteractionType: "x-facilities-interaction-type",
+  facilitiesMappingTimeMs: "x-facilities-mapping-time-ms",
+  facilitiesRequestedDatasetVersion: "x-facilities-requested-dataset-version",
+  facilitiesResponseBytes: "x-facilities-response-bytes",
+  facilitiesSqlTimeMs: "x-facilities-sql-time-ms",
   facilitiesViewMode: "x-facilities-view-mode",
   facilitiesViewportKey: "x-facilities-viewport-key",
   facilitiesZoomBucket: "x-facilities-zoom-bucket",

@@ -20,6 +20,8 @@ import type {
   RouteLocationNormalizedLoaded,
 } from "vue-router";
 import {
+  COUNTY_POWER_STORY_3D_LAYER_ID,
+  countyPowerStoryLayerId,
   FLOOD_100_LAYER_ID,
   FLOOD_500_LAYER_ID,
   fiberLayerId,
@@ -1155,6 +1157,34 @@ function applyPowerVisibilityLayers(
   }
 }
 
+function applyCountyPowerStoryVisibilityLayers(
+  visibleLayerIds: Set<string>,
+  countyPowerStoryVisibility: BuildMapContextTransferFromAppShellArgs["countyPowerStoryVisibility"]
+): void {
+  if (typeof countyPowerStoryVisibility === "undefined") {
+    return;
+  }
+
+  for (const storyId of [
+    "grid-stress",
+    "queue-pressure",
+    "market-structure",
+    "policy-watch",
+  ] as const) {
+    applyBooleanVisibilityLayer(
+      visibleLayerIds,
+      countyPowerStoryLayerId(storyId),
+      countyPowerStoryVisibility.visible && countyPowerStoryVisibility.storyId === storyId
+    );
+  }
+
+  applyBooleanVisibilityLayer(
+    visibleLayerIds,
+    COUNTY_POWER_STORY_3D_LAYER_ID,
+    countyPowerStoryVisibility.visible && countyPowerStoryVisibility.threeDimensional
+  );
+}
+
 function applyFiberVisibilityLayers(
   visibleLayerIds: Set<string>,
   fiberVisibility: BuildMapContextTransferFromAppShellArgs["fiberVisibility"]
@@ -1181,6 +1211,7 @@ function resolveVisibleLayerIdsFromAppShell(
   applyBooleanVisibilityLayer(visibleLayerIds, WATER_FEATURES_LAYER_ID, args.waterVisible);
   applyBooleanVisibilityLayer(visibleLayerIds, GAS_PIPELINES_LAYER_ID, args.gasPipelineVisible);
   applyPowerVisibilityLayers(visibleLayerIds, args.powerVisibility);
+  applyCountyPowerStoryVisibilityLayers(visibleLayerIds, args.countyPowerStoryVisibility);
   applyFiberVisibilityLayers(visibleLayerIds, args.fiberVisibility);
 
   const nextVisibleLayerIds = [...visibleLayerIds].sort((left, right) => left.localeCompare(right));
@@ -1531,6 +1562,27 @@ function applyLayerVisibilityContext(args: ApplyMapContextTransferToAppShellArgs
   }
 }
 
+function applyCountyPowerStoryVisibilityContext(args: ApplyMapContextTransferToAppShellArgs): void {
+  if (args.context === null || typeof args.context.visibleLayerIds === "undefined") {
+    return;
+  }
+
+  const visibleLayerIds = new Set(args.context.visibleLayerIds);
+  const visibleStoryId = (
+    ["grid-stress", "queue-pressure", "market-structure", "policy-watch"] as const
+  ).find((storyId) => visibleLayerIds.has(countyPowerStoryLayerId(storyId)));
+
+  if (typeof visibleStoryId === "string") {
+    args.setCountyPowerStoryVisible?.(visibleStoryId, true);
+  } else {
+    args.setCountyPowerStoryVisible?.("grid-stress", false);
+  }
+
+  args.setCountyPowerStoryThreeDimensionalEnabled?.(
+    visibleLayerIds.has(COUNTY_POWER_STORY_3D_LAYER_ID)
+  );
+}
+
 function applyFiberSourceLayerSelectionContext(args: ApplyMapContextTransferToAppShellArgs): void {
   if (args.context === null || typeof args.context.selectedFiberSourceLayerNames === "undefined") {
     return;
@@ -1591,6 +1643,7 @@ export function applyMapContextTransferToAppShell(
     args.setPerspectiveViewMode?.("hyperscale", args.context.facilityViewModes.hyperscale);
   }
   applyLayerVisibilityContext(args);
+  applyCountyPowerStoryVisibilityContext(args);
   applyFiberSourceLayerSelectionContext(args);
   applySelectedBoundaryIdsContext(args);
   applyMapFiltersContext(args);

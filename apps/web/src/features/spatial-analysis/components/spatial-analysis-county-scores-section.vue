@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import type { CountyScoresDebugCounty } from "@map-migration/http-contracts/county-intelligence-http";
   import type {
     SpatialAnalysisCountyScores,
     SpatialAnalysisCountyScoresStatus,
@@ -12,11 +13,15 @@
     formatDateTime,
     formatDeferredReason,
     formatMetric,
+    formatPillarValueState,
     formatRankStatus,
     formatShare,
+    formatSourceVolatility,
     formatTier,
     rankToneClass,
   } from "@/features/county-intelligence/county-intelligence-display.service";
+  import { useCountyScoresDiagnostics } from "@/features/county-intelligence/use-county-intelligence-diagnostics";
+  import CountyPowerContextPanel from "@/features/spatial-analysis/components/county-power-context-panel.vue";
 
   interface SpatialAnalysisCountyScoresSectionProps {
     readonly countyScores: SpatialAnalysisCountyScores | null;
@@ -30,6 +35,11 @@
   const props = defineProps<SpatialAnalysisCountyScoresSectionProps>();
 
   type CountyScoreRow = SpatialAnalysisCountyScores["rows"][number];
+  interface CountyChangeWindow {
+    readonly changes: CountyScoreRow["whatChanged30d"];
+    readonly key: "30d" | "60d" | "90d";
+    readonly label: string;
+  }
 
   const rows = computed(() => props.countyScores?.rows ?? []);
   const requestedCountyIds = computed(() => props.countyScores?.summary.requestedCountyIds ?? []);
@@ -49,19 +59,62 @@
   const rankedCountyCount = computed(
     () => rows.value.filter((row) => row.rankStatus === "ranked").length
   );
+  const diagnosticsEnabled = computed(
+    () =>
+      hasCountySummary.value ||
+      props.countyScoresStatus !== null ||
+      (props.isStatusLoading ?? false)
+  );
+  const {
+    countyScoresCoverage,
+    countyScoresCoverageError,
+    countyScoresCoverageLoading,
+    countyScoresResolution,
+    countyScoresResolutionError,
+    countyScoresResolutionLoading,
+    countyScoresDebug,
+    countyScoresDebugError,
+  } = useCountyScoresDiagnostics({
+    countyIds: requestedCountyIds,
+    enabled: diagnosticsEnabled,
+  });
+  const debugByCountyFips = computed(
+    () =>
+      new Map(
+        (countyScoresDebug.value?.counties ?? []).map(
+          (county) => [county.countyFips, county] as const
+        )
+      )
+  );
 
-  function visibleChanges(
-    row: CountyScoreRow
-  ): readonly CountyScoreRow["whatChanged30d"][number][] {
-    if (row.whatChanged30d.length > 0) {
-      return row.whatChanged30d;
-    }
+  function changeWindows(row: CountyScoreRow): readonly CountyChangeWindow[] {
+    const windows: readonly CountyChangeWindow[] = [
+      {
+        key: "30d",
+        label: "Last 30 days",
+        changes: row.whatChanged30d,
+      },
+      {
+        key: "60d",
+        label: "Last 60 days",
+        changes: row.whatChanged60d,
+      },
+      {
+        key: "90d",
+        label: "Last 90 days",
+        changes: row.whatChanged90d,
+      },
+    ];
 
-    if (row.whatChanged60d.length > 0) {
-      return row.whatChanged60d;
-    }
+    return windows.filter((window) => window.changes.length > 0);
+  }
 
-    return row.whatChanged90d;
+  function debugCountyForRow(row: CountyScoreRow): CountyScoresDebugCounty | null {
+    return debugByCountyFips.value.get(row.countyFips) ?? null;
+  }
+
+  function sampleEntries<T>(entries: readonly T[], limit = 3): readonly T[] {
+    return entries.slice(0, limit);
   }
 </script>
 
@@ -79,10 +132,23 @@
     </div>
 
     <CountyScoresDatasetStatus
+      :coverage="countyScoresCoverage"
+      :coverage-error-message="countyScoresCoverageError ?? null"
+      :coverage-loading="countyScoresCoverageLoading"
+      :resolution="countyScoresResolution"
+      :resolution-error-message="countyScoresResolutionError ?? null"
+      :resolution-loading="countyScoresResolutionLoading"
       :status="props.countyScoresStatus"
       :error-message="props.statusErrorMessage ?? null"
       :is-loading="props.isStatusLoading ?? false"
     />
+
+    <p
+      v-if="countyScoresDebugError"
+      class="rounded-sm border border-border bg-background px-3 py-2 text-xs text-muted-foreground"
+    >
+      {{ countyScoresDebugError }}
+    </p>
 
     <p
       v-if="props.errorMessage"
@@ -158,7 +224,7 @@
             </div>
           </div>
 
-          <div class="grid gap-x-4 gap-y-2 text-xs sm:grid-cols-2 xl:grid-cols-4">
+          <div class="grid gap-x-4 gap-y-2 text-xs sm:grid-cols-2 xl:grid-cols-5">
             <div class="rounded-sm bg-background px-2 py-1.5">
               <div class="uppercase tracking-wide text-muted-foreground">Pressure Index</div>
               <div class="text-sm font-semibold text-foreground/70">
@@ -175,6 +241,12 @@
               <div class="uppercase tracking-wide text-muted-foreground">Freshness</div>
               <div class="text-sm font-semibold text-foreground/70">
                 {{ formatMetric(row.freshnessScore) }}
+              </div>
+            </div>
+            <div class="rounded-sm bg-background px-2 py-1.5">
+              <div class="uppercase tracking-wide text-muted-foreground">Source Volatility</div>
+              <div class="text-sm font-semibold text-foreground/70">
+                {{ formatSourceVolatility(row.sourceVolatility) }}
               </div>
             </div>
             <div class="rounded-sm bg-background px-2 py-1.5">
@@ -242,19 +314,140 @@
             </div>
 
             <div>
-              <dt class="uppercase tracking-wide text-muted-foreground">Policy + Context</dt>
+              <dt class="uppercase tracking-wide text-muted-foreground">Policy + Sentiment</dt>
               <dd class="mt-1 space-y-1 text-foreground/70">
-                <div>Moratorium: {{ row.moratoriumStatus }}</div>
+                <div>Moratorium: {{ formatDeferredReason(row.moratoriumStatus) }}</div>
                 <div>Policy momentum: {{ formatMetric(row.policyMomentumScore) }}</div>
+                <div>Public sentiment: {{ formatMetric(row.publicSentimentScore, 2) }}</div>
                 <div>Policy events: {{ formatCount(row.policyEventCount) }}</div>
-                <div>Primary market: {{ row.primaryMarketId ?? "-" }}</div>
+                <div>County-tagged share: {{ formatShare(row.countyTaggedEventShare) }}</div>
+                <div>
+                  Policy mapping confidence:
+                  {{ row.policyMappingConfidence === null ? "-" : row.policyMappingConfidence.toUpperCase() }}
+                </div>
               </dd>
             </div>
           </dl>
 
+          <div class="text-xs">
+            <div class="uppercase tracking-wide text-muted-foreground">Pillar States</div>
+            <dl class="mt-1 grid gap-6 text-foreground/70 sm:grid-cols-2 xl:grid-cols-5">
+              <div class="rounded-sm bg-background px-2 py-1.5">
+                <dt class="text-muted-foreground">Demand</dt>
+                <dd class="m-0 font-medium">
+                  {{ formatPillarValueState(row.pillarValueStates.demand) }}
+                </dd>
+              </div>
+              <div class="rounded-sm bg-background px-2 py-1.5">
+                <dt class="text-muted-foreground">Supply timeline</dt>
+                <dd class="m-0 font-medium">
+                  {{ formatPillarValueState(row.pillarValueStates.supplyTimeline) }}
+                </dd>
+              </div>
+              <div class="rounded-sm bg-background px-2 py-1.5">
+                <dt class="text-muted-foreground">Grid friction</dt>
+                <dd class="m-0 font-medium">
+                  {{ formatPillarValueState(row.pillarValueStates.gridFriction) }}
+                </dd>
+              </div>
+              <div class="rounded-sm bg-background px-2 py-1.5">
+                <dt class="text-muted-foreground">Policy</dt>
+                <dd class="m-0 font-medium">
+                  {{ formatPillarValueState(row.pillarValueStates.policy) }}
+                </dd>
+              </div>
+              <div class="rounded-sm bg-background px-2 py-1.5">
+                <dt class="text-muted-foreground">Infrastructure</dt>
+                <dd class="m-0 font-medium">
+                  {{ formatPillarValueState(row.pillarValueStates.infrastructure) }}
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          <CountyPowerContextPanel :row="row" />
+
+          <div v-if="debugCountyForRow(row) !== null" class="text-xs">
+            <div class="uppercase tracking-wide text-muted-foreground">Debug Trail</div>
+            <div class="mt-1 grid gap-3 lg:grid-cols-4">
+              <div class="rounded-sm bg-background px-2 py-1.5 text-foreground/70">
+                <div class="font-medium">Operator zones</div>
+                <div>{{ formatCount(debugCountyForRow(row)?.operatorZones.length ?? null) }}</div>
+                <ul
+                  v-if="(debugCountyForRow(row)?.operatorZones.length ?? 0) > 0"
+                  class="mt-1 mb-0 space-y-1 pl-4"
+                >
+                  <li
+                    v-for="zone in sampleEntries(debugCountyForRow(row)?.operatorZones ?? [])"
+                    :key="`${zone.wholesaleOperator}-${zone.operatorZoneLabel}-${zone.resolutionMethod}`"
+                  >
+                    {{ zone.operatorZoneLabel }}
+                    · {{ zone.operatorZoneType }} ·
+                    {{ zone.resolutionMethod }}
+                  </li>
+                </ul>
+              </div>
+
+              <div class="rounded-sm bg-background px-2 py-1.5 text-foreground/70">
+                <div class="font-medium">Queue resolutions</div>
+                <div>
+                  {{ formatCount(debugCountyForRow(row)?.queueResolutions.length ?? null) }}
+                </div>
+                <ul
+                  v-if="(debugCountyForRow(row)?.queueResolutions.length ?? 0) > 0"
+                  class="mt-1 mb-0 space-y-1 pl-4"
+                >
+                  <li
+                    v-for="resolution in sampleEntries(debugCountyForRow(row)?.queueResolutions ?? [])"
+                    :key="`${resolution.sourceSystem}-${resolution.projectId}`"
+                  >
+                    {{ resolution.sourceSystem }}
+                    · {{ resolution.resolverType }} ·
+                    {{ resolution.projectId }}
+                  </li>
+                </ul>
+              </div>
+
+              <div class="rounded-sm bg-background px-2 py-1.5 text-foreground/70">
+                <div class="font-medium">Queue POI references</div>
+                <div>
+                  {{ formatCount(debugCountyForRow(row)?.queuePoiReferences.length ?? null) }}
+                </div>
+                <ul
+                  v-if="(debugCountyForRow(row)?.queuePoiReferences.length ?? 0) > 0"
+                  class="mt-1 mb-0 space-y-1 pl-4"
+                >
+                  <li
+                    v-for="reference in sampleEntries(debugCountyForRow(row)?.queuePoiReferences ?? [])"
+                    :key="`${reference.sourceSystem}-${reference.queuePoiLabel}`"
+                  >
+                    {{ reference.sourceSystem }}
+                    · {{ reference.queuePoiLabel }}
+                  </li>
+                </ul>
+              </div>
+
+              <div class="rounded-sm bg-background px-2 py-1.5 text-foreground/70">
+                <div class="font-medium">Congestion snapshot</div>
+                <div>
+                  As of:
+                  {{ formatDateTime(debugCountyForRow(row)?.congestionSnapshot?.sourceAsOfDate ?? null) }}
+                </div>
+                <div>
+                  Avg RT:
+                  {{ formatMetric(debugCountyForRow(row)?.congestionSnapshot?.avgRtCongestionComponent ?? null, 2) }}
+                </div>
+                <div>
+                  P95 shadow:
+                  {{ formatMetric(debugCountyForRow(row)?.congestionSnapshot?.p95ShadowPrice ?? null, 2) }}
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div
-            v-if="row.topDrivers.length > 0 || row.deferredReasonCodes.length > 0 || visibleChanges(row).length > 0"
-            class="grid gap-6 text-xs lg:grid-cols-3"
+            v-if="row.topDrivers.length > 0 || row.deferredReasonCodes.length > 0"
+            class="grid gap-6 text-xs lg:grid-cols-2"
           >
             <div>
               <div class="uppercase tracking-wide text-muted-foreground">Top Drivers</div>
@@ -276,20 +469,29 @@
                 </li>
               </ul>
             </div>
+          </div>
 
-            <div>
-              <div class="uppercase tracking-wide text-muted-foreground">What Changed</div>
-              <p v-if="visibleChanges(row).length === 0" class="mt-1 mb-0 text-foreground/70">
-                No tracked change yet.
-              </p>
-              <ul v-else class="mt-1 mb-0 space-y-1 pl-4 text-foreground/70">
-                <li
-                  v-for="change in visibleChanges(row)"
-                  :key="`${change.code}-${change.direction}`"
-                >
-                  {{ change.label }}: {{ change.summary }}
-                </li>
-              </ul>
+          <div class="text-xs">
+            <div class="uppercase tracking-wide text-muted-foreground">Change Windows</div>
+            <p v-if="changeWindows(row).length === 0" class="mt-1 mb-0 text-foreground/70">
+              No tracked change yet.
+            </p>
+            <div v-else class="mt-1 grid gap-3 lg:grid-cols-3">
+              <div
+                v-for="window in changeWindows(row)"
+                :key="window.key"
+                class="rounded-sm bg-background px-2 py-1.5"
+              >
+                <div class="font-medium text-foreground/70">{{ window.label }}</div>
+                <ul class="mt-1 mb-0 space-y-1 pl-4 text-foreground/70">
+                  <li
+                    v-for="change in window.changes"
+                    :key="`${window.key}-${change.code}-${change.direction}`"
+                  >
+                    <span class="font-medium">{{ change.label }}</span>: {{ change.summary }}
+                  </li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>

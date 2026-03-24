@@ -48,7 +48,7 @@ export interface FacilitiesBboxRow {
   readonly city: string | null | undefined;
   readonly commissioned_power_mw: number | string | null | undefined;
   readonly commissioned_semantic: string | null | undefined;
-  readonly county_fips: string;
+  readonly county_fips: string | null | undefined;
   readonly facility_code: string | null | undefined;
   readonly facility_id: string;
   readonly facility_name: string | null | undefined;

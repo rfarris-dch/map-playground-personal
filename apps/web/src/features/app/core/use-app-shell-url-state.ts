@@ -127,6 +127,9 @@ export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
         setBasemapLayerVisible: options.setBasemapLayerVisible,
         setBoundarySelectedRegionIds: options.setBoundarySelectedRegionIds,
         setBoundaryVisible: options.setBoundaryVisible,
+        setCountyPowerStoryThreeDimensionalEnabled:
+          options.setCountyPowerStoryThreeDimensionalEnabled,
+        setCountyPowerStoryVisible: options.setCountyPowerStoryVisible,
         setFiberLayerVisibility: options.setFiberLayerVisibility,
         setFiberSourceLayerSelection: options.setFiberSourceLayerSelection,
         setFloodLayerVisible: options.setFloodLayerVisible,
@@ -164,26 +167,29 @@ export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
   watch(
     () => options.interactionCoordinator.value,
     (nextCoordinator, _previousCoordinator, onCleanup) => {
-      const unsubscribeInteractionCoordinator = nextCoordinator?.subscribe((snapshot) => {
-        if (!shouldRefreshViewportData(snapshot)) {
-          return;
-        }
+      const unsubscribeInteractionCoordinator = nextCoordinator?.subscribe(
+        (snapshot) => {
+          if (!shouldRefreshViewportData(snapshot)) {
+            return;
+          }
 
-        // The initial load snapshot reflects the current route state; writing it
-        // straight back to the router only adds startup churn.
-        if (lastViewportKey.value === null && snapshot.eventType === "load") {
+          // The initial load snapshot reflects the current route state; writing it
+          // straight back to the router only adds startup churn.
+          if (lastViewportKey.value === null && snapshot.eventType === "load") {
+            lastViewportKey.value = snapshot.canonicalViewportKey;
+            return;
+          }
+
+          if (lastViewportKey.value === snapshot.canonicalViewportKey) {
+            return;
+          }
+
           lastViewportKey.value = snapshot.canonicalViewportKey;
-          return;
-        }
-
-        if (lastViewportKey.value === snapshot.canonicalViewportKey) {
-          return;
-        }
-
-        lastViewportKey.value = snapshot.canonicalViewportKey;
-        recordAppPerformanceCounter("map.moveend", { feature: "url-state" });
-        viewportVersion.value += 1;
-      });
+          recordAppPerformanceCounter("map.moveend", { feature: "url-state" });
+          viewportVersion.value += 1;
+        },
+        { priority: "idle" }
+      );
 
       onCleanup(() => {
         unsubscribeInteractionCoordinator?.();
@@ -198,6 +204,7 @@ export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
       options.basemapVisibility.value,
       options.boundaryFacetSelection.value,
       options.boundaryVisibility.value,
+      options.countyPowerStoryVisibility.value,
       options.fiberVisibility.value,
       options.floodVisibility.value,
       options.gasPipelineVisible.value,

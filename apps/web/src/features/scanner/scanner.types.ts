@@ -7,9 +7,7 @@ import type { SpatialAnalysisProviderSummaryItem } from "@/features/spatial-anal
 
 type SpatialAnalysisSelectionSummary = SpatialAnalysisSummaryResponse["summary"];
 
-export interface ScannerFacility extends SpatialAnalysisFacilityRecord {
-  readonly countyFips: string;
-}
+export type ScannerFacility = SpatialAnalysisFacilityRecord;
 
 export type ScannerPerspectiveSummary = SpatialAnalysisSelectionSummary["colocation"];
 

@@ -276,13 +276,16 @@ export function mountHyperscaleLeasedLayer(
   ) {
     map.on("moveend", onMoveEnd);
   } else {
-    unsubscribeInteractionCoordinator = options.interactionCoordinator.subscribe((snapshot) => {
-      if (!shouldRefreshViewportData(snapshot)) {
-        return;
-      }
+    unsubscribeInteractionCoordinator = options.interactionCoordinator.subscribe(
+      (snapshot) => {
+        if (!shouldRefreshViewportData(snapshot)) {
+          return;
+        }
 
-      onMoveEnd();
-    });
+        onMoveEnd();
+      },
+      { priority: "critical" }
+    );
   }
 
   return {

@@ -29,6 +29,14 @@ function resolveDisplayName(name: string, fallback: string): string {
   return "-";
 }
 
+function readNullableNumber(value: number | null | undefined): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function readNullableText(value: string | null | undefined): string | null {
+  return typeof value === "string" ? value : null;
+}
+
 function isFiniteCoordinate(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
@@ -133,25 +141,25 @@ function toSelectedFacility(
   const facilityId = properties.facilityId;
   const providerId = properties.providerId;
   return {
-    address: properties.address,
-    availablePowerMw: properties.availablePowerMw,
-    city: properties.city,
-    commissionedPowerMw: properties.commissionedPowerMw,
+    address: readNullableText(properties.address),
+    availablePowerMw: readNullableNumber(properties.availablePowerMw),
+    city: readNullableText(properties.city),
+    commissionedPowerMw: readNullableNumber(properties.commissionedPowerMw),
     commissionedSemantic: properties.commissionedSemantic,
     coordinates,
-    countyFips: properties.countyFips,
+    countyFips: normalizeCountyFips(properties.countyFips),
     facilityId,
     facilityName: resolveDisplayName(properties.facilityName, "Unknown facility"),
     leaseOrOwn: properties.leaseOrOwn,
-    plannedPowerMw: properties.plannedPowerMw,
+    plannedPowerMw: readNullableNumber(properties.plannedPowerMw),
     perspective: properties.perspective,
     providerId,
     providerName: resolveDisplayName(properties.providerName, "Unknown provider"),
-    squareFootage: properties.squareFootage,
-    state: properties.state,
+    squareFootage: readNullableNumber(properties.squareFootage),
+    state: readNullableText(properties.state),
     stateAbbrev: properties.stateAbbrev,
-    statusLabel: properties.statusLabel,
-    underConstructionPowerMw: properties.underConstructionPowerMw,
+    statusLabel: readNullableText(properties.statusLabel),
+    underConstructionPowerMw: readNullableNumber(properties.underConstructionPowerMw),
   };
 }
 

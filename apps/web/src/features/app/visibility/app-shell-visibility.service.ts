@@ -5,6 +5,8 @@ import {
 } from "@map-migration/map-layer-catalog";
 import type { MarketBoundaryVisibilityState } from "@/features/app/components/map-layer-controls-panel.types";
 import {
+  COUNTY_POWER_STORY_3D_LAYER_ID,
+  countyPowerStoryLayerId,
   FLOOD_100_LAYER_ID,
   FLOOD_500_LAYER_ID,
   facilitiesLayerId,
@@ -24,6 +26,10 @@ import type {
 import { defaultBasemapVisibilityState } from "@/features/basemap/basemap.service";
 import type { BasemapVisibilityState } from "@/features/basemap/basemap.types";
 import type { BoundaryLayerId } from "@/features/boundaries/boundaries.types";
+import type {
+  CountyPowerStoryId,
+  CountyPowerStoryVisibilityState,
+} from "@/features/county-power-story/county-power-story.types";
 import type { LayerRuntimeController } from "@/features/layers/layer-runtime.types";
 import type { PowerLayerId, PowerVisibilityState } from "@/features/power/power.types";
 
@@ -44,6 +50,12 @@ function readRuntimeUserVisible(
   }
 
   return runtime.getUserVisible(layerId);
+}
+
+function pushLayerIfVisible(visibleLayerIds: LayerId[], layerId: LayerId, visible: boolean): void {
+  if (visible) {
+    visibleLayerIds.push(layerId);
+  }
 }
 
 export function buildInitialPerspectiveVisibilityState(
@@ -95,6 +107,21 @@ export function buildInitialPowerVisibilityState(
   };
 }
 
+export function buildInitialCountyPowerStoryVisibilityState(
+  catalog: LayerCatalog = DEFAULT_LAYER_CATALOG
+): CountyPowerStoryVisibilityState {
+  return {
+    animationEnabled: true,
+    chapterId: "operator-heartbeat",
+    chapterVisible: true,
+    seamHazeEnabled: false,
+    storyId: "grid-stress",
+    threeDimensional: readCatalogDefaultVisible(COUNTY_POWER_STORY_3D_LAYER_ID, catalog),
+    visible: readCatalogDefaultVisible(countyPowerStoryLayerId("grid-stress"), catalog),
+    window: "live",
+  };
+}
+
 export function buildInitialParcelsVisible(catalog: LayerCatalog = DEFAULT_LAYER_CATALOG): boolean {
   return readCatalogDefaultVisible(PARCELS_LAYER_ID, catalog);
 }
@@ -115,6 +142,7 @@ export function buildInitialBasemapVisibilityState(): BasemapVisibilityState {
 
 interface ResolveUserVisibleLayerIdsArgs {
   readonly boundaryVisibility: BoundaryVisibilityState;
+  readonly countyPowerStoryVisibility: CountyPowerStoryVisibilityState;
   readonly fiberVisibility: FiberVisibilityState;
   readonly floodVisibility: FloodVisibilityState;
   readonly gasPipelineVisible: boolean;
@@ -131,71 +159,66 @@ export function resolveUserVisibleLayerIds(
 ): readonly LayerId[] {
   const visibleLayerIds: LayerId[] = [];
 
-  if (args.boundaryVisibility.county) {
-    visibleLayerIds.push("county");
-  }
-  if (args.boundaryVisibility.state) {
-    visibleLayerIds.push("state");
-  }
-  if (args.boundaryVisibility.country) {
-    visibleLayerIds.push("country");
-  }
+  pushLayerIfVisible(visibleLayerIds, "county", args.boundaryVisibility.county);
+  pushLayerIfVisible(visibleLayerIds, "state", args.boundaryVisibility.state);
+  pushLayerIfVisible(visibleLayerIds, "country", args.boundaryVisibility.country);
 
-  if (args.visiblePerspectives.colocation) {
-    visibleLayerIds.push(facilitiesLayerId("colocation"));
-  }
-  if (args.visiblePerspectives.hyperscale) {
-    visibleLayerIds.push(facilitiesLayerId("hyperscale"));
-  }
-  if (args.visiblePerspectives["hyperscale-leased"]) {
-    visibleLayerIds.push(facilitiesLayerId("hyperscale-leased"));
-  }
-  if (args.visiblePerspectives.enterprise) {
-    visibleLayerIds.push(facilitiesLayerId("enterprise"));
-  }
+  pushLayerIfVisible(
+    visibleLayerIds,
+    facilitiesLayerId("colocation"),
+    args.visiblePerspectives.colocation
+  );
+  pushLayerIfVisible(
+    visibleLayerIds,
+    facilitiesLayerId("hyperscale"),
+    args.visiblePerspectives.hyperscale
+  );
+  pushLayerIfVisible(
+    visibleLayerIds,
+    facilitiesLayerId("hyperscale-leased"),
+    args.visiblePerspectives["hyperscale-leased"]
+  );
+  pushLayerIfVisible(
+    visibleLayerIds,
+    facilitiesLayerId("enterprise"),
+    args.visiblePerspectives.enterprise
+  );
 
-  if (args.marketBoundaryVisibility.market) {
-    visibleLayerIds.push("markets.market");
-  }
-  if (args.marketBoundaryVisibility.submarket) {
-    visibleLayerIds.push("markets.submarket");
-  }
+  pushLayerIfVisible(visibleLayerIds, "markets.market", args.marketBoundaryVisibility.market);
+  pushLayerIfVisible(visibleLayerIds, "markets.submarket", args.marketBoundaryVisibility.submarket);
 
-  if (args.floodVisibility.flood100) {
-    visibleLayerIds.push(FLOOD_100_LAYER_ID);
-  }
-  if (args.floodVisibility.flood500) {
-    visibleLayerIds.push(FLOOD_500_LAYER_ID);
-  }
-  if (args.hydroBasinsVisible) {
-    visibleLayerIds.push(HYDRO_BASINS_LAYER_ID);
-  }
-  if (args.parcelsVisible) {
-    visibleLayerIds.push(PARCELS_LAYER_ID);
-  }
-  if (args.waterVisible) {
-    visibleLayerIds.push(WATER_FEATURES_LAYER_ID);
-  }
-  if (args.gasPipelineVisible) {
-    visibleLayerIds.push(GAS_PIPELINES_LAYER_ID);
-  }
+  pushLayerIfVisible(visibleLayerIds, FLOOD_100_LAYER_ID, args.floodVisibility.flood100);
+  pushLayerIfVisible(visibleLayerIds, FLOOD_500_LAYER_ID, args.floodVisibility.flood500);
+  pushLayerIfVisible(visibleLayerIds, HYDRO_BASINS_LAYER_ID, args.hydroBasinsVisible);
+  pushLayerIfVisible(visibleLayerIds, PARCELS_LAYER_ID, args.parcelsVisible);
+  pushLayerIfVisible(visibleLayerIds, WATER_FEATURES_LAYER_ID, args.waterVisible);
+  pushLayerIfVisible(visibleLayerIds, GAS_PIPELINES_LAYER_ID, args.gasPipelineVisible);
 
-  if (args.powerVisibility.transmission) {
-    visibleLayerIds.push(powerLayerId("transmission"));
-  }
-  if (args.powerVisibility.substations) {
-    visibleLayerIds.push(powerLayerId("substations"));
-  }
-  if (args.powerVisibility.plants) {
-    visibleLayerIds.push(powerLayerId("plants"));
-  }
+  pushLayerIfVisible(
+    visibleLayerIds,
+    powerLayerId("transmission"),
+    args.powerVisibility.transmission
+  );
+  pushLayerIfVisible(
+    visibleLayerIds,
+    powerLayerId("substations"),
+    args.powerVisibility.substations
+  );
+  pushLayerIfVisible(visibleLayerIds, powerLayerId("plants"), args.powerVisibility.plants);
 
-  if (args.fiberVisibility.metro) {
-    visibleLayerIds.push(fiberLayerId("metro"));
-  }
-  if (args.fiberVisibility.longhaul) {
-    visibleLayerIds.push(fiberLayerId("longhaul"));
-  }
+  pushLayerIfVisible(
+    visibleLayerIds,
+    countyPowerStoryLayerId(args.countyPowerStoryVisibility.storyId),
+    args.countyPowerStoryVisibility.visible
+  );
+  pushLayerIfVisible(
+    visibleLayerIds,
+    COUNTY_POWER_STORY_3D_LAYER_ID,
+    args.countyPowerStoryVisibility.visible && args.countyPowerStoryVisibility.threeDimensional
+  );
+
+  pushLayerIfVisible(visibleLayerIds, fiberLayerId("metro"), args.fiberVisibility.metro);
+  pushLayerIfVisible(visibleLayerIds, fiberLayerId("longhaul"), args.fiberVisibility.longhaul);
 
   return visibleLayerIds;
 }
@@ -268,6 +291,44 @@ export function syncPowerVisibilityState(args: {
   };
 }
 
+function readVisibleCountyPowerStoryId(
+  runtime: LayerRuntimeController | null
+): CountyPowerStoryId | null {
+  for (const storyId of [
+    "grid-stress",
+    "queue-pressure",
+    "market-structure",
+    "policy-watch",
+  ] as const) {
+    if (readRuntimeUserVisible(runtime, countyPowerStoryLayerId(storyId), false)) {
+      return storyId;
+    }
+  }
+
+  return null;
+}
+
+export function syncCountyPowerStoryVisibilityState(args: {
+  readonly fallback: CountyPowerStoryVisibilityState;
+  readonly runtime: LayerRuntimeController | null;
+}): CountyPowerStoryVisibilityState {
+  const visibleStoryId = readVisibleCountyPowerStoryId(args.runtime);
+  const visible = visibleStoryId !== null;
+
+  return {
+    ...args.fallback,
+    storyId: visibleStoryId ?? args.fallback.storyId,
+    threeDimensional:
+      visible &&
+      readRuntimeUserVisible(
+        args.runtime,
+        COUNTY_POWER_STORY_3D_LAYER_ID,
+        args.fallback.threeDimensional
+      ),
+    visible,
+  };
+}
+
 export function syncParcelsVisible(args: {
   readonly fallback: boolean;
   readonly runtime: LayerRuntimeController | null;
@@ -330,5 +391,33 @@ export function withPowerVisibility(args: {
   return {
     ...args.state,
     [args.layerId]: args.visible,
+  };
+}
+
+export function withCountyPowerStoryVisibility(args: {
+  readonly chapterId?:
+    | import("@/features/county-power-story/county-power-story.types").CountyPowerStoryChapterId
+    | undefined;
+  readonly chapterVisible?: boolean | undefined;
+  readonly seamHazeEnabled?: boolean | undefined;
+  readonly state: CountyPowerStoryVisibilityState;
+  readonly storyId?: CountyPowerStoryId | undefined;
+  readonly threeDimensional?: boolean | undefined;
+  readonly visible?: boolean | undefined;
+  readonly window?: CountyPowerStoryVisibilityState["window"] | undefined;
+}): CountyPowerStoryVisibilityState {
+  return {
+    ...args.state,
+    ...(typeof args.chapterId === "undefined" ? {} : { chapterId: args.chapterId }),
+    ...(typeof args.chapterVisible === "undefined" ? {} : { chapterVisible: args.chapterVisible }),
+    ...(typeof args.seamHazeEnabled === "undefined"
+      ? {}
+      : { seamHazeEnabled: args.seamHazeEnabled }),
+    ...(typeof args.storyId === "undefined" ? {} : { storyId: args.storyId }),
+    ...(typeof args.threeDimensional === "undefined"
+      ? {}
+      : { threeDimensional: args.threeDimensional }),
+    ...(typeof args.visible === "undefined" ? {} : { visible: args.visible }),
+    ...(typeof args.window === "undefined" ? {} : { window: args.window }),
   };
 }

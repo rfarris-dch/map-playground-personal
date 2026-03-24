@@ -42,6 +42,10 @@
       "types": "./dist/analysis-contracts.d.ts",
       "default": "./dist/analysis-contracts.js"
     },
+    "./app-performance-http": {
+      "types": "./dist/app-performance-http.d.ts",
+      "default": "./dist/app-performance-http.js"
+    },
     "./boundaries-http": {
       "types": "./dist/boundaries-http.d.ts",
       "default": "./dist/boundaries-http.js"
@@ -49,6 +53,10 @@
     "./county-intelligence-http": {
       "types": "./dist/county-intelligence-http.d.ts",
       "default": "./dist/county-intelligence-http.js"
+    },
+    "./county-power-story-http": {
+      "types": "./dist/county-power-story-http.d.ts",
+      "default": "./dist/county-power-story-http.js"
     },
     "./effect-http": {
       "types": "./dist/effect-http.d.ts",

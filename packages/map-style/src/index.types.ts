@@ -7,6 +7,14 @@ export type StyleLayer = MapStyleLayer;
 
 export type BoundaryCatalogLayerId = Extract<LayerId, "county" | "state" | "country">;
 
+export type CountyPowerStoryCatalogLayerId = Extract<
+  LayerId,
+  | "models.county-power-grid-stress"
+  | "models.county-power-queue-pressure"
+  | "models.county-power-market-structure"
+  | "models.county-power-policy-watch"
+>;
+
 export type FloodCatalogLayerId = Extract<
   LayerId,
   "environmental.flood-100" | "environmental.flood-500"
@@ -28,10 +36,22 @@ export type PowerCatalogLayerId = Extract<
 
 export type StaticCatalogLayerId = Exclude<
   LayerId,
-  "fiber-locator.metro" | "fiber-locator.longhaul" | "infrastructure.gas-pipelines"
+  | "fiber-locator.metro"
+  | "fiber-locator.longhaul"
+  | "infrastructure.gas-pipelines"
+  | "models.county-power-grid-stress"
+  | "models.county-power-queue-pressure"
+  | "models.county-power-market-structure"
+  | "models.county-power-policy-watch"
+  | "models.county-power-3d"
 >;
 
 export interface BoundaryStyleLayerIds {
+  readonly fillLayerId: string;
+  readonly outlineLayerId: string;
+}
+
+export interface CountyPowerStoryStyleLayerIds {
   readonly fillLayerId: string;
   readonly outlineLayerId: string;
 }

@@ -17,6 +17,7 @@ export function buildAppShellUrlStateQuery(
     basemapVisibility: options.basemapVisibility.value,
     boundaryFacetSelection: options.boundaryFacetSelection.value,
     boundaryVisibility: options.boundaryVisibility.value,
+    countyPowerStoryVisibility: options.countyPowerStoryVisibility.value,
     fiberVisibility: options.fiberVisibility.value,
     floodVisibility: options.floodVisibility.value,
     gasPipelineVisible: options.gasPipelineVisible.value,

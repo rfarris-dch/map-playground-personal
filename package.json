@@ -31,6 +31,7 @@
     "init:county-scores-schema": "bash ./scripts/init-county-scores-schema.sh",
     "init:facility-provider-schema": "bash ./scripts/init-facility-provider-schema.sh",
     "sync:county-scores": "bash ./scripts/refresh-county-scores.sh",
+    "sync:county-power": "bun run ./scripts/refresh-county-power.ts --step=sync",
     "sync:facility-providers": "bash ./scripts/refresh-facility-providers.sh",
     "dagster:job:facilities": "sh -c 'cd apps/dagster && dagster job execute -m map_dagster.definitions -j facilities_read_models_pipeline'",
     "sync:facilities": "bun run dagster:job:facilities",
@@ -55,6 +56,7 @@
     "sync:environmental-flood": "bun run dagster:job:flood",
     "dagster:job:hydro-basins": "sh -c 'cd apps/dagster && dagster job execute -m map_dagster.definitions -j hydro_basins_pipeline'",
     "sync:environmental-hydro-basins": "bun run dagster:job:hydro-basins",
+    "dagster:job:county-power": "sh -c 'cd apps/dagster && dagster job execute -m map_dagster.definitions -j county_power_pipeline'",
     "tiles:refresh:environmental-flood-tilesource": "sh -c 'bash ./scripts/refresh-environmental-flood-tilesources.sh ${RUN_ID:-} all'",
     "tiles:build:environmental-flood": "sh -c 'bash ./scripts/refresh-environmental-flood-tilesources.sh ${RUN_ID:-} all && bash ./scripts/build-environmental-flood-pmtiles.sh ${RUN_ID:-}'",
     "tiles:publish:environmental-flood": "sh -c 'bun run ./scripts/publish-parcels-manifest.ts --dataset=environmental-flood --run-id=${RUN_ID:-sample}'",
@@ -71,6 +73,7 @@
     "typecheck:pipeline-monitor": "turbo run typecheck --filter=@map-migration/pipeline-monitor",
     "start:api:prod": "bun run --cwd apps/api start:prod",
     "validate:api:health": "bash ./scripts/validate-api-health.sh",
+    "validate:facilities:edge": "bash ./scripts/validate-facilities-edge.sh",
     "validate:tile-delivery": "bun run ./scripts/validate-tile-delivery.ts"
   },
   "devDependencies": {

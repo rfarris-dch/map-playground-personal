@@ -2,6 +2,8 @@ import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-per
 import { shallowRef } from "vue";
 import type { MarketBoundaryVisibilityState } from "@/features/app/components/map-layer-controls-panel.types";
 import {
+  COUNTY_POWER_STORY_3D_LAYER_ID,
+  countyPowerStoryLayerId,
   FLOOD_100_LAYER_ID,
   FLOOD_500_LAYER_ID,
   facilitiesLayerId,
@@ -18,6 +20,7 @@ import type {
 } from "@/features/app/core/app-shell.types";
 import {
   buildInitialBoundaryVisibilityState,
+  buildInitialCountyPowerStoryVisibilityState,
   buildInitialFloodVisibilityState,
   buildInitialHydroBasinsVisible,
   buildInitialParcelsVisible,
@@ -25,6 +28,7 @@ import {
   buildInitialPowerVisibilityState,
   buildInitialWaterVisible,
   syncBoundaryVisibilityState,
+  syncCountyPowerStoryVisibilityState,
   syncFloodVisibilityState,
   syncHydroBasinsVisible,
   syncParcelsVisible,
@@ -32,6 +36,7 @@ import {
   syncPowerVisibilityState,
   syncWaterVisible,
   withBoundaryVisibility,
+  withCountyPowerStoryVisibility,
   withFloodVisibility,
   withPerspectiveVisibility,
   withPowerVisibility,
@@ -45,6 +50,7 @@ import {
 } from "@/features/basemap/basemap.service";
 import type { BasemapLayerId, BasemapVisibilityState } from "@/features/basemap/basemap.types";
 import type { BoundaryLayerId } from "@/features/boundaries/boundaries.types";
+import type { CountyPowerStoryId } from "@/features/county-power-story/county-power-story.types";
 import type { MarketBoundaryLayerId } from "@/features/market-boundaries/market-boundaries.types";
 import type { PowerLayerId, PowerVisibilityState } from "@/features/power/power.types";
 
@@ -59,6 +65,13 @@ export function useAppShellVisibility(options: UseAppShellVisibilityOptions) {
   const visiblePerspectives = shallowRef<PerspectiveVisibilityState>(
     buildInitialPerspectiveVisibilityState()
   );
+  const countyPowerStoryVisibility = options.countyPowerStoryVisibility;
+  if (
+    countyPowerStoryVisibility.value.storyId === "grid-stress" &&
+    !countyPowerStoryVisibility.value.visible
+  ) {
+    countyPowerStoryVisibility.value = buildInitialCountyPowerStoryVisibilityState();
+  }
   const marketBoundaryVisibility = shallowRef<MarketBoundaryVisibilityState>({
     market: false,
     submarket: false,
@@ -106,6 +119,10 @@ export function useAppShellVisibility(options: UseAppShellVisibilityOptions) {
     powerVisibility.value = syncPowerVisibilityState({
       runtime,
       fallback: powerVisibility.value,
+    });
+    countyPowerStoryVisibility.value = syncCountyPowerStoryVisibilityState({
+      runtime,
+      fallback: countyPowerStoryVisibility.value,
     });
     waterVisible.value = syncWaterVisible({
       runtime,
@@ -190,6 +207,118 @@ export function useAppShellVisibility(options: UseAppShellVisibilityOptions) {
     options.layerRuntime.value?.setUserVisible(catalogId, visible);
   }
 
+  async function setCountyPowerStoryVisible(
+    storyId: CountyPowerStoryId,
+    visible: boolean
+  ): Promise<void> {
+    countyPowerStoryVisibility.value = withCountyPowerStoryVisibility({
+      state: countyPowerStoryVisibility.value,
+      storyId,
+      visible,
+    });
+
+    for (const candidateStoryId of [
+      "grid-stress",
+      "queue-pressure",
+      "market-structure",
+      "policy-watch",
+    ] as const) {
+      options.layerRuntime.value?.setUserVisible(
+        countyPowerStoryLayerId(candidateStoryId),
+        visible && candidateStoryId === storyId
+      );
+    }
+
+    options.layerRuntime.value?.setUserVisible(
+      COUNTY_POWER_STORY_3D_LAYER_ID,
+      visible && countyPowerStoryVisibility.value.threeDimensional
+    );
+
+    const controller = options.countyPowerStoryController.value?.controller;
+    if (typeof controller === "undefined" || controller === null) {
+      return;
+    }
+
+    await controller.setStoryId(storyId);
+    await controller.setVisible(visible);
+
+    if (!visible) {
+      options.clearCountyPowerStoryHover();
+      options.clearSelectedCountyPowerStory();
+      controller.setSelectedCounty(null);
+    }
+  }
+
+  async function setCountyPowerStoryStoryId(storyId: CountyPowerStoryId): Promise<void> {
+    countyPowerStoryVisibility.value = withCountyPowerStoryVisibility({
+      state: countyPowerStoryVisibility.value,
+      storyId,
+    });
+
+    if (countyPowerStoryVisibility.value.visible) {
+      await setCountyPowerStoryVisible(storyId, true);
+      return;
+    }
+
+    await options.countyPowerStoryController.value?.controller.setStoryId(storyId);
+  }
+
+  async function setCountyPowerStoryWindow(
+    window: import("@/features/county-power-story/county-power-story.types").CountyPowerStoryVisibilityState["window"]
+  ): Promise<void> {
+    countyPowerStoryVisibility.value = withCountyPowerStoryVisibility({
+      state: countyPowerStoryVisibility.value,
+      window,
+    });
+    await options.countyPowerStoryController.value?.controller.setWindow(window);
+  }
+
+  async function setCountyPowerStoryChapterId(
+    chapterId: import("@/features/county-power-story/county-power-story.types").CountyPowerStoryChapterId
+  ): Promise<void> {
+    countyPowerStoryVisibility.value = withCountyPowerStoryVisibility({
+      state: countyPowerStoryVisibility.value,
+      chapterId,
+    });
+    await options.countyPowerStoryController.value?.controller.setChapterId(chapterId);
+  }
+
+  async function setCountyPowerStoryChapterVisible(visible: boolean): Promise<void> {
+    countyPowerStoryVisibility.value = withCountyPowerStoryVisibility({
+      state: countyPowerStoryVisibility.value,
+      chapterVisible: visible,
+    });
+    await options.countyPowerStoryController.value?.controller.setChapterVisible(visible);
+  }
+
+  function setCountyPowerStoryAnimationEnabled(enabled: boolean): void {
+    countyPowerStoryVisibility.value = {
+      ...countyPowerStoryVisibility.value,
+      animationEnabled: enabled,
+    };
+    options.countyPowerStoryController.value?.controller.setAnimationEnabled(enabled);
+  }
+
+  function setCountyPowerStorySeamHazeEnabled(enabled: boolean): void {
+    countyPowerStoryVisibility.value = withCountyPowerStoryVisibility({
+      state: countyPowerStoryVisibility.value,
+      seamHazeEnabled: enabled,
+    });
+    options.countyPowerStoryController.value?.controller.setSeamHazeEnabled(enabled);
+  }
+
+  function setCountyPowerStoryThreeDimensionalEnabled(enabled: boolean): void {
+    countyPowerStoryVisibility.value = withCountyPowerStoryVisibility({
+      state: countyPowerStoryVisibility.value,
+      threeDimensional: enabled,
+    });
+    options.layerRuntime.value?.setUserVisible(
+      COUNTY_POWER_STORY_3D_LAYER_ID,
+      countyPowerStoryVisibility.value.visible && enabled
+    );
+    options.countyPowerStoryController.value?.controller.setThreeDimensionalEnabled(enabled);
+  }
+
   function setBoundaryVisible(boundaryId: BoundaryLayerId, visible: boolean): void {
     boundaryVisibility.value = withBoundaryVisibility({
       boundaryId,
@@ -213,6 +342,7 @@ export function useAppShellVisibility(options: UseAppShellVisibilityOptions) {
     boundaryVisibility,
     floodVisibility,
     visiblePerspectives,
+    countyPowerStoryVisibility,
     hydroBasinsVisible,
     parcelsVisible,
     powerVisibility,
@@ -229,6 +359,14 @@ export function useAppShellVisibility(options: UseAppShellVisibilityOptions) {
     gasPipelineVisible,
     marketBoundaryVisibility,
     setGasPipelineVisible,
+    setCountyPowerStoryAnimationEnabled,
+    setCountyPowerStoryChapterId,
+    setCountyPowerStoryChapterVisible,
+    setCountyPowerStorySeamHazeEnabled,
+    setCountyPowerStoryStoryId,
+    setCountyPowerStoryThreeDimensionalEnabled,
+    setCountyPowerStoryVisible,
+    setCountyPowerStoryWindow,
     setMarketBoundaryVisible,
     setWaterVisible,
     setBoundaryVisible,

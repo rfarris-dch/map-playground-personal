@@ -17,6 +17,10 @@ import type {
 import type { MapFiltersState } from "@/features/app/filters/map-filters.types";
 import type { BasemapVisibilityState } from "@/features/basemap/basemap.types";
 import type { BoundaryLayerId } from "@/features/boundaries/boundaries.types";
+import type {
+  CountyPowerStoryId,
+  CountyPowerStoryVisibilityState,
+} from "@/features/county-power-story/county-power-story.types";
 import type { FacilitiesViewMode } from "@/features/facilities/facilities.types";
 import type { FiberLocatorLineId } from "@/features/fiber-locator/fiber-locator.types";
 import type { LayerRuntimeSnapshot } from "@/features/layers/layer-runtime.types";
@@ -43,6 +47,8 @@ export interface ApplyMapContextTransferToAppShellArgs {
     selectedRegionIds: readonly string[] | null
   ) => void;
   readonly setBoundaryVisible: (boundaryId: BoundaryLayerId, visible: boolean) => void;
+  readonly setCountyPowerStoryThreeDimensionalEnabled?: (enabled: boolean) => void;
+  readonly setCountyPowerStoryVisible?: (storyId: CountyPowerStoryId, visible: boolean) => void;
   readonly setFiberLayerVisibility?: (lineId: FiberLocatorLineId, visible: boolean) => void;
   readonly setFiberSourceLayerSelection?: (
     lineId: FiberLocatorLineId,
@@ -68,6 +74,7 @@ export interface BuildMapContextTransferFromAppShellArgs {
   readonly boundaryFacetSelection: BoundaryFacetSelectionState;
   readonly boundaryVisibility?: BoundaryVisibilityState;
   readonly companyIds?: readonly string[];
+  readonly countyPowerStoryVisibility?: CountyPowerStoryVisibilityState;
   readonly facilityIds?: readonly string[];
   readonly fiberVisibility?: FiberVisibilityState;
   readonly floodVisibility?: FloodVisibilityState;

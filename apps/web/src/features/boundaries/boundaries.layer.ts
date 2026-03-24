@@ -282,6 +282,12 @@ export function mountBoundaryLayer(
     state.ready = true;
     hideBasemapBoundaryLayers();
     ensureLayer();
+    applyVisibility();
+
+    if (!state.visible) {
+      return;
+    }
+
     refreshSourceData().catch(() => {
       clearHover();
       state.allFeatures = [];
@@ -289,7 +295,6 @@ export function mountBoundaryLayer(
       options.onFacetOptionsChange?.(layerId, []);
       state.dataLoaded = false;
     });
-    applyVisibility();
   }
 
   map.on("load", onLoad);

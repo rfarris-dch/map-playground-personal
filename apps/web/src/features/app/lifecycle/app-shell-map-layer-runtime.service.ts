@@ -1,3 +1,7 @@
+import {
+  destroyCountyPowerStoryRuntime,
+  initializeCountyPowerStoryRuntime,
+} from "@/features/app/lifecycle/app-shell-county-power-story-runtime.service";
 import { initializeEnvironmentalStressRuntime } from "@/features/app/lifecycle/app-shell-environmental-runtime.service";
 import {
   destroyFacilitiesRuntime,
@@ -44,6 +48,7 @@ export function initializeMapLayerRuntime(options: UseAppShellMapLifecycleOption
   initializeFloodRuntime(options);
   initializeHydroBasinsRuntime(options);
   initializeMeasureRuntime(options);
+  initializeCountyPowerStoryRuntime(options);
 
   try {
     options.fiber.initialize(currentMap);
@@ -61,6 +66,7 @@ export function initializeMapLayerRuntime(options: UseAppShellMapLifecycleOption
 export function destroyMapLayerRuntime(options: UseAppShellMapLifecycleOptions): void {
   options.layers.environmentalStressController.value?.destroy();
   options.layers.environmentalStressController.value = null;
+  destroyCountyPowerStoryRuntime(options);
   destroyMeasureRuntime(options);
   destroyWaterRuntime(options);
   destroyGasPipelineRuntime(options);

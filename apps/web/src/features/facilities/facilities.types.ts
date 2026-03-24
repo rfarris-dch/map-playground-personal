@@ -24,7 +24,7 @@ export interface FacilitiesBboxRequest {
 
 export type FacilitiesHiddenReason = "stress" | "viewport-span" | "zoom";
 
-export type FacilitiesDegradedReason = "display-budget" | "feature-budget";
+export type FacilitiesDegradedReason = "display-budget" | "feature-budget" | "stress";
 
 export interface FacilitiesViewportSnapshot {
   readonly features: FacilitiesFeatureCollection["features"];
@@ -116,7 +116,7 @@ export interface FacilitiesLayerController {
 
 export interface FacilitiesLayerState {
   cachedFeatures: FacilitiesFeatureCollection["features"];
-  debounceTimer: number | null;
+  debounceTimer: ReturnType<typeof setTimeout> | null;
   fetchedBbox: BBox | null;
   lastFetchKey: string | null;
   lastRequestId: string | null;

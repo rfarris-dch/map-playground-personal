@@ -11,6 +11,7 @@ import type {
   RequestParameters,
   ResourceType,
   SourceSpecification,
+  StyleImageInterface,
   StyleSpecification,
   TerrainSpecification,
 } from "maplibre-gl";
@@ -32,7 +33,10 @@ export interface MapCaptureImageOptions {
 
 export interface IMap {
   addControl(control: MapControl, position?: MapControlPosition): void;
-  addImage(id: string, image: ImageBitmap | HTMLImageElement | ImageData): void;
+  addImage(
+    id: string,
+    image: ImageBitmap | HTMLImageElement | ImageData | StyleImageInterface
+  ): void;
   addLayer(layerSpec: MapLayerSpecification, beforeId?: string): void;
   addSource(id: string, spec: MapSourceSpecification): void;
   captureImage(options?: MapCaptureImageOptions): Promise<Blob>;
@@ -80,9 +84,13 @@ export interface IMap {
   removeControl(control: MapControl): void;
   removeLayer(layerId: string): void;
   removeSource(sourceId: string): void;
-  replaceImage(id: string, image: ImageBitmap | HTMLImageElement | ImageData): void;
+  replaceImage(
+    id: string,
+    image: ImageBitmap | HTMLImageElement | ImageData | StyleImageInterface
+  ): void;
   setFeatureState(target: FeatureStateTarget, state: Record<string, unknown>): void;
   setGeoJSONSourceData(sourceId: string, data: unknown): void;
+  setGlobalStateProperty(name: string, value: unknown): void;
   setLayerFilter(layerId: string, filter: MapExpression | null): void;
   setLayerVisibility(layerId: string, visible: boolean): void;
   setPaintProperty(layerId: string, name: string, value: unknown): void;
@@ -90,6 +98,7 @@ export interface IMap {
   setStyle(style: StyleInput): void;
   setTerrain(terrain: MapTerrainSpecification | null): void;
   setViewport(viewport: MapViewport): void;
+  triggerRepaint(): void;
   unproject(point: [number, number]): LngLat;
 }
 

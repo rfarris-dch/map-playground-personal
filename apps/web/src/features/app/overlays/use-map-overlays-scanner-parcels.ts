@@ -403,7 +403,7 @@ export function useMapOverlaysScannerParcels(options: UseMapOverlaysScannerParce
           scannerParcelsViewportKey.value = snapshot.canonicalViewportKey;
           onMapMoveEnd();
         },
-        { emitCurrent: true }
+        { emitCurrent: true, priority: "background" }
       );
     },
     { immediate: true }

@@ -185,6 +185,24 @@ export function readParcelsStatusIngestionRunId(status: ParcelsStatus): string |
   return null;
 }
 
+function isDocumentVisible(): boolean {
+  return typeof document === "undefined" || document.visibilityState === "visible";
+}
+
+function requestNextAnimationFrame(callback: FrameRequestCallback): number {
+  return typeof globalThis.requestAnimationFrame === "function"
+    ? globalThis.requestAnimationFrame(callback)
+    : 0;
+}
+
+function cancelScheduledAnimationFrame(handle: number): void {
+  if (handle === 0 || typeof globalThis.cancelAnimationFrame !== "function") {
+    return;
+  }
+
+  globalThis.cancelAnimationFrame(handle);
+}
+
 export function createStressGovernor(
   options: StressGovernorOptions = {}
 ): StressGovernorController {
@@ -199,6 +217,15 @@ export function createStressGovernor(
   let frameHandle = 0;
   let destroyed = false;
   let enabled = false;
+
+  const cancelScheduledFrame = (): void => {
+    if (frameHandle === 0) {
+      return;
+    }
+
+    cancelScheduledAnimationFrame(frameHandle);
+    frameHandle = 0;
+  };
 
   const resetSamples = (): void => {
     samples.length = 0;
@@ -224,25 +251,34 @@ export function createStressGovernor(
     options.onChange?.(blocked);
   };
 
+  const ensureFrameLoop = (): void => {
+    if (!(enabled && frameHandle === 0 && !destroyed)) {
+      return;
+    }
+
+    frameHandle = requestNextAnimationFrame(onFrame);
+  };
+
   const onFrame = (now: number): void => {
     if (destroyed) {
       return;
     }
 
+    frameHandle = 0;
+
     if (!enabled) {
       previousFrameTime = now;
-      frameHandle = window.requestAnimationFrame(onFrame);
       return;
     }
 
-    if (document.visibilityState !== "visible") {
+    if (!isDocumentVisible()) {
       resetSamples();
       previousFrameTime = now;
       if (blocked) {
         blocked = false;
         options.onChange?.(false);
       }
-      frameHandle = window.requestAnimationFrame(onFrame);
+      ensureFrameLoop();
       return;
     }
 
@@ -259,10 +295,8 @@ export function createStressGovernor(
     }
 
     updateBlockedState();
-    frameHandle = window.requestAnimationFrame(onFrame);
+    ensureFrameLoop();
   };
-
-  frameHandle = window.requestAnimationFrame(onFrame);
 
   return {
     destroy(): void {
@@ -270,7 +304,7 @@ export function createStressGovernor(
         return;
       }
       destroyed = true;
-      window.cancelAnimationFrame(frameHandle);
+      cancelScheduledFrame();
       if (blocked) {
         blocked = false;
         options.onChange?.(false);
@@ -292,6 +326,13 @@ export function createStressGovernor(
         blocked = false;
         options.onChange?.(false);
       }
+
+      if (!enabled) {
+        cancelScheduledFrame();
+        return;
+      }
+
+      ensureFrameLoop();
     },
   };
 }

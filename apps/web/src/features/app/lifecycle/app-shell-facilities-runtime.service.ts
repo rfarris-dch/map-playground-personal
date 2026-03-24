@@ -1,5 +1,6 @@
 import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
 import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts/facilities-http";
+import { DEFAULT_LAYER_CATALOG } from "@map-migration/map-layer-catalog";
 import { facilitiesLayerId } from "@/features/app/core/app-shell.constants";
 import { isSamePerspective } from "@/features/app/core/app-shell.defaults";
 import type {
@@ -19,7 +20,7 @@ const ALL_FACILITY_PERSPECTIVES: readonly FacilityPerspective[] = [
   "enterprise",
 ];
 const EAGER_FACILITY_PERSPECTIVES: readonly FacilityPerspective[] = ["colocation", "hyperscale"];
-const FACILITIES_LAYER_MIN_ZOOM = 0;
+const FACILITIES_LAYER_MIN_ZOOM = DEFAULT_LAYER_CATALOG["facilities.colocation"].zoomMin;
 const FACILITIES_LIMIT_BY_PERSPECTIVE: Record<string, number> = {
   colocation: 2500,
   hyperscale: 12_000,
@@ -82,24 +83,6 @@ function setViewportFacilities(
   options.state.hyperscaleViewportFeatures.value = features;
 }
 
-function setStressBlocked(
-  options: UseAppShellMapLifecycleOptions,
-  perspective: FacilityPerspective,
-  blocked: boolean
-): void {
-  options.runtime.layerRuntime.value?.setStressBlocked(facilitiesLayerId(perspective), blocked);
-
-  if (!blocked) {
-    return;
-  }
-
-  setPerspectiveStatus(options, perspective, {
-    state: "hidden",
-    perspective,
-    reason: "stress",
-  });
-}
-
 function isPerspectiveMounted(
   options: UseAppShellMapLifecycleOptions,
   perspective: FacilityPerspective
@@ -160,9 +143,6 @@ function mountPerspectiveLayer({
     },
     onViewportUpdate: (snapshot) => {
       setViewportFacilities(options, perspective, snapshot.features);
-    },
-    onStressBlockedChange: (blocked) => {
-      setStressBlocked(options, perspective, blocked);
     },
     onClusterClick: () => {
       options.state.clusterClickSignal.value += 1;

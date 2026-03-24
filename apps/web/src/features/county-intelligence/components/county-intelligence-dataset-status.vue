@@ -1,14 +1,26 @@
 <script setup lang="ts">
+  import type {
+    CountyScoresCoverageResponse,
+    CountyScoresResolutionResponse,
+  } from "@map-migration/http-contracts/county-intelligence-http";
   import type { SpatialAnalysisCountyScoresStatus } from "@map-migration/http-contracts/spatial-analysis-summary-http";
   import { computed } from "vue";
+  import CountyIntelligenceCoverageSummary from "@/features/county-intelligence/components/county-intelligence-coverage-summary.vue";
   import {
     formatDateTime,
     formatFeatureFamily,
   } from "@/features/county-intelligence/county-intelligence-display.service";
+  import CountyIntelligenceResolutionSummary from "./county-intelligence-resolution-summary.vue";
 
   interface CountyScoresDatasetStatusProps {
+    readonly coverage: CountyScoresCoverageResponse | null;
+    readonly coverageErrorMessage?: string | null;
+    readonly coverageLoading?: boolean;
     readonly errorMessage?: string | null;
     readonly isLoading?: boolean;
+    readonly resolution: CountyScoresResolutionResponse | null;
+    readonly resolutionErrorMessage?: string | null;
+    readonly resolutionLoading?: boolean;
     readonly status: SpatialAnalysisCountyScoresStatus | null;
   }
 
@@ -73,6 +85,14 @@
     </div>
 
     <div v-else-if="props.status !== null" class="space-y-3">
+      <p
+        class="rounded-sm border border-border bg-background px-3 py-2 text-xs text-muted-foreground shadow-sm"
+      >
+        Feature-family availability below is dataset-level publication metadata, not county-level
+        completeness. Use the field coverage and queue resolution sections to explain why specific
+        county fields are still null.
+      </p>
+
       <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         <div class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm">
           <div class="text-xs uppercase tracking-wide text-muted-foreground">Published</div>
@@ -146,7 +166,7 @@
       <div class="grid gap-2 text-xs lg:grid-cols-2">
         <div class="rounded-sm border border-border bg-card px-3 py-2 shadow-sm">
           <div class="text-xs uppercase tracking-wide text-muted-foreground">
-            Available Feature Families
+            Published Feature Families
           </div>
           <p class="mt-1 mb-0 text-xs font-medium text-foreground/70">
             {{ availableFeatureFamilies.length > 0
@@ -166,6 +186,18 @@
           </p>
         </div>
       </div>
+
+      <CountyIntelligenceCoverageSummary
+        :coverage="props.coverage"
+        :error-message="props.coverageErrorMessage ?? null"
+        :is-loading="props.coverageLoading ?? false"
+      />
+
+      <CountyIntelligenceResolutionSummary
+        :resolution="props.resolution"
+        :error-message="props.resolutionErrorMessage ?? null"
+        :is-loading="props.resolutionLoading ?? false"
+      />
     </div>
 
     <p

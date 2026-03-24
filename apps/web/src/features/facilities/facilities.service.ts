@@ -272,7 +272,7 @@ export function findFacilitiesBboxCacheEntry(
 export function upsertFacilitiesBboxCacheEntry(
   entries: readonly FacilitiesBboxCacheEntry[],
   nextEntry: FacilitiesBboxCacheEntry,
-  maxEntries = 24
+  maxEntries = 4
 ): readonly FacilitiesBboxCacheEntry[] {
   const nextEntries = [nextEntry];
 
@@ -310,6 +310,28 @@ export function filterFacilitiesFeaturesToBbox(
       return false;
     }
     return pointWithinBbox(feature.geometry.coordinates, bbox);
+  });
+}
+
+export function filterFacilitiesFeaturesToViewport(args: {
+  readonly canvasSize: {
+    readonly height: number;
+    readonly width: number;
+  };
+  readonly features: FacilitiesFeatureCollection["features"];
+  readonly projectPoint: (coordinates: readonly [number, number]) => readonly [number, number];
+}): FacilitiesFeatureCollection["features"] {
+  return args.features.filter((feature) => {
+    if (feature.geometry.type !== "Point") {
+      return false;
+    }
+
+    const [x, y] = args.projectPoint(feature.geometry.coordinates);
+    if (!(Number.isFinite(x) && Number.isFinite(y))) {
+      return false;
+    }
+
+    return x >= 0 && x <= args.canvasSize.width && y >= 0 && y <= args.canvasSize.height;
   });
 }
 

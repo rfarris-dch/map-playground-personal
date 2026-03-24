@@ -6,10 +6,28 @@ mock.restore();
 const listCountyScoresMock = mock<(countyIds: readonly string[]) => Promise<readonly unknown[]>>();
 const mapCountyScoreRowMock = mock<(row: unknown) => CountyScore>();
 const getCountyScoresStatusSnapshotMock = mock<() => Promise<unknown>>();
+const listCountyScoresCoverageFieldsMock = mock<() => Promise<readonly unknown[]>>();
+const listCountyScoresCoverageByOperatorMock = mock<() => Promise<readonly unknown[]>>();
+const listCountyScoresResolutionBySourceMock = mock<() => Promise<readonly unknown[]>>();
+const listCountyOperatorZoneDebugMock =
+  mock<(countyIds: readonly string[]) => Promise<readonly unknown[]>>();
+const listCountyQueueResolutionDebugMock =
+  mock<(countyIds: readonly string[]) => Promise<readonly unknown[]>>();
+const listCountyQueuePoiReferenceDebugMock =
+  mock<(countyIds: readonly string[]) => Promise<readonly unknown[]>>();
+const listCountyCongestionDebugMock =
+  mock<(countyIds: readonly string[]) => Promise<readonly unknown[]>>();
 
 mock.module("@/geo/county-intelligence/county-intelligence.repo", () => ({
   getCountyScoresStatusSnapshot: getCountyScoresStatusSnapshotMock,
+  listCountyCongestionDebug: listCountyCongestionDebugMock,
+  listCountyOperatorZoneDebug: listCountyOperatorZoneDebugMock,
+  listCountyQueuePoiReferenceDebug: listCountyQueuePoiReferenceDebugMock,
+  listCountyQueueResolutionDebug: listCountyQueueResolutionDebugMock,
   listCountyScores: listCountyScoresMock,
+  listCountyScoresCoverageByOperator: listCountyScoresCoverageByOperatorMock,
+  listCountyScoresCoverageFields: listCountyScoresCoverageFieldsMock,
+  listCountyScoresResolutionBySource: listCountyScoresResolutionBySourceMock,
 }));
 
 mock.module("@/geo/county-intelligence/county-intelligence.mapper", () => ({
@@ -86,6 +104,31 @@ function createDeferredCountyRow(
       policy: "unknown",
       supplyTimeline: "unknown",
     },
+    powerMarketContext: {
+      balancingAuthority: null,
+      loadZone: null,
+      marketStructure: "unknown",
+      meteoZone: null,
+      operatorWeatherZone: null,
+      operatorZoneConfidence: null,
+      operatorZoneLabel: null,
+      operatorZoneType: null,
+      weatherZone: null,
+      wholesaleOperator: null,
+    },
+    retailStructure: {
+      competitiveAreaType: "unknown",
+      primaryTduOrUtility: null,
+      retailChoiceStatus: "unknown",
+      utilityContext: {
+        dominantUtilityId: null,
+        dominantUtilityName: null,
+        retailChoicePenetrationShare: null,
+        territoryType: null,
+        utilities: [],
+        utilityCount: null,
+      },
+    },
     expectedMw0To24m: countyFips === "06085" ? 180 : 120,
     expectedMw24To60m: countyFips === "06085" ? 70 : 60,
     recentCommissionedMw24m: 45,
@@ -109,12 +152,63 @@ function createDeferredCountyRow(
     countyTaggedEventShare: null,
     policyMappingConfidence: null,
     transmissionMiles69kvPlus: null,
+    transmissionMiles138kvPlus: null,
     transmissionMiles230kvPlus: null,
+    transmissionMiles345kvPlus: null,
+    transmissionMiles500kvPlus: null,
+    transmissionMiles765kvPlus: null,
+    transmissionContext: {
+      miles138kvPlus: null,
+      miles230kvPlus: null,
+      miles345kvPlus: null,
+      miles500kvPlus: null,
+      miles69kvPlus: null,
+      miles765kvPlus: null,
+    },
     gasPipelinePresenceFlag: null,
     gasPipelineMileageCounty: null,
     fiberPresenceFlag: null,
     primaryMarketId: "silicon-valley",
+    isBorderCounty: false,
     isSeamCounty: false,
+    queueStorageMw: null,
+    queueSolarMw: null,
+    queueWindMw: null,
+    queueAvgAgeDays: null,
+    queueWithdrawalRate: null,
+    recentOnlineMw: null,
+    avgRtCongestionComponent: null,
+    p95ShadowPrice: null,
+    negativePriceHourShare: null,
+    topConstraints: [],
+    interconnectionQueue: {
+      activeMw: null,
+      avgAgeDays: null,
+      medianDaysInQueueActive: null,
+      projectCountActive: null,
+      recentOnlineMw: null,
+      solarMw: null,
+      storageMw: null,
+      windMw: null,
+      withdrawalRate: null,
+    },
+    congestionContext: {
+      avgRtCongestionComponent: null,
+      congestionProxyScore: null,
+      negativePriceHourShare: null,
+      p95ShadowPrice: null,
+      topConstraints: [],
+    },
+    sourceProvenance: {
+      congestion: null,
+      interconnectionQueue: null,
+      operatingFootprints: null,
+      retailStructure: null,
+      transmission: null,
+      utilityTerritories: null,
+      wholesaleMarkets: null,
+    },
+    publicationRunId: "county-market-pressure-20260307T000000Z",
     formulaVersion: "county-market-pressure-v1",
     inputDataVersion: "inputs-v1",
   };
@@ -165,6 +259,7 @@ describe("queryCountyScores", () => {
     expect(result.value.dataVersion).toBe("2026-03-06");
     expect(result.value.requestedCountyIds).toEqual(["06085", "48113", "01001"]);
     expect(result.value.rows.map((row) => row.countyFips)).toEqual(["06085", "48113"]);
+    expect(result.value.rows[0]?.publicationRunId).toBe("county-market-pressure-20260307T000000Z");
     expect(result.value.missingCountyIds).toEqual(["01001"]);
     expect(result.value.deferredCountyIds).toEqual(["06085", "48113"]);
     expect(result.value.blockedCountyIds).toEqual([]);
@@ -292,6 +387,8 @@ describe("queryCountyScores", () => {
     ]);
     expect(result.value.featureCoverage.demand).toBe(true);
     expect(result.value.featureCoverage.gridFriction).toBe(false);
+    expect(result.value.featureCoverage.interconnectionQueue).toBe(false);
+    expect(result.value.featureCoverage.wholesaleMarkets).toBe(false);
     expect(result.value.missingFeatureFamilies).toEqual([
       "grid_friction",
       "policy",

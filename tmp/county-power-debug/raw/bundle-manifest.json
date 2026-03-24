@@ -1,0 +1,41 @@
+{
+  "bundleVersion": "county-power-v1",
+  "dataVersion": "2026-03-23",
+  "datasets": {
+    "congestion": {
+      "path": "congestion.ndjson",
+      "recordCount": 0,
+      "sourceAsOfDate": "2026-03-23",
+      "sourceName": "eia-wholesale-markets-county-congestion-pending",
+      "sourceUri": "https://www.eia.gov/electricity/wholesalemarkets/",
+      "sourceVersion": "2026-03-23"
+    },
+    "powerMarketContext": {
+      "path": "power-market-context.ndjson",
+      "recordCount": 3221,
+      "sourceAsOfDate": "2024-12-31",
+      "sourceName": "eia-861-2024-county-utility-market-context",
+      "sourceUri": "https://www.eia.gov/electricity/data/eia861/",
+      "sourceVersion": "2024"
+    },
+    "transmission": {
+      "path": "transmission.ndjson",
+      "recordCount": 3221,
+      "sourceAsOfDate": "2025-08-26",
+      "sourceName": "federal-us-transmission-lines-archive",
+      "sourceUri": "https://www.arcgis.com/home/item.html?id=d4090758322c4d32a4cd002ffaa0aa12",
+      "sourceVersion": "2025-08-26"
+    },
+    "utilityContext": {
+      "path": "utility-context.ndjson",
+      "recordCount": 3221,
+      "sourceAsOfDate": "2024-12-31",
+      "sourceName": "eia-861-2024-county-retail-context",
+      "sourceUri": "https://www.eia.gov/electricity/data/eia861/",
+      "sourceVersion": "2024"
+    }
+  },
+  "effectiveDate": "2026-03-23",
+  "generatedAt": "2026-03-23T18:30:39Z",
+  "month": "2026-03-01"
+}

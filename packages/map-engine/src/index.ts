@@ -88,6 +88,24 @@ function isSourceWithSetData(source: unknown): source is { setData: (data: unkno
   return typeof Reflect.get(source, "setData") === "function";
 }
 
+function isMapWithGlobalState(
+  map: unknown
+): map is { setGlobalStateProperty: (name: string, value: unknown) => void } {
+  if (typeof map !== "object" || map === null) {
+    return false;
+  }
+
+  return typeof Reflect.get(map, "setGlobalStateProperty") === "function";
+}
+
+function isMapWithTriggerRepaint(map: unknown): map is { triggerRepaint: () => void } {
+  if (typeof map !== "object" || map === null) {
+    return false;
+  }
+
+  return typeof Reflect.get(map, "triggerRepaint") === "function";
+}
+
 function isStyleNotDoneLoadingError(error: unknown): boolean {
   if (!(error instanceof Error)) {
     return false;
@@ -181,11 +199,17 @@ class MapLibreEngine implements IMap {
     this.map.addControl(control, position);
   }
 
-  addImage(id: string, image: ImageBitmap | HTMLImageElement | ImageData): void {
+  addImage(
+    id: string,
+    image: ImageBitmap | HTMLImageElement | ImageData | import("maplibre-gl").StyleImageInterface
+  ): void {
     this.map.addImage(id, image);
   }
 
-  replaceImage(id: string, image: ImageBitmap | HTMLImageElement | ImageData): void {
+  replaceImage(
+    id: string,
+    image: ImageBitmap | HTMLImageElement | ImageData | import("maplibre-gl").StyleImageInterface
+  ): void {
     if (typeof this.map.getImage(id) !== "undefined") {
       this.map.removeImage(id);
     }
@@ -408,6 +432,14 @@ class MapLibreEngine implements IMap {
     source.setData(data);
   }
 
+  setGlobalStateProperty(name: string, value: unknown): void {
+    if (!isMapWithGlobalState(this.map)) {
+      return;
+    }
+
+    this.map.setGlobalStateProperty(name, value);
+  }
+
   setLayerFilter(layerId: string, filter: MapExpression | null): void {
     if (!this.hasLayer(layerId)) {
       return;
@@ -445,6 +477,14 @@ class MapLibreEngine implements IMap {
     }
 
     this.map.setPaintProperty(layerId, name, value);
+  }
+
+  triggerRepaint(): void {
+    if (!isMapWithTriggerRepaint(this.map)) {
+      return;
+    }
+
+    this.map.triggerRepaint();
   }
 
   onError(handler: MapErrorHandler): void {

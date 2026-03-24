@@ -1,12 +1,23 @@
 export interface LayerOrderInvariants {
-  choroplethBelowColocation: readonly [string, string];
-  choroplethBelowHyperscale: readonly [string, string];
+  countyPower3dBelowColocation: readonly [string, string];
+  countyPower3dBelowHyperscale: readonly [string, string];
+  countyPowerGridStressBelowColocation: readonly [string, string];
+  countyPowerGridStressBelowHyperscale: readonly [string, string];
+  countyPowerMarketStructureBelowColocation: readonly [string, string];
+  countyPowerMarketStructureBelowHyperscale: readonly [string, string];
+  countyPowerPolicyWatchBelowColocation: readonly [string, string];
+  countyPowerPolicyWatchBelowHyperscale: readonly [string, string];
+  countyPowerQueuePressureBelowColocation: readonly [string, string];
+  countyPowerQueuePressureBelowHyperscale: readonly [string, string];
   flood100BelowParcelOutlines: readonly [string, string];
   flood500BelowParcelOutlines: readonly [string, string];
   hydroLabelsBelowFacilityPoints: readonly [string, string];
   hydroLinesBelowParcelOutlines: readonly [string, string];
   marketBoundaryBelowColocation: readonly [string, string];
-  modelsBelowFacilityPoints: readonly [string, string];
-  parcelOutlinesAboveChoropleth: readonly [string, string];
+  parcelOutlinesAboveCountyPower3d: readonly [string, string];
+  parcelOutlinesAboveCountyPowerGridStress: readonly [string, string];
+  parcelOutlinesAboveCountyPowerMarketStructure: readonly [string, string];
+  parcelOutlinesAboveCountyPowerPolicyWatch: readonly [string, string];
+  parcelOutlinesAboveCountyPowerQueuePressure: readonly [string, string];
   submarketBoundaryBelowColocation: readonly [string, string];
 }

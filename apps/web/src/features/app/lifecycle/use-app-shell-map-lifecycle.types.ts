@@ -23,6 +23,12 @@ import type {
 import type { BasemapLayerVisibilityController } from "@/features/basemap/basemap.types";
 import type { BoundaryHoverState } from "@/features/boundaries/boundaries.types";
 import type {
+  CountyPowerStoryHoverState,
+  CountyPowerStoryMountResult,
+  CountyPowerStorySelectionState,
+  CountyPowerStoryVisibilityState,
+} from "@/features/county-power-story/county-power-story.types";
+import type {
   FacilitiesLayerController,
   SelectedFacilityRef,
 } from "@/features/facilities/facilities.types";
@@ -90,6 +96,7 @@ export interface AppShellMapLifecycleRuntimeRefs {
 
 export interface AppShellMapLifecycleLayerRefs {
   readonly boundaryControllers: ShallowRef<BoundaryControllerState>;
+  readonly countyPowerStoryController: ShallowRef<CountyPowerStoryMountResult | null>;
   readonly environmentalStressController: ShallowRef<EnvironmentalStressController | null>;
   readonly facilitiesControllers: ShallowRef<readonly FacilitiesLayerController[]>;
   readonly facilitiesHoverController: ShallowRef<FacilitiesHoverController | null>;
@@ -132,8 +139,10 @@ export interface AppShellMapLifecycleStateRefs {
   readonly boundaryHoverByLayer: ShallowRef<BoundaryHoverByLayerState>;
   readonly clusterClickSignal: ShallowRef<number>;
   readonly colocationViewportFeatures: ShallowRef<FacilitiesFeatureCollection["features"]>;
+  readonly countyPowerStoryVisibility: ShallowRef<CountyPowerStoryVisibilityState>;
   readonly facilitiesStatus: ShallowRef<PerspectiveStatusState>;
   readonly hoveredBoundary: ShallowRef<BoundaryHoverState | null>;
+  readonly hoveredCountyPowerStory: ShallowRef<CountyPowerStoryHoverState | null>;
   readonly hoveredFacility: ShallowRef<FacilityHoverState | null>;
   readonly hoveredFacilityCluster: ShallowRef<FacilityClusterHoverState | null>;
   readonly hoveredMarketBoundary: ShallowRef<MarketBoundaryHoverState | null>;
@@ -147,14 +156,17 @@ export interface AppShellMapLifecycleStateRefs {
   readonly marketBoundaryHoverByLayer: ShallowRef<MarketBoundaryHoverByLayerState>;
   readonly parcelsStatus: ShallowRef<ParcelsStatus>;
   readonly perspectiveViewModes: ShallowRef<PerspectiveViewModeState>;
+  readonly selectedCountyPowerStory: ShallowRef<CountyPowerStorySelectionState | null>;
   readonly selectedFacility: ShallowRef<SelectedFacilityRef | null>;
   readonly selectedParcel: ShallowRef<SelectedParcelRef | null>;
   readonly sketchMeasureState: ShallowRef<SketchMeasureState>;
 }
 
 export interface AppShellMapLifecycleSelectionActions {
+  readonly clearSelectedCountyPowerStory: () => void;
   readonly clearSelectedFacility: () => void;
   readonly clearSelectedParcel: () => void;
+  readonly setSelectedCountyPowerStory: (county: CountyPowerStorySelectionState | null) => void;
   readonly setSelectedFacility: (facility: SelectedFacilityRef | null) => void;
   readonly setSelectedParcel: (parcel: SelectedParcelRef | null) => void;
 }

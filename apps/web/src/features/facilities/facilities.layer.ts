@@ -30,6 +30,7 @@ import {
   evaluateFacilitiesGuardrails,
   expandBbox,
   filterFacilitiesFeaturesToBbox,
+  filterFacilitiesFeaturesToViewport,
   findFacilitiesBboxCacheEntry,
   hasFeatureId,
   isFeatureId,
@@ -63,17 +64,27 @@ function defaultPerspective(): FacilityPerspective {
 
 const providerNameTokenPattern = /[^A-Za-z0-9]+/;
 const textEncoder = new TextEncoder();
+const FACILITIES_BBOX_CACHE_MAX_ENTRIES = 4;
+const TRAILING_SLASHES_RE = /\/+$/;
 
 function measureResponseBodyBytes(rawBody: unknown): number {
   if (typeof rawBody === "string") {
     return textEncoder.encode(rawBody).length;
   }
 
-  try {
-    return textEncoder.encode(JSON.stringify(rawBody) ?? "").length;
-  } catch {
-    return 0;
+  if (ArrayBuffer.isView(rawBody)) {
+    return rawBody.byteLength;
   }
+
+  if (rawBody instanceof ArrayBuffer) {
+    return rawBody.byteLength;
+  }
+
+  if (typeof Blob !== "undefined" && rawBody instanceof Blob) {
+    return rawBody.size;
+  }
+
+  return 0;
 }
 
 function toFacilitiesCatalogLayerId(
@@ -84,6 +95,20 @@ function toFacilitiesCatalogLayerId(
   }
 
   return "facilities.colocation";
+}
+
+function toAbsoluteAppUrl(path: string): string {
+  if (
+    typeof window === "undefined" ||
+    typeof window.location === "undefined" ||
+    typeof window.location.origin !== "string"
+  ) {
+    return path;
+  }
+
+  const normalizedOrigin = window.location.origin.replace(TRAILING_SLASHES_RE, "");
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${normalizedOrigin}${normalizedPath}`;
 }
 
 function getCanvasContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
@@ -101,9 +126,9 @@ interface ClusterMarkerEntry {
 }
 
 interface ViewportFeaturesCache {
-  bboxKey: string | null;
   features: FacilitiesFeatureCollection["features"] | null;
   viewportFeatures: FacilitiesFeatureCollection["features"];
+  viewportKey: string | null;
 }
 
 interface ViewportPresentationCache {
@@ -179,7 +204,7 @@ export function mountFacilitiesLayer(
 
   const heatmapLayerId = `${sourceId}.heatmap`;
   const iconFallbackLayerId = `${sourceId}.icon-fallback`;
-  const logoBaseUrl = "/api/geo/facilities/provider-logos";
+  const logoBaseUrl = toAbsoluteAppUrl("/api/geo/facilities/provider-logos");
   const loadedLogos = new Set<string>();
   const failedLogos = new Set<string>();
   const inflightLogoLoads = new Map<string, Promise<void>>();
@@ -194,7 +219,7 @@ export function mountFacilitiesLayer(
 
   const replacingImages = new Set<string>();
   const viewportFeaturesCache: ViewportFeaturesCache = {
-    bboxKey: null,
+    viewportKey: null,
     features: null,
     viewportFeatures: [],
   };
@@ -361,8 +386,8 @@ export function mountFacilitiesLayer(
 
   const yieldLogoLoadBatch = async (delayMs: number): Promise<void> => {
     await new Promise<void>((resolve) => {
-      if (typeof window.requestIdleCallback === "function") {
-        window.requestIdleCallback(
+      if (typeof globalThis.requestIdleCallback === "function") {
+        globalThis.requestIdleCallback(
           () => {
             resolve();
           },
@@ -378,6 +403,26 @@ export function mountFacilitiesLayer(
   const loadProviderLogoBatch = async (
     batch: readonly ProviderLogoLoadRequest[]
   ): Promise<void> => {
+    const loadProviderLogoImage = async (
+      url: string
+    ): Promise<ImageBitmap | HTMLImageElement | ImageData> => {
+      if (typeof Image !== "function") {
+        return await map.loadImage(url);
+      }
+
+      return await new Promise<HTMLImageElement>((resolve, reject) => {
+        const image = new Image();
+        image.decoding = "async";
+        image.onload = () => {
+          resolve(image);
+        };
+        image.onerror = () => {
+          reject(new Error(`[facilities.layer] Failed to load provider logo: ${url}`));
+        };
+        image.src = url;
+      });
+    };
+
     const loadProviderLogo = (providerId: string, url: string): Promise<void> => {
       const existingLoad = inflightLogoLoads.get(providerId);
       if (typeof existingLoad !== "undefined") {
@@ -393,7 +438,7 @@ export function mountFacilitiesLayer(
           if (loadedLogos.has(providerId) && map.hasImage(`${logoPrefix}${providerId}`)) {
             return;
           }
-          const raw = await map.loadImage(url);
+          const raw = await loadProviderLogoImage(url);
           const normalized = normalizeLogoImage(raw);
           replaceLogoImage(`${logoPrefix}${providerId}`, normalized);
           loadedLogos.add(providerId);
@@ -665,12 +710,19 @@ export function mountFacilitiesLayer(
         return;
       }
 
-      abortActiveRefresh();
-      clearScheduledLogoLoad();
-      clearClusterMarkers();
+      if (state.lastRequestId === null || state.cachedFeatures.length === 0) {
+        return;
+      }
+
+      const filtered = getFilteredCachedFeatures();
+      const bbox = quantizeBbox(map.getBounds(), VIEWPORT_BBOX_DECIMALS);
+      const viewportFeatures = getViewportFeatures(filtered, bbox);
       setStatus({
-        state: "hidden",
+        state: "degraded",
         perspective,
+        requestId: state.lastRequestId,
+        count: viewportFeatures.length,
+        truncated: state.lastTruncated,
         reason: "stress",
       });
     },
@@ -708,7 +760,7 @@ export function mountFacilitiesLayer(
     state.fetchedBbox = null;
     state.lastRequestId = null;
     state.lastTruncated = false;
-    viewportFeaturesCache.bboxKey = null;
+    viewportFeaturesCache.viewportKey = null;
     viewportFeaturesCache.features = null;
     viewportFeaturesCache.viewportFeatures = [];
   };
@@ -727,18 +779,44 @@ export function mountFacilitiesLayer(
     return `${bbox.west},${bbox.south},${bbox.east},${bbox.north}`;
   };
 
+  const toViewportKey = (bbox: BBox): string => {
+    const canvasSize = map.getCanvasSize();
+    return [
+      bbox.west,
+      bbox.south,
+      bbox.east,
+      bbox.north,
+      map.getZoom(),
+      map.getBearing(),
+      map.getPitch(),
+      canvasSize.width,
+      canvasSize.height,
+      state.viewMode,
+    ].join(",");
+  };
+
   const getViewportFeatures = (
     features: FacilitiesFeatureCollection["features"],
     bbox: BBox
   ): FacilitiesFeatureCollection["features"] => {
-    const bboxKey = toBboxKey(bbox);
-    if (viewportFeaturesCache.features === features && viewportFeaturesCache.bboxKey === bboxKey) {
+    const viewportKey = toViewportKey(bbox);
+    if (
+      viewportFeaturesCache.features === features &&
+      viewportFeaturesCache.viewportKey === viewportKey
+    ) {
       return viewportFeaturesCache.viewportFeatures;
     }
 
-    const viewportFeatures = filterFacilitiesFeaturesToBbox(features, bbox);
+    const viewportFeatures =
+      state.viewMode === "clusters" || state.viewMode === "heatmap"
+        ? filterFacilitiesFeaturesToBbox(features, bbox)
+        : filterFacilitiesFeaturesToViewport({
+            canvasSize: map.getCanvasSize(),
+            features,
+            projectPoint: (coordinates) => map.project([coordinates[0], coordinates[1]]),
+          });
     viewportFeaturesCache.features = features;
-    viewportFeaturesCache.bboxKey = bboxKey;
+    viewportFeaturesCache.viewportKey = viewportKey;
     viewportFeaturesCache.viewportFeatures = viewportFeatures;
     return viewportFeatures;
   };
@@ -1423,6 +1501,10 @@ export function mountFacilitiesLayer(
   };
 
   const onLoad = (): void => {
+    if (state.ready) {
+      return;
+    }
+
     state.ready = true;
     if (!ensureFacilitiesLayers()) {
       clearClusterMarkers();
@@ -1441,7 +1523,7 @@ export function mountFacilitiesLayer(
       options.interactionCoordinator !== null &&
       typeof options.interactionCoordinator !== "undefined"
     ) {
-      if (pendingInitialCoordinatorRefresh) {
+      if (pendingInitialCoordinatorRefresh || lastInteractionSnapshot !== null) {
         pendingInitialCoordinatorRefresh = false;
         scheduleRefresh();
       }
@@ -1467,6 +1549,17 @@ export function mountFacilitiesLayer(
 
     syncClusterMarkers();
     if (interactionType === "rotate-only") {
+      if (state.lastRequestId !== null) {
+        const filtered = getFilteredCachedFeatures();
+        const bbox = quantizeBbox(map.getBounds(), VIEWPORT_BBOX_DECIMALS);
+        const viewportFeatures = getViewportFeatures(filtered, bbox);
+        applyViewportPresentation({
+          bbox,
+          features: viewportFeatures,
+          requestId: state.lastRequestId,
+          truncated: state.lastTruncated,
+        });
+      }
       return;
     }
 
@@ -1813,11 +1906,11 @@ export function mountFacilitiesLayer(
     }
 
     if (state.debounceTimer) {
-      window.clearTimeout(state.debounceTimer);
+      clearTimeout(state.debounceTimer);
     }
     scheduledRefreshFetchKey = fetchKey;
 
-    state.debounceTimer = window.setTimeout(() => {
+    state.debounceTimer = setTimeout(() => {
       scheduledRefreshFetchKey = null;
       refresh().catch(() => {
         handleRefreshFailure({
@@ -1859,12 +1952,16 @@ export function mountFacilitiesLayer(
       requestId: args.result.requestId,
       truncated: args.result.data.meta.truncated,
     });
-    bboxCacheEntries = upsertFacilitiesBboxCacheEntry(bboxCacheEntries, {
-      bbox: args.fetchBbox,
-      features: args.result.data.features,
-      requestId: args.result.requestId,
-      truncated: args.result.data.meta.truncated,
-    });
+    bboxCacheEntries = upsertFacilitiesBboxCacheEntry(
+      bboxCacheEntries,
+      {
+        bbox: args.fetchBbox,
+        features: args.result.data.features,
+        requestId: args.result.requestId,
+        truncated: args.result.data.meta.truncated,
+      },
+      FACILITIES_BBOX_CACHE_MAX_ENTRIES
+    );
   };
 
   const handleFailedRefreshResult = (error: {
@@ -1881,9 +1978,31 @@ export function mountFacilitiesLayer(
     readonly fetchKey: string;
   } | null => {
     const bbox = quantizeBbox(map.getBounds(), VIEWPORT_BBOX_DECIMALS);
+    const currentZoom = map.getZoom();
+    if (currentZoom < minZoom) {
+      recordAppPerformanceCounter("facilities.refresh.skipped", {
+        perspective,
+        reason: "zoom",
+      });
+      state.requestSequence += 1;
+      clearCachedViewport();
+      resetVisibleFacilitiesData();
+      clearSelection();
+      state.lastFetchKey = null;
+      emitViewportUpdate([], "n/a", false);
+      setStatus({
+        state: "hidden",
+        perspective,
+        reason: "zoom",
+        zoom: currentZoom,
+        minZoom,
+      });
+      return null;
+    }
+
     const guardrailResult = evaluateFacilitiesGuardrails({
       bounds: bbox,
-      isStressBlocked: state.stressBlocked,
+      isStressBlocked: false,
       maxViewportWidthKm,
     });
     if (guardrailResult.blocked) {
@@ -2089,7 +2208,7 @@ export function mountFacilitiesLayer(
     clearScheduledLogoLoad();
 
     if (state.debounceTimer) {
-      window.clearTimeout(state.debounceTimer);
+      clearTimeout(state.debounceTimer);
     }
     state.debounceTimer = null;
     scheduledRefreshFetchKey = null;
@@ -2145,8 +2264,12 @@ export function mountFacilitiesLayer(
 
         onMoveEnd(snapshot.interactionType);
       },
-      { emitCurrent: true }
+      { emitCurrent: true, priority: "critical" }
     );
+
+    if (lastInteractionSnapshot !== null) {
+      queueMicrotask(onLoad);
+    }
   }
   map.onClick(onClick);
 
@@ -2232,7 +2355,7 @@ export function mountFacilitiesLayer(
       clearSelection();
 
       if (state.debounceTimer) {
-        window.clearTimeout(state.debounceTimer);
+        clearTimeout(state.debounceTimer);
       }
       state.debounceTimer = null;
       scheduledRefreshFetchKey = null;

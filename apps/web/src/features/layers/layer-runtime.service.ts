@@ -234,23 +234,26 @@ export function createLayerRuntime(
     map.on("moveend", onMoveEnd);
     map.on("load", onLoad);
   } else {
-    unsubscribeInteractionCoordinator = options.interactionCoordinator.subscribe((snapshot) => {
-      if (snapshot.eventType === "load") {
-        onLoad();
-        return;
-      }
+    unsubscribeInteractionCoordinator = options.interactionCoordinator.subscribe(
+      (snapshot) => {
+        if (snapshot.eventType === "load") {
+          onLoad();
+          return;
+        }
 
-      if (!shouldRefreshViewportData(snapshot)) {
-        return;
-      }
+        if (!shouldRefreshViewportData(snapshot)) {
+          return;
+        }
 
-      if (lastInteractionViewportKey === snapshot.canonicalViewportKey) {
-        return;
-      }
+        if (lastInteractionViewportKey === snapshot.canonicalViewportKey) {
+          return;
+        }
 
-      lastInteractionViewportKey = snapshot.canonicalViewportKey;
-      onMoveEnd();
-    });
+        lastInteractionViewportKey = snapshot.canonicalViewportKey;
+        onMoveEnd();
+      },
+      { priority: "critical" }
+    );
   }
 
   return {

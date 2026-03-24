@@ -3,6 +3,7 @@
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "dist",
+    "allowJs": true,
     "declaration": true,
     "declarationMap": true,
     "types": ["node"],
@@ -11,5 +12,5 @@
       "@/*": ["src/*"]
     }
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "src/**/*.js"]
 }

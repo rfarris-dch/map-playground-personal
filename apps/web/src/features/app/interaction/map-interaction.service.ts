@@ -1,19 +1,107 @@
 import type { BBox } from "@map-migration/geo-kernel/geometry";
 import type { IMap } from "@map-migration/map-engine";
+import { openAppPerformanceLongTaskWindow } from "@/features/app/diagnostics/app-performance.service";
 import type {
   MapInteractionCoordinator,
   MapInteractionEventType,
   MapInteractionListener,
   MapInteractionSnapshot,
   MapInteractionSubscribeOptions,
+  MapInteractionTaskPriority,
   MapInteractionType,
 } from "@/features/app/interaction/map-interaction.types";
+import { shouldRefreshViewportData } from "@/features/app/interaction/map-interaction-policy.service";
 
 const BBOX_DECIMALS = 2;
 const ZOOM_BUCKET_SCALE = 2;
 const ROTATION_DECIMALS = 1;
 const ZOOM_DELTA_EPSILON = 0.01;
 const ROTATION_DELTA_EPSILON = 0.5;
+const BACKGROUND_TASK_DELAY_MS = 0;
+const IDLE_TASK_TIMEOUT_MS = 200;
+const LONG_TASK_WINDOW_MS = 2000;
+
+interface ScheduledListenerEntry {
+  idleCallbackId: number | null;
+  idleTimeoutId: ReturnType<typeof setTimeout> | null;
+  readonly listener: MapInteractionListener;
+  readonly priority: MapInteractionTaskPriority;
+  timeoutId: ReturnType<typeof setTimeout> | null;
+}
+
+function hasIdleCallbackSupport(currentWindow: Window): currentWindow is Window & {
+  cancelIdleCallback: (handle: number) => void;
+  requestIdleCallback: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
+} {
+  return (
+    typeof currentWindow.requestIdleCallback === "function" &&
+    typeof currentWindow.cancelIdleCallback === "function"
+  );
+}
+
+function cancelScheduledDelivery(entry: ScheduledListenerEntry): void {
+  if (entry.timeoutId !== null) {
+    globalThis.clearTimeout(entry.timeoutId);
+    entry.timeoutId = null;
+  }
+
+  if (entry.idleTimeoutId !== null) {
+    globalThis.clearTimeout(entry.idleTimeoutId);
+    entry.idleTimeoutId = null;
+  }
+
+  if (entry.idleCallbackId === null || typeof window === "undefined") {
+    entry.idleCallbackId = null;
+    return;
+  }
+
+  if (hasIdleCallbackSupport(window)) {
+    window.cancelIdleCallback(entry.idleCallbackId);
+  }
+  entry.idleCallbackId = null;
+}
+
+function scheduleListenerDelivery(
+  entry: ScheduledListenerEntry,
+  snapshot: MapInteractionSnapshot,
+  isActive: () => boolean
+): void {
+  cancelScheduledDelivery(entry);
+
+  const deliver = (): void => {
+    entry.timeoutId = null;
+    entry.idleTimeoutId = null;
+    entry.idleCallbackId = null;
+
+    if (!isActive()) {
+      return;
+    }
+
+    entry.listener(snapshot);
+  };
+
+  if (entry.priority === "critical") {
+    deliver();
+    return;
+  }
+
+  if (entry.priority === "background") {
+    entry.timeoutId = globalThis.setTimeout(deliver, BACKGROUND_TASK_DELAY_MS);
+    return;
+  }
+
+  if (typeof window !== "undefined" && hasIdleCallbackSupport(window)) {
+    entry.idleCallbackId = window.requestIdleCallback(
+      () => {
+        deliver();
+      },
+      { timeout: IDLE_TASK_TIMEOUT_MS }
+    );
+    return;
+  }
+
+  entry.idleTimeoutId = globalThis.setTimeout(deliver, IDLE_TASK_TIMEOUT_MS);
+}
 
 function quantizeValue(value: number, decimals: number): number {
   const factor = 10 ** decimals;
@@ -129,7 +217,7 @@ function isDuplicateMoveEndSnapshot(
 }
 
 export function createMapInteractionCoordinator(map: IMap): MapInteractionCoordinator {
-  const listeners = new Set<MapInteractionListener>();
+  const listeners = new Set<ScheduledListenerEntry>();
   let destroyed = false;
   let lastSnapshot: MapInteractionSnapshot | null = null;
 
@@ -145,8 +233,19 @@ export function createMapInteractionCoordinator(map: IMap): MapInteractionCoordi
 
     lastSnapshot = nextSnapshot;
 
-    for (const listener of listeners) {
-      listener(nextSnapshot);
+    if (shouldRefreshViewportData(nextSnapshot)) {
+      openAppPerformanceLongTaskWindow(
+        {
+          interactionType: nextSnapshot.interactionType,
+          viewportKey: nextSnapshot.canonicalViewportKey,
+          zoomBucket: nextSnapshot.zoomBucket,
+        },
+        LONG_TASK_WINDOW_MS
+      );
+    }
+
+    for (const entry of listeners) {
+      scheduleListenerDelivery(entry, nextSnapshot, () => !destroyed && listeners.has(entry));
     }
   };
 
@@ -168,6 +267,9 @@ export function createMapInteractionCoordinator(map: IMap): MapInteractionCoordi
       }
 
       destroyed = true;
+      for (const entry of listeners) {
+        cancelScheduledDelivery(entry);
+      }
       listeners.clear();
       map.off("load", onLoad);
       map.off("moveend", onMoveEnd);
@@ -183,13 +285,22 @@ export function createMapInteractionCoordinator(map: IMap): MapInteractionCoordi
         return () => undefined;
       }
 
-      listeners.add(listener);
+      const entry: ScheduledListenerEntry = {
+        listener,
+        priority: options.priority ?? "critical",
+        idleCallbackId: null,
+        idleTimeoutId: null,
+        timeoutId: null,
+      };
+
+      listeners.add(entry);
       if (options.emitCurrent && lastSnapshot !== null) {
-        listener(lastSnapshot);
+        scheduleListenerDelivery(entry, lastSnapshot, () => !destroyed && listeners.has(entry));
       }
 
       return () => {
-        listeners.delete(listener);
+        cancelScheduledDelivery(entry);
+        listeners.delete(entry);
       };
     },
   };

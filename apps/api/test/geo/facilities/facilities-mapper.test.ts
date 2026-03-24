@@ -89,7 +89,7 @@ describe("facilities mapper", () => {
     ];
 
     expect(() => mapFacilitiesRowsToFeatures(rows, "colocation")).toThrow(
-      "Invalid geom_json: geometry type must be Point"
+      "Invalid geom_json: Array must contain at least 2 element(s)"
     );
   });
 
@@ -102,7 +102,7 @@ describe("facilities mapper", () => {
     ];
 
     expect(() => mapFacilitiesRowsToFeatures(rows, "colocation")).toThrow(
-      "Invalid facilities row: missing provider_id"
+      "Invalid facilities row: provider_name is required"
     );
   });
 });

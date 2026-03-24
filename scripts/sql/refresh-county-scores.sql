@@ -601,7 +601,11 @@ queue_current AS (
     county.county_geoid,
     ROUND(
       COALESCE(
-        SUM(snapshot.capacity_mw * COALESCE(snapshot.completion_prior, 0.25)) FILTER (
+        SUM(
+          snapshot.capacity_mw
+          * resolution.allocation_share
+          * COALESCE(snapshot.completion_prior, 0.25)
+        ) FILTER (
           WHERE snapshot.expected_operation_date < (SELECT data_version + INTERVAL '36 months' FROM runtime)
         ),
         0
@@ -610,7 +614,11 @@ queue_current AS (
     ) AS expected_supply_mw_0_36m,
     ROUND(
       COALESCE(
-        SUM(snapshot.capacity_mw * COALESCE(snapshot.completion_prior, 0.25)) FILTER (
+        SUM(
+          snapshot.capacity_mw
+          * resolution.allocation_share
+          * COALESCE(snapshot.completion_prior, 0.25)
+        ) FILTER (
           WHERE snapshot.expected_operation_date >= (SELECT data_version + INTERVAL '36 months' FROM runtime)
             AND snapshot.expected_operation_date < (SELECT data_version + INTERVAL '60 months' FROM runtime)
         ),
@@ -619,21 +627,63 @@ queue_current AS (
       2
     ) AS expected_supply_mw_36_60m,
     ROUND(
-      COALESCE(SUM(snapshot.capacity_mw) FILTER (WHERE snapshot.signed_ia), 0)::numeric,
+      COALESCE(
+        SUM(snapshot.capacity_mw * resolution.allocation_share) FILTER (WHERE snapshot.signed_ia),
+        0
+      )::numeric,
       2
     ) AS signed_ia_mw,
     ROUND(
       COALESCE(
-        SUM(snapshot.capacity_mw) FILTER (
+        SUM(snapshot.capacity_mw * resolution.allocation_share) FILTER (
           WHERE COALESCE(lower(snapshot.queue_status), '') NOT IN ('withdrawn', 'cancelled', 'complete')
         ),
         0
       )::numeric,
       2
     ) AS queue_mw_active,
-    COUNT(*) FILTER (
+    ROUND(
+      COALESCE(
+        SUM(snapshot.capacity_mw * resolution.allocation_share) FILTER (
+          WHERE COALESCE(lower(snapshot.queue_status), '') NOT IN ('withdrawn', 'cancelled', 'complete')
+            AND (
+              COALESCE(lower(project.fuel_type), '') LIKE '%storage%'
+              OR COALESCE(lower(project.fuel_type), '') LIKE '%battery%'
+            )
+        ),
+        0
+      )::numeric,
+      2
+    ) AS queue_storage_mw,
+    ROUND(
+      COALESCE(
+        SUM(snapshot.capacity_mw * resolution.allocation_share) FILTER (
+          WHERE COALESCE(lower(snapshot.queue_status), '') NOT IN ('withdrawn', 'cancelled', 'complete')
+            AND COALESCE(lower(project.fuel_type), '') LIKE '%solar%'
+        ),
+        0
+      )::numeric,
+      2
+    ) AS queue_solar_mw,
+    ROUND(
+      COALESCE(
+        SUM(snapshot.capacity_mw * resolution.allocation_share) FILTER (
+          WHERE COALESCE(lower(snapshot.queue_status), '') NOT IN ('withdrawn', 'cancelled', 'complete')
+            AND COALESCE(lower(project.fuel_type), '') LIKE '%wind%'
+        ),
+        0
+      )::numeric,
+      2
+    ) AS queue_wind_mw,
+    COUNT(DISTINCT snapshot.project_id) FILTER (
       WHERE COALESCE(lower(snapshot.queue_status), '') NOT IN ('withdrawn', 'cancelled', 'complete')
     )::integer AS queue_project_count_active,
+    ROUND(
+      AVG(snapshot.days_in_queue_active) FILTER (
+        WHERE COALESCE(lower(snapshot.queue_status), '') NOT IN ('withdrawn', 'cancelled', 'complete')
+      )::numeric,
+      2
+    ) AS queue_avg_age_days,
     ROUND(
       percentile_cont(0.5) WITHIN GROUP (
         ORDER BY COALESCE(snapshot.days_in_queue_active, 0)
@@ -644,14 +694,31 @@ queue_current AS (
       AVG(CASE WHEN snapshot.is_past_due THEN 1::numeric ELSE 0::numeric END)::numeric,
       6
     ) AS past_due_share,
+    ROUND(
+      AVG(snapshot.withdrawal_prior) FILTER (
+        WHERE COALESCE(lower(snapshot.queue_status), '') NOT IN ('withdrawn', 'cancelled', 'complete')
+      )::numeric,
+      6
+    ) AS queue_withdrawal_rate,
     ROUND(AVG(snapshot.withdrawal_prior)::numeric, 6) AS market_withdrawal_prior,
-    COALESCE(SUM(snapshot.transmission_upgrade_count), 0)::integer AS planned_upgrade_count,
+    ROUND(
+      COALESCE(
+        SUM(COALESCE(snapshot.transmission_upgrade_count, 0) * resolution.allocation_share),
+        0
+      )::numeric,
+      0
+    )::integer AS planned_upgrade_count,
     MAX(snapshot.source_pull_ts) AS latest_source_pull_ts,
     MAX(snapshot.source_as_of_date) AS latest_source_as_of_date
   FROM analytics.dim_county AS county
+  LEFT JOIN analytics.fact_gen_queue_county_resolution AS resolution
+    ON resolution.county_geoid = county.county_geoid
+   AND resolution.effective_date = (SELECT effective_date FROM latest_queue_effective)
   LEFT JOIN analytics.fact_gen_queue_snapshot AS snapshot
-    ON snapshot.county_geoid = county.county_geoid
-   AND snapshot.effective_date = (SELECT effective_date FROM latest_queue_effective)
+    ON snapshot.project_id = resolution.project_id
+   AND snapshot.effective_date = resolution.effective_date
+  LEFT JOIN analytics.fact_gen_queue_project AS project
+    ON project.project_id = resolution.project_id
   GROUP BY county.county_geoid
 ),
 latest_generation_effective AS (
@@ -660,16 +727,39 @@ latest_generation_effective AS (
   CROSS JOIN runtime
   WHERE snapshot.effective_date <= runtime.data_version
 ),
+latest_generation_24m_effective AS (
+  SELECT MAX(snapshot.effective_date) AS effective_date
+  FROM analytics.fact_generation_realized_snapshot AS snapshot
+  CROSS JOIN runtime
+  WHERE snapshot.effective_date <= (runtime.data_version - INTERVAL '24 months')::date
+),
+generation_24m_prior AS (
+  SELECT
+    snapshot.county_geoid,
+    ROUND(COALESCE(SUM(snapshot.operable_mw), 0)::numeric, 2) AS operable_mw_24m_prior
+  FROM analytics.fact_generation_realized_snapshot AS snapshot
+  WHERE snapshot.effective_date = (SELECT effective_date FROM latest_generation_24m_effective)
+  GROUP BY snapshot.county_geoid
+),
 generation_current AS (
   SELECT
     snapshot.county_geoid,
     ROUND(COALESCE(SUM(snapshot.operable_mw), 0)::numeric, 2) AS operable_mw,
     ROUND(COALESCE(SUM(snapshot.proposed_mw), 0)::numeric, 2) AS proposed_mw,
+    ROUND(
+      GREATEST(
+        COALESCE(SUM(snapshot.operable_mw), 0) - COALESCE(prior.operable_mw_24m_prior, 0),
+        0
+      )::numeric,
+      2
+    ) AS recent_online_mw,
     MAX(snapshot.source_pull_ts) AS latest_source_pull_ts,
     MAX(snapshot.source_as_of_date) AS latest_source_as_of_date
   FROM analytics.fact_generation_realized_snapshot AS snapshot
+  LEFT JOIN generation_24m_prior AS prior
+    ON prior.county_geoid = snapshot.county_geoid
   WHERE snapshot.effective_date = (SELECT effective_date FROM latest_generation_effective)
-  GROUP BY snapshot.county_geoid
+  GROUP BY snapshot.county_geoid, prior.operable_mw_24m_prior
 ),
 latest_grid_effective AS (
   SELECT MAX(snapshot.effective_date) AS effective_date
@@ -728,6 +818,121 @@ gas_current AS (
   FROM analytics.fact_gas_snapshot AS snapshot
   WHERE snapshot.effective_date = (SELECT effective_date FROM latest_gas_effective)
 ),
+latest_fiber_effective AS (
+  SELECT MAX(snapshot.effective_date) AS effective_date
+  FROM analytics.fact_fiber_snapshot AS snapshot
+  CROSS JOIN runtime
+  WHERE snapshot.effective_date <= runtime.data_version
+),
+fiber_current AS (
+  SELECT
+    snapshot.county_geoid,
+    snapshot.fiber_presence_flag,
+    snapshot.source_pull_ts,
+    snapshot.source_as_of_date
+  FROM analytics.fact_fiber_snapshot AS snapshot
+  WHERE snapshot.effective_date = (SELECT effective_date FROM latest_fiber_effective)
+),
+latest_power_market_context_effective AS (
+  SELECT MAX(snapshot.effective_date) AS effective_date
+  FROM analytics.fact_power_market_context_snapshot AS snapshot
+  CROSS JOIN runtime
+  WHERE snapshot.effective_date <= runtime.data_version
+),
+latest_county_operator_region_effective AS (
+  SELECT MAX(bridge.effective_date) AS effective_date
+  FROM analytics.bridge_county_operator_region AS bridge
+  CROSS JOIN runtime
+  WHERE bridge.effective_date <= runtime.data_version
+),
+county_operator_region_current AS (
+  SELECT
+    bridge.county_geoid,
+    BOOL_OR(bridge.is_border_county) AS is_border_county,
+    BOOL_OR(bridge.is_seam_county) AS is_seam_county
+  FROM analytics.bridge_county_operator_region AS bridge
+  WHERE bridge.effective_date = (SELECT effective_date FROM latest_county_operator_region_effective)
+  GROUP BY bridge.county_geoid
+),
+power_market_context_current AS (
+  SELECT
+    snapshot.county_geoid,
+    snapshot.wholesale_operator,
+    snapshot.market_structure,
+    snapshot.balancing_authority,
+    snapshot.load_zone,
+    snapshot.weather_zone,
+    snapshot.operator_zone_label,
+    snapshot.operator_zone_type,
+    snapshot.operator_zone_confidence,
+    snapshot.operator_weather_zone,
+    snapshot.meteo_zone,
+    snapshot.source_pull_ts,
+    snapshot.source_as_of_date
+  FROM analytics.fact_power_market_context_snapshot AS snapshot
+  WHERE snapshot.effective_date = (SELECT effective_date FROM latest_power_market_context_effective)
+),
+latest_utility_context_effective AS (
+  SELECT MAX(snapshot.effective_date) AS effective_date
+  FROM analytics.fact_utility_context_snapshot AS snapshot
+  CROSS JOIN runtime
+  WHERE snapshot.effective_date <= runtime.data_version
+),
+utility_context_current AS (
+  SELECT
+    snapshot.county_geoid,
+    snapshot.retail_choice_status,
+    snapshot.competitive_area_type,
+    snapshot.primary_tdu_or_utility,
+    snapshot.dominant_utility_id,
+    snapshot.dominant_utility_name,
+    snapshot.retail_choice_penetration_share,
+    snapshot.territory_type,
+    snapshot.utility_count,
+    snapshot.utilities_json,
+    snapshot.source_pull_ts,
+    snapshot.source_as_of_date
+  FROM analytics.fact_utility_context_snapshot AS snapshot
+  WHERE snapshot.effective_date = (SELECT effective_date FROM latest_utility_context_effective)
+),
+latest_transmission_effective AS (
+  SELECT MAX(snapshot.effective_date) AS effective_date
+  FROM analytics.fact_transmission_snapshot AS snapshot
+  CROSS JOIN runtime
+  WHERE snapshot.effective_date <= runtime.data_version
+),
+transmission_current AS (
+  SELECT
+    snapshot.county_geoid,
+    snapshot.transmission_miles_69kv_plus,
+    snapshot.transmission_miles_138kv_plus,
+    snapshot.transmission_miles_230kv_plus,
+    snapshot.transmission_miles_345kv_plus,
+    snapshot.transmission_miles_500kv_plus,
+    snapshot.transmission_miles_765kv_plus,
+    snapshot.source_pull_ts,
+    snapshot.source_as_of_date
+  FROM analytics.fact_transmission_snapshot AS snapshot
+  WHERE snapshot.effective_date = (SELECT effective_date FROM latest_transmission_effective)
+),
+latest_congestion_effective AS (
+  SELECT MAX(snapshot.effective_date) AS effective_date
+  FROM analytics.fact_congestion_snapshot AS snapshot
+  CROSS JOIN runtime
+  WHERE snapshot.effective_date <= runtime.data_version
+),
+congestion_current AS (
+  SELECT
+    snapshot.county_geoid,
+    snapshot.avg_rt_congestion_component,
+    snapshot.p95_shadow_price,
+    snapshot.negative_price_hour_share,
+    snapshot.top_constraints_json,
+    snapshot.source_pull_ts,
+    snapshot.source_as_of_date
+  FROM analytics.fact_congestion_snapshot AS snapshot
+  WHERE snapshot.effective_date = (SELECT effective_date FROM latest_congestion_effective)
+),
 primary_market AS (
   SELECT
     market.county_geoid,
@@ -741,17 +946,30 @@ source_availability AS (
     true AS demand_available,
     (SELECT COUNT(*) > 0 FROM analytics.fact_dc_pipeline_snapshot WHERE publication_run_id <> :'run_id'::text) AS history_available,
     (SELECT COUNT(*) > 0 FROM analytics.bridge_county_market) AS market_seams_available,
+    (SELECT effective_date FROM latest_power_market_context_effective) IS NOT NULL
+      AS wholesale_markets_available,
+    (SELECT effective_date FROM latest_power_market_context_effective) IS NOT NULL
+      AS operating_footprints_available,
     (
       (SELECT effective_date FROM latest_queue_effective) IS NOT NULL OR
       (SELECT effective_date FROM latest_generation_effective) IS NOT NULL
     ) AS supply_timeline_available,
+    (SELECT effective_date FROM latest_queue_effective) IS NOT NULL AS interconnection_queue_available,
     (
       (SELECT effective_date FROM latest_queue_effective) IS NOT NULL OR
       (SELECT effective_date FROM latest_grid_effective) IS NOT NULL
     ) AS grid_friction_available,
+    (SELECT effective_date FROM latest_congestion_effective) IS NOT NULL AS congestion_available,
     (SELECT effective_date FROM latest_policy_effective) IS NOT NULL AS policy_available,
+    (SELECT effective_date FROM latest_utility_context_effective) IS NOT NULL
+      AS retail_structure_available,
+    (SELECT effective_date FROM latest_utility_context_effective) IS NOT NULL
+      AS utility_territories_available,
+    (SELECT effective_date FROM latest_transmission_effective) IS NOT NULL AS transmission_available,
     (
+      (SELECT effective_date FROM latest_fiber_effective) IS NOT NULL OR
       (SELECT effective_date FROM latest_gas_effective) IS NOT NULL OR
+      (SELECT effective_date FROM latest_transmission_effective) IS NOT NULL OR
       (SELECT COUNT(*) > 0 FROM analytics.bridge_county_market)
     ) AS infrastructure_available,
     true AS narratives_available
@@ -793,6 +1011,30 @@ county_rollup AS (
       WHEN availability.supply_timeline_available THEN COALESCE(queue.queue_project_count_active, 0)
       ELSE NULL::integer
     END AS queue_project_count_active,
+    CASE
+      WHEN availability.interconnection_queue_available THEN queue.queue_storage_mw
+      ELSE NULL::numeric
+    END AS queue_storage_mw,
+    CASE
+      WHEN availability.interconnection_queue_available THEN queue.queue_solar_mw
+      ELSE NULL::numeric
+    END AS queue_solar_mw,
+    CASE
+      WHEN availability.interconnection_queue_available THEN queue.queue_wind_mw
+      ELSE NULL::numeric
+    END AS queue_wind_mw,
+    CASE
+      WHEN availability.interconnection_queue_available THEN queue.queue_avg_age_days
+      ELSE NULL::numeric
+    END AS queue_avg_age_days,
+    CASE
+      WHEN availability.interconnection_queue_available THEN queue.queue_withdrawal_rate
+      ELSE NULL::numeric
+    END AS queue_withdrawal_rate,
+    CASE
+      WHEN availability.supply_timeline_available THEN generation.recent_online_mw
+      ELSE NULL::numeric
+    END AS recent_online_mw,
     CASE
       WHEN availability.grid_friction_available
         THEN COALESCE(grid.median_days_in_queue_active, queue.median_days_in_queue_active)
@@ -846,8 +1088,78 @@ county_rollup AS (
       WHEN availability.policy_available THEN policy.policy_mapping_confidence
       ELSE NULL::text
     END AS policy_mapping_confidence,
-    NULL::numeric(12, 2) AS transmission_miles_69kv_plus,
-    NULL::numeric(12, 2) AS transmission_miles_230kv_plus,
+    CASE
+      WHEN availability.wholesale_markets_available THEN power_context.wholesale_operator
+      ELSE NULL::text
+    END AS wholesale_operator,
+    CASE
+      WHEN availability.wholesale_markets_available THEN power_context.market_structure
+      ELSE NULL::text
+    END AS market_structure,
+    CASE
+      WHEN availability.operating_footprints_available THEN power_context.balancing_authority
+      ELSE NULL::text
+    END AS balancing_authority,
+    CASE
+      WHEN availability.operating_footprints_available THEN power_context.load_zone
+      ELSE NULL::text
+    END AS load_zone,
+    CASE
+      WHEN availability.operating_footprints_available THEN power_context.weather_zone
+      ELSE NULL::text
+    END AS weather_zone,
+    CASE
+      WHEN availability.operating_footprints_available THEN power_context.operator_zone_label
+      ELSE NULL::text
+    END AS operator_zone_label,
+    CASE
+      WHEN availability.operating_footprints_available THEN power_context.operator_zone_type
+      ELSE NULL::text
+    END AS operator_zone_type,
+    CASE
+      WHEN availability.operating_footprints_available THEN power_context.operator_zone_confidence
+      ELSE NULL::text
+    END AS operator_zone_confidence,
+    CASE
+      WHEN availability.operating_footprints_available THEN power_context.operator_weather_zone
+      ELSE NULL::text
+    END AS operator_weather_zone,
+    CASE
+      WHEN availability.operating_footprints_available THEN power_context.meteo_zone
+      ELSE NULL::text
+    END AS meteo_zone,
+    CASE
+      WHEN availability.retail_structure_available THEN utility_context.retail_choice_status
+      ELSE NULL::text
+    END AS retail_choice_status,
+    CASE
+      WHEN availability.retail_structure_available THEN utility_context.competitive_area_type
+      ELSE NULL::text
+    END AS competitive_area_type,
+    CASE
+      WHEN availability.transmission_available THEN transmission.transmission_miles_69kv_plus
+      ELSE NULL::numeric
+    END AS transmission_miles_69kv_plus,
+    CASE
+      WHEN availability.transmission_available THEN transmission.transmission_miles_138kv_plus
+      ELSE NULL::numeric
+    END AS transmission_miles_138kv_plus,
+    CASE
+      WHEN availability.transmission_available THEN transmission.transmission_miles_230kv_plus
+      ELSE NULL::numeric
+    END AS transmission_miles_230kv_plus,
+    CASE
+      WHEN availability.transmission_available THEN transmission.transmission_miles_345kv_plus
+      ELSE NULL::numeric
+    END AS transmission_miles_345kv_plus,
+    CASE
+      WHEN availability.transmission_available THEN transmission.transmission_miles_500kv_plus
+      ELSE NULL::numeric
+    END AS transmission_miles_500kv_plus,
+    CASE
+      WHEN availability.transmission_available THEN transmission.transmission_miles_765kv_plus
+      ELSE NULL::numeric
+    END AS transmission_miles_765kv_plus,
     CASE
       WHEN (SELECT effective_date FROM latest_gas_effective) IS NOT NULL
         THEN gas.gas_pipeline_presence_flag
@@ -858,16 +1170,141 @@ county_rollup AS (
         THEN gas.gas_pipeline_mileage_county
       ELSE NULL::numeric
     END AS gas_pipeline_mileage_county,
-    NULL::boolean AS fiber_presence_flag,
+    CASE
+      WHEN (SELECT effective_date FROM latest_fiber_effective) IS NOT NULL
+        THEN fiber.fiber_presence_flag
+      ELSE NULL::boolean
+    END AS fiber_presence_flag,
     market.primary_market_id,
+    CASE
+      WHEN availability.utility_territories_available THEN utility_context.primary_tdu_or_utility
+      ELSE NULL::text
+    END AS primary_tdu_or_utility,
+    CASE
+      WHEN availability.utility_territories_available
+        THEN jsonb_build_object(
+          'dominantUtilityId',
+          utility_context.dominant_utility_id,
+          'dominantUtilityName',
+          utility_context.dominant_utility_name,
+          'retailChoicePenetrationShare',
+          utility_context.retail_choice_penetration_share,
+          'territoryType',
+          utility_context.territory_type,
+          'utilities',
+          COALESCE(utility_context.utilities_json, '[]'::jsonb),
+          'utilityCount',
+          utility_context.utility_count
+        )
+      ELSE '{}'::jsonb
+    END AS utility_context_json,
+    COALESCE(operator_region.is_border_county, false) AS is_border_county,
     COALESCE(market.is_seam_county, false) AS is_seam_county,
+    CASE
+      WHEN availability.congestion_available THEN congestion.avg_rt_congestion_component
+      ELSE NULL::numeric
+    END AS avg_rt_congestion_component,
+    CASE
+      WHEN availability.congestion_available THEN congestion.p95_shadow_price
+      ELSE NULL::numeric
+    END AS p95_shadow_price,
+    CASE
+      WHEN availability.congestion_available THEN congestion.negative_price_hour_share
+      ELSE NULL::numeric
+    END AS negative_price_hour_share,
+    CASE
+      WHEN availability.congestion_available
+        THEN COALESCE(congestion.top_constraints_json, '[]'::jsonb)
+      ELSE '[]'::jsonb
+    END AS top_constraints_json,
+    jsonb_strip_nulls(
+      jsonb_build_object(
+        'wholesaleMarkets',
+        CASE
+          WHEN availability.wholesale_markets_available
+            THEN CONCAT(
+              'fact_power_market_context_snapshot@',
+              COALESCE(power_context.source_as_of_date::text, 'unknown')
+            )
+          ELSE NULL
+        END,
+        'operatingFootprints',
+        CASE
+          WHEN availability.operating_footprints_available
+            THEN CONCAT(
+              'fact_power_market_context_snapshot@',
+              COALESCE(power_context.source_as_of_date::text, 'unknown')
+            )
+          ELSE NULL
+        END,
+        'retailStructure',
+        CASE
+          WHEN availability.retail_structure_available
+            THEN CONCAT(
+              'fact_utility_context_snapshot@',
+              COALESCE(utility_context.source_as_of_date::text, 'unknown')
+            )
+          ELSE NULL
+        END,
+        'utilityTerritories',
+        CASE
+          WHEN availability.utility_territories_available
+            THEN CONCAT(
+              'fact_utility_context_snapshot@',
+              COALESCE(utility_context.source_as_of_date::text, 'unknown')
+            )
+          ELSE NULL
+        END,
+        'transmission',
+        CASE
+          WHEN availability.transmission_available
+            THEN CONCAT(
+              'fact_transmission_snapshot@',
+              COALESCE(transmission.source_as_of_date::text, 'unknown')
+            )
+          ELSE NULL
+        END,
+        'fiber',
+        CASE
+          WHEN (SELECT effective_date FROM latest_fiber_effective) IS NOT NULL
+            THEN CONCAT(
+              'fact_fiber_snapshot@',
+              COALESCE(fiber.source_as_of_date::text, 'unknown')
+            )
+          ELSE NULL
+        END,
+        'interconnectionQueue',
+        CASE
+          WHEN availability.interconnection_queue_available
+            THEN CONCAT(
+              'fact_gen_queue_snapshot@',
+              COALESCE(queue.latest_source_as_of_date::text, 'unknown')
+            )
+          ELSE NULL
+        END,
+        'congestion',
+        CASE
+          WHEN availability.congestion_available
+            THEN CONCAT(
+              'fact_congestion_snapshot@',
+              COALESCE(congestion.source_as_of_date::text, 'unknown')
+            )
+          ELSE NULL
+        END
+      )
+    ) AS source_provenance_json,
     GREATEST(
       COALESCE(demand.latest_source_pull_ts, '-infinity'::timestamptz),
       COALESCE(queue.latest_source_pull_ts, '-infinity'::timestamptz),
       COALESCE(generation.latest_source_pull_ts, '-infinity'::timestamptz),
       COALESCE(grid.source_pull_ts, '-infinity'::timestamptz),
       COALESCE(policy.source_pull_ts, '-infinity'::timestamptz),
+      COALESCE(fiber.source_pull_ts, '-infinity'::timestamptz),
       COALESCE(gas.source_pull_ts, '-infinity'::timestamptz),
+      COALESCE(power_context.source_pull_ts, '-infinity'::timestamptz),
+      COALESCE(utility_context.source_pull_ts, '-infinity'::timestamptz),
+      COALESCE(transmission.source_pull_ts, '-infinity'::timestamptz),
+      COALESCE(congestion.source_pull_ts, '-infinity'::timestamptz),
       now()
     ) AS last_updated_at,
     GREATEST(
@@ -876,15 +1313,27 @@ county_rollup AS (
       COALESCE((SELECT data_version FROM runtime) - generation.latest_source_as_of_date, 0),
       COALESCE((SELECT data_version FROM runtime) - grid.source_as_of_date, 0),
       COALESCE((SELECT data_version FROM runtime) - policy.source_as_of_date, 0),
+      COALESCE((SELECT data_version FROM runtime) - fiber.source_as_of_date, 0),
       COALESCE((SELECT data_version FROM runtime) - gas.source_as_of_date, 0),
+      COALESCE((SELECT data_version FROM runtime) - power_context.source_as_of_date, 0),
+      COALESCE((SELECT data_version FROM runtime) - utility_context.source_as_of_date, 0),
+      COALESCE((SELECT data_version FROM runtime) - transmission.source_as_of_date, 0),
+      COALESCE((SELECT data_version FROM runtime) - congestion.source_as_of_date, 0),
       0
     ) AS max_source_age_days,
     availability.demand_available,
     availability.history_available,
+    availability.wholesale_markets_available,
+    availability.operating_footprints_available,
     availability.market_seams_available,
     availability.supply_timeline_available,
+    availability.interconnection_queue_available,
     availability.grid_friction_available,
+    availability.congestion_available,
     availability.policy_available,
+    availability.retail_structure_available,
+    availability.utility_territories_available,
+    availability.transmission_available,
     availability.infrastructure_available,
     availability.narratives_available
   FROM analytics.dim_county AS county
@@ -903,8 +1352,20 @@ county_rollup AS (
     ON grid.county_geoid = county.county_geoid
   LEFT JOIN policy_current AS policy
     ON policy.county_geoid = county.county_geoid
+  LEFT JOIN fiber_current AS fiber
+    ON fiber.county_geoid = county.county_geoid
   LEFT JOIN gas_current AS gas
     ON gas.county_geoid = county.county_geoid
+  LEFT JOIN power_market_context_current AS power_context
+    ON power_context.county_geoid = county.county_geoid
+  LEFT JOIN county_operator_region_current AS operator_region
+    ON operator_region.county_geoid = county.county_geoid
+  LEFT JOIN utility_context_current AS utility_context
+    ON utility_context.county_geoid = county.county_geoid
+  LEFT JOIN transmission_current AS transmission
+    ON transmission.county_geoid = county.county_geoid
+  LEFT JOIN congestion_current AS congestion
+    ON congestion.county_geoid = county.county_geoid
   LEFT JOIN primary_market AS market
     ON market.county_geoid = county.county_geoid
 ),
@@ -1131,13 +1592,43 @@ final_rows AS (
     score.policy_event_count,
     ROUND(score.county_tagged_event_share::numeric, 6) AS county_tagged_event_share,
     score.policy_mapping_confidence,
+    score.wholesale_operator,
+    score.market_structure,
+    score.balancing_authority,
+    score.load_zone,
+    score.weather_zone,
+    score.operator_zone_label,
+    score.operator_zone_type,
+    score.operator_zone_confidence,
+    score.operator_weather_zone,
+    score.meteo_zone,
+    score.retail_choice_status,
+    score.competitive_area_type,
     score.transmission_miles_69kv_plus,
+    score.transmission_miles_138kv_plus,
     score.transmission_miles_230kv_plus,
+    score.transmission_miles_345kv_plus,
+    score.transmission_miles_500kv_plus,
+    score.transmission_miles_765kv_plus,
     score.gas_pipeline_presence_flag,
     score.gas_pipeline_mileage_county,
     score.fiber_presence_flag,
     score.primary_market_id,
-    score.is_seam_county
+    score.primary_tdu_or_utility,
+    score.utility_context_json,
+    score.is_border_county,
+    score.is_seam_county,
+    ROUND(score.queue_storage_mw::numeric, 2) AS queue_storage_mw,
+    ROUND(score.queue_solar_mw::numeric, 2) AS queue_solar_mw,
+    ROUND(score.queue_wind_mw::numeric, 2) AS queue_wind_mw,
+    ROUND(score.queue_avg_age_days::numeric, 2) AS queue_avg_age_days,
+    ROUND(score.queue_withdrawal_rate::numeric, 6) AS queue_withdrawal_rate,
+    ROUND(score.recent_online_mw::numeric, 2) AS recent_online_mw,
+    ROUND(score.avg_rt_congestion_component::numeric, 4) AS avg_rt_congestion_component,
+    ROUND(score.p95_shadow_price::numeric, 4) AS p95_shadow_price,
+    ROUND(score.negative_price_hour_share::numeric, 6) AS negative_price_hour_share,
+    score.top_constraints_json,
+    score.source_provenance_json
   FROM scored AS score
 ),
 top_drivers AS (
@@ -1217,7 +1708,22 @@ top_drivers AS (
           ELSE NULL
         END
       ),
-      (5, NULL)
+      (
+        5,
+        CASE
+          WHEN row.is_border_county THEN jsonb_build_object(
+            'code',
+            'OPERATOR_BORDER',
+            'impact',
+            'context',
+            'label',
+            'Operator border',
+            'summary',
+            'County sits on an operator-region border, so subregional attribution may require extra review.'
+          )
+          ELSE NULL
+        END
+      )
   ) AS driver(ordinal, driver_json)
   GROUP BY row.county_geoid
 )
@@ -1265,13 +1771,43 @@ SELECT
   row.policy_event_count,
   row.county_tagged_event_share,
   row.policy_mapping_confidence,
+  row.wholesale_operator,
+  row.market_structure,
+  row.balancing_authority,
+  row.load_zone,
+  row.weather_zone,
+  row.operator_zone_label,
+  row.operator_zone_type,
+  row.operator_zone_confidence,
+  row.operator_weather_zone,
+  row.meteo_zone,
+  row.retail_choice_status,
+  row.competitive_area_type,
   row.transmission_miles_69kv_plus,
+  row.transmission_miles_138kv_plus,
   row.transmission_miles_230kv_plus,
+  row.transmission_miles_345kv_plus,
+  row.transmission_miles_500kv_plus,
+  row.transmission_miles_765kv_plus,
   row.gas_pipeline_presence_flag,
   row.gas_pipeline_mileage_county,
   row.fiber_presence_flag,
   row.primary_market_id,
-  row.is_seam_county
+  row.primary_tdu_or_utility,
+  row.utility_context_json,
+  row.is_border_county,
+  row.is_seam_county,
+  row.queue_storage_mw,
+  row.queue_solar_mw,
+  row.queue_wind_mw,
+  row.queue_avg_age_days,
+  row.queue_withdrawal_rate,
+  row.recent_online_mw,
+  row.avg_rt_congestion_component,
+  row.p95_shadow_price,
+  row.negative_price_hour_share,
+  row.top_constraints_json,
+  row.source_provenance_json
 FROM final_rows AS row
 LEFT JOIN top_drivers AS driver
   ON driver.county_geoid = row.county_geoid;
@@ -1321,13 +1857,43 @@ INSERT INTO analytics.fact_market_analysis_score_snapshot (
   policy_event_count,
   county_tagged_event_share,
   policy_mapping_confidence,
+  wholesale_operator,
+  market_structure,
+  balancing_authority,
+  load_zone,
+  weather_zone,
+  operator_zone_label,
+  operator_zone_type,
+  operator_zone_confidence,
+  operator_weather_zone,
+  meteo_zone,
+  retail_choice_status,
+  competitive_area_type,
   transmission_miles_69kv_plus,
+  transmission_miles_138kv_plus,
   transmission_miles_230kv_plus,
+  transmission_miles_345kv_plus,
+  transmission_miles_500kv_plus,
+  transmission_miles_765kv_plus,
   gas_pipeline_presence_flag,
   gas_pipeline_mileage_county,
   fiber_presence_flag,
   primary_market_id,
+  primary_tdu_or_utility,
+  utility_context_json,
+  is_border_county,
   is_seam_county,
+  queue_storage_mw,
+  queue_solar_mw,
+  queue_wind_mw,
+  queue_avg_age_days,
+  queue_withdrawal_rate,
+  recent_online_mw,
+  avg_rt_congestion_component,
+  p95_shadow_price,
+  negative_price_hour_share,
+  top_constraints_json,
+  source_provenance_json,
   formula_version,
   input_data_version,
   model_version
@@ -1400,12 +1966,82 @@ WITH input_versions AS (
         ELSE NULL
       END,
       CASE
+        WHEN EXISTS (SELECT 1 FROM analytics.fact_fiber_snapshot) THEN CONCAT(
+          'fiber=',
+          COALESCE(
+            (
+              SELECT MAX(source_as_of_date)::text
+              FROM analytics.fact_fiber_snapshot
+              WHERE effective_date <= :'data_version'::date
+            ),
+            'unknown'
+          )
+        )
+        ELSE NULL
+      END,
+      CASE
         WHEN EXISTS (SELECT 1 FROM analytics.fact_gas_snapshot) THEN CONCAT(
           'gas=',
           COALESCE(
             (
               SELECT MAX(source_as_of_date)::text
               FROM analytics.fact_gas_snapshot
+              WHERE effective_date <= :'data_version'::date
+            ),
+            'unknown'
+          )
+        )
+        ELSE NULL
+      END,
+      CASE
+        WHEN EXISTS (SELECT 1 FROM analytics.fact_power_market_context_snapshot) THEN CONCAT(
+          'power_market_context=',
+          COALESCE(
+            (
+              SELECT MAX(source_as_of_date)::text
+              FROM analytics.fact_power_market_context_snapshot
+              WHERE effective_date <= :'data_version'::date
+            ),
+            'unknown'
+          )
+        )
+        ELSE NULL
+      END,
+      CASE
+        WHEN EXISTS (SELECT 1 FROM analytics.fact_utility_context_snapshot) THEN CONCAT(
+          'utility_context=',
+          COALESCE(
+            (
+              SELECT MAX(source_as_of_date)::text
+              FROM analytics.fact_utility_context_snapshot
+              WHERE effective_date <= :'data_version'::date
+            ),
+            'unknown'
+          )
+        )
+        ELSE NULL
+      END,
+      CASE
+        WHEN EXISTS (SELECT 1 FROM analytics.fact_transmission_snapshot) THEN CONCAT(
+          'transmission=',
+          COALESCE(
+            (
+              SELECT MAX(source_as_of_date)::text
+              FROM analytics.fact_transmission_snapshot
+              WHERE effective_date <= :'data_version'::date
+            ),
+            'unknown'
+          )
+        )
+        ELSE NULL
+      END,
+      CASE
+        WHEN EXISTS (SELECT 1 FROM analytics.fact_congestion_snapshot) THEN CONCAT(
+          'congestion=',
+          COALESCE(
+            (
+              SELECT MAX(source_as_of_date)::text
+              FROM analytics.fact_congestion_snapshot
               WHERE effective_date <= :'data_version'::date
             ),
             'unknown'
@@ -1460,13 +2096,43 @@ SELECT
   stage.policy_event_count,
   stage.county_tagged_event_share,
   stage.policy_mapping_confidence,
+  stage.wholesale_operator,
+  stage.market_structure,
+  stage.balancing_authority,
+  stage.load_zone,
+  stage.weather_zone,
+  stage.operator_zone_label,
+  stage.operator_zone_type,
+  stage.operator_zone_confidence,
+  stage.operator_weather_zone,
+  stage.meteo_zone,
+  stage.retail_choice_status,
+  stage.competitive_area_type,
   stage.transmission_miles_69kv_plus,
+  stage.transmission_miles_138kv_plus,
   stage.transmission_miles_230kv_plus,
+  stage.transmission_miles_345kv_plus,
+  stage.transmission_miles_500kv_plus,
+  stage.transmission_miles_765kv_plus,
   stage.gas_pipeline_presence_flag,
   stage.gas_pipeline_mileage_county,
   stage.fiber_presence_flag,
   stage.primary_market_id,
+  stage.primary_tdu_or_utility,
+  stage.utility_context_json,
+  stage.is_border_county,
   stage.is_seam_county,
+  stage.queue_storage_mw,
+  stage.queue_solar_mw,
+  stage.queue_wind_mw,
+  stage.queue_avg_age_days,
+  stage.queue_withdrawal_rate,
+  stage.recent_online_mw,
+  stage.avg_rt_congestion_component,
+  stage.p95_shadow_price,
+  stage.negative_price_hour_share,
+  stage.top_constraints_json,
+  stage.source_provenance_json,
   :'formula_version'::text,
   input_versions.input_data_version,
   :'formula_version'::text
@@ -1544,13 +2210,43 @@ INSERT INTO analytics.county_market_pressure_current (
   policy_event_count,
   county_tagged_event_share,
   policy_mapping_confidence,
+  wholesale_operator,
+  market_structure,
+  balancing_authority,
+  load_zone,
+  weather_zone,
+  operator_zone_label,
+  operator_zone_type,
+  operator_zone_confidence,
+  operator_weather_zone,
+  meteo_zone,
+  retail_choice_status,
+  competitive_area_type,
   transmission_miles_69kv_plus,
+  transmission_miles_138kv_plus,
   transmission_miles_230kv_plus,
+  transmission_miles_345kv_plus,
+  transmission_miles_500kv_plus,
+  transmission_miles_765kv_plus,
   gas_pipeline_presence_flag,
   gas_pipeline_mileage_county,
   fiber_presence_flag,
   primary_market_id,
+  primary_tdu_or_utility,
+  utility_context_json,
+  is_border_county,
   is_seam_county,
+  queue_storage_mw,
+  queue_solar_mw,
+  queue_wind_mw,
+  queue_avg_age_days,
+  queue_withdrawal_rate,
+  recent_online_mw,
+  avg_rt_congestion_component,
+  p95_shadow_price,
+  negative_price_hour_share,
+  top_constraints_json,
+  source_provenance_json,
   formula_version,
   input_data_version,
   model_version
@@ -1600,13 +2296,43 @@ SELECT
   snapshot.policy_event_count,
   snapshot.county_tagged_event_share,
   snapshot.policy_mapping_confidence,
+  snapshot.wholesale_operator,
+  snapshot.market_structure,
+  snapshot.balancing_authority,
+  snapshot.load_zone,
+  snapshot.weather_zone,
+  snapshot.operator_zone_label,
+  snapshot.operator_zone_type,
+  snapshot.operator_zone_confidence,
+  snapshot.operator_weather_zone,
+  snapshot.meteo_zone,
+  snapshot.retail_choice_status,
+  snapshot.competitive_area_type,
   snapshot.transmission_miles_69kv_plus,
+  snapshot.transmission_miles_138kv_plus,
   snapshot.transmission_miles_230kv_plus,
+  snapshot.transmission_miles_345kv_plus,
+  snapshot.transmission_miles_500kv_plus,
+  snapshot.transmission_miles_765kv_plus,
   snapshot.gas_pipeline_presence_flag,
   snapshot.gas_pipeline_mileage_county,
   snapshot.fiber_presence_flag,
   snapshot.primary_market_id,
+  snapshot.primary_tdu_or_utility,
+  snapshot.utility_context_json,
+  snapshot.is_border_county,
   snapshot.is_seam_county,
+  snapshot.queue_storage_mw,
+  snapshot.queue_solar_mw,
+  snapshot.queue_wind_mw,
+  snapshot.queue_avg_age_days,
+  snapshot.queue_withdrawal_rate,
+  snapshot.recent_online_mw,
+  snapshot.avg_rt_congestion_component,
+  snapshot.p95_shadow_price,
+  snapshot.negative_price_hour_share,
+  snapshot.top_constraints_json,
+  snapshot.source_provenance_json,
   snapshot.formula_version,
   snapshot.input_data_version,
   snapshot.model_version
@@ -1645,19 +2371,77 @@ WITH feature_families AS (
         CASE WHEN EXISTS (SELECT 1 FROM analytics.fact_dc_pipeline_snapshot WHERE publication_run_id <> :'run_id'::text) THEN 'history' END,
         CASE WHEN EXISTS (SELECT 1 FROM analytics.bridge_county_market) THEN 'market_seams' END,
         CASE
+          WHEN EXISTS (
+            SELECT 1
+            FROM analytics.fact_power_market_context_snapshot
+            WHERE effective_date <= :'data_version'::date
+          )
+            THEN 'wholesale_markets'
+        END,
+        CASE
+          WHEN EXISTS (
+            SELECT 1
+            FROM analytics.fact_power_market_context_snapshot
+            WHERE effective_date <= :'data_version'::date
+          )
+            THEN 'operating_footprints'
+        END,
+        CASE
           WHEN EXISTS (SELECT 1 FROM analytics.fact_gen_queue_snapshot WHERE effective_date <= :'data_version'::date)
             OR EXISTS (SELECT 1 FROM analytics.fact_generation_realized_snapshot WHERE effective_date <= :'data_version'::date)
             THEN 'supply_timeline'
+        END,
+        CASE
+          WHEN EXISTS (
+            SELECT 1
+            FROM analytics.fact_gen_queue_snapshot
+            WHERE effective_date <= :'data_version'::date
+          )
+            THEN 'interconnection_queue'
         END,
         CASE
           WHEN EXISTS (SELECT 1 FROM analytics.fact_gen_queue_snapshot WHERE effective_date <= :'data_version'::date)
             OR EXISTS (SELECT 1 FROM analytics.fact_grid_friction_snapshot WHERE effective_date <= :'data_version'::date)
             THEN 'grid_friction'
         END,
+        CASE
+          WHEN EXISTS (
+            SELECT 1
+            FROM analytics.fact_congestion_snapshot
+            WHERE effective_date <= :'data_version'::date
+          )
+            THEN 'congestion'
+        END,
         CASE WHEN EXISTS (SELECT 1 FROM analytics.fact_policy_snapshot WHERE effective_date <= :'data_version'::date) THEN 'policy' END,
         CASE
+          WHEN EXISTS (
+            SELECT 1
+            FROM analytics.fact_utility_context_snapshot
+            WHERE effective_date <= :'data_version'::date
+          )
+            THEN 'retail_structure'
+        END,
+        CASE
+          WHEN EXISTS (
+            SELECT 1
+            FROM analytics.fact_utility_context_snapshot
+            WHERE effective_date <= :'data_version'::date
+          )
+            THEN 'utility_territories'
+        END,
+        CASE
+          WHEN EXISTS (
+            SELECT 1
+            FROM analytics.fact_transmission_snapshot
+            WHERE effective_date <= :'data_version'::date
+          )
+            THEN 'transmission'
+        END,
+        CASE
           WHEN EXISTS (SELECT 1 FROM analytics.bridge_county_market)
+            OR EXISTS (SELECT 1 FROM analytics.fact_fiber_snapshot WHERE effective_date <= :'data_version'::date)
             OR EXISTS (SELECT 1 FROM analytics.fact_gas_snapshot WHERE effective_date <= :'data_version'::date)
+            OR EXISTS (SELECT 1 FROM analytics.fact_transmission_snapshot WHERE effective_date <= :'data_version'::date)
             THEN 'infrastructure'
         END,
         'narratives'
@@ -1695,10 +2479,40 @@ publication_versions AS (
           FROM analytics.fact_policy_snapshot
           WHERE effective_date <= :'data_version'::date
         ),
+        'fiber',
+        (
+          SELECT MAX(source_as_of_date)::text
+          FROM analytics.fact_fiber_snapshot
+          WHERE effective_date <= :'data_version'::date
+        ),
         'gas',
         (
           SELECT MAX(source_as_of_date)::text
           FROM analytics.fact_gas_snapshot
+          WHERE effective_date <= :'data_version'::date
+        ),
+        'power_market_context',
+        (
+          SELECT MAX(source_as_of_date)::text
+          FROM analytics.fact_power_market_context_snapshot
+          WHERE effective_date <= :'data_version'::date
+        ),
+        'utility_context',
+        (
+          SELECT MAX(source_as_of_date)::text
+          FROM analytics.fact_utility_context_snapshot
+          WHERE effective_date <= :'data_version'::date
+        ),
+        'transmission',
+        (
+          SELECT MAX(source_as_of_date)::text
+          FROM analytics.fact_transmission_snapshot
+          WHERE effective_date <= :'data_version'::date
+        ),
+        'congestion',
+        (
+          SELECT MAX(source_as_of_date)::text
+          FROM analytics.fact_congestion_snapshot
           WHERE effective_date <= :'data_version'::date
         )
       )
@@ -1733,9 +2547,16 @@ SELECT
         'demand',
         'history',
         'market_seams',
+        'wholesale_markets',
+        'operating_footprints',
         'supply_timeline',
+        'interconnection_queue',
         'grid_friction',
+        'congestion',
         'policy',
+        'retail_structure',
+        'utility_territories',
+        'transmission',
         'infrastructure',
         'narratives'
       ]::text[]
@@ -1755,7 +2576,7 @@ SELECT
   :'data_version'::date,
   jsonb_build_object(
     'summary',
-    'County market-pressure publication with explicit demand, queue, friction, policy, freshness, and deferred-state semantics.'
+    'County market-pressure publication with explicit wholesale, operating-footprint, retail, transmission, queue, congestion, policy, freshness, and deferred-state semantics.'
   )
 FROM (
   SELECT DISTINCT input_data_version
@@ -1795,7 +2616,20 @@ ANALYZE analytics.bridge_county_adjacency;
 ANALYZE analytics.bridge_county_market;
 ANALYZE analytics.fact_dc_pipeline_project;
 ANALYZE analytics.fact_dc_pipeline_snapshot;
+ANALYZE analytics.fact_gen_queue_project;
+ANALYZE analytics.fact_gen_queue_county_resolution;
+ANALYZE analytics.fact_gen_queue_snapshot;
+ANALYZE analytics.fact_generation_realized_snapshot;
+ANALYZE analytics.fact_grid_friction_snapshot;
+ANALYZE analytics.fact_policy_snapshot;
+ANALYZE analytics.fact_fiber_snapshot;
+ANALYZE analytics.fact_gas_snapshot;
+ANALYZE analytics.fact_power_market_context_snapshot;
+ANALYZE analytics.fact_utility_context_snapshot;
+ANALYZE analytics.fact_transmission_snapshot;
+ANALYZE analytics.fact_congestion_snapshot;
 ANALYZE analytics.fact_market_analysis_score_snapshot;
+ANALYZE analytics.fact_narrative_snapshot;
 ANALYZE analytics.fact_publication;
 ANALYZE analytics.county_market_pressure_current;
 

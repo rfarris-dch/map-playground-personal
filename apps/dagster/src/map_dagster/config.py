@@ -37,6 +37,7 @@ def resolve_project_root() -> Path:
 PROJECT_ROOT = resolve_project_root()
 PARCELS_SNAPSHOT_ROOT = PROJECT_ROOT / "var" / "parcels-sync"
 ENVIRONMENTAL_SNAPSHOT_ROOT = PROJECT_ROOT / "var" / "environmental-sync"
+COUNTY_POWER_SNAPSHOT_ROOT = PROJECT_ROOT / "var" / "county-power-sync"
 PUBLISH_ROOT = PROJECT_ROOT / "apps" / "web" / "public"
 CACHE_ROOT = PROJECT_ROOT / ".cache"
 
@@ -253,6 +254,64 @@ DATASETS: tuple[DatasetConfig, ...] = (
                         "bash",
                         str(PROJECT_ROOT / "scripts/refresh-facilities-fast.sh"),
                         "{run_id}",
+                    ),
+                ),
+            ),
+        ),
+    ),
+    DatasetConfig(
+        dataset="county-power",
+        display_name="County Power",
+        job_name="county_power_pipeline",
+        steps=(
+            AssetStepConfig(
+                asset_key="raw_county_power_bundle",
+                commands=(
+                    shell(
+                        "bun",
+                        "run",
+                        str(PROJECT_ROOT / "scripts/refresh-county-power.ts"),
+                        "--run-id={run_id}",
+                        "--step=extract",
+                    ),
+                ),
+            ),
+            AssetStepConfig(
+                asset_key="normalized_county_power_bundle",
+                deps=("raw_county_power_bundle",),
+                commands=(
+                    shell(
+                        "bun",
+                        "run",
+                        str(PROJECT_ROOT / "scripts/refresh-county-power.ts"),
+                        "--run-id={run_id}",
+                        "--step=normalize",
+                    ),
+                ),
+            ),
+            AssetStepConfig(
+                asset_key="county_power_facts",
+                deps=("normalized_county_power_bundle",),
+                commands=(
+                    shell(
+                        "bun",
+                        "run",
+                        str(PROJECT_ROOT / "scripts/refresh-county-power.ts"),
+                        "--run-id={run_id}",
+                        "--step=load",
+                    ),
+                ),
+            ),
+            AssetStepConfig(
+                asset_key="county_scores_publication",
+                deps=("county_power_facts",),
+                commands=(
+                    shell(
+                        "bun",
+                        "run",
+                        str(PROJECT_ROOT / "scripts/refresh-county-power.ts"),
+                        "--run-id={run_id}",
+                        "--step=refresh",
                     ),
                 ),
             ),

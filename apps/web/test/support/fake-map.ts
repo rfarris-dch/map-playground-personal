@@ -19,6 +19,7 @@ import type {
   MapViewport,
   StyleInput,
 } from "@map-migration/map-engine";
+import type { StyleImageInterface } from "maplibre-gl";
 
 interface FakeMapOptions {
   readonly bearing?: number;
@@ -50,7 +51,10 @@ function createDefaultBounds(): LngLatBounds {
 export class FakeMap implements IMap {
   readonly addControlCalls: Array<{ readonly control: MapControl; readonly position?: string }> =
     [];
-  readonly addedImages = new Map<string, ImageBitmap | HTMLImageElement | ImageData>();
+  readonly addedImages = new Map<
+    string,
+    ImageBitmap | HTMLImageElement | ImageData | StyleImageInterface
+  >();
   readonly addedLayers = new Map<
     string,
     { readonly beforeId?: string; readonly spec: MapLayerSpecification }
@@ -71,6 +75,7 @@ export class FakeMap implements IMap {
     readonly state: Record<string, unknown>;
     readonly target: FeatureStateTarget;
   }> = [];
+  readonly globalStatePropertyCalls: Array<{ readonly name: string; readonly value: unknown }> = [];
   readonly layerFilterCalls: Array<{
     readonly filter: MapExpression | null;
     readonly layerId: string;
@@ -106,7 +111,10 @@ export class FakeMap implements IMap {
     this.addControlCalls.push({ control, position });
   }
 
-  addImage(id: string, image: ImageBitmap | HTMLImageElement | ImageData): void {
+  addImage(
+    id: string,
+    image: ImageBitmap | HTMLImageElement | ImageData | StyleImageInterface
+  ): void {
     this.addedImages.set(id, image);
   }
 
@@ -291,6 +299,10 @@ export class FakeMap implements IMap {
     this.sourceDataCalls.push({ sourceId, data });
   }
 
+  setGlobalStateProperty(name: string, value: unknown): void {
+    this.globalStatePropertyCalls.push({ name, value });
+  }
+
   setLayerFilter(layerId: string, filter: MapExpression | null): void {
     this.layerFilterCalls.push({ layerId, filter });
   }
@@ -340,6 +352,10 @@ export class FakeMap implements IMap {
 
   setZoom(zoom: number): void {
     this.zoom = zoom;
+  }
+
+  triggerRepaint(): void {
+    // no-op in tests
   }
 
   unproject(): LngLat {

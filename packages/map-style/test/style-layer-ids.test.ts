@@ -2,11 +2,14 @@ import { describe, expect, it } from "bun:test";
 import {
   getBoundaryStyleLayerIds,
   getCatalogStyleLayerIds,
+  getCountyPowerStoryExtrusionLayerId,
+  getCountyPowerStoryStyleLayerIds,
   getFacilitiesStyleLayerIds,
   getFloodStyleLayerIds,
   getHydroBasinsStyleLayerIds,
   getParcelsStyleLayerIds,
   getPowerStyleLayerIds,
+  validateLayerOrder,
 } from "@/index";
 
 describe("style layer ids", () => {
@@ -28,6 +31,11 @@ describe("style layer ids", () => {
       fillLayerId: "property.parcels.fill",
       outlineLayerId: "property.parcels",
     });
+    expect(getCountyPowerStoryStyleLayerIds("models.county-power-grid-stress")).toEqual({
+      fillLayerId: "models.county-power-grid-stress.fill",
+      outlineLayerId: "models.county-power-grid-stress.outline",
+    });
+    expect(getCountyPowerStoryExtrusionLayerId()).toBe("models.county-power-3d.fill-extrusion");
   });
 
   it("keeps the current hydro and power layer ordering", () => {
@@ -86,5 +94,23 @@ describe("style layer ids", () => {
       "property.parcels.fill",
       "property.parcels",
     ]);
+  });
+
+  it("validates county power story model layers against facility and parcel ordering", () => {
+    expect(
+      validateLayerOrder(["models.county-power-grid-stress.fill", "facilities.colocation.points"])
+    ).toEqual([]);
+
+    expect(
+      validateLayerOrder(["facilities.colocation.points", "models.county-power-grid-stress.fill"])
+    ).toContain(
+      "countyPowerGridStressBelowColocation failed: models.county-power-grid-stress.fill must be before facilities.colocation.points"
+    );
+
+    expect(
+      validateLayerOrder(["property.parcels", "models.county-power-3d.fill-extrusion"])
+    ).toContain(
+      "parcelOutlinesAboveCountyPower3d failed: models.county-power-3d.fill-extrusion must be before property.parcels"
+    );
   });
 });

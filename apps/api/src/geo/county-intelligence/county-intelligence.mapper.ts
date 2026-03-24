@@ -1,9 +1,12 @@
 import type {
   CountyChange,
+  CountyConstraintSummary,
   CountyDeferredReasonCode,
   CountyDriver,
   CountyPillarValueStates,
   CountyScore,
+  CountySourceProvenance,
+  CountyUtilityContext,
 } from "@map-migration/http-contracts/county-intelligence-http";
 import type { CountyScoreRow } from "./county-intelligence.repo";
 
@@ -60,6 +63,15 @@ function readNullableInteger(value: number | string | null | undefined): number 
   }
 
   return Number.isInteger(parsed) ? parsed : null;
+}
+
+function readNullableUnitInterval(value: number | string | null | undefined): number | null {
+  const parsed = readNullableNumber(value);
+  if (parsed === null || parsed < 0 || parsed > 1) {
+    return null;
+  }
+
+  return parsed;
 }
 
 function readBooleanFlag(
@@ -171,6 +183,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function readRecordNumber(record: Record<string, unknown>, key: string): number | null {
+  const value = record[key];
+  if (typeof value === "number" || typeof value === "string") {
+    return readNullableNumber(value);
+  }
+
+  return null;
+}
+
+function readRecordText(record: Record<string, unknown>, key: string): string | null {
+  const value = record[key];
+  return readNullableText(typeof value === "string" ? value : null);
+}
+
 function readNormalizedText(value: string | null | undefined): string | null {
   const normalized = readNullableText(value);
   if (normalized === null) {
@@ -260,6 +286,58 @@ function readSourceVolatility(value: string | null | undefined): CountyScore["so
     normalized === "low" ||
     normalized === "medium" ||
     normalized === "high" ||
+    normalized === "unknown"
+  ) {
+    return normalized;
+  }
+
+  return "unknown";
+}
+
+function readMarketStructure(
+  value: string | null | undefined
+): CountyScore["powerMarketContext"]["marketStructure"] {
+  const normalized = readNormalizedText(value);
+  if (
+    normalized === "organized_market" ||
+    normalized === "traditional_vertical" ||
+    normalized === "mixed" ||
+    normalized === "unknown"
+  ) {
+    return normalized;
+  }
+
+  return "unknown";
+}
+
+function readRetailChoiceStatus(
+  value: string | null | undefined
+): CountyScore["retailStructure"]["retailChoiceStatus"] {
+  const normalized = readNormalizedText(value);
+  if (
+    normalized === "choice" ||
+    normalized === "partial_choice" ||
+    normalized === "bundled_monopoly" ||
+    normalized === "mixed" ||
+    normalized === "unknown"
+  ) {
+    return normalized;
+  }
+
+  return "unknown";
+}
+
+function readCompetitiveAreaType(
+  value: string | null | undefined
+): CountyScore["retailStructure"]["competitiveAreaType"] {
+  const normalized = readNormalizedText(value);
+  if (
+    normalized === "choice" ||
+    normalized === "noie" ||
+    normalized === "bundled" ||
+    normalized === "muni" ||
+    normalized === "co_op" ||
+    normalized === "mixed" ||
     normalized === "unknown"
   ) {
     return normalized;
@@ -416,8 +494,169 @@ function mapDeferredReasonCodes(value: unknown): CountyDeferredReasonCode[] {
   });
 }
 
+function defaultUtilityContext(): CountyUtilityContext {
+  return {
+    dominantUtilityId: null,
+    dominantUtilityName: null,
+    retailChoicePenetrationShare: null,
+    territoryType: null,
+    utilities: [],
+    utilityCount: null,
+  };
+}
+
+function mapConstraintSummaryEntry(entry: unknown): CountyConstraintSummary | null {
+  if (!isRecord(entry)) {
+    return null;
+  }
+
+  const constraintId = readRecordText(entry, "constraintId");
+  const label = readRecordText(entry, "label");
+  if (constraintId === null || label === null) {
+    return null;
+  }
+
+  return {
+    constraintId,
+    flowMw: readRecordNumber(entry, "flowMw"),
+    hoursBound: readRecordNumber(entry, "hoursBound"),
+    label,
+    limitMw: readRecordNumber(entry, "limitMw"),
+    operator: readRecordText(entry, "operator"),
+    shadowPrice: readRecordNumber(entry, "shadowPrice"),
+    voltageKv: readRecordNumber(entry, "voltageKv"),
+  };
+}
+
+function mapUtilityContext(value: unknown): CountyUtilityContext {
+  const parsed = readJsonValue(value);
+  if (!isRecord(parsed)) {
+    return defaultUtilityContext();
+  }
+
+  const utilitiesValue = parsed.utilities;
+  const utilities = Array.isArray(utilitiesValue)
+    ? utilitiesValue.flatMap((entry): CountyUtilityContext["utilities"] => {
+        if (!isRecord(entry)) {
+          return [];
+        }
+
+        return [
+          {
+            utilityId: readNullableText(
+              typeof entry.utilityId === "string" ? entry.utilityId : null
+            ),
+            utilityName: readNullableText(
+              typeof entry.utilityName === "string" ? entry.utilityName : null
+            ),
+            territoryType: readNullableText(
+              typeof entry.territoryType === "string" ? entry.territoryType : null
+            ),
+            retailChoiceStatus: readRetailChoiceStatus(
+              typeof entry.retailChoiceStatus === "string" ? entry.retailChoiceStatus : null
+            ),
+          },
+        ];
+      })
+    : [];
+
+  return {
+    dominantUtilityId: readNullableText(
+      typeof parsed.dominantUtilityId === "string" ? parsed.dominantUtilityId : null
+    ),
+    dominantUtilityName: readNullableText(
+      typeof parsed.dominantUtilityName === "string" ? parsed.dominantUtilityName : null
+    ),
+    retailChoicePenetrationShare: readNullableUnitInterval(
+      typeof parsed.retailChoicePenetrationShare === "number" ||
+        typeof parsed.retailChoicePenetrationShare === "string"
+        ? parsed.retailChoicePenetrationShare
+        : null
+    ),
+    territoryType: readNullableText(
+      typeof parsed.territoryType === "string" ? parsed.territoryType : null
+    ),
+    utilities,
+    utilityCount: readNullableInteger(
+      typeof parsed.utilityCount === "number" || typeof parsed.utilityCount === "string"
+        ? parsed.utilityCount
+        : null
+    ),
+  };
+}
+
+function mapConstraintSummaryArray(value: unknown): CountyConstraintSummary[] {
+  const parsed = readJsonValue(value);
+  if (!Array.isArray(parsed)) {
+    return [];
+  }
+
+  return parsed.flatMap((entry) => {
+    const constraint = mapConstraintSummaryEntry(entry);
+    return constraint === null ? [] : [constraint];
+  });
+}
+
+function mapSourceProvenance(value: unknown): CountySourceProvenance {
+  const parsed = readJsonValue(value);
+  if (!isRecord(parsed)) {
+    return {
+      congestion: null,
+      interconnectionQueue: null,
+      operatingFootprints: null,
+      retailStructure: null,
+      transmission: null,
+      utilityTerritories: null,
+      wholesaleMarkets: null,
+    };
+  }
+
+  return {
+    congestion: readNullableText(typeof parsed.congestion === "string" ? parsed.congestion : null),
+    interconnectionQueue: readNullableText(
+      typeof parsed.interconnectionQueue === "string" ? parsed.interconnectionQueue : null
+    ),
+    operatingFootprints: readNullableText(
+      typeof parsed.operatingFootprints === "string" ? parsed.operatingFootprints : null
+    ),
+    retailStructure: readNullableText(
+      typeof parsed.retailStructure === "string" ? parsed.retailStructure : null
+    ),
+    transmission: readNullableText(
+      typeof parsed.transmission === "string" ? parsed.transmission : null
+    ),
+    utilityTerritories: readNullableText(
+      typeof parsed.utilityTerritories === "string" ? parsed.utilityTerritories : null
+    ),
+    wholesaleMarkets: readNullableText(
+      typeof parsed.wholesaleMarkets === "string" ? parsed.wholesaleMarkets : null
+    ),
+  };
+}
+
 export function mapCountyScoreRow(row: CountyScoreRow): CountyScore {
   const hasCountyScore = readBooleanFlag(row.has_county_score, "has_county_score");
+  const queueMwActive = readNullableNumber(row.queue_mw_active);
+  const queueProjectCountActive = readNullableInteger(row.queue_project_count_active);
+  const medianDaysInQueueActive = readNullableNumber(row.median_days_in_queue_active);
+  const transmissionMiles69kvPlus = readNullableNumber(row.transmission_miles_69kv_plus);
+  const transmissionMiles138kvPlus = readNullableNumber(row.transmission_miles_138kv_plus);
+  const transmissionMiles230kvPlus = readNullableNumber(row.transmission_miles_230kv_plus);
+  const transmissionMiles345kvPlus = readNullableNumber(row.transmission_miles_345kv_plus);
+  const transmissionMiles500kvPlus = readNullableNumber(row.transmission_miles_500kv_plus);
+  const transmissionMiles765kvPlus = readNullableNumber(row.transmission_miles_765kv_plus);
+  const queueStorageMw = readNullableNumber(row.queue_storage_mw);
+  const queueSolarMw = readNullableNumber(row.queue_solar_mw);
+  const queueWindMw = readNullableNumber(row.queue_wind_mw);
+  const queueAvgAgeDays = readNullableNumber(row.queue_avg_age_days);
+  const queueWithdrawalRate = readNullableUnitInterval(row.queue_withdrawal_rate);
+  const recentOnlineMw = readNullableNumber(row.recent_online_mw);
+  const avgRtCongestionComponent = readNullableNumber(row.avg_rt_congestion_component);
+  const p95ShadowPrice = readNullableNumber(row.p95_shadow_price);
+  const negativePriceHourShare = readNullableUnitInterval(row.negative_price_hour_share);
+  const topConstraints = mapConstraintSummaryArray(row.top_constraints_json);
+  const utilityContext = mapUtilityContext(row.utility_context_json);
+  const sourceProvenance = mapSourceProvenance(row.source_provenance_json);
 
   return {
     countyFips: readCountyFips(row.county_fips),
@@ -443,6 +682,27 @@ export function mapCountyScoreRow(row: CountyScoreRow): CountyScore {
     whatChanged60d: mapChangeArray(row.what_changed_60d_json),
     whatChanged90d: mapChangeArray(row.what_changed_90d_json),
     pillarValueStates: mapPillarValueStates(row.pillar_value_states_json),
+    powerMarketContext: {
+      balancingAuthority: readNullableText(row.balancing_authority),
+      loadZone: readNullableText(row.load_zone),
+      marketStructure: readMarketStructure(row.market_structure),
+      meteoZone: readNullableText(row.meteo_zone),
+      operatorWeatherZone: readNullableText(row.operator_weather_zone),
+      operatorZoneConfidence:
+        readNullableText(row.operator_zone_confidence) === null
+          ? null
+          : readConfidenceBadge(row.operator_zone_confidence, "low"),
+      operatorZoneLabel: readNullableText(row.operator_zone_label),
+      operatorZoneType: readNullableText(row.operator_zone_type),
+      weatherZone: readNullableText(row.weather_zone),
+      wholesaleOperator: readNullableText(row.wholesale_operator),
+    },
+    retailStructure: {
+      competitiveAreaType: readCompetitiveAreaType(row.competitive_area_type),
+      primaryTduOrUtility: readNullableText(row.primary_tdu_or_utility),
+      retailChoiceStatus: readRetailChoiceStatus(row.retail_choice_status),
+      utilityContext,
+    },
     expectedMw0To24m: readNullableNumber(row.expected_mw_0_24m),
     expectedMw24To60m: readNullableNumber(row.expected_mw_24_60m),
     recentCommissionedMw24m: readNullableNumber(row.recent_commissioned_mw_24m),
@@ -451,11 +711,11 @@ export function mapCountyScoreRow(row: CountyScoreRow): CountyScore {
     expectedSupplyMw0To36m: readNullableNumber(row.expected_supply_mw_0_36m),
     expectedSupplyMw36To60m: readNullableNumber(row.expected_supply_mw_36_60m),
     signedIaMw: readNullableNumber(row.signed_ia_mw),
-    queueMwActive: readNullableNumber(row.queue_mw_active),
-    queueProjectCountActive: readNullableInteger(row.queue_project_count_active),
-    medianDaysInQueueActive: readNullableNumber(row.median_days_in_queue_active),
-    pastDueShare: readNullableNumber(row.past_due_share),
-    marketWithdrawalPrior: readNullableNumber(row.market_withdrawal_prior),
+    queueMwActive,
+    queueProjectCountActive,
+    medianDaysInQueueActive,
+    pastDueShare: readNullableUnitInterval(row.past_due_share),
+    marketWithdrawalPrior: readNullableUnitInterval(row.market_withdrawal_prior),
     congestionProxyScore: readNullableNumber(row.congestion_proxy_score),
     plannedUpgradeCount: readNullableInteger(row.planned_upgrade_count),
     heatmapSignalFlag: readNullableBoolean(row.heatmap_signal_flag, "heatmap_signal_flag"),
@@ -463,13 +723,25 @@ export function mapCountyScoreRow(row: CountyScoreRow): CountyScore {
     moratoriumStatus: readMoratoriumStatus(row.moratorium_status),
     publicSentimentScore: readNullableNumber(row.public_sentiment_score),
     policyEventCount: readNullableInteger(row.policy_event_count),
-    countyTaggedEventShare: readNullableNumber(row.county_tagged_event_share),
+    countyTaggedEventShare: readNullableUnitInterval(row.county_tagged_event_share),
     policyMappingConfidence:
       readNullableText(row.policy_mapping_confidence) === null
         ? null
         : readConfidenceBadge(row.policy_mapping_confidence, "low"),
-    transmissionMiles69kvPlus: readNullableNumber(row.transmission_miles_69kv_plus),
-    transmissionMiles230kvPlus: readNullableNumber(row.transmission_miles_230kv_plus),
+    transmissionMiles69kvPlus,
+    transmissionMiles138kvPlus,
+    transmissionMiles230kvPlus,
+    transmissionMiles345kvPlus,
+    transmissionMiles500kvPlus,
+    transmissionMiles765kvPlus,
+    transmissionContext: {
+      miles138kvPlus: transmissionMiles138kvPlus,
+      miles230kvPlus: transmissionMiles230kvPlus,
+      miles345kvPlus: transmissionMiles345kvPlus,
+      miles500kvPlus: transmissionMiles500kvPlus,
+      miles69kvPlus: transmissionMiles69kvPlus,
+      miles765kvPlus: transmissionMiles765kvPlus,
+    },
     gasPipelinePresenceFlag: readNullableBoolean(
       row.gas_pipeline_presence_flag,
       "gas_pipeline_presence_flag"
@@ -477,7 +749,38 @@ export function mapCountyScoreRow(row: CountyScoreRow): CountyScore {
     gasPipelineMileageCounty: readNullableNumber(row.gas_pipeline_mileage_county),
     fiberPresenceFlag: readNullableBoolean(row.fiber_presence_flag, "fiber_presence_flag"),
     primaryMarketId: readNullableText(row.primary_market_id),
+    isBorderCounty: readNullableBoolean(row.is_border_county, "is_border_county") ?? false,
     isSeamCounty: readNullableBoolean(row.is_seam_county, "is_seam_county") ?? false,
+    queueStorageMw,
+    queueSolarMw,
+    queueWindMw,
+    queueAvgAgeDays,
+    queueWithdrawalRate,
+    recentOnlineMw,
+    avgRtCongestionComponent,
+    p95ShadowPrice,
+    negativePriceHourShare,
+    topConstraints,
+    interconnectionQueue: {
+      activeMw: queueMwActive,
+      avgAgeDays: queueAvgAgeDays,
+      medianDaysInQueueActive,
+      projectCountActive: queueProjectCountActive,
+      recentOnlineMw,
+      solarMw: queueSolarMw,
+      storageMw: queueStorageMw,
+      windMw: queueWindMw,
+      withdrawalRate: queueWithdrawalRate,
+    },
+    congestionContext: {
+      avgRtCongestionComponent,
+      congestionProxyScore: readNullableNumber(row.congestion_proxy_score),
+      negativePriceHourShare,
+      p95ShadowPrice,
+      topConstraints,
+    },
+    sourceProvenance,
+    publicationRunId: readNullableText(row.publication_run_id),
     formulaVersion: readNullableVersion(row.formula_version, "formula_version"),
     inputDataVersion: readNullableVersion(row.input_data_version, "input_data_version"),
   };

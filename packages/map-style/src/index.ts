@@ -1,6 +1,8 @@
 import type {
   BoundaryCatalogLayerId,
   BoundaryStyleLayerIds,
+  CountyPowerStoryCatalogLayerId,
+  CountyPowerStoryStyleLayerIds,
   FacilitiesCatalogLayerId,
   FacilitiesStyleLayerIds,
   FloodCatalogLayerId,
@@ -17,6 +19,8 @@ import { LAYER_ORDER_INVARIANTS } from "./manifests/layer-order";
 import {
   getBoundaryStyleLayerIds as readBoundaryStyleLayerIds,
   getCatalogStyleLayerIds as readCatalogStyleLayerIds,
+  getCountyPowerStoryExtrusionLayerId as readCountyPowerStoryExtrusionLayerId,
+  getCountyPowerStoryStyleLayerIds as readCountyPowerStoryStyleLayerIds,
   getFacilitiesStyleLayerIds as readFacilitiesStyleLayerIds,
   getFloodStyleLayerIds as readFloodStyleLayerIds,
   getHydroBasinsStyleLayerIds as readHydroBasinsStyleLayerIds,
@@ -28,6 +32,8 @@ import {
 export type {
   BoundaryCatalogLayerId,
   BoundaryStyleLayerIds,
+  CountyPowerStoryCatalogLayerId,
+  CountyPowerStoryStyleLayerIds,
   FacilitiesCatalogLayerId,
   FacilitiesStyleLayerIds,
   FloodCatalogLayerId,
@@ -44,6 +50,16 @@ export type {
 
 export function getBoundaryStyleLayerIds(layerId: BoundaryCatalogLayerId): BoundaryStyleLayerIds {
   return readBoundaryStyleLayerIds(layerId);
+}
+
+export function getCountyPowerStoryStyleLayerIds(
+  layerId: CountyPowerStoryCatalogLayerId
+): CountyPowerStoryStyleLayerIds {
+  return readCountyPowerStoryStyleLayerIds(layerId);
+}
+
+export function getCountyPowerStoryExtrusionLayerId(): string {
+  return readCountyPowerStoryExtrusionLayerId();
 }
 
 export function getFloodStyleLayerIds(layerId: FloodCatalogLayerId): FloodStyleLayerIds {

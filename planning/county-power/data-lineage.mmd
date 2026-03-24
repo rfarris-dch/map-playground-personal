@@ -1,0 +1,163 @@
+flowchart TD
+  subgraph Sources
+    EIA[EIA-861]
+    Census[Census gazetteers and geography changes]
+    NWS[NWS ZoneCounty]
+    TxLines[Transmission lines feature service]
+    CAISO[CAISO queue and OASIS]
+    ERCOT[ERCOT MIS and Appendix D]
+    ISO_NE[ISO-NE queue and ISO Express]
+    MISO[MISO GI queue, RT API, LRZ PDF]
+    NYISO[NYISO queue and public MIS]
+    PJM[PJM queue XML, Data Miner 2, System Map]
+    SPP[SPP GI active queue and RTBM market map]
+    Policy[NLR policy workbook]
+    Future[Interconnection.fyi, consultant layers, Ian boundary pack]
+  end
+
+  subgraph Extract
+    Extractor[packages/ops/src/etl/county-power-public-us.impl.js]
+    FipsAlias[dim_county_fips_alias materialization]
+    QueueResolver[queue county resolver and POI backfill]
+    ZoneResolver[county operator-zone resolver]
+  end
+
+  subgraph NormalizedBundles
+    Bundle[NDJSON bundle artifacts]
+    PowerMarket[power-market-context.ndjson]
+    Utility[utility-context.ndjson]
+    Transmission[transmission.ndjson]
+    QueueProjects[queue-projects.ndjson]
+    QueueSnapshots[queue-snapshots.ndjson]
+    QueueResolutions[queue-county-resolutions.ndjson]
+    Congestion[congestion.ndjson]
+    PolicySnapshot[policy-snapshots.ndjson]
+  end
+
+  subgraph Load
+    Sync[packages/ops/src/etl/county-power-sync.impl.js]
+    FactPower[analytics.fact_power_market_context_snapshot]
+    FactUtility[analytics.fact_utility_context_snapshot]
+    FactTransmission[analytics.fact_transmission_snapshot]
+    FactQueueProject[analytics.fact_gen_queue_project]
+    FactQueueSnapshot[analytics.fact_gen_queue_snapshot]
+    FactQueueResolution[analytics.fact_gen_queue_county_resolution]
+    FactCongestion[analytics.fact_congestion_snapshot]
+    FactGrid[analytics.fact_grid_friction_snapshot]
+    FactPolicy[analytics.fact_policy_snapshot and fact_policy_event]
+    DimZone[analytics.dim_operator_zone_reference]
+    BridgeZone[analytics.bridge_county_operator_zone]
+    DimPoi[analytics.dim_queue_poi_reference]
+    Override[analytics.fact_queue_resolution_override]
+  end
+
+  subgraph Publication
+    RefreshSql[scripts/sql/refresh-county-scores.sql]
+    CountyCurrent[analytics.county_market_pressure_current]
+    PublicationMeta[analytics.fact_publication]
+    ServePower[serve.county_power_rollup_current]
+    ServeCounty[serve.county_market_pressure_current_lod1]
+    ServeQueue[serve.county_interconnection_queue_current_lod1]
+  end
+
+  subgraph API
+    Scores[/api/geo/counties/scores]
+    Status[/api/geo/counties/scores/status]
+    Coverage[/api/geo/counties/scores/coverage]
+    Resolution[/api/geo/counties/scores/resolution]
+    Debug[/api/geo/counties/scores/debug]
+  end
+
+  subgraph ProductAndScoring
+    Web[spatial analysis county panel]
+    Diagnostics[internal explanation layer]
+    FutureScore[future scoring framework]
+  end
+
+  EIA --> Extractor
+  Census --> Extractor
+  NWS --> Extractor
+  TxLines --> Extractor
+  CAISO --> Extractor
+  ERCOT --> Extractor
+  ISO_NE --> Extractor
+  MISO --> Extractor
+  NYISO --> Extractor
+  PJM --> Extractor
+  SPP --> Extractor
+  Policy --> Extractor
+  Future -. planned authority inputs .-> Extractor
+
+  Extractor --> FipsAlias
+  Extractor --> QueueResolver
+  Extractor --> ZoneResolver
+  FipsAlias --> Bundle
+  QueueResolver --> Bundle
+  ZoneResolver --> Bundle
+  Bundle --> PowerMarket
+  Bundle --> Utility
+  Bundle --> Transmission
+  Bundle --> QueueProjects
+  Bundle --> QueueSnapshots
+  Bundle --> QueueResolutions
+  Bundle --> Congestion
+  Bundle --> PolicySnapshot
+
+  PowerMarket --> Sync
+  Utility --> Sync
+  Transmission --> Sync
+  QueueProjects --> Sync
+  QueueSnapshots --> Sync
+  QueueResolutions --> Sync
+  Congestion --> Sync
+  PolicySnapshot --> Sync
+
+  Sync --> FactPower
+  Sync --> FactUtility
+  Sync --> FactTransmission
+  Sync --> FactQueueProject
+  Sync --> FactQueueSnapshot
+  Sync --> FactQueueResolution
+  Sync --> FactCongestion
+  Sync --> FactGrid
+  Sync --> FactPolicy
+  Sync --> DimZone
+  Sync --> BridgeZone
+  Sync --> DimPoi
+  Sync --> Override
+
+  FactPower --> RefreshSql
+  FactUtility --> RefreshSql
+  FactTransmission --> RefreshSql
+  FactQueueProject --> RefreshSql
+  FactQueueSnapshot --> RefreshSql
+  FactQueueResolution --> RefreshSql
+  FactCongestion --> RefreshSql
+  FactGrid --> RefreshSql
+  FactPolicy --> RefreshSql
+
+  RefreshSql --> CountyCurrent
+  RefreshSql --> PublicationMeta
+  CountyCurrent --> ServePower
+  CountyCurrent --> ServeCounty
+  CountyCurrent --> ServeQueue
+
+  CountyCurrent --> Scores
+  PublicationMeta --> Status
+  CountyCurrent --> Coverage
+  FactQueueProject --> Resolution
+  FactQueueSnapshot --> Resolution
+  FactQueueResolution --> Resolution
+  BridgeZone --> Debug
+  DimPoi --> Debug
+  FactCongestion --> Debug
+  CountyCurrent --> Debug
+
+  Scores --> Web
+  Status --> Web
+  Coverage --> Diagnostics
+  Resolution --> Diagnostics
+  Debug --> Diagnostics
+  Diagnostics --> Web
+  CountyCurrent --> FutureScore
+  Diagnostics --> FutureScore

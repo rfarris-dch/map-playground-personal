@@ -1,5 +1,11 @@
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
-import type { CountyScore } from "@map-migration/http-contracts/county-intelligence-http";
+import type {
+  CountyScore,
+  CountyScoresCoverageResponse,
+  CountyScoresDebugResponse,
+  CountyScoresResolutionResponse,
+  CountyScoresStatusResponse,
+} from "@map-migration/http-contracts/county-intelligence-http";
 
 const queryCountyScoresMock =
   mock<
@@ -38,36 +44,82 @@ const queryCountyScoresStatusMock =
     () => Promise<
       | {
           readonly ok: true;
-          readonly value: {
-            readonly datasetAvailable: boolean;
-            readonly publicationRunId: string | null;
-            readonly publishedAt: string | null;
-            readonly methodologyId: string | null;
-            readonly dataVersion: string | null;
-            readonly inputDataVersion: string | null;
-            readonly formulaVersion: string | null;
-            readonly rowCount: number;
-            readonly sourceCountyCount: number;
-            readonly rankedCountyCount: number;
-            readonly deferredCountyCount: number;
-            readonly blockedCountyCount: number;
-            readonly highConfidenceCount: number;
-            readonly mediumConfidenceCount: number;
-            readonly lowConfidenceCount: number;
-            readonly freshCountyCount: number;
-            readonly availableFeatureFamilies: readonly string[];
-            readonly missingFeatureFamilies: readonly string[];
-            readonly featureCoverage: {
-              readonly demand: boolean;
-              readonly gridFriction: boolean;
-              readonly history: boolean;
-              readonly infrastructure: boolean;
-              readonly marketSeams: boolean;
-              readonly narratives: boolean;
-              readonly policy: boolean;
-              readonly supplyTimeline: boolean;
-            };
-          };
+          readonly value: Omit<CountyScoresStatusResponse, "meta">;
+        }
+      | {
+          readonly ok: false;
+          readonly value:
+            | {
+                readonly reason: "source_unavailable";
+                readonly error: unknown;
+              }
+            | {
+                readonly reason: "query_failed";
+                readonly error: unknown;
+              }
+            | {
+                readonly reason: "mapping_failed";
+                readonly error: unknown;
+              };
+        }
+    >
+  >();
+const queryCountyScoresCoverageMock =
+  mock<
+    () => Promise<
+      | {
+          readonly ok: true;
+          readonly value: Omit<CountyScoresCoverageResponse, "meta">;
+        }
+      | {
+          readonly ok: false;
+          readonly value:
+            | {
+                readonly reason: "source_unavailable";
+                readonly error: unknown;
+              }
+            | {
+                readonly reason: "query_failed";
+                readonly error: unknown;
+              }
+            | {
+                readonly reason: "mapping_failed";
+                readonly error: unknown;
+              };
+        }
+    >
+  >();
+const queryCountyScoresResolutionMock =
+  mock<
+    () => Promise<
+      | {
+          readonly ok: true;
+          readonly value: Omit<CountyScoresResolutionResponse, "meta">;
+        }
+      | {
+          readonly ok: false;
+          readonly value:
+            | {
+                readonly reason: "source_unavailable";
+                readonly error: unknown;
+              }
+            | {
+                readonly reason: "query_failed";
+                readonly error: unknown;
+              }
+            | {
+                readonly reason: "mapping_failed";
+                readonly error: unknown;
+              };
+        }
+    >
+  >();
+const queryCountyScoresDebugMock =
+  mock<
+    (args: { countyIds: readonly string[] }) => Promise<
+      | {
+          readonly ok: true;
+          readonly value: Omit<CountyScoresDebugResponse, "meta">;
         }
       | {
           readonly ok: false;
@@ -89,11 +141,18 @@ const queryCountyScoresStatusMock =
   >();
 
 mock.module("../../../src/geo/county-intelligence/county-intelligence.service", () => ({
+  queryCountyScoresCoverage: queryCountyScoresCoverageMock,
+  queryCountyScoresDebug: queryCountyScoresDebugMock,
   queryCountyScores: queryCountyScoresMock,
+  queryCountyScoresResolution: queryCountyScoresResolutionMock,
   queryCountyScoresStatus: queryCountyScoresStatusMock,
 }));
 
 const { createApiApp } = await import("@/app");
+
+function requestLoopback(app: ReturnType<typeof createApiApp>, path: string): Promise<Response> {
+  return app.request(new Request(`http://localhost${path}`));
+}
 
 afterAll(() => {
   mock.restore();
@@ -128,6 +187,31 @@ function createDeferredCountyRow(): CountyScore {
       policy: "unknown",
       supplyTimeline: "unknown",
     },
+    powerMarketContext: {
+      balancingAuthority: null,
+      loadZone: null,
+      marketStructure: "unknown",
+      meteoZone: null,
+      operatorWeatherZone: null,
+      operatorZoneConfidence: null,
+      operatorZoneLabel: null,
+      operatorZoneType: null,
+      weatherZone: null,
+      wholesaleOperator: null,
+    },
+    retailStructure: {
+      competitiveAreaType: "unknown",
+      primaryTduOrUtility: null,
+      retailChoiceStatus: "unknown",
+      utilityContext: {
+        dominantUtilityId: null,
+        dominantUtilityName: null,
+        retailChoicePenetrationShare: null,
+        territoryType: null,
+        utilities: [],
+        utilityCount: null,
+      },
+    },
     expectedMw0To24m: 180,
     expectedMw24To60m: 70,
     recentCommissionedMw24m: 45,
@@ -151,27 +235,104 @@ function createDeferredCountyRow(): CountyScore {
     countyTaggedEventShare: null,
     policyMappingConfidence: null,
     transmissionMiles69kvPlus: null,
+    transmissionMiles138kvPlus: null,
     transmissionMiles230kvPlus: null,
+    transmissionMiles345kvPlus: null,
+    transmissionMiles500kvPlus: null,
+    transmissionMiles765kvPlus: null,
+    transmissionContext: {
+      miles138kvPlus: null,
+      miles230kvPlus: null,
+      miles345kvPlus: null,
+      miles500kvPlus: null,
+      miles69kvPlus: null,
+      miles765kvPlus: null,
+    },
     gasPipelinePresenceFlag: null,
     gasPipelineMileageCounty: null,
     fiberPresenceFlag: null,
     primaryMarketId: "silicon-valley",
+    isBorderCounty: false,
     isSeamCounty: false,
+    queueStorageMw: null,
+    queueSolarMw: null,
+    queueWindMw: null,
+    queueAvgAgeDays: null,
+    queueWithdrawalRate: null,
+    recentOnlineMw: null,
+    avgRtCongestionComponent: null,
+    p95ShadowPrice: null,
+    negativePriceHourShare: null,
+    topConstraints: [],
+    interconnectionQueue: {
+      activeMw: null,
+      avgAgeDays: null,
+      medianDaysInQueueActive: null,
+      projectCountActive: null,
+      recentOnlineMw: null,
+      solarMw: null,
+      storageMw: null,
+      windMw: null,
+      withdrawalRate: null,
+    },
+    congestionContext: {
+      avgRtCongestionComponent: null,
+      congestionProxyScore: null,
+      negativePriceHourShare: null,
+      p95ShadowPrice: null,
+      topConstraints: [],
+    },
+    sourceProvenance: {
+      congestion: null,
+      interconnectionQueue: null,
+      operatingFootprints: null,
+      retailStructure: null,
+      transmission: null,
+      utilityTerritories: null,
+      wholesaleMarkets: null,
+    },
+    publicationRunId: "county-market-pressure-20260307T000000Z",
     formulaVersion: "county-market-pressure-v1",
     inputDataVersion: "inputs-v1",
   };
 }
 
+function createFeatureCoverage(
+  overrides?: Partial<Omit<CountyScoresStatusResponse, "meta">["featureCoverage"]>
+): Omit<CountyScoresStatusResponse, "meta">["featureCoverage"] {
+  return {
+    congestion: false,
+    demand: false,
+    gridFriction: false,
+    history: false,
+    infrastructure: false,
+    interconnectionQueue: false,
+    marketSeams: false,
+    narratives: false,
+    operatingFootprints: false,
+    policy: false,
+    retailStructure: false,
+    supplyTimeline: false,
+    transmission: false,
+    utilityTerritories: false,
+    wholesaleMarkets: false,
+    ...overrides,
+  };
+}
+
 describe("county scores route", () => {
   beforeEach(() => {
+    queryCountyScoresCoverageMock.mockReset();
+    queryCountyScoresDebugMock.mockReset();
     queryCountyScoresMock.mockReset();
+    queryCountyScoresResolutionMock.mockReset();
     queryCountyScoresStatusMock.mockReset();
   });
 
   it("returns 400 when countyIds is missing", async () => {
     const app = createApiApp();
 
-    const response = await app.request("/api/geo/counties/scores");
+    const response = await requestLoopback(app, "/api/geo/counties/scores");
     const payload = await response.json();
 
     expect(response.status).toBe(400);
@@ -181,7 +342,7 @@ describe("county scores route", () => {
   it("returns 400 when countyIds includes malformed ids", async () => {
     const app = createApiApp();
 
-    const response = await app.request("/api/geo/counties/scores?countyIds=06085,abc");
+    const response = await requestLoopback(app, "/api/geo/counties/scores?countyIds=06085,abc");
     const payload = await response.json();
 
     expect(response.status).toBe(400);
@@ -202,7 +363,7 @@ describe("county scores route", () => {
       },
     });
 
-    const response = await app.request("/api/geo/counties/scores?countyIds=06085,48113");
+    const response = await requestLoopback(app, "/api/geo/counties/scores?countyIds=06085,48113");
     const payload = await response.json();
 
     expect(response.status).toBe(200);
@@ -212,6 +373,7 @@ describe("county scores route", () => {
     expect(payload.summary.blockedCountyIds).toEqual([]);
     expect(payload.meta.dataVersion).toBe("2026-03-07");
     expect(payload.meta.recordCount).toBe(1);
+    expect(payload.rows[0].publicationRunId).toBe("county-market-pressure-20260307T000000Z");
   });
 
   it("returns 503 when the county score dataset is unavailable", async () => {
@@ -224,7 +386,7 @@ describe("county scores route", () => {
       },
     });
 
-    const response = await app.request("/api/geo/counties/scores?countyIds=06085");
+    const response = await requestLoopback(app, "/api/geo/counties/scores?countyIds=06085");
     const payload = await response.json();
 
     expect(response.status).toBe(503);
@@ -241,7 +403,7 @@ describe("county scores route", () => {
       },
     });
 
-    const response = await app.request("/api/geo/counties/scores?countyIds=06085");
+    const response = await requestLoopback(app, "/api/geo/counties/scores?countyIds=06085");
     const payload = await response.json();
 
     expect(response.status).toBe(503);
@@ -277,20 +439,17 @@ describe("county scores route", () => {
           "narratives",
         ],
         missingFeatureFamilies: ["grid_friction", "policy", "supply_timeline"],
-        featureCoverage: {
+        featureCoverage: createFeatureCoverage({
           demand: true,
-          gridFriction: false,
           history: true,
           infrastructure: true,
           marketSeams: true,
           narratives: true,
-          policy: false,
-          supplyTimeline: false,
-        },
+        }),
       },
     });
 
-    const response = await app.request("/api/geo/counties/scores/status");
+    const response = await requestLoopback(app, "/api/geo/counties/scores/status");
     const payload = await response.json();
 
     expect(response.status).toBe(200);
@@ -305,6 +464,116 @@ describe("county scores route", () => {
       "narratives",
     ]);
     expect(payload.featureCoverage.demand).toBe(true);
+  });
+
+  it("returns county field coverage diagnostics", async () => {
+    const app = createApiApp();
+    queryCountyScoresCoverageMock.mockResolvedValue({
+      ok: true,
+      value: {
+        publicationRunId: "county-market-pressure-20260324T000000Z",
+        dataVersion: "2026-03-24",
+        rowCount: 3221,
+        fields: [
+          {
+            fieldName: "operatorZoneLabel",
+            populatedCount: 1719,
+            totalCount: 3221,
+          },
+        ],
+        byWholesaleOperator: [
+          {
+            avgRtCongestionComponentCount: 550,
+            countyCount: 550,
+            meteoZoneCount: 550,
+            operatorWeatherZoneCount: 0,
+            operatorZoneLabelCount: 503,
+            p95ShadowPriceCount: 550,
+            primaryTduOrUtilityCount: 550,
+            wholesaleOperator: "PJM",
+          },
+        ],
+      },
+    });
+
+    const response = await requestLoopback(app, "/api/geo/counties/scores/coverage");
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.rowCount).toBe(3221);
+    expect(payload.fields[0].fieldName).toBe("operatorZoneLabel");
+    expect(payload.byWholesaleOperator[0].wholesaleOperator).toBe("PJM");
+  });
+
+  it("returns county queue resolution diagnostics with snapshot samples", async () => {
+    const app = createApiApp();
+    queryCountyScoresResolutionMock.mockResolvedValue({
+      ok: true,
+      value: {
+        publicationRunId: "county-market-pressure-20260324T000000Z",
+        dataVersion: "2026-03-24",
+        effectiveDate: "2026-03-24",
+        unresolvedProjectCount: 901,
+        unresolvedSnapshotCount: 901,
+        bySource: [
+          {
+            sourceSystem: "pjm_planning_queue",
+            totalProjects: 9251,
+            unresolvedProjects: 901,
+            totalSnapshots: 8241,
+            unresolvedSnapshots: 901,
+            directResolutionCount: 300,
+            derivedResolutionCount: 1200,
+            manualResolutionCount: 12,
+            lowConfidenceResolutionCount: 42,
+            samplePoiLabels: ["MASON 500"],
+            sampleLocationLabels: ["Project 123"],
+            sampleSnapshotPoiLabels: ["MASON 500"],
+            sampleSnapshotLocationLabels: ["Project 123"],
+          },
+        ],
+      },
+    });
+
+    const response = await requestLoopback(app, "/api/geo/counties/scores/resolution");
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.unresolvedProjectCount).toBe(901);
+    expect(payload.bySource[0].sampleSnapshotPoiLabels).toEqual(["MASON 500"]);
+  });
+
+  it("returns county debug diagnostics", async () => {
+    const app = createApiApp();
+    queryCountyScoresDebugMock.mockResolvedValue({
+      ok: true,
+      value: {
+        publicationRunId: "county-market-pressure-20260324T000000Z",
+        dataVersion: "2026-03-24",
+        counties: [
+          {
+            countyFips: "06085",
+            congestionSnapshot: {
+              avgRtCongestionComponent: 4.2,
+              negativePriceHourShare: 0.01,
+              p95ShadowPrice: 55.3,
+              sourceAsOfDate: "2026-03-24",
+            },
+            operatorZones: [],
+            queuePoiReferences: [],
+            queueResolutions: [],
+            score: createDeferredCountyRow(),
+          },
+        ],
+      },
+    });
+
+    const response = await requestLoopback(app, "/api/geo/counties/scores/debug?countyIds=06085");
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.counties).toHaveLength(1);
+    expect(payload.counties[0].countyFips).toBe("06085");
   });
 
   it("returns unpublished meta version when county status has no publication", async () => {
@@ -330,20 +599,11 @@ describe("county scores route", () => {
         freshCountyCount: 0,
         availableFeatureFamilies: [],
         missingFeatureFamilies: [],
-        featureCoverage: {
-          demand: false,
-          gridFriction: false,
-          history: false,
-          infrastructure: false,
-          marketSeams: false,
-          narratives: false,
-          policy: false,
-          supplyTimeline: false,
-        },
+        featureCoverage: createFeatureCoverage(),
       },
     });
 
-    const response = await app.request("/api/geo/counties/scores/status");
+    const response = await requestLoopback(app, "/api/geo/counties/scores/status");
     const payload = await response.json();
 
     expect(response.status).toBe(200);
@@ -361,7 +621,7 @@ describe("county scores route", () => {
       },
     });
 
-    const response = await app.request("/api/geo/counties/scores/status");
+    const response = await requestLoopback(app, "/api/geo/counties/scores/status");
     const payload = await response.json();
 
     expect(response.status).toBe(503);

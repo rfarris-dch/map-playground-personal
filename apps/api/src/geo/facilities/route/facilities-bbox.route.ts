@@ -54,6 +54,22 @@ function readOptionalNumericHeader(value: string | undefined): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function buildFacilitiesDiagnosticHeaders(args: {
+  readonly cacheStatus: string;
+  readonly mappingTimeMs: number;
+  readonly requestedDatasetVersion: string | null;
+  readonly responseBytes: number;
+  readonly sqlTimeMs: number;
+}): Record<string, string | undefined> {
+  return {
+    [ApiHeaders.cacheStatus]: args.cacheStatus,
+    [ApiHeaders.facilitiesMappingTimeMs]: String(args.mappingTimeMs),
+    [ApiHeaders.facilitiesRequestedDatasetVersion]: args.requestedDatasetVersion ?? undefined,
+    [ApiHeaders.facilitiesResponseBytes]: String(args.responseBytes),
+    [ApiHeaders.facilitiesSqlTimeMs]: String(args.sqlTimeMs),
+  };
+}
+
 export function registerFacilitiesBboxRoute<E extends Env>(app: Hono<E>): void {
   registerRouteTimeoutProfile(ApiRoutes.facilities, "facilities");
 
@@ -157,6 +173,7 @@ export function registerFacilitiesBboxRoute<E extends Env>(app: Hono<E>): void {
         }).catch((error) => {
           recordFacilitiesBboxMetrics({
             boundDatasetVersion: effectiveDatasetVersion,
+            cacheStatus: null,
             canonicalBboxKey,
             effectiveLimit: limit,
             interactionType,
@@ -197,8 +214,17 @@ export function registerFacilitiesBboxRoute<E extends Env>(app: Hono<E>): void {
           originRequestId: cacheResult.entry.originRequestId,
         });
         const mappingTimeMs = cacheResult.cacheStatus === "miss" ? freshMappingTimeMs : 0;
+        const requestedVersionHeaderValue =
+          versionBinding.requestedDatasetVersion ?? cacheResult.entry.datasetVersion;
         const responseBytes = cacheResult.entry.payloadBytes;
         const sqlTimeMs = cacheResult.cacheStatus === "miss" ? freshSqlTimeMs : 0;
+        const diagnosticHeaders = buildFacilitiesDiagnosticHeaders({
+          cacheStatus: responseHeaders.cacheStatus,
+          mappingTimeMs,
+          requestedDatasetVersion: requestedVersionHeaderValue,
+          responseBytes,
+          sqlTimeMs,
+        });
         const ifNoneMatchHeader = honoContext.req.header("if-none-match");
         if (
           matchesIfNoneMatch({
@@ -215,6 +241,15 @@ export function registerFacilitiesBboxRoute<E extends Env>(app: Hono<E>): void {
               [ApiHeaders.datasetVersion]: responseHeaders.datasetVersion,
               [ApiHeaders.originRequestId]: responseHeaders.originRequestId,
               [ApiHeaders.requestId]: requestId,
+              [ApiHeaders.facilitiesMappingTimeMs]:
+                diagnosticHeaders[ApiHeaders.facilitiesMappingTimeMs] ?? "0",
+              [ApiHeaders.facilitiesRequestedDatasetVersion]:
+                diagnosticHeaders[ApiHeaders.facilitiesRequestedDatasetVersion] ??
+                responseHeaders.datasetVersion,
+              [ApiHeaders.facilitiesResponseBytes]:
+                diagnosticHeaders[ApiHeaders.facilitiesResponseBytes] ?? "0",
+              [ApiHeaders.facilitiesSqlTimeMs]:
+                diagnosticHeaders[ApiHeaders.facilitiesSqlTimeMs] ?? "0",
               ETag: responseHeaders.etag,
               Vary: getFacilitiesProtectedCacheVary(),
             },
@@ -222,6 +257,7 @@ export function registerFacilitiesBboxRoute<E extends Env>(app: Hono<E>): void {
         }
         recordFacilitiesBboxMetrics({
           boundDatasetVersion: effectiveDatasetVersion,
+          cacheStatus: cacheResult.cacheStatus,
           canonicalBboxKey,
           effectiveLimit: limit,
           interactionType,
@@ -247,6 +283,13 @@ export function registerFacilitiesBboxRoute<E extends Env>(app: Hono<E>): void {
             [ApiHeaders.dataVersion]: responseHeaders.dataVersion,
             [ApiHeaders.datasetVersion]: responseHeaders.datasetVersion,
             [ApiHeaders.originRequestId]: responseHeaders.originRequestId,
+            [ApiHeaders.facilitiesMappingTimeMs]:
+              diagnosticHeaders[ApiHeaders.facilitiesMappingTimeMs],
+            [ApiHeaders.facilitiesRequestedDatasetVersion]:
+              diagnosticHeaders[ApiHeaders.facilitiesRequestedDatasetVersion],
+            [ApiHeaders.facilitiesResponseBytes]:
+              diagnosticHeaders[ApiHeaders.facilitiesResponseBytes],
+            [ApiHeaders.facilitiesSqlTimeMs]: diagnosticHeaders[ApiHeaders.facilitiesSqlTimeMs],
             ETag: responseHeaders.etag,
             Vary: getFacilitiesProtectedCacheVary(),
           }

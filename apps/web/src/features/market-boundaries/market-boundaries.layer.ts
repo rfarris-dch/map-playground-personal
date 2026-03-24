@@ -398,6 +398,12 @@ export function mountMarketBoundaryLayer(
   function onLoad(): void {
     state.ready = true;
     ensureLayer();
+    applyVisibility();
+
+    if (!state.visible) {
+      return;
+    }
+
     refreshSourceData().catch(() => {
       clearHover();
       state.allFeatures = [];
@@ -405,7 +411,6 @@ export function mountMarketBoundaryLayer(
       options.onFacetOptionsChange?.(layerId, []);
       state.dataLoaded = false;
     });
-    applyVisibility();
   }
 
   map.on("load", onLoad);

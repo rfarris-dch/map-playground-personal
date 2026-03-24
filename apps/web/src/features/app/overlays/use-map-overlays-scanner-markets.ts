@@ -206,7 +206,7 @@ export function useMapOverlaysScannerMarkets(
           scannerMarketsViewportKey.value = snapshot.canonicalViewportKey;
           onMapMoveEnd();
         },
-        { emitCurrent: true }
+        { emitCurrent: true, priority: "background" }
       );
     },
     { immediate: true }

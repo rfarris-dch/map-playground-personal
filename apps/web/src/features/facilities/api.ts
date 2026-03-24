@@ -19,7 +19,10 @@ import {
   FacilitiesFeatureCollectionSchema,
 } from "@map-migration/http-contracts/facilities-http";
 import { Effect } from "effect";
-import { recordAppPerformanceCounter } from "@/features/app/diagnostics/app-performance.service";
+import {
+  recordAppPerformanceCounter,
+  recordAppPerformanceMeasurement,
+} from "@/features/app/diagnostics/app-performance.service";
 import type {
   FacilitiesBboxRequest,
   FacilitiesViewportRequestContext,
@@ -54,6 +57,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function readFiniteNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function readFiniteHeaderNumber(headers: Headers, name: string): number | null {
+  const rawValue = headers.get(name);
+  if (typeof rawValue !== "string") {
+    return null;
+  }
+
+  const parsed = Number(rawValue.trim());
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function readNonEmptyString(value: unknown): string | null {
@@ -256,6 +269,61 @@ function buildFacilitiesViewportHeaders(
   };
 }
 
+function recordFacilitiesBboxResponseDiagnostics(args: {
+  readonly datasetVersion: string;
+  readonly perspective: FacilitiesBboxRequest["perspective"];
+  readonly response: Response;
+}): void {
+  const cacheStatus = readNonEmptyString(args.response.headers.get(ApiHeaders.cacheStatus));
+  if (cacheStatus !== null) {
+    recordAppPerformanceCounter("facilities.response.cache-status", {
+      cacheStatus,
+      perspective: args.perspective,
+    });
+  }
+
+  const mappingTimeMs = readFiniteHeaderNumber(
+    args.response.headers,
+    ApiHeaders.facilitiesMappingTimeMs
+  );
+  if (mappingTimeMs !== null) {
+    recordAppPerformanceMeasurement("facilities.response.mapping-time", mappingTimeMs, {
+      cacheStatus,
+      perspective: args.perspective,
+    });
+  }
+
+  const requestedDatasetVersion = readNonEmptyString(
+    args.response.headers.get(ApiHeaders.facilitiesRequestedDatasetVersion)
+  );
+  if (requestedDatasetVersion !== null && requestedDatasetVersion !== args.datasetVersion) {
+    recordAppPerformanceCounter("facilities.response.dataset-version-mismatch", {
+      actualDatasetVersion: args.datasetVersion,
+      perspective: args.perspective,
+      requestedDatasetVersion,
+    });
+  }
+
+  const responseBytes = readFiniteHeaderNumber(
+    args.response.headers,
+    ApiHeaders.facilitiesResponseBytes
+  );
+  if (responseBytes !== null) {
+    recordAppPerformanceMeasurement("facilities.response.payload-bytes", responseBytes, {
+      cacheStatus,
+      perspective: args.perspective,
+    });
+  }
+
+  const sqlTimeMs = readFiniteHeaderNumber(args.response.headers, ApiHeaders.facilitiesSqlTimeMs);
+  if (sqlTimeMs !== null) {
+    recordAppPerformanceMeasurement("facilities.response.sql-time", sqlTimeMs, {
+      cacheStatus,
+      perspective: args.perspective,
+    });
+  }
+}
+
 function awaitInflightFacilitiesBboxRequestEffect(
   request: Promise<FacilitiesBboxEffectSuccess>,
   perspective: FacilitiesBboxRequest["perspective"],
@@ -338,6 +406,16 @@ function fetchFacilitiesByResolvedDatasetVersionEffect(
       {
         retryProfile: facilitiesInteractiveRetryProfile,
       }
+    ).pipe(
+      Effect.tap((result) =>
+        Effect.sync(() => {
+          recordFacilitiesBboxResponseDiagnostics({
+            datasetVersion,
+            perspective: args.perspective,
+            response: result.response,
+          });
+        })
+      )
     )
   ).finally(() => {
     const activeRequest = readInflightFacilitiesBboxRequests().get(url);

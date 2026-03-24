@@ -12,8 +12,12 @@ export const FacilitiesPerformanceMeasurementSchema = z.object({
 export const FacilitiesPerformancePerspectiveSchema = z.object({
   abortedCount: z.number().int().nonnegative(),
   boundDatasetVersion: z.string().nullable(),
+  cacheHitCount: z.number().int().nonnegative(),
+  cacheMissCount: z.number().int().nonnegative(),
+  cacheStaleCount: z.number().int().nonnegative(),
   completedCount: z.number().int().nonnegative(),
   failedCount: z.number().int().nonnegative(),
+  lastCacheStatus: z.enum(["miss", "redis-hit", "stale"]).nullable(),
   lastInteractionType: z.string().nullable(),
   lastCanonicalBboxKey: z.string().nullable(),
   lastEffectiveLimit: z.number().int().nullable(),

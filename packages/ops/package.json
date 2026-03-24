@@ -6,14 +6,15 @@
   "scripts": {
     "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "echo 'no tests yet'",
+    "test": "bun test",
     "lint": "biome check .",
     "dev": "tsc -w -p tsconfig.json"
   },
   "dependencies": {
     "@effect/platform": "^0.94.5",
     "@effect/platform-bun": "^0.87.1",
-    "effect": "^3.19.19"
+    "effect": "^3.19.19",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/node": "^22.10.2"
@@ -26,6 +27,14 @@
     "./etl/cli-config": {
       "types": "./dist/etl/cli-config.d.ts",
       "default": "./dist/etl/cli-config.js"
+    },
+    "./etl/county-power-public-us": {
+      "types": "./dist/etl/county-power-public-us.d.ts",
+      "default": "./dist/etl/county-power-public-us.js"
+    },
+    "./etl/county-power-sync": {
+      "types": "./dist/etl/county-power-sync.d.ts",
+      "default": "./dist/etl/county-power-sync.js"
     },
     "./etl/command-runner": {
       "types": "./dist/etl/command-runner.d.ts",

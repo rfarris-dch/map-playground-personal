@@ -160,6 +160,12 @@ export function useSpatialAnalysisPanelState(props: SpatialAnalysisPanelProps) {
   const summaryChips = computed(() =>
     [
       {
+        dotClass: "bg-indigo-500",
+        label: "Counties",
+        value: countyScores.value?.summary.requestedCountyIds.length ?? countySelectionCount.value,
+        visible: hasCountyScores.value,
+      },
+      {
         dotClass: "bg-colocation",
         label: "Colocation",
         value: panelSummary.value.colocation.count,
@@ -182,12 +188,6 @@ export function useSpatialAnalysisPanelState(props: SpatialAnalysisPanelProps) {
         label: "Parcels",
         value: panelSummary.value.parcelSelection.count,
         visible: true,
-      },
-      {
-        dotClass: "bg-indigo-500",
-        label: "Counties",
-        value: countyScores.value?.summary.requestedCountyIds.length ?? countySelectionCount.value,
-        visible: hasCountyScores.value,
       },
     ].filter((chip) => chip.visible)
   );
@@ -272,11 +272,11 @@ export function useSpatialAnalysisPanelState(props: SpatialAnalysisPanelProps) {
     if (hasHistory.value) {
       return "history";
     }
-    if (hasFacilities.value) {
-      return "facilities";
-    }
     if (hasCountyScores.value) {
       return "counties";
+    }
+    if (hasFacilities.value) {
+      return "facilities";
     }
     if (hasParcels.value) {
       return "parcels";

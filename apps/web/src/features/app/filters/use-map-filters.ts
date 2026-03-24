@@ -238,18 +238,16 @@ export function useMapFilters(): UseMapFiltersResult {
     const nextMarkets = new Set(knownMarkets.value);
 
     for (const feature of features) {
-      const { providerName, city, state: featureState } = feature.properties;
+      const { city, marketName, providerName, stateAbbrev } = feature.properties;
 
       if (providerName && !nextProviders.has(providerName)) {
         nextProviders.add(providerName);
         providersChanged = true;
       }
-      if (city && featureState) {
-        const marketLabel = `${city}, ${featureState}`;
-        if (!nextMarkets.has(marketLabel)) {
-          nextMarkets.add(marketLabel);
-          marketsChanged = true;
-        }
+      const marketLabel = marketName ?? (city && stateAbbrev ? `${city}, ${stateAbbrev}` : null);
+      if (marketLabel !== null && !nextMarkets.has(marketLabel)) {
+        nextMarkets.add(marketLabel);
+        marketsChanged = true;
       }
     }
 

@@ -4,6 +4,8 @@ export type MapInteractionEventType = "load" | "moveend";
 
 export type MapInteractionType = "initial" | "pan" | "rotate-only" | "zoom";
 
+export type MapInteractionTaskPriority = "background" | "critical" | "idle";
+
 export interface MapInteractionSnapshot {
   readonly bearing: number;
   readonly bearingDelta: number;
@@ -22,6 +24,7 @@ export type MapInteractionListener = (snapshot: MapInteractionSnapshot) => void;
 
 export interface MapInteractionSubscribeOptions {
   readonly emitCurrent?: boolean;
+  readonly priority?: MapInteractionTaskPriority;
 }
 
 export interface MapInteractionCoordinator {

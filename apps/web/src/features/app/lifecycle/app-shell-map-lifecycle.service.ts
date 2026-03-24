@@ -2,6 +2,8 @@ import {
   type ScopedEffectHandle,
   startBrowserScopedEffect,
 } from "@map-migration/core-runtime/browser";
+import type { MapContextTransfer } from "@map-migration/http-contracts/map-context-transfer";
+import type { MapViewport } from "@map-migration/map-engine";
 import {
   destroyBoundaryRuntime,
   initializeBoundaryRuntime,
@@ -24,6 +26,29 @@ import {
   resetMarketBoundaryRuntime,
 } from "@/features/app/market-boundary/app-shell-market-boundary-runtime.service";
 import { createLayerRuntime } from "@/features/layers/layer-runtime.service";
+
+function toMapViewport(viewport: MapContextTransfer["viewport"] | undefined): MapViewport | null {
+  if (typeof viewport === "undefined") {
+    return null;
+  }
+
+  if (viewport.type === "bounds") {
+    return {
+      ...(typeof viewport.bearing === "number" ? { bearing: viewport.bearing } : {}),
+      bounds: viewport.bounds,
+      ...(typeof viewport.pitch === "number" ? { pitch: viewport.pitch } : {}),
+      type: "bounds",
+    };
+  }
+
+  return {
+    ...(typeof viewport.bearing === "number" ? { bearing: viewport.bearing } : {}),
+    center: viewport.center,
+    ...(typeof viewport.pitch === "number" ? { pitch: viewport.pitch } : {}),
+    type: "center",
+    zoom: viewport.zoom,
+  };
+}
 
 export async function initializeMapLifecycleRuntime(
   options: UseAppShellMapLifecycleOptions
@@ -51,6 +76,10 @@ export async function initializeMapLifecycleRuntime(
 
   options.runtime.disposeMapRuntime.value = mapSetup.dispose;
   options.runtime.map.value = mapSetup.value.map;
+  const initialViewport = toMapViewport(options.initialViewport);
+  if (initialViewport !== null) {
+    mapSetup.value.map.setViewport(initialViewport);
+  }
   options.runtime.interactionCoordinator.value = createMapInteractionCoordinator(
     mapSetup.value.map
   );
@@ -73,8 +102,11 @@ export async function initializeMapLifecycleRuntime(
 }
 
 export function resetMapLifecycleInteractions(options: UseAppShellMapLifecycleOptions): void {
+  options.actions.clearSelectedCountyPowerStory();
   options.actions.clearSelectedFacility();
   options.actions.clearSelectedParcel();
+  options.layers.countyPowerStoryController.value?.controller.setSelectedCounty(null);
+  options.state.hoveredCountyPowerStory.value = null;
   options.layers.facilitiesHoverController.value?.clear();
   options.state.hoveredFacility.value = null;
   options.state.hoveredFacilityCluster.value = null;

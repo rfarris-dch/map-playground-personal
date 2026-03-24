@@ -60,6 +60,14 @@ function resolveDisplayName(name: string, fallback: string): string {
   return "-";
 }
 
+function readNullableFacilityNumber(value: number | null | undefined): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function readNullableFacilityText(value: string | null | undefined): string | null {
+  return typeof value === "string" ? value : null;
+}
+
 function normalizeCountyFips(value: string | null | undefined): string | null {
   if (typeof value !== "string") {
     return null;
@@ -78,10 +86,10 @@ function toSelectionFacility(
   }
 
   return {
-    address: feature.properties.address,
-    availablePowerMw: feature.properties.availablePowerMw,
-    city: feature.properties.city,
-    commissionedPowerMw: feature.properties.commissionedPowerMw,
+    address: readNullableFacilityText(feature.properties.address),
+    availablePowerMw: readNullableFacilityNumber(feature.properties.availablePowerMw),
+    city: readNullableFacilityText(feature.properties.city),
+    commissionedPowerMw: readNullableFacilityNumber(feature.properties.commissionedPowerMw),
     commissionedSemantic: feature.properties.commissionedSemantic,
     coordinates,
     countyFips: normalizeCountyFips(feature.properties.countyFips),
@@ -89,14 +97,16 @@ function toSelectionFacility(
     facilityName: resolveDisplayName(feature.properties.facilityName, "Unknown facility"),
     leaseOrOwn: feature.properties.leaseOrOwn,
     perspective: feature.properties.perspective,
-    plannedPowerMw: feature.properties.plannedPowerMw,
+    plannedPowerMw: readNullableFacilityNumber(feature.properties.plannedPowerMw),
     providerId: feature.properties.providerId,
     providerName: resolveDisplayName(feature.properties.providerName, "Unknown provider"),
-    squareFootage: feature.properties.squareFootage,
-    state: feature.properties.state,
-    stateAbbrev: feature.properties.stateAbbrev,
-    statusLabel: feature.properties.statusLabel,
-    underConstructionPowerMw: feature.properties.underConstructionPowerMw,
+    squareFootage: readNullableFacilityNumber(feature.properties.squareFootage),
+    state: readNullableFacilityText(feature.properties.state),
+    stateAbbrev: readNullableFacilityText(feature.properties.stateAbbrev),
+    statusLabel: readNullableFacilityText(feature.properties.statusLabel),
+    underConstructionPowerMw: readNullableFacilityNumber(
+      feature.properties.underConstructionPowerMw
+    ),
   };
 }
 

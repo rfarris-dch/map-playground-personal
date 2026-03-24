@@ -15,12 +15,14 @@ import { timeout } from "hono/timeout";
 import { createMapAppAuthMiddleware, registerAuthRoute } from "@/auth/auth-route.service";
 import { parsePositiveIntFlag } from "@/config/env-parsing.service";
 import { assertPostgresReady } from "@/db/postgres";
+import { registerAppPerformanceRoute } from "@/debug/app-performance.route";
 import { registerEffectMetricsRoute } from "@/effect/effect-metrics.route";
 import { registerAnalysisHistoryRoute } from "@/geo/analysis-history/analysis-history.route";
 import { registerAnalysisSummaryRoute } from "@/geo/analysis-summary/analysis-summary.route";
 import { registerBoundariesRoute } from "@/geo/boundaries/boundaries.route";
 import { registerCompaniesRoute } from "@/geo/companies/companies.route";
 import { registerCountyIntelligenceRoute } from "@/geo/county-intelligence/county-intelligence.route";
+import { registerCountyPowerStoryRoute } from "@/geo/county-power-story/county-power-story.route";
 import { registerFacilitiesRoute } from "@/geo/facilities/facilities.route";
 import { registerFiberLocatorRoute } from "@/geo/fiber-locator/fiber-locator.route";
 import { registerHyperscaleRoute } from "@/geo/hyperscale/hyperscale.route";
@@ -178,6 +180,7 @@ export function createApiApp(options: CreateApiAppOptions = {}): Hono {
   });
 
   app.use("/api/geo/*", createMapAppAuthMiddleware());
+  app.use(ApiRoutes.appPerformanceDebug, createMapAppAuthMiddleware());
 
   app.onError((error, c) => {
     const requestIdValue = resolveRequestId(c, "api");
@@ -219,6 +222,7 @@ export function createApiApp(options: CreateApiAppOptions = {}): Hono {
   );
 
   registerAuthRoute(app);
+  registerAppPerformanceRoute(app);
   registerEffectMetricsRoute(app);
   registerPipelineStatusRoute(app);
   registerFacilitiesRoute(app);
@@ -231,6 +235,7 @@ export function createApiApp(options: CreateApiAppOptions = {}): Hono {
   registerParcelsRoute(app);
   registerBoundariesRoute(app);
   registerCountyIntelligenceRoute(app);
+  registerCountyPowerStoryRoute(app);
   registerMarketBoundariesRoute(app);
   registerMarketsRoute(app);
   registerProvidersRoute(app);

@@ -1,4 +1,5 @@
 import type { FacilitiesPerformanceSnapshot } from "@map-migration/http-contracts/facilities-performance-http";
+import type { FacilitiesCacheStatus } from "@/geo/facilities/route/facilities-cache.types";
 
 interface MeasurementAccumulator {
   count: number;
@@ -11,8 +12,12 @@ interface MeasurementAccumulator {
 interface PerspectiveAccumulator {
   abortedCount: number;
   boundDatasetVersion: string | null;
+  cacheHitCount: number;
+  cacheMissCount: number;
+  cacheStaleCount: number;
   completedCount: number;
   failedCount: number;
+  lastCacheStatus: FacilitiesCacheStatus | null;
   lastCanonicalBboxKey: string | null;
   lastEffectiveLimit: number | null;
   lastInteractionType: string | null;
@@ -50,6 +55,7 @@ interface FacilitiesPerformanceState {
 
 export interface RecordFacilitiesBboxMetricsArgs {
   readonly boundDatasetVersion: string;
+  readonly cacheStatus: FacilitiesCacheStatus | null;
   readonly canonicalBboxKey: string;
   readonly effectiveLimit: number;
   readonly interactionType: string | null;
@@ -81,8 +87,12 @@ function createPerspectiveAccumulator(): PerspectiveAccumulator {
   return {
     abortedCount: 0,
     boundDatasetVersion: null,
+    cacheHitCount: 0,
+    cacheMissCount: 0,
+    cacheStaleCount: 0,
     completedCount: 0,
     failedCount: 0,
+    lastCacheStatus: null,
     lastInteractionType: null,
     lastCanonicalBboxKey: null,
     lastEffectiveLimit: null,
@@ -207,6 +217,7 @@ export function recordFacilitiesBboxMetrics(args: RecordFacilitiesBboxMetricsArg
   const perspective = getPerspectiveAccumulator(args.perspective);
   perspective.requestCount += 1;
   perspective.boundDatasetVersion = args.boundDatasetVersion;
+  perspective.lastCacheStatus = args.cacheStatus;
   perspective.lastCanonicalBboxKey = args.canonicalBboxKey;
   perspective.lastEffectiveLimit = args.effectiveLimit;
   perspective.lastInteractionType = args.interactionType;
@@ -223,6 +234,14 @@ export function recordFacilitiesBboxMetrics(args: RecordFacilitiesBboxMetricsArg
     perspective.abortedCount += 1;
   } else {
     perspective.failedCount += 1;
+  }
+
+  if (args.cacheStatus === "redis-hit") {
+    perspective.cacheHitCount += 1;
+  } else if (args.cacheStatus === "stale") {
+    perspective.cacheStaleCount += 1;
+  } else if (args.cacheStatus === "miss") {
+    perspective.cacheMissCount += 1;
   }
 
   updateMeasurement(perspective.routeLatencyMs, args.routeLatencyMs);
@@ -250,8 +269,12 @@ export function getFacilitiesPerformanceSnapshot(): FacilitiesPerformanceSnapsho
       {
         abortedCount: accumulator.abortedCount,
         boundDatasetVersion: accumulator.boundDatasetVersion,
+        cacheHitCount: accumulator.cacheHitCount,
+        cacheMissCount: accumulator.cacheMissCount,
+        cacheStaleCount: accumulator.cacheStaleCount,
         completedCount: accumulator.completedCount,
         failedCount: accumulator.failedCount,
+        lastCacheStatus: accumulator.lastCacheStatus,
         lastInteractionType: accumulator.lastInteractionType,
         lastCanonicalBboxKey: accumulator.lastCanonicalBboxKey,
         lastEffectiveLimit: accumulator.lastEffectiveLimit,

@@ -172,21 +172,27 @@ export function mapFacilitiesRowsToFeatures(
         facilityName: row.facility_name,
         perspective,
       }),
-      countyFips: row.county_fips,
       stateAbbrev: readNullableText(row.state_abbrev),
       commissionedPowerMw: readNullableNumber(row.commissioned_power_mw),
       plannedPowerMw: readNullableNumber(row.planned_power_mw),
       underConstructionPowerMw: readNullableNumber(row.under_construction_power_mw),
       availablePowerMw: readNullableNumber(row.available_power_mw),
-      squareFootage: readNullableNumber(row.square_footage),
       commissionedSemantic: readCommissionedSemantic(row.commissioned_semantic),
       leaseOrOwn: readLeaseOrOwn(row.lease_or_own),
       statusLabel: readNullableText(row.status_label),
-      facilityCode: readNullableText(row.facility_code),
-      address: readNullableText(row.address),
       city: readNullableText(row.city),
-      state: readNullableText(row.state),
       marketName: readNullableText(row.market_name),
+      ...(typeof row.county_fips !== "undefined"
+        ? { countyFips: readNullableText(row.county_fips) }
+        : {}),
+      ...(typeof row.square_footage !== "undefined"
+        ? { squareFootage: readNullableNumber(row.square_footage) }
+        : {}),
+      ...(typeof row.facility_code !== "undefined"
+        ? { facilityCode: readNullableText(row.facility_code) }
+        : {}),
+      ...(typeof row.address !== "undefined" ? { address: readNullableText(row.address) } : {}),
+      ...(typeof row.state !== "undefined" ? { state: readNullableText(row.state) } : {}),
     },
   }));
 }

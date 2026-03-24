@@ -13,6 +13,10 @@ import type { MapFiltersState } from "@/features/app/filters/map-filters.types";
 import type { MapInteractionCoordinator } from "@/features/app/interaction/map-interaction.types";
 import type { BasemapLayerId, BasemapVisibilityState } from "@/features/basemap/basemap.types";
 import type { BoundaryLayerId } from "@/features/boundaries/boundaries.types";
+import type {
+  CountyPowerStoryId,
+  CountyPowerStoryVisibilityState,
+} from "@/features/county-power-story/county-power-story.types";
 import type { FacilitiesViewMode } from "@/features/facilities/facilities.types";
 import type { LayerRuntimeSnapshot } from "@/features/layers/layer-runtime.types";
 import type { PowerLayerId } from "@/features/power/power.types";
@@ -21,6 +25,7 @@ export interface UseAppShellUrlStateOptions {
   readonly basemapVisibility: ShallowRef<BasemapVisibilityState>;
   readonly boundaryFacetSelection: ShallowRef<BoundaryFacetSelectionState>;
   readonly boundaryVisibility: ShallowRef<BoundaryVisibilityState>;
+  readonly countyPowerStoryVisibility: ShallowRef<CountyPowerStoryVisibilityState>;
   readonly currentSurface: ComputedRef<MapContextSurface>;
   readonly fiberVisibility: ShallowRef<FiberVisibilityState>;
   readonly floodVisibility: ShallowRef<FloodVisibilityState>;
@@ -43,6 +48,11 @@ export interface UseAppShellUrlStateOptions {
     selectedRegionIds: readonly string[] | null
   ) => void;
   readonly setBoundaryVisible: (boundaryId: BoundaryLayerId, visible: boolean) => void;
+  readonly setCountyPowerStoryThreeDimensionalEnabled: (enabled: boolean) => void;
+  readonly setCountyPowerStoryVisible: (
+    storyId: CountyPowerStoryId,
+    visible: boolean
+  ) => Promise<void>;
   readonly setFiberLayerVisibility: (
     lineId: import("@/features/fiber-locator/fiber-locator.types").FiberLocatorLineId,
     visible: boolean

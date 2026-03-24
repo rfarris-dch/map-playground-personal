@@ -39,10 +39,16 @@ export function useAppShellRuntime(
     basemapLayerController: state.basemapLayerController,
     boundaryControllers: state.boundaryControllers,
     boundaryFacetSelection: state.boundaryFacetSelection,
+    countyPowerStoryController: state.countyPowerStoryController,
+    countyPowerStoryVisibility: state.countyPowerStoryVisibility,
+    clearCountyPowerStoryHover: () => {
+      state.hoveredCountyPowerStory.value = null;
+    },
     clearPowerHover: () => {
       state.powerHoverController.value?.clear();
       state.hoveredPower.value = null;
     },
+    clearSelectedCountyPowerStory: selection.clearSelectedCountyPowerStory,
     clearSelectedParcel: selection.clearSelectedParcel,
     gasPipelineController: state.gasPipelineController,
     layerRuntime: state.layerRuntime,
@@ -91,8 +97,10 @@ export function useAppShellRuntime(
 
   const mapLifecycle = useAppShellMapLifecycle({
     actions: {
+      clearSelectedCountyPowerStory: selection.clearSelectedCountyPowerStory,
       clearSelectedFacility: selection.clearSelectedFacility,
       clearSelectedParcel: selection.clearSelectedParcel,
+      setSelectedCountyPowerStory: selection.setSelectedCountyPowerStory,
       setSelectedFacility: selection.setSelectedFacility,
       setSelectedParcel: selection.setSelectedParcel,
     },
@@ -111,6 +119,7 @@ export function useAppShellRuntime(
     readInitialUserVisibleLayerIds: () =>
       resolveUserVisibleLayerIds({
         boundaryVisibility: visibility.boundaryVisibility.value,
+        countyPowerStoryVisibility: state.countyPowerStoryVisibility.value,
         fiberVisibility: fiber.visibleFiberLayers.value,
         floodVisibility: visibility.floodVisibility.value,
         gasPipelineVisible: visibility.gasPipelineVisible.value,
@@ -123,6 +132,7 @@ export function useAppShellRuntime(
       }),
     layers: {
       boundaryControllers: state.boundaryControllers,
+      countyPowerStoryController: state.countyPowerStoryController,
       marketBoundaryControllers: state.marketBoundaryControllers,
       environmentalStressController: state.environmentalStressController,
       facilitiesControllers: state.facilitiesControllers,
@@ -151,8 +161,10 @@ export function useAppShellRuntime(
       boundaryFacetSelection: state.boundaryFacetSelection,
       boundaryHoverByLayer: state.boundaryHoverByLayer,
       colocationViewportFeatures: state.colocationViewportFeatures,
+      countyPowerStoryVisibility: state.countyPowerStoryVisibility,
       facilitiesStatus: state.facilitiesStatus,
       hoveredBoundary: state.hoveredBoundary,
+      hoveredCountyPowerStory: state.hoveredCountyPowerStory,
       hoveredFacility: state.hoveredFacility,
       clusterClickSignal: state.clusterClickSignal,
       hoveredFacilityCluster: state.hoveredFacilityCluster,
@@ -167,6 +179,7 @@ export function useAppShellRuntime(
       layerRuntimeSnapshot: state.layerRuntimeSnapshot,
       parcelsStatus: state.parcelsStatus,
       perspectiveViewModes: state.perspectiveViewModes,
+      selectedCountyPowerStory: selection.selectedCountyPowerStory,
       selectedFacility: selection.selectedFacility,
       selectedParcel: selection.selectedParcel,
       sketchMeasureState: state.sketchMeasureState,

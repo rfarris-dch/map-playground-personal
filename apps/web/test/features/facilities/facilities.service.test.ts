@@ -3,6 +3,7 @@ import {
   bboxContains,
   expandBbox,
   filterFacilitiesFeaturesToBbox,
+  filterFacilitiesFeaturesToViewport,
   findFacilitiesBboxCacheEntry,
   quantizeBbox,
   upsertFacilitiesBboxCacheEntry,
@@ -109,6 +110,75 @@ describe("facilities bbox helpers", () => {
         north: 30,
       }).map((feature) => feature.id)
     ).toEqual(["inside"]);
+  });
+
+  it("filters viewport features by projected screen position for pitched or rotated cameras", () => {
+    const features = [
+      {
+        type: "Feature",
+        id: "visible",
+        geometry: { type: "Point", coordinates: [-95.5, 29.5] },
+        properties: {
+          perspective: "colocation",
+          facilityId: "visible",
+          facilityName: "Visible",
+          providerId: "p1",
+          providerName: "Provider",
+          countyFips: "48201",
+          stateAbbrev: "TX",
+          commissionedPowerMw: null,
+          plannedPowerMw: null,
+          underConstructionPowerMw: null,
+          availablePowerMw: null,
+          squareFootage: null,
+          commissionedSemantic: "unknown",
+          leaseOrOwn: null,
+          statusLabel: null,
+          address: null,
+          city: null,
+          state: null,
+        },
+      },
+      {
+        type: "Feature",
+        id: "offscreen",
+        geometry: { type: "Point", coordinates: [-94.5, 29.5] },
+        properties: {
+          perspective: "colocation",
+          facilityId: "offscreen",
+          facilityName: "Offscreen",
+          providerId: "p2",
+          providerName: "Provider",
+          countyFips: "48201",
+          stateAbbrev: "TX",
+          commissionedPowerMw: null,
+          plannedPowerMw: null,
+          underConstructionPowerMw: null,
+          availablePowerMw: null,
+          squareFootage: null,
+          commissionedSemantic: "unknown",
+          leaseOrOwn: null,
+          statusLabel: null,
+          address: null,
+          city: null,
+          state: null,
+        },
+      },
+    ] as const;
+
+    const projectedViewportFeatures = filterFacilitiesFeaturesToViewport({
+      canvasSize: { width: 1000, height: 800 },
+      features,
+      projectPoint: (coordinates) => {
+        if (coordinates[0] === -95.5) {
+          return [420, 320];
+        }
+
+        return [1200, 320];
+      },
+    });
+
+    expect(projectedViewportFeatures.map((feature) => feature.id)).toEqual(["visible"]);
   });
 
   it("reuses the smallest non-truncated cached bbox that covers the viewport", () => {

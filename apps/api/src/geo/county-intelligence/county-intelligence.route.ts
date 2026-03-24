@@ -1,7 +1,15 @@
 import { ApiRoutes } from "@map-migration/http-contracts/api-routes";
 import {
+  type CountyScoresCoverageResponse,
+  CountyScoresCoverageResponseSchema,
+  type CountyScoresDebugRequest,
+  CountyScoresDebugRequestSchema,
+  type CountyScoresDebugResponse,
+  CountyScoresDebugResponseSchema,
   type CountyScoresRequest,
   CountyScoresRequestSchema,
+  type CountyScoresResolutionResponse,
+  CountyScoresResolutionResponseSchema,
   type CountyScoresResponse,
   CountyScoresResponseSchema,
   type CountyScoresStatusResponse,
@@ -10,6 +18,9 @@ import {
 import type { Env, Hono } from "hono";
 import {
   queryCountyScores,
+  queryCountyScoresCoverage,
+  queryCountyScoresDebug,
+  queryCountyScoresResolution,
   queryCountyScoresStatus,
 } from "@/geo/county-intelligence/county-intelligence.service";
 import {
@@ -54,6 +65,22 @@ function readCountyScoresRequest(countyIdsRaw: string | undefined): CountyScores
       httpStatus: 400,
       code: "INVALID_COUNTY_IDS",
       message: "invalid county scores request",
+      details: toDebugDetails(parsed.error),
+    });
+  }
+
+  return parsed.data;
+}
+
+function readCountyScoresDebugRequest(countyIdsRaw: string | undefined): CountyScoresDebugRequest {
+  const parsed = CountyScoresDebugRequestSchema.safeParse({
+    countyIds: countyIdsRaw,
+  });
+  if (!parsed.success) {
+    throw routeError({
+      httpStatus: 400,
+      code: "INVALID_COUNTY_IDS",
+      message: "invalid county scores debug request",
       details: toDebugDetails(parsed.error),
     });
   }
@@ -115,6 +142,64 @@ export function registerCountyIntelligenceRoute<E extends Env>(app: Hono<E>): vo
     )
   );
 
+  app.get(ApiRoutes.countyScoresCoverage, (c) =>
+    runEffectRoute(
+      c,
+      fromApiRequest(async ({ honoContext, requestId }) => {
+        const countyScoresCoverageResult = await queryCountyScoresCoverage();
+
+        if (!countyScoresCoverageResult.ok) {
+          throw countyScoresRouteError(
+            countyScoresCoverageResult.value.reason,
+            countyScoresCoverageResult.value.error
+          );
+        }
+
+        setCacheControlHeader(honoContext, getDatasetCacheTtlSeconds("county_scores"));
+
+        const payload: CountyScoresCoverageResponse = {
+          ...countyScoresCoverageResult.value,
+          meta: buildCountyScoresResponseMeta({
+            dataVersion: countyScoresCoverageResult.value.dataVersion,
+            requestId,
+            recordCount: countyScoresCoverageResult.value.fields.length,
+          }),
+        };
+
+        return jsonOk(honoContext, CountyScoresCoverageResponseSchema, payload, requestId);
+      })
+    )
+  );
+
+  app.get(ApiRoutes.countyScoresResolution, (c) =>
+    runEffectRoute(
+      c,
+      fromApiRequest(async ({ honoContext, requestId }) => {
+        const countyScoresResolutionResult = await queryCountyScoresResolution();
+
+        if (!countyScoresResolutionResult.ok) {
+          throw countyScoresRouteError(
+            countyScoresResolutionResult.value.reason,
+            countyScoresResolutionResult.value.error
+          );
+        }
+
+        setCacheControlHeader(honoContext, getDatasetCacheTtlSeconds("county_scores"));
+
+        const payload: CountyScoresResolutionResponse = {
+          ...countyScoresResolutionResult.value,
+          meta: buildCountyScoresResponseMeta({
+            dataVersion: countyScoresResolutionResult.value.dataVersion,
+            requestId,
+            recordCount: countyScoresResolutionResult.value.bySource.length,
+          }),
+        };
+
+        return jsonOk(honoContext, CountyScoresResolutionResponseSchema, payload, requestId);
+      })
+    )
+  );
+
   app.get(ApiRoutes.countyScores, (c) =>
     runEffectRoute(
       c,
@@ -158,6 +243,46 @@ export function registerCountyIntelligenceRoute<E extends Env>(app: Hono<E>): vo
         };
 
         return jsonOk(honoContext, CountyScoresResponseSchema, payload, requestId);
+      })
+    )
+  );
+
+  app.get(ApiRoutes.countyScoresDebug, (c) =>
+    runEffectRoute(
+      c,
+      fromApiRequest(async ({ honoContext, requestId }) => {
+        if (!isDatasetQueryAllowed("county_scores", "county")) {
+          throw routeError({
+            httpStatus: 422,
+            code: "POLICY_REJECTED",
+            message: 'query granularity "county" is not allowed for county_scores',
+          });
+        }
+
+        const request = readCountyScoresDebugRequest(honoContext.req.query("countyIds"));
+        const countyScoresDebugResult = await queryCountyScoresDebug({
+          countyIds: request.countyIds,
+        });
+
+        if (!countyScoresDebugResult.ok) {
+          throw countyScoresRouteError(
+            countyScoresDebugResult.value.reason,
+            countyScoresDebugResult.value.error
+          );
+        }
+
+        setCacheControlHeader(honoContext, getDatasetCacheTtlSeconds("county_scores"));
+
+        const payload: CountyScoresDebugResponse = {
+          ...countyScoresDebugResult.value,
+          meta: buildCountyScoresResponseMeta({
+            dataVersion: countyScoresDebugResult.value.dataVersion,
+            requestId,
+            recordCount: countyScoresDebugResult.value.counties.length,
+          }),
+        };
+
+        return jsonOk(honoContext, CountyScoresDebugResponseSchema, payload, requestId);
       })
     )
   );

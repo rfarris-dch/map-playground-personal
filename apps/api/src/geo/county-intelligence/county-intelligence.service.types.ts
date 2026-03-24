@@ -1,5 +1,8 @@
 import type {
   CountyScore,
+  CountyScoresCoverageResponse,
+  CountyScoresDebugResponse,
+  CountyScoresResolutionResponse,
   CountyScoresStatusResponse,
 } from "@map-migration/http-contracts/county-intelligence-http";
 
@@ -43,6 +46,72 @@ export type QueryCountyScoresStatusResult =
   | {
       readonly ok: true;
       readonly value: Omit<CountyScoresStatusResponse, "meta">;
+    }
+  | {
+      readonly ok: false;
+      readonly value:
+        | {
+            readonly reason: "source_unavailable";
+            readonly error: unknown;
+          }
+        | {
+            readonly reason: "query_failed";
+            readonly error: unknown;
+          }
+        | {
+            readonly reason: "mapping_failed";
+            readonly error: unknown;
+          };
+    };
+
+export type QueryCountyScoresCoverageResult =
+  | {
+      readonly ok: true;
+      readonly value: Omit<CountyScoresCoverageResponse, "meta">;
+    }
+  | {
+      readonly ok: false;
+      readonly value:
+        | {
+            readonly reason: "source_unavailable";
+            readonly error: unknown;
+          }
+        | {
+            readonly reason: "query_failed";
+            readonly error: unknown;
+          }
+        | {
+            readonly reason: "mapping_failed";
+            readonly error: unknown;
+          };
+    };
+
+export type QueryCountyScoresResolutionResult =
+  | {
+      readonly ok: true;
+      readonly value: Omit<CountyScoresResolutionResponse, "meta">;
+    }
+  | {
+      readonly ok: false;
+      readonly value:
+        | {
+            readonly reason: "source_unavailable";
+            readonly error: unknown;
+          }
+        | {
+            readonly reason: "query_failed";
+            readonly error: unknown;
+          }
+        | {
+            readonly reason: "mapping_failed";
+            readonly error: unknown;
+          };
+    };
+
+export type QueryCountyScoresDebugResult =
+  | {
+      readonly ok: true;
+      readonly value: Omit<CountyScoresDebugResponse, "meta">;
     }
   | {
       readonly ok: false;

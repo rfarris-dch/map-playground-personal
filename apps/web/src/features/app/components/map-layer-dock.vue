@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import type { CountyPowerStoryId } from "@map-migration/http-contracts/county-power-story-http";
   import {
     computed,
     inject,
@@ -14,6 +15,7 @@
   import { useGsapStagger } from "@/composables/use-gsap-stagger";
   import { useGsapTransition } from "@/composables/use-gsap-transition";
   import DockFlyoutBasemap from "@/features/app/components/dock-flyout-basemap.vue";
+  import DockFlyoutCountyPowerStory from "@/features/app/components/dock-flyout-county-power-story.vue";
   import DockFlyoutFacilities from "@/features/app/components/dock-flyout-facilities.vue";
   import DockFlyoutFiber from "@/features/app/components/dock-flyout-fiber.vue";
   import DockFlyoutGas from "@/features/app/components/dock-flyout-gas.vue";
@@ -153,6 +155,57 @@
     shell.setFiberLayerVisibility("longhaul", newVisible);
   }
 
+  function isCountyPowerStoryVisible(storyId: CountyPowerStoryId): boolean {
+    return (
+      shell.countyPowerStoryVisibility.value.visible &&
+      shell.countyPowerStoryVisibility.value.storyId === storyId
+    );
+  }
+
+  function setCountyPowerStoryVisible(storyId: CountyPowerStoryId, visible: boolean): void {
+    shell.setCountyPowerStoryVisible(storyId, visible).catch((error: unknown) => {
+      console.error("[county-power-story] failed to update visibility from dock", error);
+    });
+  }
+
+  function setCountyPowerStoryChapterId(
+    chapterId: import("@/features/county-power-story/county-power-story.types").CountyPowerStoryChapterId
+  ): void {
+    shell.setCountyPowerStoryChapterId(chapterId).catch((error: unknown) => {
+      console.error("[county-power-story] failed to update chapter from dock", error);
+    });
+  }
+
+  function setCountyPowerStoryChapterVisible(visible: boolean): void {
+    shell.setCountyPowerStoryChapterVisible(visible).catch((error: unknown) => {
+      console.error("[county-power-story] failed to update chapter visibility from dock", error);
+    });
+  }
+
+  function countyPowerStoryIdFromLayerId(layerId: string | null): CountyPowerStoryId | null {
+    if (layerId === "county-power-grid-stress") {
+      return "grid-stress";
+    }
+
+    if (layerId === "county-power-queue-pressure") {
+      return "queue-pressure";
+    }
+
+    if (layerId === "county-power-market-structure") {
+      return "market-structure";
+    }
+
+    if (layerId === "county-power-policy-watch") {
+      return "policy-watch";
+    }
+
+    return null;
+  }
+
+  const expandedCountyPowerStoryId = computed(() =>
+    countyPowerStoryIdFromLayerId(expandedLayer.value)
+  );
+
   function layer(def: LayerDef): SectionItem {
     return { kind: "layer", layer: def };
   }
@@ -251,6 +304,60 @@
       hasDrawer: false,
     }),
     { kind: "divider" },
+    { kind: "header", label: "Models" },
+    layer({
+      id: "county-power-grid-stress",
+      label: "Grid Stress Pulse",
+      dot: "#ef4444",
+      visible: () => isCountyPowerStoryVisible("grid-stress"),
+      toggle: () =>
+        setCountyPowerStoryVisible("grid-stress", !isCountyPowerStoryVisible("grid-stress")),
+      hasDrawer: true,
+    }),
+    layer({
+      id: "county-power-queue-pressure",
+      label: "Queue Pressure Bloom",
+      dot: "#8b5cf6",
+      visible: () => isCountyPowerStoryVisible("queue-pressure"),
+      toggle: () =>
+        setCountyPowerStoryVisible("queue-pressure", !isCountyPowerStoryVisible("queue-pressure")),
+      hasDrawer: true,
+    }),
+    layer({
+      id: "county-power-market-structure",
+      label: "Market Structure",
+      dot: "#2563eb",
+      visible: () => isCountyPowerStoryVisible("market-structure"),
+      toggle: () =>
+        setCountyPowerStoryVisible(
+          "market-structure",
+          !isCountyPowerStoryVisible("market-structure")
+        ),
+      hasDrawer: true,
+    }),
+    layer({
+      id: "county-power-policy-watch",
+      label: "Policy Watch",
+      dot: "#f59e0b",
+      visible: () => isCountyPowerStoryVisible("policy-watch"),
+      toggle: () =>
+        setCountyPowerStoryVisible("policy-watch", !isCountyPowerStoryVisible("policy-watch")),
+      hasDrawer: true,
+    }),
+    layer({
+      id: "county-power-3d",
+      label: "County Story 3D",
+      dot: "#0f766e",
+      visible: () =>
+        shell.countyPowerStoryVisibility.value.visible &&
+        shell.countyPowerStoryVisibility.value.threeDimensional,
+      toggle: () =>
+        shell.setCountyPowerStoryThreeDimensionalEnabled(
+          !shell.countyPowerStoryVisibility.value.threeDimensional
+        ),
+      hasDrawer: false,
+    }),
+    { kind: "divider" },
     { kind: "header", label: "Environmental" },
     layer({
       id: "flood100",
@@ -317,6 +424,10 @@
     gas: "Gas Pipeline Filters",
     parcels: "Parcel Filters",
     markets: "Market Boundaries",
+    "county-power-grid-stress": "Grid Stress Pulse",
+    "county-power-queue-pressure": "Queue Pressure Bloom",
+    "county-power-market-structure": "Market Structure + Seam",
+    "county-power-policy-watch": "Policy Watch",
     basemap: "Basemap Settings",
   };
 
@@ -335,6 +446,12 @@
   }
 
   function toggleExpanded(layerId: string): void {
+    const countyPowerStoryId = countyPowerStoryIdFromLayerId(layerId);
+    if (countyPowerStoryId !== null) {
+      shell.setCountyPowerStoryStoryId(countyPowerStoryId).catch((error: unknown) => {
+        console.error("[county-power-story] failed to select story from dock", error);
+      });
+    }
     expandedLayer.value = expandedLayer.value === layerId ? null : layerId;
   }
 
@@ -672,6 +789,28 @@
             v-if="expandedLayer === 'markets'"
             :color-mode="shell.marketBoundaryColorMode.value"
             @update:color-mode="shell.setMarketBoundaryColorMode($event)"
+          />
+
+          <DockFlyoutCountyPowerStory
+            v-if="expandedCountyPowerStoryId !== null"
+            :story-id="expandedCountyPowerStoryId"
+            :chapter-id="shell.countyPowerStoryVisibility.value.chapterId"
+            :chapter-visible="shell.countyPowerStoryVisibility.value.chapterVisible"
+            :window="shell.countyPowerStoryVisibility.value.window"
+            :animation-enabled="shell.countyPowerStoryVisibility.value.animationEnabled"
+            :seam-haze-enabled="shell.countyPowerStoryVisibility.value.seamHazeEnabled"
+            :three-dimensional="shell.countyPowerStoryVisibility.value.threeDimensional"
+            :is-visible="
+              shell.countyPowerStoryVisibility.value.visible &&
+              shell.countyPowerStoryVisibility.value.storyId === expandedCountyPowerStoryId
+            "
+            @update:visible="shell.setCountyPowerStoryVisible(expandedCountyPowerStoryId, $event)"
+            @update:chapter-id="setCountyPowerStoryChapterId"
+            @update:chapter-visible="setCountyPowerStoryChapterVisible"
+            @update:window="shell.setCountyPowerStoryWindow"
+            @update:animation-enabled="shell.setCountyPowerStoryAnimationEnabled"
+            @update:seam-haze-enabled="shell.setCountyPowerStorySeamHazeEnabled"
+            @update:three-dimensional="shell.setCountyPowerStoryThreeDimensionalEnabled"
           />
 
           <DockFlyoutBasemap

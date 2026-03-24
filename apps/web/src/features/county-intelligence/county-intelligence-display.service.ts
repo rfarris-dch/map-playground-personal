@@ -8,6 +8,13 @@ function titleCasePart(value: string): string {
   return `${value.slice(0, 1).toUpperCase()}${value.slice(1)}`;
 }
 
+function formatCodeLabel(value: string): string {
+  return value
+    .split("_")
+    .map((part) => titleCasePart(part.toLowerCase()))
+    .join(" ");
+}
+
 export function countyLabel(
   row: Pick<CountyScore, "countyFips" | "countyName" | "stateAbbrev">
 ): string {
@@ -64,11 +71,76 @@ export function formatFeatureFamily(value: string): string {
     .join(" ");
 }
 
+export function formatCoverageFieldLabel(value: string): string {
+  const labels: Readonly<Record<string, string>> = {
+    avgRtCongestionComponent: "Avg RT Congestion",
+    meteoZone: "Meteo Zone",
+    operatorWeatherZone: "Operator Weather Zone",
+    operatorZoneLabel: "Operator Zone",
+    p95ShadowPrice: "P95 Shadow Price",
+    queueMwActive: "Queue MW Active",
+    queueProjectCountActive: "Queue Projects",
+  };
+
+  return labels[value] ?? value;
+}
+
+export function formatCoverageCount(populatedCount: number, totalCount: number): string {
+  if (!(Number.isFinite(populatedCount) && Number.isFinite(totalCount)) || totalCount <= 0) {
+    return "-";
+  }
+
+  return `${populatedCount.toLocaleString()} / ${totalCount.toLocaleString()}`;
+}
+
+export function formatCoveragePercent(populatedCount: number, totalCount: number): string {
+  if (!(Number.isFinite(populatedCount) && Number.isFinite(totalCount)) || totalCount <= 0) {
+    return "-";
+  }
+
+  return `${((populatedCount / totalCount) * 100).toLocaleString(undefined, {
+    maximumFractionDigits: 0,
+  })}%`;
+}
+
+export function formatSourceSystem(value: string): string {
+  return formatCodeLabel(value);
+}
+
 export function formatDeferredReason(value: string): string {
-  return value
-    .split("_")
-    .map((part) => titleCasePart(part.toLowerCase()))
-    .join(" ");
+  return formatCodeLabel(value);
+}
+
+export function formatNullableText(value: string | null | undefined, fallback = "-"): string {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : fallback;
+}
+
+export function formatBooleanPresence(
+  value: boolean | null | undefined,
+  labels: {
+    readonly falseLabel?: string;
+    readonly nullLabel?: string;
+    readonly trueLabel?: string;
+  } = {}
+): string {
+  if (value === true) {
+    return labels.trueLabel ?? "Yes";
+  }
+
+  if (value === false) {
+    return labels.falseLabel ?? "No";
+  }
+
+  return labels.nullLabel ?? "-";
+}
+
+export function formatPillarValueState(value: CountyScore["pillarValueStates"]["demand"]): string {
+  return formatCodeLabel(value);
 }
 
 export function formatTier(value: CountyScore["attractivenessTier"]): string {
@@ -80,6 +152,28 @@ export function formatTier(value: CountyScore["attractivenessTier"]): string {
 
 export function formatRankStatus(value: CountyScore["rankStatus"]): string {
   return titleCasePart(value);
+}
+
+export function formatSourceVolatility(value: CountyScore["sourceVolatility"]): string {
+  return formatCodeLabel(value);
+}
+
+export function formatMarketStructure(
+  value: CountyScore["powerMarketContext"]["marketStructure"]
+): string {
+  return formatCodeLabel(value);
+}
+
+export function formatRetailChoiceStatus(
+  value: CountyScore["retailStructure"]["retailChoiceStatus"]
+): string {
+  return formatCodeLabel(value);
+}
+
+export function formatCompetitiveAreaType(
+  value: CountyScore["retailStructure"]["competitiveAreaType"]
+): string {
+  return formatCodeLabel(value);
 }
 
 export function confidenceToneClass(value: CountyScore["confidenceBadge"]): string {

@@ -8,6 +8,8 @@
   import MapStatusBar from "@/features/app/components/map-status-bar.vue";
   import { useMapShellContext } from "@/features/app/core/map-shell-context";
   import BoundaryHoverTooltip from "@/features/boundaries/components/boundary-hover-tooltip.vue";
+  import CountyPowerStoryDetailDrawer from "@/features/county-power-story/components/county-power-story-detail-drawer.vue";
+  import CountyPowerStoryHoverTooltip from "@/features/county-power-story/components/county-power-story-hover-tooltip.vue";
   import FacilityClusterHoverTooltip from "@/features/facilities/components/facility-cluster-hover-tooltip.vue";
   import FacilityClusterSelectedTooltip from "@/features/facilities/components/facility-cluster-selected-tooltip.vue";
   import FacilityHoverTooltip from "@/features/facilities/components/facility-hover-tooltip.vue";
@@ -242,9 +244,17 @@
     @zoom-to-cluster="handleClusterZoom"
   />
   <BoundaryHoverTooltip :hover-state="shell.hoveredBoundary.value" />
+  <CountyPowerStoryHoverTooltip :hover-state="shell.hoveredCountyPowerStory.value" />
   <MarketBoundaryHoverTooltip :hover="shell.hoveredMarketBoundary.value" />
   <FiberLocatorHoverTooltip :hover-state="shell.hoveredFiber.value" />
   <PowerHoverTooltip :hover-state="shell.hoveredPower.value" />
+  <CountyPowerStoryDetailDrawer
+    :selected-county="shell.selectedCountyPowerStory.value"
+    :detail-row="shell.countyPowerStoryDetailRow.value"
+    :is-loading="shell.countyPowerStoryDetailLoading.value"
+    :error-message="shell.countyPowerStoryDetailError.value"
+    @close="shell.clearSelectedCountyPowerStory"
+  />
 
   <ParcelDetailDrawer
     :selected-parcel="shell.selectedParcel.value"

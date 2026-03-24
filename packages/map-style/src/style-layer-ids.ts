@@ -1,6 +1,8 @@
 import type {
   BoundaryCatalogLayerId,
   BoundaryStyleLayerIds,
+  CountyPowerStoryCatalogLayerId,
+  CountyPowerStoryStyleLayerIds,
   FacilitiesCatalogLayerId,
   FacilitiesStyleLayerIds,
   FloodCatalogLayerId,
@@ -18,6 +20,19 @@ export function getBoundaryStyleLayerIds(layerId: BoundaryCatalogLayerId): Bound
     fillLayerId: `${layerId}.fill`,
     outlineLayerId: layerId,
   };
+}
+
+export function getCountyPowerStoryStyleLayerIds(
+  layerId: CountyPowerStoryCatalogLayerId
+): CountyPowerStoryStyleLayerIds {
+  return {
+    fillLayerId: `${layerId}.fill`,
+    outlineLayerId: `${layerId}.outline`,
+  };
+}
+
+export function getCountyPowerStoryExtrusionLayerId(): string {
+  return "models.county-power-3d.fill-extrusion";
 }
 
 export function getFloodStyleLayerIds(_: FloodCatalogLayerId): FloodStyleLayerIds {

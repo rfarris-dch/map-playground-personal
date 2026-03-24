@@ -67,6 +67,7 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
     null
   );
   const hasInitializedFiberSourceLayerSelection = shallowRef<boolean>(false);
+  const fiberCatalogLoadPromise = shallowRef<Promise<void> | null>(null);
   const fiberInViewAbortController = shallowRef<AbortController | null>(null);
   const fiberInViewFetchKey = shallowRef<string | null>(null);
   const fiberInViewRequestVersion = shallowRef<number>(0);
@@ -112,7 +113,7 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
           }
         );
       },
-      { emitCurrent: true }
+      { emitCurrent: true, priority: "background" }
     );
   }
 
@@ -134,6 +135,13 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
       ...(pendingSelectedFiberSourceLayerNames.value ?? selectedFiberSourceLayerNames.value),
       [lineId]: [...selectedLayerNames],
     };
+  }
+
+  function hasFiberCatalogLoaded(): boolean {
+    return (
+      fiberCatalogSourceLayerOptions.value.metro.length > 0 ||
+      fiberCatalogSourceLayerOptions.value.longhaul.length > 0
+    );
   }
 
   function syncFiberControllerSourceLayers(lineId: FiberLocatorLineId): void {
@@ -287,37 +295,50 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
     );
   }
 
-  async function loadFiberLocatorCatalogStatus(): Promise<void> {
-    fiberStatus.value = {
-      state: "loading",
-    };
+  function loadFiberLocatorCatalogStatus(): Promise<void> {
+    if (fiberCatalogLoadPromise.value !== null) {
+      return fiberCatalogLoadPromise.value;
+    }
 
-    const result = await fetchFiberLocatorCatalog();
-    if (!result.ok) {
+    const loadPromise = (async () => {
       fiberStatus.value = {
-        state: "error",
-        requestId: result.requestId,
-        reason: result.reason,
+        state: "loading",
       };
-      return;
-    }
 
-    fiberStatus.value = {
-      state: "ok",
-      requestId: result.requestId,
-      count: result.data.meta.recordCount,
-    };
+      const result = await fetchFiberLocatorCatalog();
+      if (!result.ok) {
+        fiberStatus.value = {
+          state: "error",
+          requestId: result.requestId,
+          reason: result.reason,
+        };
+        return;
+      }
 
-    fiberCatalogSourceLayerOptions.value = {
-      metro: getFiberLocatorSourceLayerOptions(result.data.layers, "metro"),
-      longhaul: getFiberLocatorSourceLayerOptions(result.data.layers, "longhaul"),
-    };
+      fiberStatus.value = {
+        state: "ok",
+        requestId: result.requestId,
+        count: result.data.meta.recordCount,
+      };
 
-    if (hasVisibleFiberLayers()) {
-      await refreshFiberLocatorLayersInView({ force: true });
-    } else {
-      applyFiberSourceLayerOptions(fiberCatalogSourceLayerOptions.value);
-    }
+      fiberCatalogSourceLayerOptions.value = {
+        metro: getFiberLocatorSourceLayerOptions(result.data.layers, "metro"),
+        longhaul: getFiberLocatorSourceLayerOptions(result.data.layers, "longhaul"),
+      };
+
+      if (hasVisibleFiberLayers()) {
+        await refreshFiberLocatorLayersInView({ force: true });
+      } else {
+        applyFiberSourceLayerOptions(fiberCatalogSourceLayerOptions.value);
+      }
+    })().finally(() => {
+      if (fiberCatalogLoadPromise.value === loadPromise) {
+        fiberCatalogLoadPromise.value = null;
+      }
+    });
+
+    fiberCatalogLoadPromise.value = loadPromise;
+    return loadPromise;
   }
 
   function setFiberLayerVisibility(lineId: FiberLocatorLineId, visible: boolean): void {
@@ -330,7 +351,10 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
 
     if (visible) {
       setAllFiberSourceLayers(lineId, true);
-      refreshFiberLocatorLayersInView({ force: true }).catch((error: unknown) => {
+      const loadOrRefreshPromise = hasFiberCatalogLoaded()
+        ? refreshFiberLocatorLayersInView({ force: true })
+        : loadFiberLocatorCatalogStatus();
+      loadOrRefreshPromise.catch((error: unknown) => {
         console.error("Fiber locator layers/inview refresh failed", error);
       });
     } else if (!hasVisibleFiberLayers()) {
@@ -438,9 +462,14 @@ export function useAppShellFiber(options: UseAppShellFiberOptions) {
       longhaul: options.layerRuntime.value?.getUserVisible(fiberLayerId("longhaul")) ?? false,
     };
 
-    loadFiberLocatorCatalogStatus().catch((error: unknown) => {
-      console.error("Fiber locator catalog status failed", error);
-    });
+    if (hasVisibleFiberLayers()) {
+      loadFiberLocatorCatalogStatus().catch((error: unknown) => {
+        console.error("Fiber locator catalog status failed", error);
+      });
+    } else {
+      fiberStatus.value = initialFiberLocatorStatus();
+      applyFiberSourceLayerOptions(initialFiberSourceLayerOptionsState());
+    }
 
     fiberHoverController.value = mountFiberLocatorHover(nextMap, {
       getControllers: () => fiberControllers.value,

@@ -28,6 +28,11 @@ import type {
 import type { BasemapLayerVisibilityController } from "@/features/basemap/basemap.types";
 import type { BoundaryHoverState } from "@/features/boundaries/boundaries.types";
 import type {
+  CountyPowerStoryHoverState,
+  CountyPowerStoryMountResult,
+  CountyPowerStoryVisibilityState,
+} from "@/features/county-power-story/county-power-story.types";
+import type {
   FacilitiesLayerController,
   FacilitiesViewMode,
 } from "@/features/facilities/facilities.types";
@@ -78,6 +83,8 @@ export interface UseAppShellStateResult {
   readonly clearSketchMeasure: () => void;
   readonly clusterClickSignal: ShallowRef<number>;
   readonly colocationViewportFeatures: ShallowRef<FacilitiesFeatureCollection["features"]>;
+  readonly countyPowerStoryController: ShallowRef<CountyPowerStoryMountResult | null>;
+  readonly countyPowerStoryVisibility: ShallowRef<CountyPowerStoryVisibilityState>;
   readonly dismissAllToolPanels: () => void;
   readonly disposeMapRuntime: ShallowRef<(() => Promise<void>) | null>;
   readonly environmentalStressController: ShallowRef<EnvironmentalStressController | null>;
@@ -88,6 +95,7 @@ export interface UseAppShellStateResult {
   readonly floodLayersController: ShallowRef<FloodLayerMountResult | null>;
   readonly gasPipelineController: ShallowRef<GasPipelineLayerController | null>;
   readonly hoveredBoundary: ShallowRef<BoundaryHoverState | null>;
+  readonly hoveredCountyPowerStory: ShallowRef<CountyPowerStoryHoverState | null>;
   readonly hoveredFacility: ShallowRef<FacilityHoverState | null>;
   readonly hoveredFacilityCluster: ShallowRef<FacilityClusterHoverState | null>;
   readonly hoveredMarketBoundary: ShallowRef<MarketBoundaryHoverState | null>;

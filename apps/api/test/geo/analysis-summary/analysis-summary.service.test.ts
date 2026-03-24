@@ -3,6 +3,7 @@ import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 const queryCountyScoresMock = mock();
 const queryCountyScoresStatusMock = mock();
 const queryMarketsBySelectionMock = mock();
+const queryMarketInsightByMarketIdMock = mock();
 const queryFacilitiesByPolygonMock = mock();
 const queryFloodAnalysisMock = mock();
 const isDatasetQueryAllowedMock = mock();
@@ -180,6 +181,247 @@ function createMarketsSelectionResult(args?: {
   };
 }
 
+function createCanonicalCountyStatusPayload() {
+  return {
+    datasetAvailable: true,
+    publicationRunId: "county-market-pressure-20260307T000000Z",
+    publishedAt: "2026-03-07T00:00:00.000Z",
+    methodologyId: "county-market-pressure-v1",
+    dataVersion: "2026-03-07",
+    inputDataVersion:
+      "dc_pipeline=2026-03-07;queue=2026-03-01;policy=2026-03-05;power_market_context=2026-03-07;utility_context=2026-03-07;transmission=2026-03-06;congestion=2026-03-05",
+    formulaVersion: "county-market-pressure-v1",
+    rowCount: 3221,
+    sourceCountyCount: 3221,
+    rankedCountyCount: 2400,
+    deferredCountyCount: 700,
+    blockedCountyCount: 121,
+    highConfidenceCount: 1800,
+    mediumConfidenceCount: 1000,
+    lowConfidenceCount: 421,
+    freshCountyCount: 3100,
+    availableFeatureFamilies: [
+      "congestion",
+      "demand",
+      "grid_friction",
+      "history",
+      "infrastructure",
+      "interconnection_queue",
+      "market_seams",
+      "narratives",
+      "operating_footprints",
+      "policy",
+      "retail_structure",
+      "supply_timeline",
+      "transmission",
+      "utility_territories",
+      "wholesale_markets",
+    ],
+    missingFeatureFamilies: [],
+    featureCoverage: {
+      congestion: true,
+      demand: true,
+      gridFriction: true,
+      history: true,
+      infrastructure: true,
+      interconnectionQueue: true,
+      marketSeams: true,
+      narratives: true,
+      operatingFootprints: true,
+      policy: true,
+      retailStructure: true,
+      supplyTimeline: true,
+      transmission: true,
+      utilityTerritories: true,
+      wholesaleMarkets: true,
+    },
+  };
+}
+
+function createCanonicalCountyScoreRow() {
+  return {
+    countyFips: "48453",
+    countyName: "Travis County",
+    stateAbbrev: "TX",
+    rankStatus: "ranked",
+    attractivenessTier: "balanced",
+    confidenceBadge: "high",
+    marketPressureIndex: 61.4,
+    demandPressureScore: 74.2,
+    supplyTimelineScore: 55.1,
+    gridFrictionScore: 48.6,
+    policyConstraintScore: 32.5,
+    freshnessScore: 92,
+    lastUpdatedAt: "2026-03-07T00:00:00.000Z",
+    sourceVolatility: "medium",
+    narrativeSummary: "Demand and supply signals are mixed, pointing to a balanced county profile.",
+    topDrivers: [
+      {
+        code: "DEMAND_0_24M",
+        impact: "headwind",
+        label: "Near-term demand pipeline",
+        summary: "Stage-weighted expected demand in the next 24 months is 120 MW.",
+      },
+    ],
+    deferredReasonCodes: [],
+    whatChanged30d: [
+      {
+        code: "DEMAND_0_24M",
+        direction: "up",
+        label: "Near-term demand pipeline",
+        magnitude: 18,
+        summary: "Stage-weighted 0-24 month load pipeline increased over the last 30 days.",
+      },
+    ],
+    whatChanged60d: [],
+    whatChanged90d: [],
+    pillarValueStates: {
+      demand: "observed",
+      gridFriction: "observed",
+      infrastructure: "derived",
+      policy: "observed",
+      supplyTimeline: "observed",
+    },
+    powerMarketContext: {
+      balancingAuthority: "ERCOT",
+      loadZone: "LCRA",
+      marketStructure: "organized_market",
+      meteoZone: "Austin/San Antonio (TX215)",
+      operatorWeatherZone: "South Central",
+      operatorZoneConfidence: "medium",
+      operatorZoneLabel: "LCRA",
+      operatorZoneType: "load_zone",
+      weatherZone: "South Central",
+      wholesaleOperator: "ERCOT",
+    },
+    retailStructure: {
+      competitiveAreaType: "choice",
+      primaryTduOrUtility: "Oncor",
+      retailChoiceStatus: "choice",
+      utilityContext: {
+        dominantUtilityId: "oncor",
+        dominantUtilityName: "Oncor Electric Delivery",
+        retailChoicePenetrationShare: 0.82,
+        territoryType: "tdu",
+        utilities: [
+          {
+            utilityId: "oncor",
+            utilityName: "Oncor Electric Delivery",
+            territoryType: "tdu",
+            retailChoiceStatus: "choice",
+          },
+        ],
+        utilityCount: 1,
+      },
+    },
+    expectedMw0To24m: 120,
+    expectedMw24To60m: 60,
+    recentCommissionedMw24m: 45,
+    demandMomentumQoq: 0.12,
+    providerEntryCount12m: 1,
+    expectedSupplyMw0To36m: 80,
+    expectedSupplyMw36To60m: 40,
+    signedIaMw: 25,
+    queueMwActive: 200,
+    queueProjectCountActive: 4,
+    medianDaysInQueueActive: 540,
+    pastDueShare: 0.22,
+    marketWithdrawalPrior: 0.18,
+    congestionProxyScore: 36,
+    plannedUpgradeCount: 2,
+    heatmapSignalFlag: true,
+    policyMomentumScore: 14.6,
+    moratoriumStatus: "watch",
+    publicSentimentScore: 0.41,
+    policyEventCount: 3,
+    countyTaggedEventShare: 0.5,
+    policyMappingConfidence: "high",
+    transmissionMiles69kvPlus: 128.2,
+    transmissionMiles138kvPlus: 96.4,
+    transmissionMiles230kvPlus: 42.8,
+    transmissionMiles345kvPlus: 18.1,
+    transmissionMiles500kvPlus: 0,
+    transmissionMiles765kvPlus: 0,
+    transmissionContext: {
+      miles138kvPlus: 96.4,
+      miles230kvPlus: 42.8,
+      miles345kvPlus: 18.1,
+      miles500kvPlus: 0,
+      miles69kvPlus: 128.2,
+      miles765kvPlus: 0,
+    },
+    gasPipelinePresenceFlag: true,
+    gasPipelineMileageCounty: 88.6,
+    fiberPresenceFlag: true,
+    primaryMarketId: "austin",
+    isBorderCounty: false,
+    isSeamCounty: false,
+    queueStorageMw: 75,
+    queueSolarMw: 20,
+    queueWindMw: 15,
+    queueAvgAgeDays: 610,
+    queueWithdrawalRate: 0.19,
+    recentOnlineMw: 55,
+    avgRtCongestionComponent: 4.8,
+    p95ShadowPrice: 29.4,
+    negativePriceHourShare: 0.07,
+    topConstraints: [
+      {
+        constraintId: "ercot-west-001",
+        flowMw: 410,
+        hoursBound: 38,
+        label: "West export interface",
+        limitMw: 450,
+        operator: "ERCOT",
+        shadowPrice: 29.4,
+        voltageKv: 345,
+      },
+    ],
+    interconnectionQueue: {
+      activeMw: 200,
+      avgAgeDays: 610,
+      medianDaysInQueueActive: 540,
+      projectCountActive: 4,
+      recentOnlineMw: 55,
+      solarMw: 20,
+      storageMw: 75,
+      windMw: 15,
+      withdrawalRate: 0.19,
+    },
+    congestionContext: {
+      avgRtCongestionComponent: 4.8,
+      congestionProxyScore: 36,
+      negativePriceHourShare: 0.07,
+      p95ShadowPrice: 29.4,
+      topConstraints: [
+        {
+          constraintId: "ercot-west-001",
+          flowMw: 410,
+          hoursBound: 38,
+          label: "West export interface",
+          limitMw: 450,
+          operator: "ERCOT",
+          shadowPrice: 29.4,
+          voltageKv: 345,
+        },
+      ],
+    },
+    sourceProvenance: {
+      congestion: "fact_congestion_snapshot@2026-03-05",
+      interconnectionQueue: "fact_gen_queue_snapshot@2026-03-01",
+      operatingFootprints: "fact_power_market_context_snapshot@2026-03-07",
+      retailStructure: "fact_utility_context_snapshot@2026-03-07",
+      transmission: "fact_transmission_snapshot@2026-03-06",
+      utilityTerritories: "fact_utility_context_snapshot@2026-03-07",
+      wholesaleMarkets: "fact_power_market_context_snapshot@2026-03-07",
+    },
+    publicationRunId: "county-market-pressure-20260307T000000Z",
+    formulaVersion: "county-market-pressure-v1",
+    inputDataVersion:
+      "dc_pipeline=2026-03-07;queue=2026-03-01;policy=2026-03-05;power_market_context=2026-03-07;utility_context=2026-03-07;transmission=2026-03-06;congestion=2026-03-05",
+  };
+}
+
 function createPorts() {
   return {
     facilitiesBboxExceedsLimits: (bbox: {
@@ -272,6 +514,7 @@ function createPorts() {
     queryCountyScoresStatus: queryCountyScoresStatusMock,
     queryFacilitiesByPolygon: queryFacilitiesByPolygonMock,
     queryFloodAnalysis: queryFloodAnalysisMock,
+    queryMarketInsightByMarketId: queryMarketInsightByMarketIdMock,
     queryMarketsBySelection: queryMarketsBySelectionMock,
     queryParcels: async (args: {
       expectedIngestionRunId: string | null;
@@ -402,6 +645,7 @@ describe("querySpatialAnalysisSummary", () => {
     queryCountyScoresMock.mockReset();
     queryCountyScoresStatusMock.mockReset();
     queryMarketsBySelectionMock.mockReset();
+    queryMarketInsightByMarketIdMock.mockReset();
     queryFacilitiesByPolygonMock.mockReset();
     queryFloodAnalysisMock.mockReset();
     isDatasetQueryAllowedMock.mockReset();
@@ -479,6 +723,10 @@ describe("querySpatialAnalysisSummary", () => {
           unavailableReason: null,
         },
       },
+    });
+    queryMarketInsightByMarketIdMock.mockResolvedValue({
+      ok: true,
+      value: null,
     });
     listIntersectedCountyIdsMock.mockResolvedValue([
       {
@@ -649,6 +897,92 @@ describe("querySpatialAnalysisSummary", () => {
       "County intelligence scores are temporarily unavailable."
     );
     expect(result.value.warnings.map((warning) => warning.code)).toEqual(
+      expect.arrayContaining(["COUNTY_INTELLIGENCE_INVALID", "COUNTY_INTELLIGENCE_STATUS_INVALID"])
+    );
+  });
+
+  it("embeds canonical county market-pressure payloads into the summary response", async () => {
+    queryMarketsBySelectionMock.mockResolvedValue(createMarketsSelectionResult());
+    queryCountyScoresStatusMock.mockResolvedValue({
+      ok: true,
+      value: createCanonicalCountyStatusPayload(),
+    });
+    queryCountyScoresMock.mockResolvedValue({
+      ok: true,
+      value: {
+        blockedCountyIds: [],
+        dataVersion: "2026-03-07",
+        deferredCountyIds: [],
+        missingCountyIds: [],
+        requestedCountyIds: ["48453"],
+        rows: [createCanonicalCountyScoreRow()],
+      },
+    });
+    getMarketBoundarySourceVersionMock.mockResolvedValue("derived-market-boundaries-v1");
+
+    const result = await querySpatialAnalysisSummary(
+      {
+        expectedParcelIngestionRunId: null,
+        request: createRequest(),
+      },
+      createPorts()
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      throw new Error("Expected successful summary query with canonical county payloads");
+    }
+
+    expect(result.value.countyIntelligence.status).toMatchObject({
+      dataVersion: "2026-03-07",
+      datasetAvailable: true,
+      publicationRunId: "county-market-pressure-20260307T000000Z",
+    });
+    expect(result.value.countyIntelligence.scores?.rows[0]).toMatchObject({
+      countyFips: "48453",
+      marketPressureIndex: 61.4,
+      powerMarketContext: {
+        marketStructure: "organized_market",
+        wholesaleOperator: "ERCOT",
+      },
+      retailStructure: {
+        primaryTduOrUtility: "Oncor",
+        retailChoiceStatus: "choice",
+      },
+      publicationRunId: "county-market-pressure-20260307T000000Z",
+      rankStatus: "ranked",
+    });
+    expect(result.value.coverage.countyIntelligence).toEqual({
+      availableFeatureFamilies: [
+        "congestion",
+        "demand",
+        "grid_friction",
+        "history",
+        "infrastructure",
+        "interconnection_queue",
+        "market_seams",
+        "narratives",
+        "operating_footprints",
+        "policy",
+        "retail_structure",
+        "supply_timeline",
+        "transmission",
+        "utility_territories",
+        "wholesale_markets",
+      ],
+      datasetAvailable: true,
+      missingFeatureFamilies: [],
+    });
+    expect(result.value.provenance.countyIntelligence).toEqual({
+      dataVersion: "2026-03-07",
+      formulaVersion: "county-market-pressure-v1",
+      inputDataVersion:
+        "dc_pipeline=2026-03-07;queue=2026-03-01;policy=2026-03-05;power_market_context=2026-03-07;utility_context=2026-03-07;transmission=2026-03-06;congestion=2026-03-05",
+      methodologyId: "county-market-pressure-v1",
+      publicationRunId: "county-market-pressure-20260307T000000Z",
+      publishedAt: "2026-03-07T00:00:00.000Z",
+    });
+    expect(result.value.warnings.map((warning) => warning.code)).not.toEqual(
       expect.arrayContaining(["COUNTY_INTELLIGENCE_INVALID", "COUNTY_INTELLIGENCE_STATUS_INVALID"])
     );
   });

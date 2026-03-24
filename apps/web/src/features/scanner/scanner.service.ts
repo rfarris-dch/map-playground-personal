@@ -13,6 +13,28 @@ import type {
 const COUNTY_FIPS_PATTERN = /^[0-9]{5}$/;
 const COUNTY_GEOID_PREFIX_PATTERN = /^([0-9]{5})/;
 
+function resolveDisplayName(name: string, fallback: string): string {
+  const normalizedName = name.trim();
+  if (normalizedName.length > 0) {
+    return normalizedName;
+  }
+
+  const normalizedFallback = fallback.trim();
+  if (normalizedFallback.length > 0) {
+    return normalizedFallback;
+  }
+
+  return "-";
+}
+
+function readNullableNumber(value: number | null | undefined): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function readNullableText(value: string | null | undefined): string | null {
+  return typeof value === "string" ? value : null;
+}
+
 function readPointCoordinates(value: unknown): [number, number] | null {
   if (!Array.isArray(value) || value.length !== 2) {
     return null;
@@ -41,25 +63,25 @@ function toScannerFacility(
   }
 
   return {
-    address: feature.properties.address,
-    availablePowerMw: feature.properties.availablePowerMw,
-    city: feature.properties.city,
-    countyFips: feature.properties.countyFips,
+    address: readNullableText(feature.properties.address),
+    availablePowerMw: readNullableNumber(feature.properties.availablePowerMw),
+    city: readNullableText(feature.properties.city),
+    countyFips: normalizeCountyFips(feature.properties.countyFips),
     perspective: feature.properties.perspective,
     facilityId: feature.properties.facilityId,
-    facilityName: feature.properties.facilityName,
+    facilityName: resolveDisplayName(feature.properties.facilityName, "Unknown facility"),
     providerId: feature.properties.providerId,
-    providerName: feature.properties.providerName,
-    commissionedPowerMw: feature.properties.commissionedPowerMw,
+    providerName: resolveDisplayName(feature.properties.providerName, "Unknown provider"),
+    commissionedPowerMw: readNullableNumber(feature.properties.commissionedPowerMw),
     commissionedSemantic: feature.properties.commissionedSemantic,
     leaseOrOwn: feature.properties.leaseOrOwn,
-    plannedPowerMw: feature.properties.plannedPowerMw,
+    plannedPowerMw: readNullableNumber(feature.properties.plannedPowerMw),
     coordinates,
-    squareFootage: feature.properties.squareFootage,
-    state: feature.properties.state,
+    squareFootage: readNullableNumber(feature.properties.squareFootage),
+    state: readNullableText(feature.properties.state),
     stateAbbrev: feature.properties.stateAbbrev,
-    statusLabel: feature.properties.statusLabel,
-    underConstructionPowerMw: feature.properties.underConstructionPowerMw,
+    statusLabel: readNullableText(feature.properties.statusLabel),
+    underConstructionPowerMw: readNullableNumber(feature.properties.underConstructionPowerMw),
   };
 }
 

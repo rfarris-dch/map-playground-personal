@@ -17,17 +17,35 @@ describe("default layer catalog", () => {
   });
 
   it("retains the current default visible-layer baseline", () => {
-    expect(visibleLayerCount(DEFAULT_LAYER_CATALOG)).toBe(2);
+    expect(visibleLayerCount(DEFAULT_LAYER_CATALOG)).toBe(3);
     const visibleLayerIds = LAYER_IDS.filter(
       (layerId) => DEFAULT_LAYER_CATALOG[layerId].defaultVisible
     );
-    expect(visibleLayerIds).toEqual(["facilities.colocation", "facilities.hyperscale"]);
+    expect(visibleLayerIds).toEqual(["state", "facilities.colocation", "facilities.hyperscale"]);
   });
 
   it("keeps power overlays ungated by minimum zoom", () => {
     expect(DEFAULT_LAYER_CATALOG["power.transmission"].zoomMin).toBe(0);
     expect(DEFAULT_LAYER_CATALOG["power.substations"].zoomMin).toBe(0);
     expect(DEFAULT_LAYER_CATALOG["power.plants"].zoomMin).toBe(0);
+  });
+
+  it("keeps facilities overlays available at all zoom levels", () => {
+    expect(DEFAULT_LAYER_CATALOG["facilities.colocation"].zoomMin).toBe(0);
+    expect(DEFAULT_LAYER_CATALOG["facilities.hyperscale"].zoomMin).toBe(0);
+    expect(DEFAULT_LAYER_CATALOG["facilities.hyperscale-leased"].zoomMin).toBe(0);
+    expect(DEFAULT_LAYER_CATALOG["facilities.enterprise"].zoomMin).toBe(0);
+  });
+
+  it("keeps county-power 3d available at all zoom levels", () => {
+    expect(DEFAULT_LAYER_CATALOG["models.county-power-3d"].zoomMin).toBe(0);
+  });
+
+  it("keeps county-power 2d stories available at all zoom levels", () => {
+    expect(DEFAULT_LAYER_CATALOG["models.county-power-grid-stress"].zoomMin).toBe(0);
+    expect(DEFAULT_LAYER_CATALOG["models.county-power-queue-pressure"].zoomMin).toBe(0);
+    expect(DEFAULT_LAYER_CATALOG["models.county-power-market-structure"].zoomMin).toBe(0);
+    expect(DEFAULT_LAYER_CATALOG["models.county-power-policy-watch"].zoomMin).toBe(0);
   });
 
   it("keeps environmental flood overlays aligned to a shared vector source at parcel zooms", () => {

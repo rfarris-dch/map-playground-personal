@@ -27,9 +27,18 @@ function isLoopbackHost(hostHeader: string | undefined): boolean {
   return normalizedHost.startsWith("127.0.0.1") || normalizedHost.startsWith("localhost");
 }
 
+function isLoopbackRequest(c: Context): boolean {
+  if (isLoopbackHost(c.req.header("host"))) {
+    return true;
+  }
+
+  const requestUrl = new URL(c.req.url);
+  return isLoopbackHost(requestUrl.host);
+}
+
 function useSecureCookies(c: Context): boolean {
   const requestUrl = new URL(c.req.url);
-  return requestUrl.protocol === "https:" && !isLoopbackHost(c.req.header("host"));
+  return requestUrl.protocol === "https:" && !isLoopbackRequest(c);
 }
 
 export function readMapAppAuthSession(c: Context): AuthSession | null {
@@ -204,7 +213,7 @@ export function registerAuthRoute(app: Hono): void {
 
 export function createMapAppAuthMiddleware() {
   return async (c: Context, next: () => Promise<void>) => {
-    if (isLoopbackHost(c.req.header("host"))) {
+    if (isLoopbackRequest(c)) {
       await next();
       return;
     }

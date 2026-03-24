@@ -1,4 +1,6 @@
 import {
+  getCountyPowerStoryExtrusionLayerId,
+  getCountyPowerStoryStyleLayerIds,
   getFacilitiesStyleLayerIds,
   getFloodStyleLayerIds,
   getHydroBasinsStyleLayerIds,
@@ -7,45 +9,93 @@ import {
 } from "../style-layer-ids";
 import type { LayerOrderInvariants } from "./layer-order.types";
 
+const countyPowerGridStressStyleLayerIds = getCountyPowerStoryStyleLayerIds(
+  "models.county-power-grid-stress"
+);
+const countyPowerQueuePressureStyleLayerIds = getCountyPowerStoryStyleLayerIds(
+  "models.county-power-queue-pressure"
+);
+const countyPowerMarketStructureStyleLayerIds = getCountyPowerStoryStyleLayerIds(
+  "models.county-power-market-structure"
+);
+const countyPowerPolicyWatchStyleLayerIds = getCountyPowerStoryStyleLayerIds(
+  "models.county-power-policy-watch"
+);
+const countyPowerExtrusionLayerId = getCountyPowerStoryExtrusionLayerId();
 const floodStyleLayerIds = getFloodStyleLayerIds("environmental.flood-100");
 const hydroBasinsStyleLayerIds = getHydroBasinsStyleLayerIds();
+const parcelsOutlineLayerId = getParcelsStyleLayerIds().outlineLayerId;
+const colocationPointLayerId = getFacilitiesStyleLayerIds("facilities.colocation").pointLayerId;
+const hyperscalePointLayerId = getFacilitiesStyleLayerIds("facilities.hyperscale").pointLayerId;
 
 export const LAYER_ORDER_INVARIANTS: LayerOrderInvariants = {
-  choroplethBelowColocation: [
-    "analytics.friction",
-    getFacilitiesStyleLayerIds("facilities.colocation").pointLayerId,
+  countyPower3dBelowColocation: [countyPowerExtrusionLayerId, colocationPointLayerId],
+  countyPower3dBelowHyperscale: [countyPowerExtrusionLayerId, hyperscalePointLayerId],
+  countyPowerGridStressBelowColocation: [
+    countyPowerGridStressStyleLayerIds.fillLayerId,
+    colocationPointLayerId,
   ],
-  choroplethBelowHyperscale: [
-    "analytics.friction",
-    getFacilitiesStyleLayerIds("facilities.hyperscale").pointLayerId,
+  countyPowerGridStressBelowHyperscale: [
+    countyPowerGridStressStyleLayerIds.fillLayerId,
+    hyperscalePointLayerId,
   ],
-  flood100BelowParcelOutlines: [
-    floodStyleLayerIds.fill100LayerId,
-    getParcelsStyleLayerIds().outlineLayerId,
+  countyPowerMarketStructureBelowColocation: [
+    countyPowerMarketStructureStyleLayerIds.fillLayerId,
+    colocationPointLayerId,
   ],
-  flood500BelowParcelOutlines: [
-    floodStyleLayerIds.fill500LayerId,
-    getParcelsStyleLayerIds().outlineLayerId,
+  countyPowerMarketStructureBelowHyperscale: [
+    countyPowerMarketStructureStyleLayerIds.fillLayerId,
+    hyperscalePointLayerId,
   ],
+  countyPowerPolicyWatchBelowColocation: [
+    countyPowerPolicyWatchStyleLayerIds.fillLayerId,
+    colocationPointLayerId,
+  ],
+  countyPowerPolicyWatchBelowHyperscale: [
+    countyPowerPolicyWatchStyleLayerIds.fillLayerId,
+    hyperscalePointLayerId,
+  ],
+  countyPowerQueuePressureBelowColocation: [
+    countyPowerQueuePressureStyleLayerIds.fillLayerId,
+    colocationPointLayerId,
+  ],
+  countyPowerQueuePressureBelowHyperscale: [
+    countyPowerQueuePressureStyleLayerIds.fillLayerId,
+    hyperscalePointLayerId,
+  ],
+  flood100BelowParcelOutlines: [floodStyleLayerIds.fill100LayerId, parcelsOutlineLayerId],
+  flood500BelowParcelOutlines: [floodStyleLayerIds.fill500LayerId, parcelsOutlineLayerId],
   hydroLabelsBelowFacilityPoints: [
     hydroBasinsStyleLayerIds.labelLayerIds.at(-1) ?? "environmental-hydro-basins-huc10-label",
-    getFacilitiesStyleLayerIds("facilities.colocation").pointLayerId,
+    colocationPointLayerId,
   ],
   hydroLinesBelowParcelOutlines: [
     hydroBasinsStyleLayerIds.lineLayerIds.at(-1) ?? "environmental-hydro-basins-huc12-line",
-    getParcelsStyleLayerIds().outlineLayerId,
+    parcelsOutlineLayerId,
   ],
-  parcelOutlinesAboveChoropleth: ["analytics.friction", getParcelsStyleLayerIds().outlineLayerId],
+  parcelOutlinesAboveCountyPower3d: [countyPowerExtrusionLayerId, parcelsOutlineLayerId],
+  parcelOutlinesAboveCountyPowerGridStress: [
+    countyPowerGridStressStyleLayerIds.fillLayerId,
+    parcelsOutlineLayerId,
+  ],
+  parcelOutlinesAboveCountyPowerMarketStructure: [
+    countyPowerMarketStructureStyleLayerIds.fillLayerId,
+    parcelsOutlineLayerId,
+  ],
+  parcelOutlinesAboveCountyPowerPolicyWatch: [
+    countyPowerPolicyWatchStyleLayerIds.fillLayerId,
+    parcelsOutlineLayerId,
+  ],
+  parcelOutlinesAboveCountyPowerQueuePressure: [
+    countyPowerQueuePressureStyleLayerIds.fillLayerId,
+    parcelsOutlineLayerId,
+  ],
   marketBoundaryBelowColocation: [
     getMarketBoundaryStyleLayerIds("markets.market").fillLayerId,
-    getFacilitiesStyleLayerIds("facilities.colocation").pointLayerId,
+    colocationPointLayerId,
   ],
   submarketBoundaryBelowColocation: [
     getMarketBoundaryStyleLayerIds("markets.submarket").fillLayerId,
-    getFacilitiesStyleLayerIds("facilities.colocation").pointLayerId,
-  ],
-  modelsBelowFacilityPoints: [
-    "models.facilities",
-    getFacilitiesStyleLayerIds("facilities.colocation").pointLayerId,
+    colocationPointLayerId,
   ],
 };

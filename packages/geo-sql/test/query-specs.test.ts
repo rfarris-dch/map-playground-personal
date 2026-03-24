@@ -155,4 +155,19 @@ describe("geo-sql query specs", () => {
     expect(query.sql).toContain('"serve"."hyperscale_site_fast__20260323.abc123"');
     expect(query.sql).not.toContain("serve.hyperscale_site_fast AS facility");
   });
+
+  it("keeps county metrics query aligned with power market context fields", () => {
+    const spec = getCountyMetricsQuerySpec();
+
+    expect(spec.sql).toContain("wholesale_operator");
+    expect(spec.sql).toContain("market_structure");
+    expect(spec.sql).toContain("retail_choice_status");
+    expect(spec.sql).toContain("utility_context_json");
+    expect(spec.sql).toContain("transmission_miles_138kv_plus");
+    expect(spec.sql).toContain("transmission_miles_345kv_plus");
+    expect(spec.sql).toContain("queue_storage_mw");
+    expect(spec.sql).toContain("avg_rt_congestion_component");
+    expect(spec.sql).toContain("top_constraints_json");
+    expect(spec.sql).toContain("source_provenance_json");
+  });
 });
