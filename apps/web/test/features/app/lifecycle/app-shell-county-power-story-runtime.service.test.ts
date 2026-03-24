@@ -53,6 +53,7 @@ const setStoryIdMock =
     ) => Promise<void>
   >();
 const setThreeDimensionalEnabledMock = mock<(enabled: boolean) => void>();
+const setVisibilityManagedByRuntimeMock = mock<(enabled: boolean) => void>();
 const setVisibleMock = mock<(visible: boolean) => Promise<void>>();
 const setWindowMock = mock<(window: "live" | "30d" | "60d" | "90d") => Promise<void>>();
 const setSeamHazeEnabledMock = mock<(enabled: boolean) => void>();
@@ -78,6 +79,7 @@ const mountCountyPowerStoryLayerMock = mock((_map: unknown, args: Record<string,
       setSeamHazeEnabled: setSeamHazeEnabledMock,
       setStoryId: setStoryIdMock,
       setThreeDimensionalEnabled: setThreeDimensionalEnabledMock,
+      setVisibilityManagedByRuntime: setVisibilityManagedByRuntimeMock,
       setVisible: setVisibleMock,
       setWindow: setWindowMock,
     },
@@ -287,6 +289,7 @@ describe("county power story runtime service", () => {
     setSeamHazeEnabledMock.mockClear();
     setStoryIdMock.mockReset();
     setThreeDimensionalEnabledMock.mockClear();
+    setVisibilityManagedByRuntimeMock.mockClear();
     setVisibleMock.mockReset();
     setWindowMock.mockReset();
     lastMountCountyPowerStoryLayerArgs = null;
@@ -313,6 +316,7 @@ describe("county power story runtime service", () => {
     expect(setStoryIdMock).toHaveBeenCalledWith("queue-pressure");
     expect(setWindowMock).toHaveBeenCalledWith("60d");
     expect(registerLayerControllerMock).toHaveBeenCalledTimes(5);
+    expect(setVisibilityManagedByRuntimeMock).toHaveBeenCalledWith(true);
     expect(setThreeDimensionalEnabledMock).toHaveBeenCalledWith(true);
     expect(setVisibleMock).toHaveBeenCalledWith(true);
   });

@@ -72,6 +72,7 @@ export interface CountyPowerStoryRuntimeController {
   setSelectedCounty(countyFips: string | null): void;
   setStoryId(storyId: CountyPowerStoryIdType): Promise<void>;
   setThreeDimensionalEnabled(enabled: boolean): void;
+  setVisibilityManagedByRuntime(enabled: boolean): void;
   setVisible(visible: boolean): Promise<void>;
   setWindow(window: CountyPowerStoryWindowType): Promise<void>;
 }

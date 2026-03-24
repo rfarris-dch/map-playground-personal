@@ -48,6 +48,26 @@ function resolveRoute(name: string, query: LocationQueryRaw = {}) {
   });
 }
 
+async function flushPromises(): Promise<void> {
+  for (let index = 0; index < 8; index += 1) {
+    await Promise.resolve();
+  }
+}
+
+function createDeferred<T>() {
+  let resolve: ((value: T | PromiseLike<T>) => void) | null = null;
+  const promise = new Promise<T>((nextResolve) => {
+    resolve = nextResolve;
+  });
+
+  return {
+    promise,
+    resolve(value: T) {
+      resolve?.(value);
+    },
+  };
+}
+
 describe("map-context-transfer service", () => {
   it("infers scoped route surfaces when the route has no inline context", () => {
     const route = resolveRoute("market-map");
@@ -266,6 +286,10 @@ describe("map-context-transfer service", () => {
         pitch: 50,
         zoom: 9.25,
       }),
+      fiberVisibility: {
+        longhaul: false,
+        metro: true,
+      },
       selectedFiberSourceLayerNames: {
         longhaul: [],
         metro: ["att", "zayo"],
@@ -310,6 +334,262 @@ describe("map-context-transfer service", () => {
     expect(query.visibleLayerIds).toBe("facilities.colocation,fiber-locator.metro,power.plants");
     expect(query.basemapLayerIds).toBe("buildings3d,labels,roads");
     expect(query.fiberMetroSourceLayerNames).toBe("att,zayo");
+  });
+
+  it("stores and restores full county power story visibility state through context tokens", () => {
+    const countyPowerStoryVisibility: NonNullable<
+      MapContextTransfer["countyPowerStoryVisibility"]
+    > = {
+      animationEnabled: false,
+      chapterId: "policy-shockwaves",
+      chapterVisible: false,
+      seamHazeEnabled: true,
+      storyId: "queue-pressure",
+      threeDimensional: true,
+      visible: false,
+      window: "90d",
+    };
+    const context = buildMapContextTransferFromAppShell({
+      boundaryFacetSelection: {
+        country: null,
+        county: null,
+        state: null,
+      },
+      countyPowerStoryVisibility,
+      map: null,
+      sourceSurface: "global-map",
+      targetSurface: "global-map",
+      visiblePerspectives: {
+        colocation: false,
+        enterprise: false,
+        hyperscale: false,
+        "hyperscale-leased": false,
+      },
+    });
+
+    expect(context.countyPowerStoryVisibility).toEqual(countyPowerStoryVisibility);
+
+    const query = buildMapContextTransferQuery(context, {
+      load() {
+        return null;
+      },
+      save(savedContext) {
+        expect(savedContext.countyPowerStoryVisibility).toEqual(countyPowerStoryVisibility);
+        return "county-story-token";
+      },
+    });
+
+    expect(query.mapContextToken).toBe("county-story-token");
+
+    const roundTrip = readMapContextTransferFromRoute({
+      route: resolveRoute("map", query),
+      store: {
+        load(token) {
+          return token === "county-story-token" ? context : null;
+        },
+        save() {
+          throw new Error("save should not be called during county story round-trip read");
+        },
+      },
+    });
+
+    expect(roundTrip?.countyPowerStoryVisibility).toEqual(countyPowerStoryVisibility);
+  });
+
+  it("does not reset hidden county power story state when visible layers omit county story", () => {
+    const calls = {
+      countyPowerStoryThreeDimensionalEnabled: [] as boolean[],
+      countyPowerStoryVisible: [] as Array<{ readonly storyId: string; readonly visible: boolean }>,
+    };
+
+    applyMapContextTransferToAppShell({
+      context: {
+        schemaVersion: MAP_CONTEXT_TRANSFER_SCHEMA_VERSION,
+        sourceSurface: "global-map",
+        targetSurface: "global-map",
+        visibleLayerIds: ["facilities.colocation"],
+      },
+      setBoundarySelectedRegionIds: () => undefined,
+      setBoundaryVisible: () => undefined,
+      setCountyPowerStoryThreeDimensionalEnabled: (enabled) => {
+        calls.countyPowerStoryThreeDimensionalEnabled.push(enabled);
+      },
+      setCountyPowerStoryVisible: (storyId, visible) => {
+        calls.countyPowerStoryVisible.push({ storyId, visible });
+        return Promise.resolve();
+      },
+      setPerspectiveVisibility: () => undefined,
+    });
+
+    expect(calls.countyPowerStoryVisible).toEqual([]);
+    expect(calls.countyPowerStoryThreeDimensionalEnabled).toEqual([]);
+  });
+
+  it("replays full county power story state in order through one async sequence", async () => {
+    const calls: string[] = [];
+
+    applyMapContextTransferToAppShell({
+      context: {
+        countyPowerStoryVisibility: {
+          animationEnabled: false,
+          chapterId: "policy-shockwaves",
+          chapterVisible: false,
+          seamHazeEnabled: true,
+          storyId: "queue-pressure",
+          threeDimensional: true,
+          visible: false,
+          window: "90d",
+        },
+        schemaVersion: MAP_CONTEXT_TRANSFER_SCHEMA_VERSION,
+        sourceSurface: "global-map",
+        targetSurface: "global-map",
+      },
+      setBoundarySelectedRegionIds: () => undefined,
+      setBoundaryVisible: () => undefined,
+      setCountyPowerStoryAnimationEnabled: (enabled) => {
+        calls.push(`animation:${enabled}`);
+      },
+      setCountyPowerStoryChapterId: (chapterId) => {
+        calls.push(`chapter:${chapterId}`);
+        return Promise.resolve();
+      },
+      setCountyPowerStoryChapterVisible: (visible) => {
+        calls.push(`chapter-visible:${visible}`);
+        return Promise.resolve();
+      },
+      setCountyPowerStorySeamHazeEnabled: (enabled) => {
+        calls.push(`seam:${enabled}`);
+      },
+      setCountyPowerStoryStoryId: (storyId) => {
+        calls.push(`story:${storyId}`);
+        return Promise.resolve();
+      },
+      setCountyPowerStoryThreeDimensionalEnabled: (enabled) => {
+        calls.push(`three-dimensional:${enabled}`);
+      },
+      setCountyPowerStoryVisible: (storyId, visible) => {
+        calls.push(`visible:${storyId}:${visible}`);
+        return Promise.resolve();
+      },
+      setCountyPowerStoryWindow: (window) => {
+        calls.push(`window:${window}`);
+        return Promise.resolve();
+      },
+      setPerspectiveVisibility: () => undefined,
+    });
+
+    await flushPromises();
+
+    expect(calls).toEqual([
+      "animation:false",
+      "story:queue-pressure",
+      "window:90d",
+      "chapter:policy-shockwaves",
+      "chapter-visible:false",
+      "seam:true",
+      "three-dimensional:true",
+      "visible:queue-pressure:false",
+    ]);
+  });
+
+  it("keeps the latest county power story replay when replays overlap", async () => {
+    const firstStoryDeferred = createDeferred<void>();
+    const state = {
+      storyId: "grid-stress",
+      visible: false,
+      window: "live",
+    };
+
+    applyMapContextTransferToAppShell({
+      context: {
+        countyPowerStoryVisibility: {
+          animationEnabled: true,
+          chapterId: "operator-heartbeat",
+          chapterVisible: true,
+          seamHazeEnabled: false,
+          storyId: "grid-stress",
+          threeDimensional: false,
+          visible: true,
+          window: "live",
+        },
+        schemaVersion: MAP_CONTEXT_TRANSFER_SCHEMA_VERSION,
+        sourceSurface: "global-map",
+        targetSurface: "global-map",
+      },
+      setBoundarySelectedRegionIds: () => undefined,
+      setBoundaryVisible: () => undefined,
+      setCountyPowerStoryAnimationEnabled: () => undefined,
+      setCountyPowerStoryChapterId: () => Promise.resolve(),
+      setCountyPowerStoryChapterVisible: () => Promise.resolve(),
+      setCountyPowerStorySeamHazeEnabled: () => undefined,
+      setCountyPowerStoryStoryId: (storyId) => {
+        state.storyId = storyId;
+        if (storyId === "grid-stress") {
+          return firstStoryDeferred.promise;
+        }
+
+        return Promise.resolve();
+      },
+      setCountyPowerStoryThreeDimensionalEnabled: () => undefined,
+      setCountyPowerStoryVisible: (storyId, visible) => {
+        state.storyId = storyId;
+        state.visible = visible;
+        return Promise.resolve();
+      },
+      setCountyPowerStoryWindow: (window) => {
+        state.window = window;
+        return Promise.resolve();
+      },
+      setPerspectiveVisibility: () => undefined,
+    });
+
+    applyMapContextTransferToAppShell({
+      context: {
+        countyPowerStoryVisibility: {
+          animationEnabled: true,
+          chapterId: "policy-shockwaves",
+          chapterVisible: true,
+          seamHazeEnabled: false,
+          storyId: "policy-watch",
+          threeDimensional: false,
+          visible: true,
+          window: "90d",
+        },
+        schemaVersion: MAP_CONTEXT_TRANSFER_SCHEMA_VERSION,
+        sourceSurface: "global-map",
+        targetSurface: "global-map",
+      },
+      setBoundarySelectedRegionIds: () => undefined,
+      setBoundaryVisible: () => undefined,
+      setCountyPowerStoryAnimationEnabled: () => undefined,
+      setCountyPowerStoryChapterId: () => Promise.resolve(),
+      setCountyPowerStoryChapterVisible: () => Promise.resolve(),
+      setCountyPowerStorySeamHazeEnabled: () => undefined,
+      setCountyPowerStoryStoryId: (storyId) => {
+        state.storyId = storyId;
+        return Promise.resolve();
+      },
+      setCountyPowerStoryThreeDimensionalEnabled: () => undefined,
+      setCountyPowerStoryVisible: (storyId, visible) => {
+        state.storyId = storyId;
+        state.visible = visible;
+        return Promise.resolve();
+      },
+      setCountyPowerStoryWindow: (window) => {
+        state.window = window;
+        return Promise.resolve();
+      },
+      setPerspectiveVisibility: () => undefined,
+    });
+
+    firstStoryDeferred.resolve(undefined);
+    await flushPromises();
+
+    expect(state).toEqual({
+      storyId: "policy-watch",
+      visible: true,
+      window: "90d",
+    });
   });
 
   it("applies perspective and boundary visibility without changing current UI-side behavior", () => {

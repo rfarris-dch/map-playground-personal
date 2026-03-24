@@ -8,6 +8,37 @@ import {
 } from "@/features/map-context-transfer/map-context-transfer.service";
 import type { UseAppShellUrlStateOptions } from "./app-shell-url-state.types";
 
+export interface SelfAuthoredQuerySignatureRegistry {
+  add(signature: string): void;
+  clear(signature: string): void;
+  consume(signature: string): boolean;
+  has(signature: string): boolean;
+}
+
+export function createSelfAuthoredQuerySignatureRegistry(): SelfAuthoredQuerySignatureRegistry {
+  const signatures = new Set<string>();
+
+  return {
+    add(signature) {
+      signatures.add(signature);
+    },
+    clear(signature) {
+      signatures.delete(signature);
+    },
+    consume(signature) {
+      if (!signatures.has(signature)) {
+        return false;
+      }
+
+      signatures.delete(signature);
+      return true;
+    },
+    has(signature) {
+      return signatures.has(signature);
+    },
+  };
+}
+
 export function buildAppShellUrlStateQuery(
   options: UseAppShellUrlStateOptions,
   currentQuery: LocationQueryRaw,

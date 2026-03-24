@@ -36,7 +36,20 @@ export function initializeCountyPowerStoryRuntime(options: UseAppShellMapLifecyc
     },
   });
 
-  options.layers.countyPowerStoryController.value = countyPowerStoryResult;
+  const applyRequestedVisibilityState = async (
+    requestedVisibility: UseAppShellMapLifecycleOptions["state"]["countyPowerStoryVisibility"]["value"]
+  ): Promise<void> => {
+    countyPowerStoryResult.controller.setAnimationEnabled(requestedVisibility.animationEnabled);
+    await countyPowerStoryResult.controller.setStoryId(requestedVisibility.storyId);
+    await countyPowerStoryResult.controller.setWindow(requestedVisibility.window);
+    await countyPowerStoryResult.controller.setChapterId(requestedVisibility.chapterId);
+    await countyPowerStoryResult.controller.setChapterVisible(requestedVisibility.chapterVisible);
+    countyPowerStoryResult.controller.setSeamHazeEnabled(requestedVisibility.seamHazeEnabled);
+    countyPowerStoryResult.controller.setThreeDimensionalEnabled(
+      requestedVisibility.threeDimensional
+    );
+    await countyPowerStoryResult.controller.setVisible(requestedVisibility.visible);
+  };
 
   const synchronizePreRegistrationState = async (): Promise<void> => {
     let lastAppliedSignature: string | null = null;
@@ -50,24 +63,12 @@ export function initializeCountyPowerStoryRuntime(options: UseAppShellMapLifecyc
       }
 
       lastAppliedSignature = signature;
-      countyPowerStoryResult.controller.setAnimationEnabled(requestedVisibility.animationEnabled);
-      await countyPowerStoryResult.controller.setStoryId(requestedVisibility.storyId);
-      await countyPowerStoryResult.controller.setWindow(requestedVisibility.window);
-
-      const latestVisibility = options.state.countyPowerStoryVisibility.value;
-      countyPowerStoryResult.controller.setAnimationEnabled(latestVisibility.animationEnabled);
-      await countyPowerStoryResult.controller.setChapterId(latestVisibility.chapterId);
-      await countyPowerStoryResult.controller.setChapterVisible(latestVisibility.chapterVisible);
-      countyPowerStoryResult.controller.setSeamHazeEnabled(latestVisibility.seamHazeEnabled);
-      countyPowerStoryResult.controller.setThreeDimensionalEnabled(
-        latestVisibility.threeDimensional
-      );
-      await countyPowerStoryResult.controller.setVisible(latestVisibility.visible);
+      await applyRequestedVisibilityState(requestedVisibility);
     }
   };
 
   synchronizePreRegistrationState()
-    .then(() => {
+    .then(async () => {
       for (const layerId of countyPowerStoryCatalogLayerIds()) {
         options.runtime.layerRuntime.value?.registerLayerController(
           layerId,
@@ -75,23 +76,18 @@ export function initializeCountyPowerStoryRuntime(options: UseAppShellMapLifecyc
         );
       }
 
-      const currentVisibility = options.state.countyPowerStoryVisibility.value;
-      countyPowerStoryResult.controller.setAnimationEnabled(currentVisibility.animationEnabled);
-      countyPowerStoryResult.controller.setSeamHazeEnabled(currentVisibility.seamHazeEnabled);
-      countyPowerStoryResult.controller.setThreeDimensionalEnabled(
-        currentVisibility.threeDimensional
-      );
+      countyPowerStoryResult.controller.setVisibilityManagedByRuntime(true);
+      await applyRequestedVisibilityState(options.state.countyPowerStoryVisibility.value);
+      options.layers.countyPowerStoryController.value = countyPowerStoryResult;
 
-      return countyPowerStoryResult.controller.setVisible(currentVisibility.visible);
+      const selectedCounty = options.state.selectedCountyPowerStory.value;
+      if (selectedCounty !== null) {
+        countyPowerStoryResult.controller.setSelectedCounty(selectedCounty.countyFips);
+      }
     })
     .catch((error: unknown) => {
       console.error("[county-power-story] runtime initialization failed", error);
     });
-
-  const selectedCounty = options.state.selectedCountyPowerStory.value;
-  if (selectedCounty !== null) {
-    countyPowerStoryResult.controller.setSelectedCounty(selectedCounty.countyFips);
-  }
 }
 
 export function destroyCountyPowerStoryRuntime(options: UseAppShellMapLifecycleOptions): void {

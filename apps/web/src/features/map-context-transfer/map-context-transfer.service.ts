@@ -49,6 +49,7 @@ import type {
 const MAP_CONTEXT_STORAGE_KEY_PREFIX = "map.context-transfer";
 const MAP_CONTEXT_STORAGE_TTL_MS = 1000 * 60 * 30;
 const MAX_INLINE_QUERY_VALUE_LENGTH = 160;
+let latestCountyPowerStoryReplayVersion = 0;
 
 const mapContextSurfaceRouteNames = new Map<string, MapContextSurface>([
   ["map", "global-map"],
@@ -511,6 +512,11 @@ function buildMergedOptionalMapContextFields(
   );
   assignMapContextField(
     mergedFields,
+    "countyPowerStoryVisibility",
+    shortContext.countyPowerStoryVisibility ?? storedContext?.countyPowerStoryVisibility
+  );
+  assignMapContextField(
+    mergedFields,
     "visibleLayerIds",
     shortContext.visibleLayerIds ?? storedContext?.visibleLayerIds
   );
@@ -940,6 +946,7 @@ export function buildMapContextTransferQuery(
     context.selectedFiberSourceLayerNames?.longhaul
   );
   const requiresStoredContext =
+    typeof context.countyPowerStoryVisibility !== "undefined" ||
     typeof context.mapFilters !== "undefined" ||
     inlineMarketIds !== context.marketIds ||
     inlineCompanyIds !== context.companyIds ||
@@ -1431,6 +1438,10 @@ export function buildMapContextTransferFromAppShell(
     context.visibleBasemapLayerIds = [...visibleBasemapLayerIds];
   }
 
+  if (typeof args.countyPowerStoryVisibility !== "undefined") {
+    context.countyPowerStoryVisibility = args.countyPowerStoryVisibility;
+  }
+
   if (typeof selectedBoundaryIds !== "undefined") {
     context.selectedBoundaryIds = selectedBoundaryIds;
   }
@@ -1562,8 +1573,92 @@ function applyLayerVisibilityContext(args: ApplyMapContextTransferToAppShellArgs
   }
 }
 
+function hasNewerCountyPowerStoryReplay(requestedVersion: number): boolean {
+  return requestedVersion !== latestCountyPowerStoryReplayVersion;
+}
+
+function scheduleCountyPowerStoryReplay(task: (requestedVersion: number) => Promise<void>): void {
+  latestCountyPowerStoryReplayVersion += 1;
+  const requestedVersion = latestCountyPowerStoryReplayVersion;
+
+  task(requestedVersion).catch((error: unknown) => {
+    console.error("[map-context-transfer] failed to replay county power story state", error);
+  });
+}
+
+async function replayFullCountyPowerStoryVisibility(
+  args: ApplyMapContextTransferToAppShellArgs,
+  visibility: NonNullable<MapContextTransfer["countyPowerStoryVisibility"]>,
+  requestedVersion: number
+): Promise<void> {
+  args.setCountyPowerStoryAnimationEnabled?.(visibility.animationEnabled);
+  if (hasNewerCountyPowerStoryReplay(requestedVersion)) {
+    return;
+  }
+
+  await args.setCountyPowerStoryStoryId?.(visibility.storyId);
+  if (hasNewerCountyPowerStoryReplay(requestedVersion)) {
+    return;
+  }
+
+  await args.setCountyPowerStoryWindow?.(visibility.window);
+  if (hasNewerCountyPowerStoryReplay(requestedVersion)) {
+    return;
+  }
+
+  await args.setCountyPowerStoryChapterId?.(visibility.chapterId);
+  if (hasNewerCountyPowerStoryReplay(requestedVersion)) {
+    return;
+  }
+
+  await args.setCountyPowerStoryChapterVisible?.(visibility.chapterVisible);
+  if (hasNewerCountyPowerStoryReplay(requestedVersion)) {
+    return;
+  }
+
+  args.setCountyPowerStorySeamHazeEnabled?.(visibility.seamHazeEnabled);
+  if (hasNewerCountyPowerStoryReplay(requestedVersion)) {
+    return;
+  }
+
+  args.setCountyPowerStoryThreeDimensionalEnabled?.(visibility.threeDimensional);
+  if (hasNewerCountyPowerStoryReplay(requestedVersion)) {
+    return;
+  }
+
+  await args.setCountyPowerStoryVisible?.(visibility.storyId, visibility.visible);
+}
+
+async function replayVisibleCountyPowerStoryLayer(
+  args: ApplyMapContextTransferToAppShellArgs,
+  visibleLayerIds: ReadonlySet<string>,
+  visibleStoryId: "grid-stress" | "queue-pressure" | "market-structure" | "policy-watch",
+  requestedVersion: number
+): Promise<void> {
+  args.setCountyPowerStoryThreeDimensionalEnabled?.(
+    visibleLayerIds.has(COUNTY_POWER_STORY_3D_LAYER_ID)
+  );
+  if (hasNewerCountyPowerStoryReplay(requestedVersion)) {
+    return;
+  }
+
+  await args.setCountyPowerStoryVisible?.(visibleStoryId, true);
+}
+
 function applyCountyPowerStoryVisibilityContext(args: ApplyMapContextTransferToAppShellArgs): void {
-  if (args.context === null || typeof args.context.visibleLayerIds === "undefined") {
+  if (args.context === null) {
+    return;
+  }
+
+  if (typeof args.context.countyPowerStoryVisibility !== "undefined") {
+    const visibility = args.context.countyPowerStoryVisibility;
+    scheduleCountyPowerStoryReplay((requestedVersion) =>
+      replayFullCountyPowerStoryVisibility(args, visibility, requestedVersion)
+    );
+    return;
+  }
+
+  if (typeof args.context.visibleLayerIds === "undefined") {
     return;
   }
 
@@ -1573,14 +1668,10 @@ function applyCountyPowerStoryVisibilityContext(args: ApplyMapContextTransferToA
   ).find((storyId) => visibleLayerIds.has(countyPowerStoryLayerId(storyId)));
 
   if (typeof visibleStoryId === "string") {
-    args.setCountyPowerStoryVisible?.(visibleStoryId, true);
-  } else {
-    args.setCountyPowerStoryVisible?.("grid-stress", false);
+    scheduleCountyPowerStoryReplay((requestedVersion) =>
+      replayVisibleCountyPowerStoryLayer(args, visibleLayerIds, visibleStoryId, requestedVersion)
+    );
   }
-
-  args.setCountyPowerStoryThreeDimensionalEnabled?.(
-    visibleLayerIds.has(COUNTY_POWER_STORY_3D_LAYER_ID)
-  );
 }
 
 function applyFiberSourceLayerSelectionContext(args: ApplyMapContextTransferToAppShellArgs): void {

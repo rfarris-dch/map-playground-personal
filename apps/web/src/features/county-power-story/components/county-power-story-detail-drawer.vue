@@ -65,6 +65,8 @@
     :is-error="props.errorMessage !== null"
     loading-message="Loading county intelligence detail..."
     :error-message="props.errorMessage ?? 'County intelligence detail failed to load.'"
+    width-class="w-[min(44rem,calc(100%-2rem))]"
+    top-class="top-14"
     @close="emit('close')"
   >
     <template v-if="props.selectedCounty !== null">

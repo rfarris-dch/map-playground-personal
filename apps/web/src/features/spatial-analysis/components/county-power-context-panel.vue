@@ -72,7 +72,7 @@
 </script>
 
 <template>
-  <div class="context-grid grid gap-4 text-xs lg:grid-cols-2 xl:grid-cols-4">
+  <div class="context-grid grid grid-cols-2 gap-x-4 gap-y-5 text-xs">
     <div class="context-section">
       <div class="context-heading">Wholesale + Footprint</div>
       <dl class="context-dl">
@@ -308,8 +308,8 @@
 
   .context-dl {
     display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 0.125rem 0.75rem;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.125rem 0.5rem;
     margin: 0;
   }
 
@@ -320,8 +320,11 @@
 
   .context-dl dd {
     margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
     font-weight: 500;
     color: rgba(0, 0, 0, 0.65);
     text-align: right;
+    white-space: nowrap;
   }
 </style>

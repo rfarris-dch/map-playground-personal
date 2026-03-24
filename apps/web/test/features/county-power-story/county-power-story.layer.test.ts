@@ -228,6 +228,26 @@ function createMap(zoom = 5) {
   });
 }
 
+function createDeferred<T>() {
+  let resolve: ((value: T | PromiseLike<T>) => void) | null = null;
+  const promise = new Promise<T>((nextResolve) => {
+    resolve = nextResolve;
+  });
+
+  return {
+    promise,
+    resolve(value: T) {
+      resolve?.(value);
+    },
+  };
+}
+
+async function flushPromises(): Promise<void> {
+  for (let index = 0; index < 8; index += 1) {
+    await Promise.resolve();
+  }
+}
+
 function createStoryRow(): CountyPowerStoryRow {
   return {
     countyFips: "48453",
@@ -534,6 +554,317 @@ describe("county power story layer", () => {
     }
   });
 
+  it("keeps only the latest county power story visibility request when setter calls race", async () => {
+    const runtimeVisibility = new Map<string, boolean>();
+    const firstStoryDeferred = createDeferred<void>();
+    const storyCalls: string[] = [];
+    const visibility = useAppShellVisibility({
+      basemapLayerController: shallowRef(null),
+      boundaryControllers: shallowRef({
+        country: null,
+        county: null,
+        state: null,
+      }),
+      boundaryFacetSelection: shallowRef({
+        country: null,
+        county: null,
+        state: null,
+      }),
+      clearCountyPowerStoryHover: () => undefined,
+      clearPowerHover: () => undefined,
+      clearSelectedCountyPowerStory: () => undefined,
+      clearSelectedParcel: () => undefined,
+      countyPowerStoryController: shallowRef({
+        controller: {
+          destroy: () => undefined,
+          setAnimationEnabled: () => undefined,
+          setChapterId: async () => undefined,
+          setChapterVisible: async () => undefined,
+          setSeamHazeEnabled: () => undefined,
+          setSelectedCounty: () => undefined,
+          setStoryId: async (storyId) => {
+            storyCalls.push(storyId);
+            if (storyCalls.length === 1) {
+              await firstStoryDeferred.promise;
+            }
+          },
+          setThreeDimensionalEnabled: () => undefined,
+          setVisibilityManagedByRuntime: () => undefined,
+          setVisible: () => Promise.resolve(),
+          setWindow: async () => undefined,
+        },
+        controllers: {
+          "models.county-power-3d": {
+            destroy: () => undefined,
+            layerId: "models.county-power-3d",
+            setVisible: () => undefined,
+          },
+          "models.county-power-grid-stress": {
+            destroy: () => undefined,
+            layerId: "models.county-power-grid-stress",
+            setVisible: () => undefined,
+          },
+          "models.county-power-market-structure": {
+            destroy: () => undefined,
+            layerId: "models.county-power-market-structure",
+            setVisible: () => undefined,
+          },
+          "models.county-power-policy-watch": {
+            destroy: () => undefined,
+            layerId: "models.county-power-policy-watch",
+            setVisible: () => undefined,
+          },
+          "models.county-power-queue-pressure": {
+            destroy: () => undefined,
+            layerId: "models.county-power-queue-pressure",
+            setVisible: () => undefined,
+          },
+        },
+        destroy: () => undefined,
+        status: { state: "ready" },
+      }),
+      countyPowerStoryVisibility: shallowRef({
+        animationEnabled: true,
+        chapterId: "operator-heartbeat",
+        chapterVisible: true,
+        seamHazeEnabled: false,
+        storyId: "grid-stress",
+        threeDimensional: false,
+        visible: true,
+        window: "live",
+      }),
+      gasPipelineController: shallowRef(null),
+      layerRuntime: shallowRef({
+        destroy: () => undefined,
+        getEffectiveVisible: () => false,
+        getUserVisible: () => false,
+        registerLayerController: () => undefined,
+        setStressBlocked: () => undefined,
+        setUserVisible: (layerId, visible) => {
+          runtimeVisibility.set(layerId, visible);
+        },
+        unregisterLayerController: () => undefined,
+      }),
+      setViewportFacilities: () => undefined,
+    });
+
+    const staleRequest = visibility.setCountyPowerStoryVisible("grid-stress", false);
+    const latestRequest = visibility.setCountyPowerStoryVisible("queue-pressure", true);
+
+    firstStoryDeferred.resolve(undefined);
+    await staleRequest;
+    await latestRequest;
+
+    expect(storyCalls.at(-1)).toBe("queue-pressure");
+    expect(runtimeVisibility.get("models.county-power-grid-stress")).toBe(false);
+    expect(runtimeVisibility.get("models.county-power-queue-pressure")).toBe(true);
+    expect(visibility.countyPowerStoryVisibility.value).toMatchObject({
+      storyId: "queue-pressure",
+      visible: true,
+    });
+  });
+
+  it("keeps the current story id when county power story visibility is turned off", async () => {
+    const runtimeVisibility = new Map<string, boolean>();
+    const storyCalls: string[] = [];
+    const visibility = useAppShellVisibility({
+      basemapLayerController: shallowRef(null),
+      boundaryControllers: shallowRef({
+        country: null,
+        county: null,
+        state: null,
+      }),
+      boundaryFacetSelection: shallowRef({
+        country: null,
+        county: null,
+        state: null,
+      }),
+      clearCountyPowerStoryHover: () => undefined,
+      clearPowerHover: () => undefined,
+      clearSelectedCountyPowerStory: () => undefined,
+      clearSelectedParcel: () => undefined,
+      countyPowerStoryController: shallowRef({
+        controller: {
+          destroy: () => undefined,
+          setAnimationEnabled: () => undefined,
+          setChapterId: async () => undefined,
+          setChapterVisible: async () => undefined,
+          setSeamHazeEnabled: () => undefined,
+          setSelectedCounty: () => undefined,
+          setStoryId: (storyId) => {
+            storyCalls.push(storyId);
+            return Promise.resolve();
+          },
+          setThreeDimensionalEnabled: () => undefined,
+          setVisibilityManagedByRuntime: () => undefined,
+          setVisible: () => Promise.resolve(),
+          setWindow: async () => undefined,
+        },
+        controllers: {
+          "models.county-power-3d": {
+            destroy: () => undefined,
+            layerId: "models.county-power-3d",
+            setVisible: () => undefined,
+          },
+          "models.county-power-grid-stress": {
+            destroy: () => undefined,
+            layerId: "models.county-power-grid-stress",
+            setVisible: () => undefined,
+          },
+          "models.county-power-market-structure": {
+            destroy: () => undefined,
+            layerId: "models.county-power-market-structure",
+            setVisible: () => undefined,
+          },
+          "models.county-power-policy-watch": {
+            destroy: () => undefined,
+            layerId: "models.county-power-policy-watch",
+            setVisible: () => undefined,
+          },
+          "models.county-power-queue-pressure": {
+            destroy: () => undefined,
+            layerId: "models.county-power-queue-pressure",
+            setVisible: () => undefined,
+          },
+        },
+        destroy: () => undefined,
+        status: { state: "ready" },
+      }),
+      countyPowerStoryVisibility: shallowRef({
+        animationEnabled: true,
+        chapterId: "operator-heartbeat",
+        chapterVisible: true,
+        seamHazeEnabled: false,
+        storyId: "queue-pressure",
+        threeDimensional: false,
+        visible: true,
+        window: "live",
+      }),
+      gasPipelineController: shallowRef(null),
+      layerRuntime: shallowRef({
+        destroy: () => undefined,
+        getEffectiveVisible: () => false,
+        getUserVisible: () => false,
+        registerLayerController: () => undefined,
+        setStressBlocked: () => undefined,
+        setUserVisible: (layerId, visible) => {
+          runtimeVisibility.set(layerId, visible);
+        },
+        unregisterLayerController: () => undefined,
+      }),
+      setViewportFacilities: () => undefined,
+    });
+
+    await visibility.setCountyPowerStoryVisible("grid-stress", false);
+
+    expect(storyCalls.at(-1)).toBe("queue-pressure");
+    expect(runtimeVisibility.get("models.county-power-grid-stress")).toBe(false);
+    expect(runtimeVisibility.get("models.county-power-queue-pressure")).toBe(false);
+    expect(visibility.countyPowerStoryVisibility.value).toMatchObject({
+      storyId: "queue-pressure",
+      visible: false,
+    });
+  });
+
+  it("stays on the latest story when a stale replay arrives after a local model switch", async () => {
+    const map = createMap();
+    const mounted = mountCountyPowerStoryLayer(map);
+    const layerRuntime = createLayerRuntime(map, {
+      initialUserVisibleLayerIds: [],
+    });
+    const firstStoryDeferred = createDeferred<void>();
+    let shouldDeferGridStress = true;
+    const visibility = useAppShellVisibility({
+      basemapLayerController: shallowRef(null),
+      boundaryControllers: shallowRef({
+        country: null,
+        county: null,
+        state: null,
+      }),
+      boundaryFacetSelection: shallowRef({
+        country: null,
+        county: null,
+        state: null,
+      }),
+      clearCountyPowerStoryHover: () => undefined,
+      clearPowerHover: () => undefined,
+      clearSelectedCountyPowerStory: () => undefined,
+      clearSelectedParcel: () => undefined,
+      countyPowerStoryController: shallowRef({
+        controller: {
+          destroy: mounted.controller.destroy,
+          setAnimationEnabled: mounted.controller.setAnimationEnabled,
+          setChapterId: mounted.controller.setChapterId,
+          setChapterVisible: mounted.controller.setChapterVisible,
+          setSeamHazeEnabled: mounted.controller.setSeamHazeEnabled,
+          setSelectedCounty: mounted.controller.setSelectedCounty,
+          setStoryId: async (storyId) => {
+            if (storyId === "grid-stress" && shouldDeferGridStress) {
+              shouldDeferGridStress = false;
+              await firstStoryDeferred.promise;
+            }
+
+            await mounted.controller.setStoryId(storyId);
+          },
+          setThreeDimensionalEnabled: mounted.controller.setThreeDimensionalEnabled,
+          setVisibilityManagedByRuntime: mounted.controller.setVisibilityManagedByRuntime,
+          setVisible: mounted.controller.setVisible,
+          setWindow: mounted.controller.setWindow,
+        },
+        controllers: mounted.controllers,
+        destroy: mounted.destroy,
+        status: mounted.status,
+      }),
+      countyPowerStoryVisibility: shallowRef({
+        animationEnabled: true,
+        chapterId: "operator-heartbeat",
+        chapterVisible: true,
+        seamHazeEnabled: false,
+        storyId: "grid-stress",
+        threeDimensional: false,
+        visible: false,
+        window: "live",
+      }),
+      gasPipelineController: shallowRef(null),
+      layerRuntime: shallowRef(layerRuntime),
+      setViewportFacilities: () => undefined,
+    });
+
+    try {
+      for (const layerId of countyPowerStoryCatalogLayerIds()) {
+        layerRuntime.registerLayerController(layerId, mounted.controllers[layerId]);
+      }
+
+      map.emit("load");
+
+      const staleReplay = visibility.setCountyPowerStoryVisible("grid-stress", true);
+      const latestSwitch = visibility.setCountyPowerStoryVisible("policy-watch", true);
+
+      firstStoryDeferred.resolve(undefined);
+      await staleReplay;
+      await latestSwitch;
+
+      const gridStressFillLayerId = countyPowerStoryStyleLayerIds("grid-stress").fillLayerId;
+      const policyWatchFillLayerId = countyPowerStoryStyleLayerIds("policy-watch").fillLayerId;
+      const latestGridStressVisibility = map.layerVisibilityCalls.findLast(
+        (call) => call.layerId === gridStressFillLayerId
+      );
+      const latestPolicyWatchVisibility = map.layerVisibilityCalls.findLast(
+        (call) => call.layerId === policyWatchFillLayerId
+      );
+
+      expect(visibility.countyPowerStoryVisibility.value).toMatchObject({
+        storyId: "policy-watch",
+        visible: true,
+      });
+      expect(latestGridStressVisibility?.visible).toBe(false);
+      expect(latestPolicyWatchVisibility?.visible).toBe(true);
+    } finally {
+      layerRuntime.destroy();
+      mounted.destroy();
+    }
+  });
+
   it("keeps county power stories visible at national zoom when enabled", async () => {
     const map = createMap(3.2);
     const mounted = mountCountyPowerStoryLayer(map);
@@ -589,6 +920,7 @@ describe("county power story layer", () => {
       expect(latestLowZoomVisibility?.visible).toBe(true);
 
       visibility.setCountyPowerStoryThreeDimensionalEnabled(true);
+      await flushPromises();
 
       const extrusionLayerId = "models.county-power-3d.fill-extrusion";
       const latestLowZoomExtrusionVisibility = map.layerVisibilityCalls.findLast(

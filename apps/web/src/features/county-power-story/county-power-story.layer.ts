@@ -157,6 +157,7 @@ interface CountyPowerStoryLayerState {
   threeDimensional: boolean;
   transferRoutes: readonly AnimatedRoute[];
   transmissionRoutes: readonly AnimatedRoute[];
+  visibilityManagedByRuntime: boolean;
   visible: boolean;
   window: CountyPowerStoryWindow;
 }
@@ -519,6 +520,7 @@ export function mountCountyPowerStoryLayer(
     transferRoutes: [],
     transmissionRoutes: [],
     visible: false,
+    visibilityManagedByRuntime: false,
     window: "live",
   };
   let animationFrame: number | null = null;
@@ -2071,7 +2073,9 @@ export function mountCountyPowerStoryLayer(
     async setStoryId(storyId: CountyPowerStoryId): Promise<void> {
       const previousStoryId = state.storyId;
       const shouldTransferVisibility =
-        previousStoryId !== storyId && isStoryRequestedVisible(previousStoryId);
+        !state.visibilityManagedByRuntime &&
+        previousStoryId !== storyId &&
+        isStoryRequestedVisible(previousStoryId);
 
       state.storyId = storyId;
       if (shouldTransferVisibility) {
@@ -2081,7 +2085,7 @@ export function mountCountyPowerStoryLayer(
       applyExtrusionPaint();
       applyVisibility();
 
-      if (!isStoryRequestedVisible(storyId)) {
+      if (state.visibilityManagedByRuntime || !isStoryRequestedVisible(storyId)) {
         return;
       }
 
@@ -2095,7 +2099,15 @@ export function mountCountyPowerStoryLayer(
       state.threeDimensional = enabled;
       applyVisibility();
     },
+    setVisibilityManagedByRuntime(enabled: boolean): void {
+      state.visibilityManagedByRuntime = enabled;
+    },
     async setVisible(visible: boolean): Promise<void> {
+      if (state.visibilityManagedByRuntime) {
+        applyVisibility();
+        return;
+      }
+
       setStoryRequestedVisible(state.storyId, visible);
       applyVisibility();
 

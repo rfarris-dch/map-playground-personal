@@ -10,9 +10,14 @@
     readonly loadingMessage: string;
     readonly selected: unknown | null;
     readonly title: string;
+    readonly topClass?: string;
+    readonly widthClass?: string;
   }
 
-  const props = defineProps<EntityDetailDrawerShellProps>();
+  const props = withDefaults(defineProps<EntityDetailDrawerShellProps>(), {
+    topClass: "top-4",
+    widthClass: "w-[min(28rem,calc(100%-2rem))]",
+  });
 
   const emit = defineEmits<{
     close: [];
@@ -22,7 +27,8 @@
 <template>
   <aside
     v-if="props.selected !== null"
-    class="map-glass-elevated pointer-events-auto absolute right-4 top-4 z-10 w-[min(28rem,calc(100%-2rem))] rounded-lg p-4"
+    class="map-glass-elevated pointer-events-auto absolute right-4 z-10 max-h-[calc(100%-2rem)] overflow-y-auto rounded-lg p-4"
+    :class="[props.widthClass, props.topClass]"
     :aria-label="props.ariaLabel"
   >
     <header class="mb-3 flex items-center gap-2">

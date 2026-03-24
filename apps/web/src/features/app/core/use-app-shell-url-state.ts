@@ -15,6 +15,7 @@ import {
 } from "@/features/map-context-transfer/map-context-transfer.service";
 import {
   buildAppShellUrlStateQuery,
+  createSelfAuthoredQuerySignatureRegistry,
   serializeNormalizedMapContextQuery,
 } from "./app-shell-url-state.service";
 import type { UseAppShellUrlStateOptions } from "./app-shell-url-state.types";
@@ -48,10 +49,9 @@ export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
   const contextToken = shallowRef<string | null>(
     readMapContextTransferTokenFromQuery(route.query) ?? null
   );
-  const lastWrittenQuerySignature = shallowRef<string | null>(null);
-  const pendingQuerySignature = shallowRef<string | null>(null);
   const lastViewportKey = shallowRef<string | null>(null);
   const viewportVersion = shallowRef(0);
+  const selfAuthoredQuerySignatures = createSelfAuthoredQuerySignatureRegistry();
   const replaceTask = useDebouncedLatestEffectTask({
     debounceMs: URL_STATE_SYNC_DEBOUNCE_MS,
     onUnexpectedError(error) {
@@ -77,30 +77,26 @@ export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
     contextToken.value = readMapContextTransferTokenFromQuery(nextQuery) ?? null;
 
     if (currentSignature === nextSignature) {
-      pendingQuerySignature.value = null;
-      lastWrittenQuerySignature.value = null;
+      selfAuthoredQuerySignatures.clear(nextSignature);
       stopSyncTimer();
       return Promise.resolve();
     }
 
-    if (pendingQuerySignature.value === nextSignature) {
+    if (selfAuthoredQuerySignatures.has(nextSignature)) {
       stopSyncTimer();
       return Promise.resolve();
     }
 
-    pendingQuerySignature.value = nextSignature;
-    lastWrittenQuerySignature.value = nextSignature;
+    selfAuthoredQuerySignatures.add(nextSignature);
 
     return replaceTask.start(
       Effect.tryPromise({
         try: async () => {
           await router.replace({ query: nextQuery });
-          pendingQuerySignature.value = null;
           stopSyncTimer();
         },
         catch: (error) => {
-          pendingQuerySignature.value = null;
-          lastWrittenQuerySignature.value = null;
+          selfAuthoredQuerySignatures.clear(nextSignature);
           stopSyncTimer();
           throw error;
         },
@@ -112,12 +108,7 @@ export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
     () => serializeNormalizedMapContextQuery(route.query),
     (routeQuerySignature) => {
       contextToken.value = readMapContextTransferTokenFromQuery(route.query) ?? null;
-      if (routeQuerySignature === pendingQuerySignature.value) {
-        pendingQuerySignature.value = null;
-      }
-
-      if (routeQuerySignature === lastWrittenQuerySignature.value) {
-        lastWrittenQuerySignature.value = null;
+      if (selfAuthoredQuerySignatures.consume(routeQuerySignature)) {
         return;
       }
 
@@ -127,9 +118,15 @@ export function useAppShellUrlState(options: UseAppShellUrlStateOptions): void {
         setBasemapLayerVisible: options.setBasemapLayerVisible,
         setBoundarySelectedRegionIds: options.setBoundarySelectedRegionIds,
         setBoundaryVisible: options.setBoundaryVisible,
+        setCountyPowerStoryAnimationEnabled: options.setCountyPowerStoryAnimationEnabled,
+        setCountyPowerStoryChapterId: options.setCountyPowerStoryChapterId,
+        setCountyPowerStoryChapterVisible: options.setCountyPowerStoryChapterVisible,
+        setCountyPowerStorySeamHazeEnabled: options.setCountyPowerStorySeamHazeEnabled,
+        setCountyPowerStoryStoryId: options.setCountyPowerStoryStoryId,
         setCountyPowerStoryThreeDimensionalEnabled:
           options.setCountyPowerStoryThreeDimensionalEnabled,
         setCountyPowerStoryVisible: options.setCountyPowerStoryVisible,
+        setCountyPowerStoryWindow: options.setCountyPowerStoryWindow,
         setFiberLayerVisibility: options.setFiberLayerVisibility,
         setFiberSourceLayerSelection: options.setFiberSourceLayerSelection,
         setFloodLayerVisible: options.setFloodLayerVisible,

@@ -48,10 +48,20 @@ export interface UseAppShellUrlStateOptions {
     selectedRegionIds: readonly string[] | null
   ) => void;
   readonly setBoundaryVisible: (boundaryId: BoundaryLayerId, visible: boolean) => void;
+  readonly setCountyPowerStoryAnimationEnabled: (enabled: boolean) => void;
+  readonly setCountyPowerStoryChapterId: (
+    chapterId: CountyPowerStoryVisibilityState["chapterId"]
+  ) => Promise<void>;
+  readonly setCountyPowerStoryChapterVisible: (visible: boolean) => Promise<void>;
+  readonly setCountyPowerStorySeamHazeEnabled: (enabled: boolean) => void;
+  readonly setCountyPowerStoryStoryId: (storyId: CountyPowerStoryId) => Promise<void>;
   readonly setCountyPowerStoryThreeDimensionalEnabled: (enabled: boolean) => void;
   readonly setCountyPowerStoryVisible: (
     storyId: CountyPowerStoryId,
     visible: boolean
+  ) => Promise<void>;
+  readonly setCountyPowerStoryWindow: (
+    window: CountyPowerStoryVisibilityState["window"]
   ) => Promise<void>;
   readonly setFiberLayerVisibility: (
     lineId: import("@/features/fiber-locator/fiber-locator.types").FiberLocatorLineId,

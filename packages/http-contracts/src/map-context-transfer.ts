@@ -26,6 +26,35 @@ export const MapContextFacilityViewModeSchema = z.enum([
   "icons",
 ]);
 
+export const MapContextCountyPowerStoryIdSchema = z.enum([
+  "grid-stress",
+  "queue-pressure",
+  "market-structure",
+  "policy-watch",
+]);
+
+export const MapContextCountyPowerStoryWindowSchema = z.enum(["live", "30d", "60d", "90d"]);
+
+export const MapContextCountyPowerStoryChapterIdSchema = z.enum([
+  "operator-heartbeat",
+  "transfer-friction",
+  "queue-pressure-storm",
+  "transmission-current",
+  "policy-shockwaves",
+  "county-scan",
+]);
+
+export const MapContextCountyPowerStoryVisibilitySchema = z.object({
+  animationEnabled: z.boolean(),
+  chapterId: MapContextCountyPowerStoryChapterIdSchema,
+  chapterVisible: z.boolean(),
+  seamHazeEnabled: z.boolean(),
+  storyId: MapContextCountyPowerStoryIdSchema,
+  threeDimensional: z.boolean(),
+  visible: z.boolean(),
+  window: MapContextCountyPowerStoryWindowSchema,
+});
+
 export const MapContextViewportSchema = MapViewportSchema;
 
 export const MapContextFiltersSchema = z.object({
@@ -62,6 +91,7 @@ export const MapContextTransferSchema = z.object({
       hyperscale: MapContextFacilityViewModeSchema.optional(),
     })
     .optional(),
+  countyPowerStoryVisibility: MapContextCountyPowerStoryVisibilitySchema.optional(),
   visibleLayerIds: z.array(z.string().min(1)).optional(),
   visibleBasemapLayerIds: z.array(z.string().min(1)).optional(),
   selectedBoundaryIds: z

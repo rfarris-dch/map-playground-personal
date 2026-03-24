@@ -50,7 +50,10 @@ import {
 } from "@/features/basemap/basemap.service";
 import type { BasemapLayerId, BasemapVisibilityState } from "@/features/basemap/basemap.types";
 import type { BoundaryLayerId } from "@/features/boundaries/boundaries.types";
-import type { CountyPowerStoryId } from "@/features/county-power-story/county-power-story.types";
+import type {
+  CountyPowerStoryId,
+  CountyPowerStoryVisibilityState,
+} from "@/features/county-power-story/county-power-story.types";
 import type { MarketBoundaryLayerId } from "@/features/market-boundaries/market-boundaries.types";
 import type { PowerLayerId, PowerVisibilityState } from "@/features/power/power.types";
 
@@ -81,6 +84,9 @@ export function useAppShellVisibility(options: UseAppShellVisibilityOptions) {
   const parcelsVisible = shallowRef<boolean>(buildInitialParcelsVisible());
   const powerVisibility = shallowRef<PowerVisibilityState>(buildInitialPowerVisibilityState());
   const waterVisible = shallowRef<boolean>(buildInitialWaterVisible());
+  let countyPowerStoryMutationVersion = 0;
+  let countyPowerStorySettledVersion = 0;
+  let countyPowerStoryReconcilePromise: Promise<void> | null = null;
 
   function applyBasemapVisibility(): void {
     const controller = options.basemapLayerController.value;
@@ -207,16 +213,9 @@ export function useAppShellVisibility(options: UseAppShellVisibilityOptions) {
     options.layerRuntime.value?.setUserVisible(catalogId, visible);
   }
 
-  async function setCountyPowerStoryVisible(
-    storyId: CountyPowerStoryId,
-    visible: boolean
-  ): Promise<void> {
-    countyPowerStoryVisibility.value = withCountyPowerStoryVisibility({
-      state: countyPowerStoryVisibility.value,
-      storyId,
-      visible,
-    });
-
+  function applyCountyPowerStoryRuntimeVisibility(
+    visibility: CountyPowerStoryVisibilityState
+  ): void {
     for (const candidateStoryId of [
       "grid-stress",
       "queue-pressure",
@@ -225,98 +224,208 @@ export function useAppShellVisibility(options: UseAppShellVisibilityOptions) {
     ] as const) {
       options.layerRuntime.value?.setUserVisible(
         countyPowerStoryLayerId(candidateStoryId),
-        visible && candidateStoryId === storyId
+        visibility.visible && candidateStoryId === visibility.storyId
       );
     }
 
     options.layerRuntime.value?.setUserVisible(
       COUNTY_POWER_STORY_3D_LAYER_ID,
-      visible && countyPowerStoryVisibility.value.threeDimensional
+      visibility.visible && visibility.threeDimensional
     );
+  }
 
-    const controller = options.countyPowerStoryController.value?.controller;
-    if (typeof controller === "undefined" || controller === null) {
-      return;
+  function updateCountyPowerStoryVisibility(
+    nextVisibility: CountyPowerStoryVisibilityState
+  ): CountyPowerStoryVisibilityState {
+    countyPowerStoryVisibility.value = nextVisibility;
+    countyPowerStoryMutationVersion += 1;
+    applyCountyPowerStoryRuntimeVisibility(nextVisibility);
+    return nextVisibility;
+  }
+
+  function hasNewerCountyPowerStoryMutation(requestedVersion: number): boolean {
+    return requestedVersion !== countyPowerStoryMutationVersion;
+  }
+
+  function readCountyPowerStoryController() {
+    return options.countyPowerStoryController.value?.controller ?? null;
+  }
+
+  async function applyCountyPowerStoryControllerVisibility(
+    requestedVersion: number,
+    requestedVisibility: CountyPowerStoryVisibilityState
+  ): Promise<boolean> {
+    const controller = readCountyPowerStoryController();
+    if (controller === null) {
+      countyPowerStorySettledVersion = requestedVersion;
+      return true;
     }
 
-    await controller.setStoryId(storyId);
-    await controller.setVisible(visible);
+    const createSyncStep = (apply: () => void) => {
+      return () => {
+        apply();
+        return Promise.resolve();
+      };
+    };
 
-    if (!visible) {
+    const steps = [
+      createSyncStep(() => {
+        controller.setAnimationEnabled(requestedVisibility.animationEnabled);
+      }),
+      async () => {
+        await controller.setStoryId(requestedVisibility.storyId);
+      },
+      async () => {
+        await controller.setWindow(requestedVisibility.window);
+      },
+      async () => {
+        await controller.setChapterId(requestedVisibility.chapterId);
+      },
+      async () => {
+        await controller.setChapterVisible(requestedVisibility.chapterVisible);
+      },
+      createSyncStep(() => {
+        controller.setSeamHazeEnabled(requestedVisibility.seamHazeEnabled);
+      }),
+      createSyncStep(() => {
+        controller.setThreeDimensionalEnabled(requestedVisibility.threeDimensional);
+      }),
+    ];
+
+    for (const step of steps) {
+      await step();
+      if (hasNewerCountyPowerStoryMutation(requestedVersion)) {
+        return false;
+      }
+    }
+
+    if (!requestedVisibility.visible) {
       options.clearCountyPowerStoryHover();
       options.clearSelectedCountyPowerStory();
       controller.setSelectedCounty(null);
     }
+
+    countyPowerStorySettledVersion = requestedVersion;
+    return true;
   }
 
-  async function setCountyPowerStoryStoryId(storyId: CountyPowerStoryId): Promise<void> {
-    countyPowerStoryVisibility.value = withCountyPowerStoryVisibility({
-      state: countyPowerStoryVisibility.value,
-      storyId,
-    });
-
-    if (countyPowerStoryVisibility.value.visible) {
-      await setCountyPowerStoryVisible(storyId, true);
+  async function reconcileCountyPowerStoryVisibility(): Promise<void> {
+    if (countyPowerStoryReconcilePromise !== null) {
+      await countyPowerStoryReconcilePromise;
       return;
     }
 
-    await options.countyPowerStoryController.value?.controller.setStoryId(storyId);
+    countyPowerStoryReconcilePromise = (async () => {
+      while (countyPowerStorySettledVersion < countyPowerStoryMutationVersion) {
+        const requestedVersion = countyPowerStoryMutationVersion;
+        const requestedVisibility = countyPowerStoryVisibility.value;
+        await applyCountyPowerStoryControllerVisibility(requestedVersion, requestedVisibility);
+      }
+    })().finally(() => {
+      countyPowerStoryReconcilePromise = null;
+    });
+
+    await countyPowerStoryReconcilePromise;
+  }
+
+  function scheduleCountyPowerStoryReconcile(): void {
+    reconcileCountyPowerStoryVisibility().catch((error: unknown) => {
+      console.error("[county-power-story] visibility reconciliation failed", error);
+    });
+  }
+
+  async function setCountyPowerStoryVisible(
+    storyId: CountyPowerStoryId,
+    visible: boolean
+  ): Promise<void> {
+    updateCountyPowerStoryVisibility(
+      withCountyPowerStoryVisibility({
+        state: countyPowerStoryVisibility.value,
+        ...(visible ? { storyId } : {}),
+        visible,
+      })
+    );
+
+    await reconcileCountyPowerStoryVisibility();
+  }
+
+  async function setCountyPowerStoryStoryId(storyId: CountyPowerStoryId): Promise<void> {
+    updateCountyPowerStoryVisibility(
+      withCountyPowerStoryVisibility({
+        state: countyPowerStoryVisibility.value,
+        storyId,
+      })
+    );
+
+    await reconcileCountyPowerStoryVisibility();
   }
 
   async function setCountyPowerStoryWindow(
     window: import("@/features/county-power-story/county-power-story.types").CountyPowerStoryVisibilityState["window"]
   ): Promise<void> {
-    countyPowerStoryVisibility.value = withCountyPowerStoryVisibility({
-      state: countyPowerStoryVisibility.value,
-      window,
-    });
-    await options.countyPowerStoryController.value?.controller.setWindow(window);
+    updateCountyPowerStoryVisibility(
+      withCountyPowerStoryVisibility({
+        state: countyPowerStoryVisibility.value,
+        window,
+      })
+    );
+
+    await reconcileCountyPowerStoryVisibility();
   }
 
   async function setCountyPowerStoryChapterId(
     chapterId: import("@/features/county-power-story/county-power-story.types").CountyPowerStoryChapterId
   ): Promise<void> {
-    countyPowerStoryVisibility.value = withCountyPowerStoryVisibility({
-      state: countyPowerStoryVisibility.value,
-      chapterId,
-    });
-    await options.countyPowerStoryController.value?.controller.setChapterId(chapterId);
+    updateCountyPowerStoryVisibility(
+      withCountyPowerStoryVisibility({
+        state: countyPowerStoryVisibility.value,
+        chapterId,
+      })
+    );
+
+    await reconcileCountyPowerStoryVisibility();
   }
 
   async function setCountyPowerStoryChapterVisible(visible: boolean): Promise<void> {
-    countyPowerStoryVisibility.value = withCountyPowerStoryVisibility({
-      state: countyPowerStoryVisibility.value,
-      chapterVisible: visible,
-    });
-    await options.countyPowerStoryController.value?.controller.setChapterVisible(visible);
+    updateCountyPowerStoryVisibility(
+      withCountyPowerStoryVisibility({
+        state: countyPowerStoryVisibility.value,
+        chapterVisible: visible,
+      })
+    );
+
+    await reconcileCountyPowerStoryVisibility();
   }
 
   function setCountyPowerStoryAnimationEnabled(enabled: boolean): void {
-    countyPowerStoryVisibility.value = {
+    updateCountyPowerStoryVisibility({
       ...countyPowerStoryVisibility.value,
       animationEnabled: enabled,
-    };
-    options.countyPowerStoryController.value?.controller.setAnimationEnabled(enabled);
+    });
+    readCountyPowerStoryController()?.setAnimationEnabled(enabled);
+    scheduleCountyPowerStoryReconcile();
   }
 
   function setCountyPowerStorySeamHazeEnabled(enabled: boolean): void {
-    countyPowerStoryVisibility.value = withCountyPowerStoryVisibility({
-      state: countyPowerStoryVisibility.value,
-      seamHazeEnabled: enabled,
-    });
-    options.countyPowerStoryController.value?.controller.setSeamHazeEnabled(enabled);
+    updateCountyPowerStoryVisibility(
+      withCountyPowerStoryVisibility({
+        state: countyPowerStoryVisibility.value,
+        seamHazeEnabled: enabled,
+      })
+    );
+    readCountyPowerStoryController()?.setSeamHazeEnabled(enabled);
+    scheduleCountyPowerStoryReconcile();
   }
 
   function setCountyPowerStoryThreeDimensionalEnabled(enabled: boolean): void {
-    countyPowerStoryVisibility.value = withCountyPowerStoryVisibility({
-      state: countyPowerStoryVisibility.value,
-      threeDimensional: enabled,
-    });
-    options.layerRuntime.value?.setUserVisible(
-      COUNTY_POWER_STORY_3D_LAYER_ID,
-      countyPowerStoryVisibility.value.visible && enabled
+    updateCountyPowerStoryVisibility(
+      withCountyPowerStoryVisibility({
+        state: countyPowerStoryVisibility.value,
+        threeDimensional: enabled,
+      })
     );
-    options.countyPowerStoryController.value?.controller.setThreeDimensionalEnabled(enabled);
+    readCountyPowerStoryController()?.setThreeDimensionalEnabled(enabled);
+    scheduleCountyPowerStoryReconcile();
   }
 
   function setBoundaryVisible(boundaryId: BoundaryLayerId, visible: boolean): void {
