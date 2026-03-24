@@ -38,11 +38,11 @@ if [[ ! -f "${SCHEMA_SQL}" ]]; then
   exit 1
 fi
 
-
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/market-source.XXXXXX")"
 cleanup() {
   rm -rf "${TMP_DIR}"
 }
+trap cleanup EXIT
 
 mysql_exec() {
   MYSQL_PWD="${DB_PASSWORD}" mysql \
@@ -158,46 +158,62 @@ mysql_exec "
     'latitude', facility_location.LATITUDE,
     'longitude', facility_location.LONGITUDE
   )
-  FROM BLC_PRODUCT AS product
-  INNER JOIN HAWK_FACILITY_LOCATION AS facility_location
+  FROM HAWK_PRODUCT product
+  JOIN HAWK_FACILITY_LOCATION facility_location
     ON facility_location.FACILITY_LOCATION_ID = product.FACILITY_LOCATION_ID
-  WHERE product.PRODUCT_TYPE = 'COLOCATION'
-    AND COALESCE(product.ARCHIVED, 'N') <> 'Y'
-    AND COALESCE(product.OPT_OUT, '0') = '0'
-    AND product.MARKET_ID IS NOT NULL
-    AND facility_location.LATITUDE IS NOT NULL
-    AND facility_location.LONGITUDE IS NOT NULL
-  ORDER BY product.PRODUCT_ID;
-" > "${TMP_DIR}/colocation-points.ndjson"
+  WHERE product.FACILITY_LOCATION_ID IS NOT NULL;
+" > "${TMP_DIR}/product-facility-locations.ndjson"
 
 mysql_exec "
   SELECT JSON_OBJECT(
-    'point_id', facility.ID,
-    'market_id', facility.MARKET,
-    'submarket_id', facility.SUBMARKET_ID,
-    'company', facility.COMPANY,
-    'facility_code', COALESCE(
-      NULLIF(TRIM(facility.FACILITY_CODE), ''),
-      NULLIF(TRIM(facility.BUILDING_DESIGNATION), '')
-    ),
-    'address', facility.ADDRESS,
-    'city', facility.CITY,
-    'state', facility.STATE,
-    'country', facility.COUNTRY,
-    'county_fips', ${HYPERSCALE_COUNTY_FIPS_EXPR},
-    'facility_status', facility.FACILITY_STATUS,
-    'lease_or_own', facility.LEASE_OR_OWN,
-    'latitude', facility.LATITUDE,
-    'longitude', facility.LONGITUDE,
-    'updated_at', facility.DATE_UPDATED
+    'facility_id', facility.FACILITY_ID,
+    'facility_name', facility.FACILITY_NAME,
+    'market_id', market.MARKET_ID,
+    'submarket_id', submarket.SUBMARKET_ID,
+    'market_name', market.NAME,
+    'submarket_name', submarket.NAME,
+    'company_id', company.COMPANY_ID,
+    'company_name', company.COMPANY_NAME,
+    'power_capacity_mw', facility.POWER_CAPACITY_MW,
+    'critical_load_mw', facility.CRITICAL_LOAD_MW,
+    'county_fips', ${HYPERSCALE_COUNTY_FIPS_EXPR}
   )
-  FROM HYPERSCALE_FACILITY AS facility
-  WHERE COALESCE(facility.ARCHIVED, 'N') <> 'Y'
-    AND facility.MARKET IS NOT NULL
-    AND facility.LATITUDE IS NOT NULL
-    AND facility.LONGITUDE IS NOT NULL
-  ORDER BY facility.ID;
-" > "${TMP_DIR}/hyperscale-points.ndjson"
+  FROM HYPERSCALE_FACILITY facility
+  LEFT JOIN HAWK_MARKET market
+    ON market.MARKET_ID = facility.MARKET_ID
+  LEFT JOIN HAWK_SUBMARKET submarket
+    ON submarket.SUBMARKET_ID = facility.SUBMARKET_ID
+  LEFT JOIN HAWK_COMPANY company
+    ON company.COMPANY_ID = facility.COMPANY_ID;
+" > "${TMP_DIR}/hyperscale-facilities.ndjson"
 
-psql \
-echo "$TMP_DIR"
+psql "${DB_URL}" \
+  --set ON_ERROR_STOP=1 \
+  --file "${SCHEMA_SQL}"
+
+for file_name in \
+  market-groups \
+  world-regions \
+  markets \
+  submarkets \
+  market-quarterly-data \
+  market-yearly-data \
+  market-totals-data \
+  market-updates \
+  market-cap-reports \
+  companies \
+  power-space-info \
+  facility-quarterly-data \
+  product-facility-locations \
+  hyperscale-facility-current \
+  hyperscale-historical-capacity \
+  hyperscale-company-lease-total \
+  hs-grid-company-market-lease-total \
+  insight-forecast \
+  insight-pricing-forecast \
+  hyperscale-facilities
+do
+  psql "${DB_URL}" \
+    --set ON_ERROR_STOP=1 \
+    --command "\\copy market_source.${file_name//-/_} FROM '${TMP_DIR}/${file_name}.ndjson'"
+done

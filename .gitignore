@@ -23,9 +23,7 @@ coverage
 
 # local automation artifacts
 tmp/
-.playwright-cli/*.yml
-.playwright-cli/*.png
-.playwright-cli/*.log
+.playwright-cli/
 __pycache__/
 *.pyc
 
