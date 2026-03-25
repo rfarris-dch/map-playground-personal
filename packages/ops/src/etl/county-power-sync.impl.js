@@ -1628,10 +1628,10 @@ export async function materializeCountyPowerManifest(args) {
   let manifest;
   if (manifestPath !== null) {
     manifest = readJson(manifestPath, decodeCountyPowerBundleManifest);
-  } else if (manifestUrl !== null) {
-    manifest = decodeCountyPowerBundleManifest(JSON.parse(await fetchText(manifestUrl)));
-  } else {
+  } else if (manifestUrl === null) {
     throw new Error("County power manifest input is required");
+  } else {
+    manifest = decodeCountyPowerBundleManifest(JSON.parse(await fetchText(manifestUrl)));
   }
   const rawPaths = materializedDatasetPaths(args.rawDir);
   if (manifestPath !== null) {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { FacilityPerspectiveSchema } from "@map-migration/geo-kernel/facility-perspective";
 import {
   buildFacilitiesBboxQuery,
   buildFacilitiesPolygonQuery,
@@ -154,6 +155,47 @@ describe("geo-sql query specs", () => {
 
     expect(query.sql).toContain('"serve"."hyperscale_site_fast__20260323.abc123"');
     expect(query.sql).not.toContain("serve.hyperscale_site_fast AS facility");
+  });
+
+  it("rejects enterprise perspective for polygon and detail queries", () => {
+    expect(() => getFacilitiesPolygonQuerySpec("enterprise")).toThrow(
+      /unsupported facility perspective/i
+    );
+    expect(() => getFacilityDetailQuerySpec("enterprise")).toThrow(
+      /unsupported facility perspective/i
+    );
+  });
+
+  it("accepts enterprise perspective for bbox queries", () => {
+    const spec = getFacilitiesBboxQuerySpec("enterprise");
+    expect(spec.endpointClass).toBe("feature-collection");
+    expect(spec.sql).toContain("serve.enterprise_site");
+  });
+
+  it("handles every FacilityPerspective for bbox queries without throwing", () => {
+    for (const perspective of FacilityPerspectiveSchema.options) {
+      const spec = getFacilitiesBboxQuerySpec(perspective);
+      expect(spec.endpointClass).toBe("feature-collection");
+      expect(spec.maxRows).toBeGreaterThan(0);
+      expect(spec.sql.trim().length).toBeGreaterThan(0);
+    }
+  });
+
+  it("explicitly rejects unsupported perspectives for polygon and detail queries", () => {
+    const bboxOnlyPerspectives = ["enterprise"];
+    const supportedPerspectives = FacilityPerspectiveSchema.options.filter(
+      (p) => !bboxOnlyPerspectives.includes(p)
+    );
+
+    for (const perspective of supportedPerspectives) {
+      expect(() => getFacilitiesPolygonQuerySpec(perspective)).not.toThrow();
+      expect(() => getFacilityDetailQuerySpec(perspective)).not.toThrow();
+    }
+
+    for (const perspective of bboxOnlyPerspectives) {
+      expect(() => getFacilitiesPolygonQuerySpec(perspective)).toThrow(/unsupported/i);
+      expect(() => getFacilityDetailQuerySpec(perspective)).toThrow(/unsupported/i);
+    }
   });
 
   it("keeps county metrics query aligned with power market context fields", () => {

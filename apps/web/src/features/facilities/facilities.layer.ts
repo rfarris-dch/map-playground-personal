@@ -89,9 +89,13 @@ function measureResponseBodyBytes(rawBody: unknown): number {
 
 function toFacilitiesCatalogLayerId(
   perspective: FacilityPerspective
-): "facilities.colocation" | "facilities.hyperscale" {
+): "facilities.colocation" | "facilities.hyperscale" | "facilities.enterprise" {
   if (perspective === "hyperscale") {
     return "facilities.hyperscale";
+  }
+
+  if (perspective === "enterprise") {
+    return "facilities.enterprise";
   }
 
   return "facilities.colocation";
@@ -678,6 +682,7 @@ export function mountFacilitiesLayer(
     lastTruncated: false,
     lastFetchKey: null,
     requestSequence: 0,
+    lastSelectedFacilityId: null,
     selectedFeatureId: null,
     stressBlocked: false,
     viewMode: options.initialViewMode ?? "icons",
@@ -1442,6 +1447,14 @@ export function mountFacilitiesLayer(
   ): void => {
     const previousFeatureId = state.selectedFeatureId;
     if (previousFeatureId === nextFeatureId) {
+      if (
+        typeof selectedFacilityOverride !== "undefined" &&
+        selectedFacilityOverride !== null &&
+        selectedFacilityOverride.facilityId !== state.lastSelectedFacilityId
+      ) {
+        state.lastSelectedFacilityId = selectedFacilityOverride.facilityId;
+        emitSelectedFacility(nextFeatureId, selectedFacilityOverride);
+      }
       return;
     }
 
@@ -1456,6 +1469,7 @@ export function mountFacilitiesLayer(
     }
 
     state.selectedFeatureId = nextFeatureId;
+    state.lastSelectedFacilityId = selectedFacilityOverride?.facilityId ?? null;
 
     if (nextFeatureId !== null) {
       map.setFeatureState(
@@ -1471,6 +1485,7 @@ export function mountFacilitiesLayer(
   };
 
   const clearSelection = (): void => {
+    state.lastSelectedFacilityId = null;
     if (!state.ready) {
       state.selectedFeatureId = null;
       emitSelectedFacility(null);

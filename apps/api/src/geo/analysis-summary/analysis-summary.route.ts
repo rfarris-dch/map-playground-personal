@@ -1,5 +1,6 @@
 import { ApiRoutes } from "@map-migration/http-contracts/api-routes";
 import {
+  type SpatialAnalysisSummaryRequest,
   SpatialAnalysisSummaryRequestSchema,
   type SpatialAnalysisSummaryResponse,
   SpatialAnalysisSummaryResponseSchema,
@@ -75,7 +76,7 @@ function analysisSummaryErrorMessage(reason: string): string {
 async function readSpatialAnalysisSummaryRequest(
   c: Context,
   requestId: string
-): Promise<typeof SpatialAnalysisSummaryRequestSchema._type | Response> {
+): Promise<SpatialAnalysisSummaryRequest | Response> {
   const bodyResult = await readJsonBody(c, {
     requestId,
     invalidJsonMessage: "invalid JSON body",

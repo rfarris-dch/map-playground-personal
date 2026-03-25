@@ -63,13 +63,13 @@ export interface IMap {
   hasSource(sourceId: string): boolean;
   isLayerVisible(layerId: string): boolean;
   loadImage(url: string): Promise<ImageBitmap | HTMLImageElement | ImageData>;
-  off(event: "load" | "moveend", handler: () => void): void;
+  off(event: "idle" | "load" | "moveend", handler: () => void): void;
   offClick(handler: (event: MapClickEvent) => void): void;
   offError(handler: MapErrorHandler): void;
   offPointerLeave(handler: () => void): void;
   offPointerMove(handler: (event: MapPointerEvent) => void): void;
   offStyleImageMissing(handler: (id: string) => void): void;
-  on(event: "load" | "moveend", handler: () => void): void;
+  on(event: "idle" | "load" | "moveend", handler: () => void): void;
   onClick(handler: (event: MapClickEvent) => void): void;
   onError(handler: MapErrorHandler): void;
   onPointerLeave(handler: () => void): void;

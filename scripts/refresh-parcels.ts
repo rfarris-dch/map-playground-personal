@@ -1678,8 +1678,7 @@ function initializeExpectedStateCheckpoints(args: {
     const isCompleted =
       args.cli.resume &&
       args.cli.maxPagesPerState === null &&
-      existingCheckpoint !== null &&
-      existingCheckpoint.isCompleted;
+      existingCheckpoint?.isCompleted === true;
 
     expectedByState.set(state2, normalizedExpected);
     writeStateCheckpoint(checkpointPath, state2, normalizedExpected, counters, isCompleted);

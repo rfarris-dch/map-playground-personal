@@ -193,17 +193,17 @@ export function buildFacilitiesDatasetManifest(
     publishedAt: state.publishedAt,
     current: {
       version: state.currentVersion,
-      ...(state.warmProfileVersion !== null
-        ? { warmProfileVersion: state.warmProfileVersion }
-        : {}),
+      ...(state.warmProfileVersion === null
+        ? {}
+        : { warmProfileVersion: state.warmProfileVersion }),
     },
-    ...(state.previousVersion !== null
-      ? {
+    ...(state.previousVersion === null
+      ? {}
+      : {
           previous: {
             version: state.previousVersion,
           },
-        }
-      : {}),
+        }),
   };
 }
 

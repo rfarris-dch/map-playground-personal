@@ -1,5 +1,11 @@
+/**
+ * Pipeline / ETL status contracts.
+ *
+ * Now composes generic SyncStatusResponseSchema from sync-run-http
+ * instead of depending on parcels-http (which reversed the dependency).
+ */
 import { z } from "zod";
-import { ParcelsSyncStatusResponseSchema } from "./parcels-http.js";
+import { SyncStatusResponseSchema } from "./sync-run-http.js";
 
 export const PipelineDatasetSchema = z.enum(["parcels", "flood", "hydro-basins"]);
 export const PipelineDatasetFamilySchema = z.enum(["parcels", "environmental"]);
@@ -22,7 +28,7 @@ export const PipelineDatasetDescriptorSchema = z.object({
   assetChain: z.array(z.string().min(1)).min(1),
 });
 
-export const PipelineStatusResponseSchema = ParcelsSyncStatusResponseSchema.extend({
+export const PipelineStatusResponseSchema = SyncStatusResponseSchema.extend({
   dataset: PipelineDatasetDescriptorSchema,
   platform: PipelinePlatformSchema,
 });

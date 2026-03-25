@@ -1,5 +1,9 @@
-import { GeometrySchema } from "@map-migration/geo-kernel/geometry";
+import {
+  MultiPolygonGeometrySchema,
+  PolygonGeometrySchema,
+} from "@map-migration/geo-kernel/geometry";
 import { z } from "zod";
+import { trimQueryValue } from "./_query-parsing.js";
 import { ResponseMetaSchema } from "./api-response-meta.js";
 import {
   CountyFipsSchema,
@@ -9,15 +13,6 @@ import {
 
 export const COUNTY_POWER_STORY_TILE_SOURCE_LAYER = "county_power_story";
 export const COUNTY_POWER_STORY_TILE_PROMOTE_ID = "county_fips";
-
-function trimQueryValue(value: unknown): unknown {
-  if (typeof value !== "string") {
-    return value;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
-}
 
 export const CountyPowerStoryIdSchema = z.enum([
   "grid-stress",
@@ -52,10 +47,11 @@ export const CountyPowerStoryGeometryPropertiesSchema = CountyScoreSchema.pick({
   centroid: z.tuple([z.number().finite(), z.number().finite()]),
 });
 
+/** County story geometry is polygonal — tightened from generic GeometrySchema. */
 export const CountyPowerStoryGeometryFeatureSchema = z.object({
   type: z.literal("Feature"),
   id: CountyFipsSchema,
-  geometry: GeometrySchema,
+  geometry: z.union([PolygonGeometrySchema, MultiPolygonGeometrySchema]),
   properties: CountyPowerStoryGeometryPropertiesSchema,
 });
 

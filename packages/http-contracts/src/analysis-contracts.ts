@@ -1,199 +1,66 @@
-import { AreaOfInterestSchema } from "@map-migration/geo-kernel/area-of-interest";
-import { FacilityPerspectiveSchema } from "@map-migration/geo-kernel/facility-perspective";
-import { GeometrySchema } from "@map-migration/geo-kernel/geometry";
-import { z } from "zod";
-import { ApiErrorResponseSchema } from "./api-error.js";
-import { ResponseMetaSchema } from "./api-response-meta.js";
-import { ParcelFeatureSchema } from "./parcels-http.js";
+/**
+ * Analysis contracts barrel — re-exports from domain-specific modules.
+ *
+ * Previously this file mixed parcel scoring, proximity, market metrics,
+ * and licensing/governance policy. Each domain now has its own file:
+ *   - parcel-scoring-http.ts
+ *   - market-metrics-http.ts
+ *   - analysis-policy-http.ts
+ */
 
-export const ParcelScoreConstraintSchema = z.object({
-  key: z.string().min(1),
-  passed: z.boolean(),
-  reason: z.string().min(1).optional(),
-});
+export {
+  ParcelScoreConstraintSchema,
+  ParcelScoreComponentSchema,
+  ScoredParcelSchema,
+  ParcelScoreRequestSchema,
+  ParcelScoreResponseSchema,
+  ProximityTargetSchema,
+  ProximityNeighborTypeSchema,
+  ProximityRequestSchema,
+  ProximityNeighborSchema,
+  ProximityResponseSchema,
+  AnalysisErrorResponseSchema,
+  type ParcelScoreConstraint,
+  type ParcelScoreComponent,
+  type ScoredParcel,
+  type ParcelScoreRequest,
+  type ParcelScoreResponse,
+  type ProximityTarget,
+  type ProximityNeighborType,
+  type ProximityRequest,
+  type ProximityNeighbor,
+  type ProximityResponse,
+  type AnalysisErrorResponse,
+} from "./parcel-scoring-http.js";
 
-export const ParcelScoreComponentSchema = z.object({
-  key: z.string().min(1),
-  weight: z.number(),
-  rawValue: z.unknown(),
-  normalizedValue: z.number(),
-  contribution: z.number(),
-  confidence: z.number(),
-});
+export {
+  MarketMetricKeySchema,
+  MetricTimeWindowSchema,
+  MetricAggregationGrainSchema,
+  MetricNullHandlingSchema,
+  MarketMetricDefinitionSchema,
+  MarketMetricDefinitionsSchema,
+  type MarketMetricKey,
+  type MetricTimeWindow,
+  type MetricAggregationGrain,
+  type MetricNullHandling,
+  type MarketMetricDefinition,
+  type MarketMetricDefinitions,
+} from "./market-metrics-http.js";
 
-export const ScoredParcelSchema = z.object({
-  parcel: ParcelFeatureSchema,
-  scoreTotal: z.number(),
-  confidenceScore: z.number(),
-  constraints: z.array(ParcelScoreConstraintSchema),
-  components: z.array(ParcelScoreComponentSchema),
-  provenance: z.object({
-    modelId: z.string().min(1),
-    modelVersion: z.number().int().nonnegative(),
-    ingestionRunId: z.string().min(1),
-    boundarySetId: z.string().min(1).optional(),
-    boundarySetVersion: z.number().int().nonnegative().optional(),
-  }),
-});
-
-export const ParcelScoreRequestSchema = z.object({
-  aoi: AreaOfInterestSchema,
-  modelId: z.string().min(1),
-  modelVersion: z.number().int().nonnegative(),
-  overrides: z.record(z.unknown()).optional(),
-});
-
-export const ParcelScoreResponseSchema = z.object({
-  status: z.literal("ok"),
-  results: z.array(ScoredParcelSchema),
-  meta: ResponseMetaSchema,
-});
-
-export const ProximityTargetSchema = z.discriminatedUnion("type", [
-  z.object({
-    type: z.literal("parcel"),
-    parcelId: z.string().min(1),
-  }),
-  z.object({
-    type: z.literal("facility"),
-    facilityId: z.string().min(1),
-    perspective: FacilityPerspectiveSchema,
-  }),
-  z.object({
-    type: z.literal("geometry"),
-    geometry: GeometrySchema,
-  }),
-]);
-
-export const ProximityNeighborTypeSchema = z.enum([
-  "power_substation",
-  "fiber_metro",
-  "fiber_longhaul",
-  "facility_colocation",
-  "facility_hyperscale",
-]);
-
-export const ProximityRequestSchema = z.object({
-  target: ProximityTargetSchema,
-  neighborTypes: z.array(ProximityNeighborTypeSchema).min(1),
-  limit: z.number().int().positive().max(50).default(5),
-});
-
-export const ProximityNeighborSchema = z.object({
-  neighborType: ProximityNeighborTypeSchema,
-  id: z.string().min(1),
-  name: z.string().min(1).optional(),
-  distanceMeters: z.number().nonnegative(),
-  bearingDegrees: z.number(),
-  confidence: z.number().optional(),
-});
-
-export const ProximityResponseSchema = z.object({
-  status: z.literal("ok"),
-  neighbors: z.array(ProximityNeighborSchema),
-  meta: ResponseMetaSchema,
-});
-
-export const AnalysisErrorResponseSchema = ApiErrorResponseSchema;
-
-export const MarketMetricKeySchema = z.enum(["market_size", "absorption", "vacancy"]);
-export const MetricTimeWindowSchema = z.enum(["monthly", "quarterly", "trailing_12_month"]);
-export const MetricAggregationGrainSchema = z.enum(["county", "market", "state", "country"]);
-export const MetricNullHandlingSchema = z.enum(["exclude", "coalesce_zero", "error"]);
-
-export const MarketMetricDefinitionSchema = z.object({
-  key: MarketMetricKeySchema,
-  canonicalFormula: z.string().min(1),
-  timeWindow: MetricTimeWindowSchema,
-  aggregationGrain: MetricAggregationGrainSchema,
-  nullHandling: MetricNullHandlingSchema,
-  owner: z.string().min(1),
-  dueDate: z.string().date(),
-});
-
-export const MarketMetricDefinitionsSchema = z.object({
-  market_size: MarketMetricDefinitionSchema.extend({
-    key: z.literal("market_size"),
-  }),
-  absorption: MarketMetricDefinitionSchema.extend({
-    key: z.literal("absorption"),
-  }),
-  vacancy: MarketMetricDefinitionSchema.extend({
-    key: z.literal("vacancy"),
-  }),
-});
-
-export const PolicyDatasetSchema = z.enum([
-  "county_scores",
-  "parcels",
-  "facilities",
-  "environmental_flood",
-  "power",
-  "fiber",
-  "market_metrics",
-]);
-export const PolicySensitivityTierSchema = z.enum(["public", "internal", "restricted"]);
-export const QueryGranularitySchema = z.enum([
-  "bbox",
-  "polygon",
-  "county",
-  "tileSet",
-  "parcel",
-  "facility",
-  "market",
-  "state",
-  "country",
-]);
-export const ExportGranularitySchema = z.enum([
-  "none",
-  "parcel",
-  "facility",
-  "county",
-  "market",
-  "state",
-  "country",
-]);
-export const RedistributionPolicySchema = z.enum(["none", "internal", "partner", "public"]);
-
-export const DatasetLicensingPolicySchema = z.object({
-  dataset: PolicyDatasetSchema,
-  sensitivityTier: PolicySensitivityTierSchema,
-  allowedQueryGranularities: z.array(QueryGranularitySchema).min(1),
-  allowedExportGranularities: z.array(ExportGranularitySchema).min(1),
-  minimumKAnonymity: z.number().int().positive().nullable(),
-  cacheTtlSeconds: z.number().int().positive(),
-  retentionDays: z.number().int().positive(),
-  redistribution: RedistributionPolicySchema,
-  owner: z.string().min(1),
-  dueDate: z.string().date(),
-});
-
-export const SpatialAnalysisPolicySchema = z.object({
-  marketMetrics: MarketMetricDefinitionsSchema,
-  licensing: z.array(DatasetLicensingPolicySchema).min(1),
-});
-
-export type ParcelScoreConstraint = z.infer<typeof ParcelScoreConstraintSchema>;
-export type ParcelScoreComponent = z.infer<typeof ParcelScoreComponentSchema>;
-export type ScoredParcel = z.infer<typeof ScoredParcelSchema>;
-export type ParcelScoreRequest = z.infer<typeof ParcelScoreRequestSchema>;
-export type ParcelScoreResponse = z.infer<typeof ParcelScoreResponseSchema>;
-export type ProximityTarget = z.infer<typeof ProximityTargetSchema>;
-export type ProximityNeighborType = z.infer<typeof ProximityNeighborTypeSchema>;
-export type ProximityRequest = z.infer<typeof ProximityRequestSchema>;
-export type ProximityNeighbor = z.infer<typeof ProximityNeighborSchema>;
-export type ProximityResponse = z.infer<typeof ProximityResponseSchema>;
-export type AnalysisErrorResponse = z.infer<typeof AnalysisErrorResponseSchema>;
-export type MarketMetricKey = z.infer<typeof MarketMetricKeySchema>;
-export type MetricTimeWindow = z.infer<typeof MetricTimeWindowSchema>;
-export type MetricAggregationGrain = z.infer<typeof MetricAggregationGrainSchema>;
-export type MetricNullHandling = z.infer<typeof MetricNullHandlingSchema>;
-export type MarketMetricDefinition = z.infer<typeof MarketMetricDefinitionSchema>;
-export type MarketMetricDefinitions = z.infer<typeof MarketMetricDefinitionsSchema>;
-export type PolicyDataset = z.infer<typeof PolicyDatasetSchema>;
-export type PolicySensitivityTier = z.infer<typeof PolicySensitivityTierSchema>;
-export type QueryGranularity = z.infer<typeof QueryGranularitySchema>;
-export type ExportGranularity = z.infer<typeof ExportGranularitySchema>;
-export type RedistributionPolicy = z.infer<typeof RedistributionPolicySchema>;
-export type DatasetLicensingPolicy = z.infer<typeof DatasetLicensingPolicySchema>;
-export type SpatialAnalysisPolicy = z.infer<typeof SpatialAnalysisPolicySchema>;
+export {
+  PolicyDatasetSchema,
+  PolicySensitivityTierSchema,
+  QueryGranularitySchema,
+  ExportGranularitySchema,
+  RedistributionPolicySchema,
+  DatasetLicensingPolicySchema,
+  SpatialAnalysisPolicySchema,
+  type PolicyDataset,
+  type PolicySensitivityTier,
+  type QueryGranularity,
+  type ExportGranularity,
+  type RedistributionPolicy,
+  type DatasetLicensingPolicy,
+  type SpatialAnalysisPolicy,
+} from "./analysis-policy-http.js";

@@ -14,7 +14,7 @@
     "dev": "tsc -w -p tsconfig.json & tsc-alias -w -p tsconfig.json --resolve-full-paths --resolve-full-extension .js"
   },
   "dependencies": {
-    "zod": "^3.24.2"
+    "zod": "^4.3.6"
   },
   "exports": {
     "./geometry": {
@@ -29,10 +29,6 @@
       "types": "./dist/commissioned-semantic.d.ts",
       "default": "./dist/commissioned-semantic.js"
     },
-    "./facility-lifecycle": {
-      "types": "./dist/facility-lifecycle.d.ts",
-      "default": "./dist/facility-lifecycle.js"
-    },
     "./warning": {
       "types": "./dist/warning.d.ts",
       "default": "./dist/warning.js"
@@ -44,14 +40,6 @@
     "./area-of-interest-policy": {
       "types": "./dist/area-of-interest-policy.d.ts",
       "default": "./dist/area-of-interest-policy.js"
-    },
-    "./parcel-snapshot-id": {
-      "types": "./dist/parcel-snapshot-id.d.ts",
-      "default": "./dist/parcel-snapshot-id.js"
-    },
-    "./map-viewport": {
-      "types": "./dist/map-viewport.d.ts",
-      "default": "./dist/map-viewport.js"
     }
   },
   "files": [

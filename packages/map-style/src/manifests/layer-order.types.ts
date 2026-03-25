@@ -19,5 +19,11 @@ export interface LayerOrderInvariants {
   parcelOutlinesAboveCountyPowerMarketStructure: readonly [string, string];
   parcelOutlinesAboveCountyPowerPolicyWatch: readonly [string, string];
   parcelOutlinesAboveCountyPowerQueuePressure: readonly [string, string];
+  countyPower3dBelowEnterprise: readonly [string, string];
+  countyPowerGridStressBelowEnterprise: readonly [string, string];
+  countyPowerMarketStructureBelowEnterprise: readonly [string, string];
+  countyPowerPolicyWatchBelowEnterprise: readonly [string, string];
+  countyPowerQueuePressureBelowEnterprise: readonly [string, string];
+  hyperscaleLeasedFillBelowParcelOutlines: readonly [string, string];
   submarketBoundaryBelowColocation: readonly [string, string];
 }

@@ -66,7 +66,18 @@ export class ApiSchemaError extends TaggedError("ApiSchemaError")<{
 
 export type ApiEffectError = ApiAbortedError | ApiHttpError | ApiNetworkError | ApiSchemaError;
 
-export const MapAppAuthRequiredEventName = "map-app:auth-required";
+export type ApiHttpStatusObserver = (status: number) => void;
+
+let httpStatusObserver: ApiHttpStatusObserver | undefined;
+
+/**
+ * Register a callback invoked on every HTTP error status.
+ * The web app uses this to detect 401s and clear auth state, keeping
+ * the transport layer free of browser-specific side effects.
+ */
+export function setApiHttpStatusObserver(observer: ApiHttpStatusObserver): void {
+  httpStatusObserver = observer;
+}
 
 // ---------------------------------------------------------------------------
 // Retry profiles
@@ -221,12 +232,8 @@ function parseApiError(details: unknown): ParsedApiError | null {
   };
 }
 
-function notifyMapAppAuthRequired(status: number): void {
-  if (status !== 401 || typeof window === "undefined") {
-    return;
-  }
-
-  window.dispatchEvent(new CustomEvent(MapAppAuthRequiredEventName));
+function notifyHttpStatus(status: number): void {
+  httpStatusObserver?.(status);
 }
 
 export function getApiErrorMessage(error: ApiEffectError, fallbackMessage: string): string {
@@ -363,7 +370,7 @@ export function apiRequestJsonEffect<TValue>(
         case "RequestHttpError": {
           const apiError = parseApiError(error.details);
           if (apiError !== null) {
-            notifyMapAppAuthRequired(error.status);
+            notifyHttpStatus(error.status);
             return fail(
               new ApiHttpError({
                 requestId: apiError.requestId,
@@ -377,7 +384,7 @@ export function apiRequestJsonEffect<TValue>(
             );
           }
 
-          notifyMapAppAuthRequired(error.status);
+          notifyHttpStatus(error.status);
           return fail(
             new ApiHttpError({
               requestId: error.requestId,

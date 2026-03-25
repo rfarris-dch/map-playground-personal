@@ -6,19 +6,19 @@ import { FacilityPerspectiveSchema } from "@map-migration/geo-kernel/facility-pe
 import { PointGeometrySchema, PolygonGeometrySchema } from "@map-migration/geo-kernel/geometry";
 import { WarningSchema } from "@map-migration/geo-kernel/warning";
 import { z } from "zod";
-import { PolicyDatasetSchema, QueryGranularitySchema } from "./analysis-contracts.js";
+import { FacilityCorePropertiesSchema, FacilityHttpPerspectiveSchema } from "./_facility-core.js";
+import { trimQueryValue } from "./_query-parsing.js";
+import { PolicyDatasetSchema, QueryGranularitySchema } from "./analysis-policy-http.js";
 import { ResponseMetaSchema } from "./api-response-meta.js";
 import {
+  CountyFipsSchema,
   CountyScoresResponseSchema,
   CountyScoresStatusResponseSchema,
 } from "./county-intelligence-http.js";
 import { MarketSelectionMatchSchema } from "./markets-selection-http.js";
 
-const CountyFipsSchema = z.string().regex(/^[0-9]{5}$/);
-const trimValue = (value: unknown): unknown => (typeof value === "string" ? value.trim() : value);
-
 export const SpatialAnalysisSummaryRequestSchema = z.object({
-  facilitiesDatasetVersion: z.preprocess(trimValue, z.string().min(1)).optional(),
+  facilitiesDatasetVersion: z.preprocess(trimQueryValue, z.string().min(1)).optional(),
   geometry: PolygonGeometrySchema,
   includeFacilities: z.boolean().default(true),
   includeFlood: z.boolean().default(true),
@@ -29,26 +29,31 @@ export const SpatialAnalysisSummaryRequestSchema = z.object({
   perspectives: z.array(FacilityPerspectiveSchema).max(2).default(["colocation", "hyperscale"]),
 });
 
-export const SpatialAnalysisSummaryFacilityRecordSchema = z.object({
+/**
+ * Derived from FacilityCorePropertiesSchema to stay aligned with the
+ * canonical facility shape, avoiding hand-copy drift.
+ */
+export const SpatialAnalysisSummaryFacilityRecordSchema = FacilityCorePropertiesSchema.pick({
+  availablePowerMw: true,
+  commissionedPowerMw: true,
+  commissionedSemantic: true,
+  facilityId: true,
+  facilityName: true,
+  leaseOrOwn: true,
+  perspective: true,
+  plannedPowerMw: true,
+  providerId: true,
+  providerName: true,
+  squareFootage: true,
+  statusLabel: true,
+  underConstructionPowerMw: true,
+}).extend({
   address: z.string().nullable(),
-  availablePowerMw: z.number().nullable(),
   city: z.string().nullable(),
-  commissionedPowerMw: z.number().nullable(),
-  commissionedSemantic: CommissionedSemanticSchema,
   coordinates: PointGeometrySchema.shape.coordinates,
   countyFips: CountyFipsSchema.nullable(),
-  facilityId: z.string().min(1),
-  facilityName: z.string().min(1),
-  leaseOrOwn: LeaseOrOwnSchema.nullable(),
-  perspective: FacilityPerspectiveSchema,
-  plannedPowerMw: z.number().nullable(),
-  providerId: z.string().min(1),
-  providerName: z.string().min(1),
-  squareFootage: z.number().nullable(),
   state: z.string().nullable(),
   stateAbbrev: z.string().length(2).nullable(),
-  statusLabel: z.string().nullable(),
-  underConstructionPowerMw: z.number().nullable(),
 });
 
 export const SpatialAnalysisPerspectiveSummarySchema = z.object({
@@ -74,7 +79,7 @@ export const SpatialAnalysisProviderSummarySchema = z.object({
 });
 
 export const SpatialAnalysisParcelRecordSchema = z.object({
-  attrs: z.record(z.unknown()),
+  attrs: z.record(z.string(), z.unknown()),
   coordinates: PointGeometrySchema.shape.coordinates.nullable(),
   geoid: z.string().nullable(),
   parcelId: z.string().min(1),
@@ -124,6 +129,10 @@ export const SpatialAnalysisFloodSummarySchema = z.object({
   unavailableReason: z.string().nullable(),
 });
 
+/**
+ * Selection summary uses FacilityHttpPerspectiveSchema keys since response
+ * shapes are structurally keyed to colocation + hyperscale only.
+ */
 export const SpatialAnalysisSelectionSummarySchema = z.object({
   colocation: SpatialAnalysisPerspectiveSummarySchema,
   countyIds: z.array(CountyFipsSchema),

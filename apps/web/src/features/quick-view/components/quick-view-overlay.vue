@@ -95,10 +95,11 @@
   }
 
   function formatCompact(value: number): string {
-    if (value >= 100) {
-      return Math.round(value).toLocaleString();
-    }
-    return value.toLocaleString(undefined, { maximumFractionDigits: 1 });
+    const num =
+      value >= 100
+        ? Math.round(value).toLocaleString()
+        : value.toLocaleString(undefined, { maximumFractionDigits: 1 });
+    return `${num} MW`;
   }
 
   function getCardCode(card: QuickViewCard): string | null {

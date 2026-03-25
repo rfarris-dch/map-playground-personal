@@ -38,7 +38,7 @@
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <DetailMetricCard
         label="Listings"
-        :value="provider.listingCount != null ? provider.listingCount.toLocaleString() : '--'"
+        :value="provider.listingCount == null ? '--' : provider.listingCount.toLocaleString()"
         :icon="Building2"
         icon-class="text-primary"
       />

@@ -1,4 +1,4 @@
-import { toLifecycleDisplayLabel } from "@map-migration/geo-kernel/facility-lifecycle";
+import { toLifecycleDisplayLabel } from "@/features/spatial-analysis/facility-lifecycle";
 import type { SpatialAnalysisFacilityRecord } from "@/features/spatial-analysis/spatial-analysis-facilities.types";
 import type { SpatialAnalysisParcelRecord } from "@/features/spatial-analysis/spatial-analysis-parcels.types";
 import type {

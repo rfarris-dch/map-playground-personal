@@ -534,8 +534,13 @@ class MapLibreEngine implements IMap {
     return guarded;
   }
 
-  on(event: "load" | "moveend", handler: () => void): void {
+  on(event: "idle" | "load" | "moveend", handler: () => void): void {
     const guarded = this.guardCallback(event, handler);
+
+    if (event === "idle") {
+      this.map.on("idle", guarded);
+      return;
+    }
 
     if (event === "load") {
       if (this.map.isStyleLoaded()) {
@@ -569,9 +574,15 @@ class MapLibreEngine implements IMap {
     this.map.on(event, guarded);
   }
 
-  off(event: "load" | "moveend", handler: () => void): void {
+  off(event: "idle" | "load" | "moveend", handler: () => void): void {
     const guarded = this.guardedHandlers.get(handler);
     const effectiveHandler = typeof guarded === "function" ? guarded : handler;
+
+    if (event === "idle") {
+      this.map.off("idle", effectiveHandler);
+      this.guardedHandlers.delete(handler);
+      return;
+    }
 
     if (event === "load") {
       this.map.off("style.load", effectiveHandler);

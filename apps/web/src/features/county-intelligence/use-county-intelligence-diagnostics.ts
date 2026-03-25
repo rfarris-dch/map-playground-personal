@@ -3,7 +3,7 @@ import type {
   CountyScoresCoverageResponse,
   CountyScoresDebugResponse,
   CountyScoresResolutionResponse,
-} from "@map-migration/http-contracts/county-intelligence-http";
+} from "@map-migration/http-contracts/county-intelligence-debug-http";
 import { Effect } from "effect";
 import { computed, onBeforeUnmount, type Ref, shallowRef, watch } from "vue";
 import {

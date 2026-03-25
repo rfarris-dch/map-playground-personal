@@ -122,6 +122,7 @@ export interface UseAppShellStateResult {
   readonly perspectiveViewModes: ShallowRef<PerspectiveViewModeState>;
   readonly powerHoverController: ShallowRef<PowerHoverController | null>;
   readonly powerLayersController: ShallowRef<PowerLayerMountResult | null>;
+  readonly selectedFacilityHoverState: ShallowRef<FacilityHoverState | null>;
   readonly selectionGeometry: ShallowRef<SketchAreaGeometry | null>;
   readonly setSketchMeasureAreaShape: (shape: SketchMeasureAreaShape) => void;
   readonly setSketchMeasureMode: (mode: SketchMeasureMode) => void;

@@ -21,7 +21,6 @@ function createHiddenExportContainer(size: {
   container.style.width = `${String(Math.max(1, Math.round(size.width)))}px`;
   container.style.height = `${String(Math.max(1, Math.round(size.height)))}px`;
   container.style.pointerEvents = "none";
-  container.style.opacity = "0";
   container.style.contain = "strict";
   document.body.append(container);
   return container;
@@ -35,19 +34,19 @@ async function waitForAnimationFrame(): Promise<void> {
   });
 }
 
-async function waitForMapLoad(map: IMap): Promise<void> {
+async function waitForMapIdle(map: IMap): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     let settled = false;
     let timeoutHandle = 0;
 
-    const onLoad = (): void => {
+    const onIdle = (): void => {
       if (settled) {
         return;
       }
 
       settled = true;
       window.clearTimeout(timeoutHandle);
-      map.off("load", onLoad);
+      map.off("idle", onIdle);
       resolve();
     };
 
@@ -57,11 +56,11 @@ async function waitForMapLoad(map: IMap): Promise<void> {
       }
 
       settled = true;
-      map.off("load", onLoad);
-      reject(new Error("[map-export] Timed out waiting for export map to load."));
+      map.off("idle", onIdle);
+      reject(new Error("[map-export] Timed out waiting for export map to become idle."));
     }, EXPORT_MAP_LOAD_TIMEOUT_MS);
 
-    map.on("load", onLoad);
+    map.on("idle", onIdle);
   });
 }
 
@@ -87,8 +86,7 @@ async function withTemporaryExportMap<T>(
   });
 
   try {
-    await waitForMapLoad(exportMap);
-    await waitForAnimationFrame();
+    await waitForMapIdle(exportMap);
     await waitForAnimationFrame();
     return await run(exportMap);
   } finally {

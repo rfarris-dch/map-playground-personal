@@ -5,7 +5,7 @@ import {
   parseLeaseOrOwn,
 } from "@map-migration/geo-kernel/commissioned-semantic";
 import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
-import { type Geometry, GeometrySchema } from "@map-migration/geo-kernel/geometry";
+import { type Geometry, GeometrySchema, PointGeometrySchema } from "@map-migration/geo-kernel/geometry";
 import type {
   FacilitiesDetailFeature,
   FacilitiesFeature,
@@ -133,14 +133,14 @@ function readProviderId(value: string | null | undefined): string {
   return readNullableText(value) ?? "unknown";
 }
 
-function resolveFeatureGeometry(row: FacilitiesBboxRow): Geometry {
+function resolveFeatureGeometry(row: FacilitiesBboxRow): PointGeometry {
   const longitude = readNullableNumber(row.longitude);
   const latitude = readNullableNumber(row.latitude);
   if (longitude !== null && latitude !== null) {
     return buildPointGeometry(longitude, latitude);
   }
 
-  return parseGeometry(row.geom_json);
+  return parsePointGeometry(row.geom_json);
 }
 
 function resolveDetailGeometry(row: FacilityDetailRow): PointGeometry {
@@ -182,17 +182,17 @@ export function mapFacilitiesRowsToFeatures(
       statusLabel: readNullableText(row.status_label),
       city: readNullableText(row.city),
       marketName: readNullableText(row.market_name),
-      ...(typeof row.county_fips !== "undefined"
-        ? { countyFips: readNullableText(row.county_fips) }
-        : {}),
-      ...(typeof row.square_footage !== "undefined"
-        ? { squareFootage: readNullableNumber(row.square_footage) }
-        : {}),
-      ...(typeof row.facility_code !== "undefined"
-        ? { facilityCode: readNullableText(row.facility_code) }
-        : {}),
-      ...(typeof row.address !== "undefined" ? { address: readNullableText(row.address) } : {}),
-      ...(typeof row.state !== "undefined" ? { state: readNullableText(row.state) } : {}),
+      ...(typeof row.county_fips === "undefined"
+        ? {}
+        : { countyFips: readNullableText(row.county_fips) }),
+      ...(typeof row.square_footage === "undefined"
+        ? {}
+        : { squareFootage: readNullableNumber(row.square_footage) }),
+      ...(typeof row.facility_code === "undefined"
+        ? {}
+        : { facilityCode: readNullableText(row.facility_code) }),
+      ...(typeof row.address === "undefined" ? {} : { address: readNullableText(row.address) }),
+      ...(typeof row.state === "undefined" ? {} : { state: readNullableText(row.state) }),
     },
   }));
 }

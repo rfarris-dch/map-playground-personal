@@ -3,24 +3,30 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "dist/api-routes.js",
-  "types": "dist/api-routes.d.ts",
   "scripts": {
-    "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json --resolve-full-paths --resolve-full-extension .js",
+    "build": "rimraf dist && tsc -p tsconfig.json && tsc-alias -p tsconfig.json --resolve-full-paths --resolve-full-extension .js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "echo 'no tests yet'",
+    "test": "vitest run",
     "ci:check": "bun run typecheck && bun run test",
     "lint": "biome check .",
     "dev": "tsc -w -p tsconfig.json & tsc-alias -w -p tsconfig.json --resolve-full-paths --resolve-full-extension .js"
   },
   "dependencies": {
     "@map-migration/geo-kernel": "workspace:*",
-    "zod": "^3.24.2"
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "rimraf": "^6.0.0",
+    "vitest": "^3.0.0"
   },
   "exports": {
     "./api-error": {
       "types": "./dist/api-error.d.ts",
       "default": "./dist/api-error.js"
+    },
+    "./api-defaults": {
+      "types": "./dist/api-defaults.d.ts",
+      "default": "./dist/api-defaults.js"
     },
     "./auth-http": {
       "types": "./dist/auth-http.d.ts",
@@ -34,13 +40,13 @@
       "types": "./dist/api-routes.d.ts",
       "default": "./dist/api-routes.js"
     },
-    "./feature-schemas": {
-      "types": "./dist/feature-schemas.d.ts",
-      "default": "./dist/feature-schemas.js"
-    },
     "./analysis-contracts": {
       "types": "./dist/analysis-contracts.d.ts",
       "default": "./dist/analysis-contracts.js"
+    },
+    "./analysis-policy-http": {
+      "types": "./dist/analysis-policy-http.d.ts",
+      "default": "./dist/analysis-policy-http.js"
     },
     "./app-performance-http": {
       "types": "./dist/app-performance-http.d.ts",
@@ -54,6 +60,10 @@
       "types": "./dist/county-intelligence-http.d.ts",
       "default": "./dist/county-intelligence-http.js"
     },
+    "./county-intelligence-debug-http": {
+      "types": "./dist/county-intelligence-debug-http.d.ts",
+      "default": "./dist/county-intelligence-debug-http.js"
+    },
     "./county-power-story-http": {
       "types": "./dist/county-power-story-http.d.ts",
       "default": "./dist/county-power-story-http.js"
@@ -65,6 +75,10 @@
     "./facilities-http": {
       "types": "./dist/facilities-http.d.ts",
       "default": "./dist/facilities-http.js"
+    },
+    "./facilities-table-http": {
+      "types": "./dist/facilities-table-http.d.ts",
+      "default": "./dist/facilities-table-http.js"
     },
     "./facilities-performance-http": {
       "types": "./dist/facilities-performance-http.d.ts",
@@ -82,17 +96,33 @@
       "types": "./dist/market-boundaries-http.d.ts",
       "default": "./dist/market-boundaries-http.js"
     },
+    "./market-metrics-http": {
+      "types": "./dist/market-metrics-http.d.ts",
+      "default": "./dist/market-metrics-http.js"
+    },
     "./markets-selection-http": {
       "types": "./dist/markets-selection-http.d.ts",
       "default": "./dist/markets-selection-http.js"
+    },
+    "./markets-table-http": {
+      "types": "./dist/markets-table-http.d.ts",
+      "default": "./dist/markets-table-http.js"
     },
     "./parcels-http": {
       "types": "./dist/parcels-http.d.ts",
       "default": "./dist/parcels-http.js"
     },
+    "./parcel-scoring-http": {
+      "types": "./dist/parcel-scoring-http.d.ts",
+      "default": "./dist/parcel-scoring-http.js"
+    },
     "./pipeline-http": {
       "types": "./dist/pipeline-http.d.ts",
       "default": "./dist/pipeline-http.js"
+    },
+    "./providers-table-http": {
+      "types": "./dist/providers-table-http.d.ts",
+      "default": "./dist/providers-table-http.js"
     },
     "./spatial-analysis-summary-http": {
       "types": "./dist/spatial-analysis-summary-http.d.ts",
@@ -101,6 +131,10 @@
     "./spatial-analysis-history-http": {
       "types": "./dist/spatial-analysis-history-http.d.ts",
       "default": "./dist/spatial-analysis-history-http.js"
+    },
+    "./sync-run-http": {
+      "types": "./dist/sync-run-http.d.ts",
+      "default": "./dist/sync-run-http.js"
     },
     "./tiles-http": {
       "types": "./dist/tiles-http.d.ts",

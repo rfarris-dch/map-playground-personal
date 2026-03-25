@@ -1,4 +1,4 @@
-import { makeParcelSnapshotId } from "@map-migration/geo-kernel/parcel-snapshot-id";
+import { makeParcelSnapshotId } from "@/features/parcels/parcel-snapshot-id";
 import { createPmtilesSourceUrl, type VectorTilesetSchemaContract } from "@map-migration/geo-tiles";
 import type { IMap, MapClickEvent } from "@map-migration/map-engine";
 import {

@@ -159,7 +159,7 @@ export function useMapFilters(): UseMapFiltersResult {
   function setTransmissionVoltage(id: TransmissionVoltageFilterId | null): void {
     updateState((prev) => ({
       ...prev,
-      transmissionMinVoltage: id !== null ? VOLTAGE_THRESHOLDS[id] : null,
+      transmissionMinVoltage: id === null ? null : VOLTAGE_THRESHOLDS[id],
     }));
   }
 

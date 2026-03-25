@@ -294,6 +294,7 @@ export function useAppShell() {
     hoveredPower: state.hoveredPower,
     colocationViewportFeatures: state.colocationViewportFeatures,
     hyperscaleViewportFeatures: state.hyperscaleViewportFeatures,
+    selectedFacilityHoverState: state.selectedFacilityHoverState,
     basemapVisibility: visibility.basemapVisibility,
     boundaryVisibility: visibility.boundaryVisibility,
     boundaryFacetOptions: state.boundaryFacetOptions,

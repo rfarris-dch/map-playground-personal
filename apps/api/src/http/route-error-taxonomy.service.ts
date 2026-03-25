@@ -124,7 +124,7 @@ export function upstreamError(
   return routeError({
     category: "UPSTREAM_ERROR",
     code: "UPSTREAM_ERROR",
-    details: args.error !== undefined ? toDebugDetails(args.error) : undefined,
+    details: args.error === undefined ? undefined : toDebugDetails(args.error),
     httpStatus: args.httpStatus ?? 502,
     message,
     subtype,

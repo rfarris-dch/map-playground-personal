@@ -101,6 +101,12 @@ function resolveFacilitiesTableName(
     return tables.hyperscaleFastTable;
   }
 
+  if (perspective === "enterprise") {
+    throw new Error(
+      `Unsupported facility perspective for table resolution: "${perspective}". Enterprise uses a dedicated table (serve.enterprise_site) and is not backed by the facilities dataset tables.`
+    );
+  }
+
   return tables.colocationFastTable;
 }
 

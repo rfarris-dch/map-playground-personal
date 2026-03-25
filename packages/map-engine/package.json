@@ -23,14 +23,14 @@
     }
   },
   "peerDependencies": {
-    "maplibre-gl": "5.19.0"
+    "maplibre-gl": "5.21.0"
   },
   "dependencies": {
-    "effect": "^3.19.19",
+    "effect": "^3.21.0",
     "pmtiles": "4.4.0"
   },
   "devDependencies": {
-    "maplibre-gl": "5.19.0"
+    "maplibre-gl": "5.21.0"
   },
   "files": [
     "dist"

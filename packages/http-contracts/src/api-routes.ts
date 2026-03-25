@@ -1,25 +1,37 @@
+/**
+ * API route constants and builder functions.
+ *
+ * Runtime defaults (ApiDefaults, ApiQueryDefaults, resolveDataVersion)
+ * have been moved to api-defaults.ts. This file only contains route
+ * paths, headers, and URL builder functions.
+ */
 import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
 import type { BBox } from "@map-migration/geo-kernel/geometry";
 import { formatBboxParam } from "@map-migration/geo-kernel/geometry";
 import { z } from "zod";
-import type { SourceMode } from "./api-response-meta.js";
 import type { BoundaryPowerLevel } from "./boundaries-http.js";
 import type { CountyPowerStoryId, CountyPowerStoryWindow } from "./county-power-story-http.js";
 import type { MarketBoundaryLevel } from "./market-boundaries-http.js";
 import type { ParcelGeometryMode, ParcelProfile } from "./parcels-http.js";
 import { isPipelineDataset, type PipelineDataset } from "./pipeline-http.js";
-import type {
-  FacilitySortBy,
-  MarketSortBy,
-  ProviderSortBy,
-  SortDirection,
-} from "./table-contracts.js";
+import type { SortDirection } from "./_pagination.js";
 
-export interface DataVersionResolveOptions {
-  readonly env?: Readonly<Record<string, string | undefined>>;
-  readonly fallback?: string;
-  readonly override?: string | undefined;
-}
+// ---------------------------------------------------------------------------
+// Re-exports from api-defaults.ts for backwards compatibility
+// ---------------------------------------------------------------------------
+
+export {
+  ApiDefaults,
+  ApiQueryDefaults,
+  resolveDataVersion,
+  type ApiDefaultsTable,
+  type ApiQueryDefaultsTable,
+  type DataVersionResolveOptions,
+} from "./api-defaults.js";
+
+// ---------------------------------------------------------------------------
+// Route arg interfaces
+// ---------------------------------------------------------------------------
 
 export interface PaginatedRouteArgs {
   readonly page: number;
@@ -38,7 +50,7 @@ export interface FacilitiesBboxRouteArgs {
   readonly perspective?: FacilityPerspective | undefined;
 }
 
-export interface FacilitiesTableRouteArgs extends SortedPaginatedRouteArgs<FacilitySortBy> {
+export interface FacilitiesTableRouteArgs extends SortedPaginatedRouteArgs<string> {
   readonly datasetVersion?: string | undefined;
 }
 
@@ -60,6 +72,10 @@ export interface CountyPowerStoryRouteArgs {
   readonly publicationRunId?: string | undefined;
   readonly window?: CountyPowerStoryWindow | undefined;
 }
+
+// ---------------------------------------------------------------------------
+// Route table
+// ---------------------------------------------------------------------------
 
 export interface ApiRoutesTable {
   readonly analysisHistory: string;
@@ -115,29 +131,6 @@ export interface ApiHeadersTable {
   readonly requestId: string;
 }
 
-export interface ApiDefaultsTable {
-  readonly analysisSummarySourceMode: SourceMode;
-  readonly boundariesSourceMode: SourceMode;
-  readonly countyIntelligenceSourceMode: SourceMode;
-  readonly dataVersion: string;
-  readonly facilitiesSourceMode: SourceMode;
-  readonly fiberLocatorSourceMode: SourceMode;
-  readonly marketBoundariesSourceMode: SourceMode;
-  readonly marketsSourceMode: SourceMode;
-  readonly parcelsSourceMode: SourceMode;
-}
-
-export interface ApiQueryDefaultsTable {
-  readonly facilities: {
-    readonly bboxLimit: number;
-    readonly perspective: FacilityPerspective;
-  };
-  readonly parcelDetail: {
-    readonly includeGeometry: ParcelGeometryMode;
-    readonly profile: ParcelProfile;
-  };
-}
-
 export const HealthSchema = z.object({
   status: z.literal("ok"),
   service: z.string(),
@@ -183,16 +176,35 @@ export const ApiRoutes = Object.freeze<ApiRoutesTable>({
   usgsWaterTile: "/api/tiles/usgs-water",
 });
 
-export const ApiQueryDefaults = Object.freeze<ApiQueryDefaultsTable>({
-  facilities: {
-    bboxLimit: 50_000,
-    perspective: "colocation",
-  },
-  parcelDetail: {
-    includeGeometry: "full",
-    profile: "analysis_v1",
-  },
+export const ApiHeaders = Object.freeze<ApiHeadersTable>({
+  cacheStatus: "x-cache-status",
+  dataVersion: "x-data-version",
+  datasetVersion: "x-dataset-version",
+  facilitiesInteractionType: "x-facilities-interaction-type",
+  facilitiesMappingTimeMs: "x-facilities-mapping-time-ms",
+  facilitiesRequestedDatasetVersion: "x-facilities-requested-dataset-version",
+  facilitiesResponseBytes: "x-facilities-response-bytes",
+  facilitiesSqlTimeMs: "x-facilities-sql-time-ms",
+  facilitiesViewMode: "x-facilities-view-mode",
+  facilitiesViewportKey: "x-facilities-viewport-key",
+  facilitiesZoomBucket: "x-facilities-zoom-bucket",
+  originRequestId: "x-origin-request-id",
+  parcelIngestionRunId: "x-parcel-ingestion-run-id",
+  requestId: "x-request-id",
 });
+
+// ---------------------------------------------------------------------------
+// Defaults — re-exported from api-defaults.ts but also local reference
+// for route builders that need default perspective/profile values.
+// ---------------------------------------------------------------------------
+
+const DEFAULT_PERSPECTIVE = "colocation" as const;
+const DEFAULT_PARCEL_PROFILE = "analysis_v1" as const;
+const DEFAULT_PARCEL_GEOMETRY = "full" as const;
+
+// ---------------------------------------------------------------------------
+// Route builder helpers
+// ---------------------------------------------------------------------------
 
 function appendQueryToRoute(
   baseRoute: string,
@@ -218,7 +230,7 @@ export function buildFacilityDetailRoute(
   options: FacilityDetailRouteOptions = {}
 ): string {
   return appendQueryToRoute(`${ApiRoutes.facilities}/${encodeURIComponent(facilityId)}`, [
-    ["perspective", options.perspective ?? ApiQueryDefaults.facilities.perspective],
+    ["perspective", options.perspective ?? DEFAULT_PERSPECTIVE],
     ["v", options.datasetVersion],
   ]);
 }
@@ -226,7 +238,7 @@ export function buildFacilityDetailRoute(
 export function buildFacilitiesBboxRoute(args: FacilitiesBboxRouteArgs): string {
   return appendQueryToRoute(ApiRoutes.facilities, [
     ["bbox", formatBboxParam(args.bbox)],
-    ["perspective", args.perspective ?? ApiQueryDefaults.facilities.perspective],
+    ["perspective", args.perspective ?? DEFAULT_PERSPECTIVE],
     ["limit", typeof args.limit === "number" ? String(args.limit) : undefined],
     ["v", args.datasetVersion],
   ]);
@@ -270,10 +282,19 @@ export function buildBoundaryPowerRoute(level: BoundaryPowerLevel): string {
   return `${ApiRoutes.boundariesPower}?${params.toString()}`;
 }
 
-export function buildMarketBoundariesRoute(level: MarketBoundaryLevel): string {
+/**
+ * FIX: version parameter is now explicit via the `version` arg instead of
+ * being silently hardcoded to "4". Callers must pass the version they want.
+ */
+export function buildMarketBoundariesRoute(
+  level: MarketBoundaryLevel,
+  version?: string
+): string {
   const params = new URLSearchParams();
   params.set("level", level);
-  params.set("v", "4");
+  if (typeof version === "string") {
+    params.set("v", version);
+  }
   return `${ApiRoutes.marketBoundaries}?${params.toString()}`;
 }
 
@@ -303,13 +324,19 @@ export function buildCountyPowerStorySnapshotRoute(
   ]);
 }
 
+/**
+ * FIX: `window` is now forwarded to the query string (was silently dropped).
+ */
 export function buildCountyPowerStoryTimelineRoute(
   storyId: CountyPowerStoryId,
   args: CountyPowerStoryRouteArgs = {}
 ): string {
   return appendQueryToRoute(
     `${ApiRoutes.countyPowerStory}/${encodeURIComponent(storyId)}/timeline`,
-    [["publicationRunId", args.publicationRunId]]
+    [
+      ["window", args.window],
+      ["publicationRunId", args.publicationRunId],
+    ]
   );
 }
 
@@ -342,8 +369,8 @@ export function buildParcelDetailRoute(
   options: ParcelDetailRouteOptions = {}
 ): string {
   return appendQueryToRoute(`${ApiRoutes.parcels}/${encodeURIComponent(parcelId)}`, [
-    ["profile", options.profile ?? ApiQueryDefaults.parcelDetail.profile],
-    ["includeGeometry", options.includeGeometry ?? ApiQueryDefaults.parcelDetail.includeGeometry],
+    ["profile", options.profile ?? DEFAULT_PARCEL_PROFILE],
+    ["includeGeometry", options.includeGeometry ?? DEFAULT_PARCEL_GEOMETRY],
   ]);
 }
 
@@ -378,7 +405,7 @@ function buildPaginatedRoute(
   return `${baseRoute}?${params.toString()}`;
 }
 
-export function buildMarketsRoute(args: SortedPaginatedRouteArgs<MarketSortBy>): string {
+export function buildMarketsRoute(args: SortedPaginatedRouteArgs<string>): string {
   return buildPaginatedRoute(ApiRoutes.markets, args, {
     sortBy: args.sortBy,
     sortOrder: args.sortOrder,
@@ -389,7 +416,7 @@ export function buildMarketsSelectionRoute(): string {
   return ApiRoutes.marketsSelection;
 }
 
-export function buildProvidersRoute(args: SortedPaginatedRouteArgs<ProviderSortBy>): string {
+export function buildProvidersRoute(args: SortedPaginatedRouteArgs<string>): string {
   return buildPaginatedRoute(ApiRoutes.providers, args, {
     sortBy: args.sortBy,
     sortOrder: args.sortOrder,
@@ -455,66 +482,4 @@ export function buildUsgsWaterTileRoute(
   y: number | string
 ): string {
   return `${ApiRoutes.usgsWaterTile}/${String(z)}/${String(x)}/${String(y)}`;
-}
-
-export const ApiHeaders = Object.freeze<ApiHeadersTable>({
-  cacheStatus: "x-cache-status",
-  dataVersion: "x-data-version",
-  datasetVersion: "x-dataset-version",
-  facilitiesInteractionType: "x-facilities-interaction-type",
-  facilitiesMappingTimeMs: "x-facilities-mapping-time-ms",
-  facilitiesRequestedDatasetVersion: "x-facilities-requested-dataset-version",
-  facilitiesResponseBytes: "x-facilities-response-bytes",
-  facilitiesSqlTimeMs: "x-facilities-sql-time-ms",
-  facilitiesViewMode: "x-facilities-view-mode",
-  facilitiesViewportKey: "x-facilities-viewport-key",
-  facilitiesZoomBucket: "x-facilities-zoom-bucket",
-  originRequestId: "x-origin-request-id",
-  parcelIngestionRunId: "x-parcel-ingestion-run-id",
-  requestId: "x-request-id",
-});
-
-export const ApiDefaults = Object.freeze<ApiDefaultsTable>({
-  analysisSummarySourceMode: "postgis",
-  boundariesSourceMode: "postgis",
-  countyIntelligenceSourceMode: "postgis",
-  dataVersion: "dev",
-  facilitiesSourceMode: "postgis",
-  fiberLocatorSourceMode: "external-xyz",
-  marketBoundariesSourceMode: "postgis",
-  marketsSourceMode: "postgis",
-  parcelsSourceMode: "postgis",
-});
-
-function toNonEmptyValue(value: string | undefined): string | undefined {
-  if (typeof value !== "string") {
-    return undefined;
-  }
-
-  const trimmed = value.trim();
-  if (trimmed.length === 0) {
-    return undefined;
-  }
-
-  return trimmed;
-}
-
-export function resolveDataVersion(options: DataVersionResolveOptions = {}): string {
-  const override = toNonEmptyValue(options.override);
-  if (typeof override === "string") {
-    return override;
-  }
-
-  const env = options.env ?? {};
-  const envCandidates = [env.MAP_DATA_VERSION, env.API_DATA_VERSION, env.DATA_VERSION, env.GIT_SHA];
-
-  const resolvedFromEnv = envCandidates
-    .map((envValue) => toNonEmptyValue(envValue))
-    .find((resolved): resolved is string => typeof resolved === "string");
-
-  if (typeof resolvedFromEnv === "string") {
-    return resolvedFromEnv;
-  }
-
-  return toNonEmptyValue(options.fallback) ?? ApiDefaults.dataVersion;
 }

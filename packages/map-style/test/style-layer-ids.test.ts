@@ -6,11 +6,14 @@ import {
   getCountyPowerStoryStyleLayerIds,
   getFacilitiesStyleLayerIds,
   getFloodStyleLayerIds,
+  getHyperscaleLeasedStyleLayerIds,
   getHydroBasinsStyleLayerIds,
   getParcelsStyleLayerIds,
   getPowerStyleLayerIds,
   validateLayerOrder,
 } from "@/index";
+import type { StaticCatalogLayerId } from "@/index.types";
+import { LAYER_IDS } from "@map-migration/map-layer-catalog";
 
 describe("style layer ids", () => {
   it("keeps the exact derived ids for boundary, flood, facilities, and parcels layers", () => {
@@ -36,6 +39,15 @@ describe("style layer ids", () => {
       outlineLayerId: "models.county-power-grid-stress.outline",
     });
     expect(getCountyPowerStoryExtrusionLayerId()).toBe("models.county-power-3d.fill-extrusion");
+    expect(getFacilitiesStyleLayerIds("facilities.enterprise")).toEqual({
+      clusterLayerId: "facilities.enterprise.clusters",
+      clusterCountLayerId: "facilities.enterprise.cluster-count",
+      pointLayerId: "facilities.enterprise.points",
+    });
+    expect(getHyperscaleLeasedStyleLayerIds()).toEqual({
+      fillLayerId: "hyperscale-leased-voronoi.fill",
+      lineLayerId: "hyperscale-leased-voronoi.line",
+    });
   });
 
   it("keeps the current hydro and power layer ordering", () => {
@@ -86,6 +98,15 @@ describe("style layer ids", () => {
       "facilities.colocation.cluster-count",
       "facilities.colocation.points",
     ]);
+    expect(getCatalogStyleLayerIds("facilities.enterprise")).toEqual([
+      "facilities.enterprise.clusters",
+      "facilities.enterprise.cluster-count",
+      "facilities.enterprise.points",
+    ]);
+    expect(getCatalogStyleLayerIds("facilities.hyperscale-leased")).toEqual([
+      "hyperscale-leased-voronoi.fill",
+      "hyperscale-leased-voronoi.line",
+    ]);
     expect(getCatalogStyleLayerIds("power.plants")).toEqual(["power.plants-area", "power.plants"]);
     expect(getCatalogStyleLayerIds("environmental.water-features")).toEqual([
       "environmental.water-features",
@@ -94,6 +115,32 @@ describe("style layer ids", () => {
       "property.parcels.fill",
       "property.parcels",
     ]);
+  });
+
+  it("handles every StaticCatalogLayerId without throwing", () => {
+    const excludedLayerIds = new Set([
+      "fiber-locator.metro",
+      "fiber-locator.longhaul",
+      "infrastructure.gas-pipelines",
+      "models.county-power-grid-stress",
+      "models.county-power-queue-pressure",
+      "models.county-power-market-structure",
+      "models.county-power-policy-watch",
+      "models.county-power-3d",
+    ]);
+
+    for (const layerId of LAYER_IDS) {
+      if (excludedLayerIds.has(layerId)) {
+        continue;
+      }
+
+      const result = getCatalogStyleLayerIds(layerId as StaticCatalogLayerId);
+      expect(result.length).toBeGreaterThan(0);
+      for (const styleLayerId of result) {
+        expect(typeof styleLayerId).toBe("string");
+        expect(styleLayerId.length).toBeGreaterThan(0);
+      }
+    }
   });
 
   it("validates county power story model layers against facility and parcel ordering", () => {

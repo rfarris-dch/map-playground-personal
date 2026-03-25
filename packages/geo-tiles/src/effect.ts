@@ -24,11 +24,14 @@ const tilePublishManifestSchema: SafeParseSchema<TilePublishManifest> = {
 };
 
 export interface LoadTilePublishManifestEffectArgs {
-  readonly contextLabel?: string;
   readonly fetchImplementation?: typeof fetch;
   readonly manifestPath: string;
-  readonly preserveNetworkErrorCause?: boolean;
   readonly signal?: AbortSignal;
+}
+
+export interface LoadTilePublishManifestArgs extends LoadTilePublishManifestEffectArgs {
+  readonly contextLabel?: string;
+  readonly preserveNetworkErrorCause?: boolean;
 }
 
 export function loadTilePublishManifestEffect(args: LoadTilePublishManifestEffectArgs) {
@@ -51,7 +54,7 @@ export function loadTilePublishManifestEffect(args: LoadTilePublishManifestEffec
 }
 
 export async function loadTilePublishManifest(
-  args: LoadTilePublishManifestEffectArgs
+  args: LoadTilePublishManifestArgs
 ): Promise<TilePublishManifest> {
   const result: Either<
     FetchJsonEffectSuccess<TilePublishManifest>,

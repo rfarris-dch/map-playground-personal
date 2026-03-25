@@ -19,8 +19,8 @@ export function useTooltipPosition(
     const tw = tooltipRef.value?.offsetWidth ?? tooltipSize.width ?? 280;
     const th = tooltipRef.value?.offsetHeight ?? tooltipSize.height ?? 160;
 
-    const vw = typeof window !== "undefined" ? window.innerWidth : 1920;
-    const vh = typeof window !== "undefined" ? window.innerHeight : 1080;
+    const vw = typeof window === "undefined" ? 1920 : window.innerWidth;
+    const vh = typeof window === "undefined" ? 1080 : window.innerHeight;
 
     const left = cx + ox + tw > vw ? cx - ox - tw : cx + ox;
     const top = cy + oy + th > vh ? cy - oy - th : cy + oy;

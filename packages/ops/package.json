@@ -11,13 +11,13 @@
     "dev": "tsc -w -p tsconfig.json"
   },
   "dependencies": {
-    "@effect/platform": "^0.94.5",
-    "@effect/platform-bun": "^0.87.1",
-    "effect": "^3.19.19",
+    "@effect/platform": "^0.96.0",
+    "@effect/platform-bun": "^0.89.0",
+    "effect": "^3.21.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "@types/node": "^22.10.2"
+    "@types/node": "^25.5.0"
   },
   "exports": {
     "./etl/atomic-file-store": {

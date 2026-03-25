@@ -56,10 +56,11 @@
   }
 
   function formatCompact(value: number): string {
-    if (value >= 100) {
-      return Math.round(value).toLocaleString();
-    }
-    return value.toLocaleString(undefined, { maximumFractionDigits: 1 });
+    const num =
+      value >= 100
+        ? Math.round(value).toLocaleString()
+        : value.toLocaleString(undefined, { maximumFractionDigits: 1 });
+    return `${num} MW`;
   }
 
   const metrics = computed<Metric[]>(() => {
@@ -131,27 +132,27 @@
   >
     <div
       v-if="displayState !== null"
-      class="flex flex-col items-start justify-center gap-2 p-2 leading-normal whitespace-nowrap"
+      class="flex flex-col items-start justify-center gap-1 p-2 leading-normal whitespace-nowrap"
       @mouseenter="onMouseEnter"
       @mouseleave="onMouseLeave"
     >
       <div class="flex items-center gap-2">
-        <span class="text-[16px] font-semibold leading-none" :class="accentText">
+        <span class="text-[14px] font-semibold leading-none" :class="accentText">
           {{ titleLine }}
         </span>
-        <span class="text-[12px] font-normal leading-none text-[#94a3b8]"> {{ totalMw }} </span>
+        <span class="text-[11px] font-normal leading-none text-[#94a3b8]"> {{ totalMw }} </span>
       </div>
 
       <div v-if="metrics.length > 0" class="flex items-start gap-2">
         <div
           v-for="metric in metrics"
           :key="metric.label"
-          class="flex items-center justify-center gap-2"
+          class="flex items-center justify-center gap-1"
         >
-          <span class="text-[16px] font-normal leading-none text-[#94a3b8]">
+          <span class="text-[13px] font-normal leading-none text-[#94a3b8]">
             {{ metric.label }}
           </span>
-          <span class="text-[16px] font-semibold leading-none" :class="accentText">
+          <span class="text-[13px] font-semibold leading-none" :class="accentText">
             {{ metric.value }}
           </span>
         </div>

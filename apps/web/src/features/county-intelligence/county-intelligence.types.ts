@@ -1,11 +1,13 @@
 import type { ApiResult } from "@map-migration/core-runtime/api";
 import type {
-  CountyScoresCoverageResponse,
-  CountyScoresDebugResponse,
-  CountyScoresResolutionResponse,
   CountyScoresResponse,
   CountyScoresStatusResponse,
 } from "@map-migration/http-contracts/county-intelligence-http";
+import type {
+  CountyScoresCoverageResponse,
+  CountyScoresDebugResponse,
+  CountyScoresResolutionResponse,
+} from "@map-migration/http-contracts/county-intelligence-debug-http";
 
 export type CountyScoresFetchResult = ApiResult<CountyScoresResponse>;
 

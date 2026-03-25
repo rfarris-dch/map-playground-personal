@@ -165,6 +165,7 @@ export function useAppShellState(): UseAppShellStateResult {
   const selectionGeometry = shallowRef<SketchAreaGeometry | null>(null);
   const colocationViewportFeatures = shallowRef<FacilitiesFeatureCollection["features"]>([]);
   const hyperscaleViewportFeatures = shallowRef<FacilitiesFeatureCollection["features"]>([]);
+  const selectedFacilityHoverState = shallowRef<FacilityHoverState | null>(null);
   const activeToolPanel = shallowRef<AppShellToolPanel>(initialActiveToolPanel());
 
   const isLayerPanelOpen = computed(() => activeToolPanel.value === "layers");
@@ -315,6 +316,7 @@ export function useAppShellState(): UseAppShellStateResult {
     selectionGeometry,
     colocationViewportFeatures,
     hyperscaleViewportFeatures,
+    selectedFacilityHoverState,
     isLayerPanelOpen,
     isSketchMeasurePanelOpen,
     isSelectionPanelOpen,

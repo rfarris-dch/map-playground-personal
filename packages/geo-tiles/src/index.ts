@@ -241,7 +241,16 @@ function resolveLocationOrigin(locationOrigin: string | undefined): string {
     return locationOrigin;
   }
 
-  return window.location.origin;
+  if (typeof globalThis !== "undefined" && "location" in globalThis) {
+    const loc = (globalThis as { location?: { origin?: string } }).location;
+    if (typeof loc?.origin === "string" && isHttpUrl(loc.origin)) {
+      return loc.origin;
+    }
+  }
+
+  throw new Error(
+    "Cannot resolve tile asset URL: no valid resolutionBase provided and no browser location.origin available. Pass an explicit base URL."
+  );
 }
 
 function isHttpUrl(value: string): boolean {

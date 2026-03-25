@@ -67,32 +67,32 @@
         label="Commissioned Power"
         :value="formatNullableMw(properties.commissionedPowerMw)"
         :icon="Zap"
-        v-bind="iconClass !== undefined ? { iconClass } : {}"
+        v-bind="iconClass === undefined ? {} : { iconClass }"
       />
       <DetailMetricCard
         label="Available Power"
         :value="formatNullableMw(properties.availablePowerMw)"
         :icon="Zap"
-        v-bind="{ ...(iconClass !== undefined ? { iconClass } : {}), ...(availablePercent !== null ? { description: availablePercent } : {}) }"
+        v-bind="{ ...(iconClass === undefined ? {} : { iconClass }), ...(availablePercent === null ? {} : { description: availablePercent }) }"
       />
       <DetailMetricCard
         label="Under Construction"
         :value="formatNullableMw(properties.underConstructionPowerMw)"
         :icon="HardHat"
-        v-bind="iconClass !== undefined ? { iconClass } : {}"
+        v-bind="iconClass === undefined ? {} : { iconClass }"
       />
       <DetailMetricCard
         label="Square Footage"
         :value="formatSqft(properties.squareFootage)"
         :icon="Building2"
-        v-bind="iconClass !== undefined ? { iconClass } : {}"
+        v-bind="iconClass === undefined ? {} : { iconClass }"
       />
     </div>
 
     <DetailCard
       title="General Information"
       :fields="generalInfoFields"
-      v-bind="accentClass !== undefined ? { accentClass } : {}"
+      v-bind="accentClass === undefined ? {} : { accentClass }"
     />
   </div>
 </template>

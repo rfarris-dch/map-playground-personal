@@ -12,17 +12,19 @@ import {
   buildCountyScoresStatusRoute,
 } from "@map-migration/http-contracts/api-routes";
 import {
+  type CountyScoresResponse,
+  CountyScoresResponseSchema,
+  type CountyScoresStatusResponse,
+  CountyScoresStatusResponseSchema,
+} from "@map-migration/http-contracts/county-intelligence-http";
+import {
   type CountyScoresCoverageResponse,
   CountyScoresCoverageResponseSchema,
   type CountyScoresDebugResponse,
   CountyScoresDebugResponseSchema,
   type CountyScoresResolutionResponse,
   CountyScoresResolutionResponseSchema,
-  type CountyScoresResponse,
-  CountyScoresResponseSchema,
-  type CountyScoresStatusResponse,
-  CountyScoresStatusResponseSchema,
-} from "@map-migration/http-contracts/county-intelligence-http";
+} from "@map-migration/http-contracts/county-intelligence-debug-http";
 import type { Effect } from "effect";
 import type {
   CountyScoresCoverageFetchResult,

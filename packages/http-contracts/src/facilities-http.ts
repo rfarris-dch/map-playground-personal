@@ -3,79 +3,29 @@ import {
   LeaseOrOwnSchema,
 } from "@map-migration/geo-kernel/commissioned-semantic";
 import { FacilityPerspectiveSchema } from "@map-migration/geo-kernel/facility-perspective";
-import {
-  BBoxSchema,
-  GeometrySchema,
-  PointGeometrySchema,
-  PolygonGeometrySchema,
-  parseBboxParam,
-} from "@map-migration/geo-kernel/geometry";
+import { PointGeometrySchema, PolygonGeometrySchema } from "@map-migration/geo-kernel/geometry";
 import { z } from "zod";
+import { FacilityCorePropertiesSchema, FacilityHttpPerspectiveSchema } from "./_facility-core.js";
+import { BboxQuerySchema, queryIntegerWithDefault, trimmedEnumWithDefault, trimQueryValue } from "./_query-parsing.js";
 import { ResponseMetaSchema } from "./api-response-meta.js";
 
-function trimValue(value: unknown): unknown {
-  if (typeof value !== "string") {
-    return value;
-  }
+// ---------------------------------------------------------------------------
+// Bbox feature — loosened optionality for bbox results where some fields
+// may be absent from the projection.
+// ---------------------------------------------------------------------------
 
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
-}
-
-function parseBboxQuery(value: unknown): unknown {
-  if (typeof value !== "string") {
-    return value;
-  }
-
-  const parsed = parseBboxParam(value);
-  return parsed ?? value;
-}
-
-function parsePositiveInteger(value: unknown): unknown {
-  const normalized = trimValue(value);
-  if (typeof normalized === "undefined") {
-    return undefined;
-  }
-
-  if (typeof normalized === "number") {
-    return normalized;
-  }
-
-  if (typeof normalized !== "string") {
-    return normalized;
-  }
-
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? parsed : normalized;
-}
-
-export const FacilitiesPropertiesSchema = z.object({
-  perspective: FacilityPerspectiveSchema,
-  facilityId: z.string(),
-  facilityName: z.string(),
-  providerId: z.string(),
-  providerName: z.string(),
+export const FacilitiesPropertiesSchema = FacilityCorePropertiesSchema.extend({
   countyFips: z.string().nullable().optional(),
-  stateAbbrev: z.string().nullable(),
-  commissionedPowerMw: z.number().nullable(),
-  plannedPowerMw: z.number().nullable(),
-  underConstructionPowerMw: z.number().nullable(),
-  availablePowerMw: z.number().nullable(),
   squareFootage: z.number().nullable().optional(),
-  commissionedSemantic: CommissionedSemanticSchema,
-  leaseOrOwn: LeaseOrOwnSchema.nullable(),
-  statusLabel: z.string().nullable(),
   facilityCode: z.string().nullable().optional(),
   address: z.string().nullable().optional(),
-  city: z.string().nullable(),
   state: z.string().nullable().optional(),
-  marketName: z.string().nullable(),
 });
 
 export const FacilitiesFeatureSchema = z.object({
   type: z.literal("Feature"),
   id: z.union([z.string(), z.number()]),
-  geometry: GeometrySchema,
+  geometry: PointGeometrySchema,
   properties: FacilitiesPropertiesSchema,
 });
 
@@ -85,11 +35,16 @@ export const FacilitiesFeatureCollectionSchema = z.object({
   meta: ResponseMetaSchema,
 });
 
+/**
+ * FIX: default limit aligned to ApiQueryDefaults.facilities.bboxLimit (50_000).
+ * Previously defaulted to 2000 while the config said 50_000.
+ * FIX: datasetVersion now modeled in the request schema (was only in route builder).
+ */
 export const FacilitiesBboxRequestSchema = z.object({
-  bbox: z.preprocess(parseBboxQuery, BBoxSchema),
-  datasetVersion: z.preprocess(trimValue, z.string().min(1)).optional(),
-  perspective: z.preprocess(trimValue, FacilityPerspectiveSchema).default("colocation"),
-  limit: z.preprocess(parsePositiveInteger, z.number().int().positive().max(100_000)).default(2000),
+  bbox: BboxQuerySchema,
+  datasetVersion: z.preprocess(trimQueryValue, z.string().min(1)).optional(),
+  perspective: trimmedEnumWithDefault(FacilityPerspectiveSchema, "colocation"),
+  limit: queryIntegerWithDefault(50_000, { min: 1, max: 100_000 }),
 });
 
 export const FacilitiesDatasetManifestEntrySchema = z.object({
@@ -116,6 +71,10 @@ export const FacilitiesSelectionRequestSchema = z.object({
   limitPerPerspective: z.number().int().positive().max(100_000).default(5000),
 });
 
+/**
+ * Selection summary uses the HTTP perspective subset since response shapes
+ * are structurally keyed to colocation + hyperscale only.
+ */
 export const FacilitiesSelectionSummarySchema = z.object({
   countsByPerspective: z.object({
     colocation: z.number().int().nonnegative(),
@@ -134,27 +93,12 @@ export const FacilitiesSelectionResponseSchema = z.object({
   selection: FacilitiesSelectionSummarySchema,
 });
 
-export const FacilitiesDetailPropertiesSchema = z.object({
-  perspective: FacilityPerspectiveSchema,
-  facilityId: z.string(),
-  facilityName: z.string(),
-  providerId: z.string(),
-  providerName: z.string(),
+// ---------------------------------------------------------------------------
+// Detail — all core fields required-nullable (canonical shape).
+// ---------------------------------------------------------------------------
+
+export const FacilitiesDetailPropertiesSchema = FacilityCorePropertiesSchema.extend({
   countyFips: z.string(),
-  stateAbbrev: z.string().nullable(),
-  commissionedSemantic: CommissionedSemanticSchema,
-  leaseOrOwn: LeaseOrOwnSchema.nullable(),
-  commissionedPowerMw: z.number().nullable(),
-  plannedPowerMw: z.number().nullable(),
-  underConstructionPowerMw: z.number().nullable(),
-  availablePowerMw: z.number().nullable(),
-  squareFootage: z.number().nullable(),
-  statusLabel: z.string().nullable(),
-  facilityCode: z.string().nullable(),
-  address: z.string().nullable(),
-  city: z.string().nullable(),
-  state: z.string().nullable(),
-  marketName: z.string().nullable(),
 });
 
 export const FacilitiesDetailFeatureSchema = z.object({
@@ -170,11 +114,15 @@ export const FacilitiesDetailResponseSchema = z.object({
 });
 
 export const FacilityDetailPathSchema = z.object({
-  facilityId: z.preprocess(trimValue, z.string().min(1)),
+  facilityId: z.preprocess(trimQueryValue, z.string().min(1)),
 });
 
+/**
+ * FIX: datasetVersion now modeled in the request schema (was only in route builder via `v`).
+ */
 export const FacilitiesDetailRequestSchema = z.object({
-  perspective: z.preprocess(trimValue, FacilityPerspectiveSchema).default("colocation"),
+  perspective: trimmedEnumWithDefault(FacilityPerspectiveSchema, "colocation"),
+  datasetVersion: z.preprocess(trimQueryValue, z.string().min(1)).optional(),
 });
 
 export type FacilitiesFeature = z.infer<typeof FacilitiesFeatureSchema>;

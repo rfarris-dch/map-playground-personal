@@ -611,6 +611,12 @@ function getFacilitiesPolygonQueryName(
     return "facilities_polygon_hyperscale";
   }
 
+  if (perspective === "enterprise") {
+    throw new Error(
+      `Unsupported facility perspective for polygon query: "${perspective}". Enterprise only supports bbox queries.`
+    );
+  }
+
   return "facilities_polygon_colocation";
 }
 
@@ -619,6 +625,12 @@ function getFacilityDetailQueryName(
 ): "facility_detail_colocation" | "facility_detail_hyperscale" {
   if (perspective === "hyperscale" || perspective === "hyperscale-leased") {
     return "facility_detail_hyperscale";
+  }
+
+  if (perspective === "enterprise") {
+    throw new Error(
+      `Unsupported facility perspective for detail query: "${perspective}". Enterprise only supports bbox queries.`
+    );
   }
 
   return "facility_detail_colocation";

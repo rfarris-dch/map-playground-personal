@@ -7,6 +7,7 @@ import type {
   FacilitiesStyleLayerIds,
   FloodCatalogLayerId,
   FloodStyleLayerIds,
+  HyperscaleLeasedStyleLayerIds,
   HydroBasinsStyleLayerIds,
   MarketBoundaryCatalogLayerId,
   MarketBoundaryStyleLayerIds,
@@ -23,6 +24,7 @@ import {
   getCountyPowerStoryStyleLayerIds as readCountyPowerStoryStyleLayerIds,
   getFacilitiesStyleLayerIds as readFacilitiesStyleLayerIds,
   getFloodStyleLayerIds as readFloodStyleLayerIds,
+  getHyperscaleLeasedStyleLayerIds as readHyperscaleLeasedStyleLayerIds,
   getHydroBasinsStyleLayerIds as readHydroBasinsStyleLayerIds,
   getMarketBoundaryStyleLayerIds as readMarketBoundaryStyleLayerIds,
   getParcelsStyleLayerIds as readParcelsStyleLayerIds,
@@ -38,6 +40,8 @@ export type {
   FacilitiesStyleLayerIds,
   FloodCatalogLayerId,
   FloodStyleLayerIds,
+  HyperscaleLeasedCatalogLayerId,
+  HyperscaleLeasedStyleLayerIds,
   HydroBasinsStyleLayerIds,
   MarketBoundaryCatalogLayerId,
   MarketBoundaryStyleLayerIds,
@@ -80,6 +84,10 @@ export function getMarketBoundaryStyleLayerIds(
   layerId: MarketBoundaryCatalogLayerId
 ): MarketBoundaryStyleLayerIds {
   return readMarketBoundaryStyleLayerIds(layerId);
+}
+
+export function getHyperscaleLeasedStyleLayerIds(): HyperscaleLeasedStyleLayerIds {
+  return readHyperscaleLeasedStyleLayerIds();
 }
 
 export function getParcelsStyleLayerIds(): ParcelsStyleLayerIds {

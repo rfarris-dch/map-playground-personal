@@ -168,6 +168,7 @@ export function useAppShellRuntime(
       hoveredFacility: state.hoveredFacility,
       clusterClickSignal: state.clusterClickSignal,
       hoveredFacilityCluster: state.hoveredFacilityCluster,
+      selectedFacilityHoverState: state.selectedFacilityHoverState,
       hoveredMarketBoundary: state.hoveredMarketBoundary,
       hoveredPower: state.hoveredPower,
       marketBoundaryColorMode: state.marketBoundaryColorMode,

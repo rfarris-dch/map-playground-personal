@@ -1,7 +1,7 @@
 import { shallowRef } from "vue";
 
 const query =
-  typeof window !== "undefined" ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
+  typeof window === "undefined" ? null : window.matchMedia("(prefers-reduced-motion: reduce)");
 
 export const prefersReducedMotion = shallowRef(query?.matches ?? false);
 

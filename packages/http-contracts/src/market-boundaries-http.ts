@@ -1,21 +1,18 @@
-import { GeometrySchema } from "@map-migration/geo-kernel/geometry";
+import { MultiPolygonGeometrySchema, PolygonGeometrySchema } from "@map-migration/geo-kernel/geometry";
 import { z } from "zod";
+import { trimQueryValue, trimmedEnumWithDefault } from "./_query-parsing.js";
 import { ResponseMetaSchema } from "./api-response-meta.js";
-
-function trimQueryValue(value: unknown): unknown {
-  if (typeof value !== "string") {
-    return value;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
-}
 
 export const MarketBoundaryLevelSchema = z.enum(["market", "submarket"]);
 export type MarketBoundaryLevel = z.infer<typeof MarketBoundaryLevelSchema>;
 
+/**
+ * FIX: `version` is now modeled in the request schema. Previously the
+ * route builder hardcoded `v=4` but the schema didn't know about it.
+ */
 export const MarketBoundaryRequestSchema = z.object({
-  level: z.preprocess(trimQueryValue, MarketBoundaryLevelSchema).default("market"),
+  level: trimmedEnumWithDefault(MarketBoundaryLevelSchema, "market"),
+  version: z.preprocess(trimQueryValue, z.string().min(1)).optional(),
 });
 
 export function parseMarketBoundaryLevelParam(
@@ -44,10 +41,11 @@ export const MarketBoundaryPropertiesSchema = z.object({
   commissionedPowerMw: z.number().nonnegative().nullable(),
 });
 
+/** Market boundaries are polygonal — tightened from generic GeometrySchema. */
 export const MarketBoundaryFeatureSchema = z.object({
   type: z.literal("Feature"),
   id: z.string(),
-  geometry: GeometrySchema,
+  geometry: z.union([PolygonGeometrySchema, MultiPolygonGeometrySchema]),
   properties: MarketBoundaryPropertiesSchema,
 });
 

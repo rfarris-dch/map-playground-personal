@@ -1,5 +1,6 @@
 import { ApiRoutes } from "@map-migration/http-contracts/api-routes";
 import {
+  type SpatialAnalysisHistoryRequest,
   SpatialAnalysisHistoryRequestSchema,
   type SpatialAnalysisHistoryResponse,
   SpatialAnalysisHistoryResponseSchema,
@@ -16,7 +17,7 @@ import { querySpatialAnalysisHistory } from "./analysis-history.service";
 async function readSpatialAnalysisHistoryRequest(
   c: Context,
   requestId: string
-): Promise<typeof SpatialAnalysisHistoryRequestSchema._type | Response> {
+): Promise<SpatialAnalysisHistoryRequest | Response> {
   const bodyResult = await readJsonBody(c, {
     requestId,
     invalidJsonMessage: "invalid JSON body",

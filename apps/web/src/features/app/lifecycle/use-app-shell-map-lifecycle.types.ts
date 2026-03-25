@@ -158,6 +158,7 @@ export interface AppShellMapLifecycleStateRefs {
   readonly perspectiveViewModes: ShallowRef<PerspectiveViewModeState>;
   readonly selectedCountyPowerStory: ShallowRef<CountyPowerStorySelectionState | null>;
   readonly selectedFacility: ShallowRef<SelectedFacilityRef | null>;
+  readonly selectedFacilityHoverState: ShallowRef<FacilityHoverState | null>;
   readonly selectedParcel: ShallowRef<SelectedParcelRef | null>;
   readonly sketchMeasureState: ShallowRef<SketchMeasureState>;
 }

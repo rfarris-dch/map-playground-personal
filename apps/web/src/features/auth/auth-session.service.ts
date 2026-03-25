@@ -1,4 +1,4 @@
-import { MapAppAuthRequiredEventName } from "@map-migration/core-runtime/api";
+import { setApiHttpStatusObserver } from "@map-migration/core-runtime/api";
 import type { AuthSession } from "@map-migration/http-contracts/auth-http";
 import { computed, readonly, ref } from "vue";
 import { loginToMapApp, logoutFromMapApp, readMapAppAuthSession } from "@/features/auth/auth.api";
@@ -9,7 +9,7 @@ const authSessionInitialized = ref(false);
 const authSessionLoading = ref(false);
 
 let inflightAuthSessionRequest: Promise<AuthSession | null> | null = null;
-let authRequiredListenerRegistered = false;
+let authObserverRegistered = false;
 
 function setMapAppAuthSession(session: AuthSession | null): void {
   currentAuthSession.value = session;
@@ -20,19 +20,21 @@ function clearMapAppAuthSession(): void {
   setMapAppAuthSession(null);
 }
 
-function ensureAuthRequiredListenerRegistered(): void {
-  if (authRequiredListenerRegistered || typeof window === "undefined") {
+function ensureAuthObserverRegistered(): void {
+  if (authObserverRegistered) {
     return;
   }
 
-  window.addEventListener(MapAppAuthRequiredEventName, () => {
-    clearMapAppAuthSession();
+  setApiHttpStatusObserver((status) => {
+    if (status === 401) {
+      clearMapAppAuthSession();
+    }
   });
-  authRequiredListenerRegistered = true;
+  authObserverRegistered = true;
 }
 
 export function useMapAppAuthState() {
-  ensureAuthRequiredListenerRegistered();
+  ensureAuthObserverRegistered();
 
   return {
     initialized: readonly(authSessionInitialized),
@@ -48,7 +50,7 @@ export function useMapAppAuthState() {
 }
 
 export function ensureMapAppAuthSessionLoaded(forceRefresh = false): Promise<AuthSession | null> {
-  ensureAuthRequiredListenerRegistered();
+  ensureAuthObserverRegistered();
 
   if (!forceRefresh && authSessionInitialized.value) {
     return Promise.resolve(currentAuthSession.value);
@@ -73,7 +75,7 @@ export function ensureMapAppAuthSessionLoaded(forceRefresh = false): Promise<Aut
 }
 
 export async function signInToMapApp(credentials: MapAppLoginCredentials): Promise<AuthSession> {
-  ensureAuthRequiredListenerRegistered();
+  ensureAuthObserverRegistered();
   authSessionLoading.value = true;
 
   try {
@@ -86,7 +88,7 @@ export async function signInToMapApp(credentials: MapAppLoginCredentials): Promi
 }
 
 export async function signOutOfMapApp(): Promise<void> {
-  ensureAuthRequiredListenerRegistered();
+  ensureAuthObserverRegistered();
 
   authSessionLoading.value = true;
   try {

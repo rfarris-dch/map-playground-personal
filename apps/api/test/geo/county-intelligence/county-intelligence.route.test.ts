@@ -1,11 +1,13 @@
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 import type {
   CountyScore,
+  CountyScoresStatusResponse,
+} from "@map-migration/http-contracts/county-intelligence-http";
+import type {
   CountyScoresCoverageResponse,
   CountyScoresDebugResponse,
   CountyScoresResolutionResponse,
-  CountyScoresStatusResponse,
-} from "@map-migration/http-contracts/county-intelligence-http";
+} from "@map-migration/http-contracts/county-intelligence-debug-http";
 
 const queryCountyScoresMock =
   mock<

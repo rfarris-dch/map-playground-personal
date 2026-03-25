@@ -36,7 +36,7 @@ export const FacilitiesPerformancePerspectiveSchema = z.object({
 
 export const FacilitiesPerformanceSnapshotSchema = z.object({
   bbox: z.object({
-    perspectives: z.record(FacilitiesPerformancePerspectiveSchema),
+    perspectives: z.record(z.string(), FacilitiesPerformancePerspectiveSchema),
   }),
   cache: z.object({
     configured: z.boolean(),

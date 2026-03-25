@@ -151,10 +151,12 @@ function mountPerspectiveLayer({
       if (facility === null) {
         if (isSamePerspective(options.state.selectedFacility.value, perspective)) {
           options.actions.setSelectedFacility(null);
+          options.state.selectedFacilityHoverState.value = null;
         }
         return;
       }
 
+      options.state.selectedFacilityHoverState.value = options.state.hoveredFacility.value ?? null;
       options.actions.setSelectedFacility(facility);
       options.layers.facilitiesControllers.value.reduce((_, existingController) => {
         if (existingController !== controller) {

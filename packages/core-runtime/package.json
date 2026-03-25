@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@map-migration/http-contracts": "workspace:*",
-    "effect": "^3.19.19"
+    "effect": "^3.21.0"
   },
   "exports": {
     ".": {

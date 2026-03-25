@@ -381,13 +381,13 @@
             {{ facility.providerName ?? "—" }}
           </span>
           <span class="text-right text-muted-foreground">
-            {{ facility.commissionedPowerMw !== null ? facility.commissionedPowerMw.toFixed(1) : "—" }}
+            {{ facility.commissionedPowerMw === null ? "—" : facility.commissionedPowerMw.toFixed(1) }}
           </span>
           <span class="text-right text-muted-foreground">
-            {{ facility.underConstructionPowerMw !== null ? facility.underConstructionPowerMw.toFixed(1) : "—" }}
+            {{ facility.underConstructionPowerMw === null ? "—" : facility.underConstructionPowerMw.toFixed(1) }}
           </span>
           <span class="text-right text-muted-foreground">
-            {{ facility.plannedPowerMw !== null ? facility.plannedPowerMw.toFixed(1) : "—" }}
+            {{ facility.plannedPowerMw === null ? "—" : facility.plannedPowerMw.toFixed(1) }}
           </span>
         </button>
       </section>

@@ -3,6 +3,7 @@ import {
   getCountyPowerStoryStyleLayerIds,
   getFacilitiesStyleLayerIds,
   getFloodStyleLayerIds,
+  getHyperscaleLeasedStyleLayerIds,
   getHydroBasinsStyleLayerIds,
   getMarketBoundaryStyleLayerIds,
   getParcelsStyleLayerIds,
@@ -27,6 +28,8 @@ const hydroBasinsStyleLayerIds = getHydroBasinsStyleLayerIds();
 const parcelsOutlineLayerId = getParcelsStyleLayerIds().outlineLayerId;
 const colocationPointLayerId = getFacilitiesStyleLayerIds("facilities.colocation").pointLayerId;
 const hyperscalePointLayerId = getFacilitiesStyleLayerIds("facilities.hyperscale").pointLayerId;
+const enterprisePointLayerId = getFacilitiesStyleLayerIds("facilities.enterprise").pointLayerId;
+const hyperscaleLeasedFillLayerId = getHyperscaleLeasedStyleLayerIds().fillLayerId;
 
 export const LAYER_ORDER_INVARIANTS: LayerOrderInvariants = {
   countyPower3dBelowColocation: [countyPowerExtrusionLayerId, colocationPointLayerId],
@@ -94,6 +97,24 @@ export const LAYER_ORDER_INVARIANTS: LayerOrderInvariants = {
     getMarketBoundaryStyleLayerIds("markets.market").fillLayerId,
     colocationPointLayerId,
   ],
+  countyPowerGridStressBelowEnterprise: [
+    countyPowerGridStressStyleLayerIds.fillLayerId,
+    enterprisePointLayerId,
+  ],
+  countyPowerQueuePressureBelowEnterprise: [
+    countyPowerQueuePressureStyleLayerIds.fillLayerId,
+    enterprisePointLayerId,
+  ],
+  countyPowerMarketStructureBelowEnterprise: [
+    countyPowerMarketStructureStyleLayerIds.fillLayerId,
+    enterprisePointLayerId,
+  ],
+  countyPowerPolicyWatchBelowEnterprise: [
+    countyPowerPolicyWatchStyleLayerIds.fillLayerId,
+    enterprisePointLayerId,
+  ],
+  countyPower3dBelowEnterprise: [countyPowerExtrusionLayerId, enterprisePointLayerId],
+  hyperscaleLeasedFillBelowParcelOutlines: [hyperscaleLeasedFillLayerId, parcelsOutlineLayerId],
   submarketBoundaryBelowColocation: [
     getMarketBoundaryStyleLayerIds("markets.submarket").fillLayerId,
     colocationPointLayerId,

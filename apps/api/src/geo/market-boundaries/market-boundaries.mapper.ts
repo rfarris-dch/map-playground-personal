@@ -1,4 +1,4 @@
-import { GeometrySchema } from "@map-migration/geo-kernel/geometry";
+import { MultiPolygonGeometrySchema, PolygonGeometrySchema } from "@map-migration/geo-kernel/geometry";
 import type {
   MarketBoundaryFeature,
   MarketBoundaryLevel,
@@ -16,12 +16,18 @@ function parseJsonObject(input: string): unknown {
 
 function readGeometry(input: unknown): MarketBoundaryFeature["geometry"] {
   const value = typeof input === "string" ? parseJsonObject(input) : input;
-  const parsed = GeometrySchema.safeParse(value);
-  if (!parsed.success) {
-    throw new Error("Invalid geom_json: geometry did not match GeoJSON schema");
+
+  const polygon = PolygonGeometrySchema.safeParse(value);
+  if (polygon.success) {
+    return polygon.data;
   }
 
-  return parsed.data;
+  const multiPolygon = MultiPolygonGeometrySchema.safeParse(value);
+  if (multiPolygon.success) {
+    return multiPolygon.data;
+  }
+
+  throw new Error("Invalid geom_json: geometry did not match Polygon/MultiPolygon schema");
 }
 
 function readRequiredLabel(value: string | null | undefined, field: string): string {

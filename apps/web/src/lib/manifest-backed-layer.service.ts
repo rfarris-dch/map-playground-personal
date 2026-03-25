@@ -72,9 +72,7 @@ export function mountManifestBackedLayerBootstrap(
         const result = await runEffectPromise(
           Effect.either(
             loadTilePublishManifestEffect({
-              contextLabel: options.contextLabel,
               manifestPath: options.manifestPath,
-              preserveNetworkErrorCause: options.preserveNetworkErrorCause ?? false,
             })
           )
         );

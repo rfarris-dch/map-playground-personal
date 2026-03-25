@@ -1,21 +1,13 @@
-import { GeometrySchema } from "@map-migration/geo-kernel/geometry";
+import { MultiPolygonGeometrySchema, PolygonGeometrySchema } from "@map-migration/geo-kernel/geometry";
 import { z } from "zod";
+import { trimmedEnumWithDefault } from "./_query-parsing.js";
 import { ResponseMetaSchema } from "./api-response-meta.js";
-
-function trimQueryValue(value: unknown): unknown {
-  if (typeof value !== "string") {
-    return value;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
-}
 
 export const BoundaryPowerLevelSchema = z.enum(["county", "state", "country"]);
 export type BoundaryPowerLevel = z.infer<typeof BoundaryPowerLevelSchema>;
 
 export const BoundaryPowerRequestSchema = z.object({
-  level: z.preprocess(trimQueryValue, BoundaryPowerLevelSchema).default("county"),
+  level: trimmedEnumWithDefault(BoundaryPowerLevelSchema, "county"),
 });
 
 export function parseBoundaryPowerLevelParam(value: string | undefined): BoundaryPowerLevel | null {
@@ -39,10 +31,11 @@ export const BoundaryPowerPropertiesSchema = z.object({
   commissionedPowerMw: z.number().nonnegative(),
 });
 
+/** Boundaries are polygonal — tightened from generic GeometrySchema. */
 export const BoundaryPowerFeatureSchema = z.object({
   type: z.literal("Feature"),
   id: z.string(),
-  geometry: GeometrySchema,
+  geometry: z.union([PolygonGeometrySchema, MultiPolygonGeometrySchema]),
   properties: BoundaryPowerPropertiesSchema,
 });
 

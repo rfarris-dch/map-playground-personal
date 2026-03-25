@@ -22,8 +22,10 @@ export type FloodCatalogLayerId = Extract<
 
 export type FacilitiesCatalogLayerId = Extract<
   LayerId,
-  "facilities.colocation" | "facilities.hyperscale"
+  "facilities.colocation" | "facilities.hyperscale" | "facilities.enterprise"
 >;
+
+export type HyperscaleLeasedCatalogLayerId = Extract<LayerId, "facilities.hyperscale-leased">;
 
 export type HydroBasinsCatalogLayerId = Extract<LayerId, "environmental.hydro-basins">;
 
@@ -75,6 +77,11 @@ export interface MarketBoundaryStyleLayerIds {
 export interface HydroBasinsStyleLayerIds {
   readonly labelLayerIds: readonly string[];
   readonly lineLayerIds: readonly string[];
+}
+
+export interface HyperscaleLeasedStyleLayerIds {
+  readonly fillLayerId: string;
+  readonly lineLayerId: string;
 }
 
 export interface ParcelsStyleLayerIds {

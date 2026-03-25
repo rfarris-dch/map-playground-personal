@@ -19,7 +19,7 @@ export const EffectFrequencyMetricSnapshotSchema = z.object({
   description: z.string().nullable(),
   kind: z.literal("frequency"),
   name: z.string().min(1),
-  occurrences: z.record(z.number().int().nonnegative()),
+  occurrences: z.record(z.string(), z.number().int().nonnegative()),
   tags: z.array(EffectMetricTagSchema),
 });
 

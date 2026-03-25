@@ -7,6 +7,7 @@ import type {
   FacilitiesStyleLayerIds,
   FloodCatalogLayerId,
   FloodStyleLayerIds,
+  HyperscaleLeasedStyleLayerIds,
   HydroBasinsStyleLayerIds,
   MarketBoundaryCatalogLayerId,
   MarketBoundaryStyleLayerIds,
@@ -49,6 +50,13 @@ export function getFacilitiesStyleLayerIds(
     clusterLayerId: `${layerId}.clusters`,
     clusterCountLayerId: `${layerId}.cluster-count`,
     pointLayerId: `${layerId}.points`,
+  };
+}
+
+export function getHyperscaleLeasedStyleLayerIds(): HyperscaleLeasedStyleLayerIds {
+  return {
+    fillLayerId: "hyperscale-leased-voronoi.fill",
+    lineLayerId: "hyperscale-leased-voronoi.line",
   };
 }
 
@@ -118,13 +126,22 @@ export function getCatalogStyleLayerIds(layerId: StaticCatalogLayerId): readonly
     return [...hydroLayerIds.lineLayerIds, ...hydroLayerIds.labelLayerIds];
   }
 
-  if (layerId === "facilities.colocation" || layerId === "facilities.hyperscale") {
+  if (
+    layerId === "facilities.colocation" ||
+    layerId === "facilities.hyperscale" ||
+    layerId === "facilities.enterprise"
+  ) {
     const facilitiesLayers = getFacilitiesStyleLayerIds(layerId);
     return [
       facilitiesLayers.clusterLayerId,
       facilitiesLayers.clusterCountLayerId,
       facilitiesLayers.pointLayerId,
     ];
+  }
+
+  if (layerId === "facilities.hyperscale-leased") {
+    const leasedLayers = getHyperscaleLeasedStyleLayerIds();
+    return [leasedLayers.fillLayerId, leasedLayers.lineLayerId];
   }
 
   if (
@@ -144,6 +161,11 @@ export function getCatalogStyleLayerIds(layerId: StaticCatalogLayerId): readonly
     return ["environmental.water-features"];
   }
 
-  const parcelsLayers = getParcelsStyleLayerIds();
-  return [parcelsLayers.fillLayerId, parcelsLayers.outlineLayerId];
+  if (layerId === "property.parcels") {
+    const parcelsLayers = getParcelsStyleLayerIds();
+    return [parcelsLayers.fillLayerId, parcelsLayers.outlineLayerId];
+  }
+
+  const _exhaustive: never = layerId;
+  throw new Error(`Unsupported catalog layer ID: ${_exhaustive}`);
 }

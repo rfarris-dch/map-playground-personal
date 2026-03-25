@@ -7,7 +7,7 @@ import {
 
 export function fetchMarketBoundariesEffect(level: MarketBoundaryLevel, init: RequestInit = {}) {
   return apiRequestJsonEffect(
-    buildMarketBoundariesRoute(level),
+    buildMarketBoundariesRoute(level, "4"),
     MarketBoundaryFeatureCollectionSchema,
     init
   );

@@ -1037,10 +1037,10 @@ export function mountBasemapLayerVisibility(
 
     try {
       const buildingSourceId = findBuildingSourceId(map, profile);
-      if (buildingSourceId !== null) {
-        add3DBuildings(map, profile, buildingSourceId);
-      } else {
+      if (buildingSourceId === null) {
         console.warn("[basemap] building source not found; 3D buildings unavailable");
+      } else {
+        add3DBuildings(map, profile, buildingSourceId);
       }
     } catch (buildingError: unknown) {
       console.warn("[basemap] 3D buildings unavailable", buildingError);

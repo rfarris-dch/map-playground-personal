@@ -95,10 +95,11 @@
   });
 
   function formatCompact(value: number): string {
-    if (value >= 100) {
-      return Math.round(value).toLocaleString();
-    }
-    return value.toLocaleString(undefined, { maximumFractionDigits: 1 });
+    const num =
+      value >= 100
+        ? Math.round(value).toLocaleString()
+        : value.toLocaleString(undefined, { maximumFractionDigits: 1 });
+    return `${num} MW`;
   }
 
   const metrics = computed<Metric[]>(() => {
@@ -146,20 +147,20 @@
   >
     <div
       v-if="displayState !== null"
-      class="flex flex-col items-start justify-center gap-2 p-2 leading-normal whitespace-nowrap"
+      class="flex flex-col items-start justify-center gap-1 p-2 leading-normal whitespace-nowrap"
       @mouseenter="onTooltipEnter"
       @mouseleave="onTooltipLeave"
     >
       <div class="flex items-center gap-2">
-        <span class="text-[16px] font-semibold leading-none" :class="accentText">
+        <span class="text-[14px] font-semibold leading-none" :class="accentText">
           {{ displayState.providerName }}
         </span>
-        <span v-if="codeText" class="text-[12px] font-normal leading-none text-[#94a3b8]">
+        <span v-if="codeText" class="text-[11px] font-normal leading-none text-[#94a3b8]">
           {{ codeText }}
         </span>
       </div>
 
-      <span v-if="addressText" class="text-[12px] font-normal leading-none text-[#94a3b8]">
+      <span v-if="addressText" class="text-[11px] font-normal leading-none text-[#94a3b8]">
         {{ addressText }}
       </span>
 
@@ -167,12 +168,12 @@
         <div
           v-for="metric in metrics"
           :key="metric.label"
-          class="flex items-center justify-center gap-2"
+          class="flex items-center justify-center gap-1"
         >
-          <span class="text-[16px] font-normal leading-none text-[#94a3b8]">
+          <span class="text-[13px] font-normal leading-none text-[#94a3b8]">
             {{ metric.label }}
           </span>
-          <span class="text-[16px] font-semibold leading-none" :class="accentText">
+          <span class="text-[13px] font-semibold leading-none" :class="accentText">
             {{ metric.value }}
           </span>
         </div>

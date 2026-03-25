@@ -2,7 +2,7 @@
   import type {
     CountyScoresCoverageResponse,
     CountyScoresResolutionResponse,
-  } from "@map-migration/http-contracts/county-intelligence-http";
+  } from "@map-migration/http-contracts/county-intelligence-debug-http";
   import type { SpatialAnalysisCountyScoresStatus } from "@map-migration/http-contracts/spatial-analysis-summary-http";
   import { computed } from "vue";
   import CountyIntelligenceCoverageSummary from "@/features/county-intelligence/components/county-intelligence-coverage-summary.vue";

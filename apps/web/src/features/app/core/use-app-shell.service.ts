@@ -11,6 +11,7 @@ function buildAppShellMapViewModel(args: UseAppShellRuntimeResult) {
     hoveredPower,
     colocationViewportFeatures,
     hyperscaleViewportFeatures,
+    selectedFacilityHoverState,
   } = state;
   const { selectedFacility, selectedParcel, facilityDetailQuery, parcelDetailQuery } = selection;
   const { hoveredFiber } = fiber;
@@ -27,6 +28,7 @@ function buildAppShellMapViewModel(args: UseAppShellRuntimeResult) {
     hoveredPower,
     colocationViewportFeatures,
     hyperscaleViewportFeatures,
+    selectedFacilityHoverState,
     facilityDetailQuery,
     parcelDetailQuery,
   };

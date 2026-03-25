@@ -1,15 +1,17 @@
 import type {
+  CountyScore,
+  CountyScoresStatusResponse,
+} from "@map-migration/http-contracts/county-intelligence-http";
+import type {
   CountyCongestionSnapshotDebug,
   CountyOperatorZoneDebug,
   CountyQueuePoiReferenceDebug,
   CountyQueueResolutionDebug,
-  CountyScore,
   CountyScoresCoverageByOperator,
   CountyScoresCoverageField,
   CountyScoresDebugCounty,
   CountyScoresResolutionSource,
-  CountyScoresStatusResponse,
-} from "@map-migration/http-contracts/county-intelligence-http";
+} from "@map-migration/http-contracts/county-intelligence-debug-http";
 import { mapCountyScoreRow } from "@/geo/county-intelligence/county-intelligence.mapper";
 import type {
   CountyCongestionDebugRow,
@@ -508,13 +510,13 @@ export async function queryCountyScores(
   let rows: readonly CountyScoreRow[];
   let statusRow: CountyScoresStatusRow;
   try {
-    if (args.statusSnapshot !== undefined) {
-      [rows, statusRow] = [await listCountyScores(requestedCountyIds), args.statusSnapshot];
-    } else {
+    if (args.statusSnapshot === undefined) {
       [rows, statusRow] = await Promise.all([
         listCountyScores(requestedCountyIds),
         getCountyScoresStatusSnapshot(),
       ]);
+    } else {
+      [rows, statusRow] = [await listCountyScores(requestedCountyIds), args.statusSnapshot];
     }
   } catch (error) {
     if (isCountyScoresSourceUnavailable(error)) {

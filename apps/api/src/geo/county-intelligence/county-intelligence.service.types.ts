@@ -1,10 +1,12 @@
 import type {
   CountyScore,
+  CountyScoresStatusResponse,
+} from "@map-migration/http-contracts/county-intelligence-http";
+import type {
   CountyScoresCoverageResponse,
   CountyScoresDebugResponse,
   CountyScoresResolutionResponse,
-  CountyScoresStatusResponse,
-} from "@map-migration/http-contracts/county-intelligence-http";
+} from "@map-migration/http-contracts/county-intelligence-debug-http";
 
 export interface QueryCountyScoresArgs {
   readonly countyIds: readonly string[];

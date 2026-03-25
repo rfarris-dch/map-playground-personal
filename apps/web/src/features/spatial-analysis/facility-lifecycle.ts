@@ -1,4 +1,4 @@
-import type { CommissionedSemantic, LeaseOrOwn } from "./commissioned-semantic.js";
+import type { CommissionedSemantic, LeaseOrOwn } from "@map-migration/geo-kernel/commissioned-semantic";
 
 export interface FacilityLifecycle {
   readonly commissionedSemantic: CommissionedSemantic;

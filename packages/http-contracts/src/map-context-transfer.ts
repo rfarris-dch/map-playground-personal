@@ -1,6 +1,36 @@
 import { FacilityPerspectiveSchema } from "@map-migration/geo-kernel/facility-perspective";
-import { MapViewportSchema } from "@map-migration/geo-kernel/map-viewport";
+import { BBoxSchema } from "@map-migration/geo-kernel/geometry";
 import { z } from "zod";
+import {
+  CountyPowerStoryIdSchema,
+  CountyPowerStoryWindowSchema,
+} from "./county-power-story-http.js";
+
+const MapContextCameraSchema = z.object({
+  bearing: z.number().finite().min(-180).max(180).optional(),
+  pitch: z.number().finite().min(0).max(85).optional(),
+});
+
+export const MapViewportSchema = z.union([
+  z
+    .object({
+      center: z.tuple([
+        z.number().finite().min(-180).max(180),
+        z.number().finite().min(-90).max(90),
+      ]),
+      type: z.literal("center"),
+      zoom: z.number().finite().min(0).max(24),
+    })
+    .merge(MapContextCameraSchema),
+  z
+    .object({
+      bounds: BBoxSchema,
+      type: z.literal("bounds"),
+    })
+    .merge(MapContextCameraSchema),
+]);
+
+export type MapViewport = z.infer<typeof MapViewportSchema>;
 
 export const MAP_CONTEXT_TRANSFER_SCHEMA_VERSION = 1;
 
@@ -26,14 +56,12 @@ export const MapContextFacilityViewModeSchema = z.enum([
   "icons",
 ]);
 
-export const MapContextCountyPowerStoryIdSchema = z.enum([
-  "grid-stress",
-  "queue-pressure",
-  "market-structure",
-  "policy-watch",
-]);
-
-export const MapContextCountyPowerStoryWindowSchema = z.enum(["live", "30d", "60d", "90d"]);
+/**
+ * These now reference the canonical schemas from county-power-story-http
+ * instead of duplicating them.
+ */
+export const MapContextCountyPowerStoryIdSchema = CountyPowerStoryIdSchema;
+export const MapContextCountyPowerStoryWindowSchema = CountyPowerStoryWindowSchema;
 
 export const MapContextCountyPowerStoryChapterIdSchema = z.enum([
   "operator-heartbeat",

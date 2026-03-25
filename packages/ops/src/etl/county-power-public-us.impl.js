@@ -3339,9 +3339,9 @@ function buildSppQueueDerivedValues(args) {
   const withdrawnDate = parseOptionalUsDate(args.row.dateWithdrawn);
   const signedIa = inferSppQueueSignedIa(args.row.status);
   const queueStatus =
-    withdrawnDate !== null
-      ? "withdrawn"
-      : normalizeQueueStatus(args.row.status, expectedOperationDate);
+    withdrawnDate === null
+      ? normalizeQueueStatus(args.row.status, expectedOperationDate)
+      : "withdrawn";
   return {
     capacityMw: chooseFirstFiniteNumber([
       args.row.requestedInjectionCapabilityMw,

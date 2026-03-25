@@ -120,6 +120,7 @@ export interface FacilitiesLayerState {
   fetchedBbox: BBox | null;
   lastFetchKey: string | null;
   lastRequestId: string | null;
+  lastSelectedFacilityId: string | null;
   lastTruncated: boolean;
   ready: boolean;
   requestSequence: number;

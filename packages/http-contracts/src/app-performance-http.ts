@@ -6,7 +6,7 @@ export const AppPerformanceCounterSnapshotSchema = z.object({
   lastRecordedAt: z.string().datetime(),
   lastValue: z.number(),
   name: z.string().min(1),
-  tags: z.record(z.string()),
+  tags: z.record(z.string(), z.string()),
 });
 
 export const AppPerformanceMeasurementSnapshotSchema = z.object({
@@ -18,15 +18,15 @@ export const AppPerformanceMeasurementSnapshotSchema = z.object({
   max: z.number(),
   min: z.number(),
   name: z.string().min(1),
-  tags: z.record(z.string()),
+  tags: z.record(z.string(), z.string()),
   total: z.number(),
 });
 
 export const AppPerformanceSnapshotSchema = z.object({
-  counters: z.record(AppPerformanceCounterSnapshotSchema),
+  counters: z.record(z.string(), AppPerformanceCounterSnapshotSchema),
   generatedAt: z.string().datetime(),
   lastResetAt: z.string().datetime(),
-  measurements: z.record(AppPerformanceMeasurementSnapshotSchema),
+  measurements: z.record(z.string(), AppPerformanceMeasurementSnapshotSchema),
   status: z.literal("ok"),
 });
 

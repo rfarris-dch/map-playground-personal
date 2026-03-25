@@ -241,13 +241,13 @@ export function mountFacilitiesHover(
         const properties = cachedProperties ?? feature.properties;
         const geom = feature.geometry;
         const hoverFeature =
-          geom.type !== "GeometryCollection"
-            ? {
+          geom.type === "GeometryCollection"
+            ? { id: feature.id, properties }
+            : {
                 id: feature.id,
                 geometry: { type: geom.type, coordinates: geom.coordinates },
                 properties,
-              }
-            : { id: feature.id, properties };
+              };
         const nextHover = toFacilityHoverState(hoverFeature, screenPoint);
         if (nextHover === null) {
           continue;
