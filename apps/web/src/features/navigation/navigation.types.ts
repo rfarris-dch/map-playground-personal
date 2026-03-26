@@ -14,24 +14,6 @@ export interface FacilityNavigationItem {
   readonly to: string;
 }
 
-export interface MarketMapRouteParams {
-  readonly marketSlug: string;
-}
-
-export interface CompanyMapRouteParams {
-  readonly companyKind: string;
-  readonly companySlug: string;
-}
-
-export interface CompanyDashboardRouteParams {
-  readonly companyKind: string;
-  readonly companySlug: string;
-}
-
-export interface MarketDashboardRouteParams {
-  readonly marketSlug: string;
-}
-
 export interface FacilityDetailRouteParams {
   readonly facilityId: string;
   readonly perspective: string;

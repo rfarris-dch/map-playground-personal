@@ -37,9 +37,7 @@ function waitForDelay(milliseconds: number): Promise<void> {
   });
 }
 
-export async function terminateManagedSyncProcess(
-  runtimeState: ManagedSyncRuntimeState
-): Promise<void> {
+async function terminateManagedSyncProcess(runtimeState: ManagedSyncRuntimeState): Promise<void> {
   const activeChild = runtimeState.activeChild;
   if (activeChild === null) {
     return;

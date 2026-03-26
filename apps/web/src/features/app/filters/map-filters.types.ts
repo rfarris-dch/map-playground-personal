@@ -20,25 +20,6 @@ export const VOLTAGE_THRESHOLDS: Record<TransmissionVoltageFilterId, number> = {
   "ge-765": 765,
 };
 
-export type PowerTypeFilterId = "commissioned" | "available" | "under-construction" | "planned";
-export type GasCapacityFilterId = "0-10" | "25-100" | "100-500" | "500-1000" | "1000+";
-export type GasStatusFilterId =
-  | "operating"
-  | "proposed"
-  | "announced"
-  | "discontinued"
-  | "in-development";
-export type ZoningTypeFilterId =
-  | "residential"
-  | "commercial"
-  | "industrial"
-  | "agriculture"
-  | "exempt"
-  | "farmland"
-  | "mixed"
-  | "unzoned";
-export type FloodZoneFilterId = "low-risk" | "high-risk" | "coastal-high-risk";
-
 export interface MapFiltersState {
   readonly activeMarkets: ReadonlySet<string>;
   readonly activeUsers: ReadonlySet<string>;

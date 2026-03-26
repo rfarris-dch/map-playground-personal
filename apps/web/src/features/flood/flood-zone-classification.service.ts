@@ -1,12 +1,6 @@
 const SFHA_ZONE_CODES = new Set(["A", "AE", "AH", "AO", "AR", "A99", "V", "VE"]);
 
-export interface FloodZoneClassificationInput {
-  readonly sfhaTf: boolean | null;
-  readonly zone: string | null;
-  readonly zoneSubtype: string | null;
-}
-
-export interface FloodZoneClassification {
+interface FloodZoneClassification {
   readonly isFlood100: boolean;
   readonly isFlood500: boolean;
   readonly label: string;
@@ -15,7 +9,7 @@ export interface FloodZoneClassification {
   readonly normalizedZoneSubtype: string | null;
 }
 
-export function floodLegendLabel(legendKey: "flood-100" | "flood-500"): string {
+function floodLegendLabel(legendKey: "flood-100" | "flood-500"): string {
   if (legendKey === "flood-100") {
     return "100-year floodplain (1% annual chance / SFHA)";
   }
@@ -103,7 +97,7 @@ function describeOtherZone(zone: string | null, zoneSubtype: string | null): str
   return `FEMA flood subtype ${zoneSubtype?.toLowerCase() ?? "unavailable"}`;
 }
 
-export function classifyFloodZone(
+function classifyFloodZone(
   input: Readonly<{
     sfhaTf?: unknown;
     zone?: unknown;
@@ -146,16 +140,6 @@ export function classifyFloodZone(
     normalizedZone,
     normalizedZoneSubtype,
   };
-}
-
-export function classifyFloodHazardProperties(
-  properties: Readonly<Record<string, unknown>>
-): FloodZoneClassification {
-  return classifyFloodZone({
-    sfhaTf: properties.SFHA_TF,
-    zone: properties.FLD_ZONE,
-    zoneSubtype: properties.ZONE_SUBTY,
-  });
 }
 
 export function classifyParcelFloodAttributes(

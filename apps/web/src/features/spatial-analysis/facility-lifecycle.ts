@@ -1,20 +1,12 @@
-import type { CommissionedSemantic, LeaseOrOwn } from "@map-migration/geo-kernel/commissioned-semantic";
+import type {
+  CommissionedSemantic,
+  LeaseOrOwn,
+} from "@map-migration/geo-kernel/commissioned-semantic";
 
-export interface FacilityLifecycle {
+interface FacilityLifecycle {
   readonly commissionedSemantic: CommissionedSemantic;
   readonly leaseOrOwn: LeaseOrOwn | null;
   readonly statusLabel: string | null;
-}
-
-export type FacilityLifecycleBucket =
-  | "operational"
-  | "leased"
-  | "under_construction"
-  | "planned"
-  | "unknown";
-
-export function toLifecycleBucket(lifecycle: FacilityLifecycle): FacilityLifecycleBucket {
-  return lifecycle.commissionedSemantic;
 }
 
 export function toLifecycleDisplayLabel(lifecycle: FacilityLifecycle): string {
@@ -36,10 +28,4 @@ export function toLifecycleDisplayLabel(lifecycle: FacilityLifecycle): string {
     default:
       return lifecycle.commissionedSemantic;
   }
-}
-
-export function isCommissionedCapacity(lifecycle: FacilityLifecycle): boolean {
-  return (
-    lifecycle.commissionedSemantic === "operational" || lifecycle.commissionedSemantic === "leased"
-  );
 }

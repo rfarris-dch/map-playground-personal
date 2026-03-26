@@ -2,6 +2,7 @@
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { writeJsonAtomic } from "../packages/ops/src/etl/atomic-file-store";
+import { ensureBatchArtifactLayout } from "../packages/ops/src/etl/batch-artifact-layout";
 import { findCliArgValue, trimToNull } from "../packages/ops/src/etl/cli-config";
 import { runBufferedCommand } from "../packages/ops/src/etl/command-runner";
 import { extractCountyPowerPublicUs } from "../packages/ops/src/etl/county-power-public-us";
@@ -17,6 +18,7 @@ import {
   resolveCountyPowerRunContext,
   verifyCountyPowerRunConfig,
   writeCountyPowerRunConfig,
+  writeCountyPowerSilverParquet,
 } from "../packages/ops/src/etl/county-power-sync";
 
 type CountyPowerSyncStep = "extract" | "load" | "normalize" | "refresh" | "sync";
@@ -150,6 +152,12 @@ async function extractStep(args: {
     },
     runId: args.runId,
   });
+  ensureBatchArtifactLayout({
+    dataVersion: materialized.manifest.dataVersion,
+    effectiveDate: materialized.manifest.effectiveDate,
+    layout: context,
+    month: materialized.manifest.month,
+  });
 
   writeJsonAtomic(context.runSummaryPath, {
     dataVersion: materialized.manifest.dataVersion,
@@ -171,7 +179,7 @@ async function extractStep(args: {
   };
 }
 
-function normalizeStep(runId: string): StepState {
+async function normalizeStep(runId: string): Promise<StepState> {
   const context = resolveCountyPowerRunContext(PROJECT_ROOT, runId);
   ensureCountyPowerRunDirectories(context);
 
@@ -189,6 +197,10 @@ function normalizeStep(runId: string): StepState {
       step: "extract",
     },
     runId,
+  });
+  const silverArtifacts = await writeCountyPowerSilverParquet({
+    bundle: normalized,
+    context,
   });
 
   writeJsonAtomic(context.runSummaryPath, {
@@ -218,6 +230,7 @@ function normalizeStep(runId: string): StepState {
     effectiveDate: normalized.manifest.effectiveDate,
     month: normalized.manifest.month,
     runId,
+    silverParquetArtifacts: silverArtifacts.map((artifact) => artifact.relativePath),
     step: "normalize",
   });
 
@@ -231,7 +244,7 @@ function normalizeStep(runId: string): StepState {
 
 async function loadStep(runId: string): Promise<StepState> {
   const context = resolveCountyPowerRunContext(PROJECT_ROOT, runId);
-  const bundle = readNormalizedCountyPowerBundle(context.normalizedManifestPath);
+  const bundle = await readNormalizedCountyPowerBundle(context.normalizedManifestPath);
 
   await runProjectCommand("bash", [join(PROJECT_ROOT, "scripts/init-county-scores-schema.sh")]);
 
@@ -286,7 +299,7 @@ async function loadStep(runId: string): Promise<StepState> {
 
 async function refreshStep(runId: string): Promise<StepState> {
   const context = resolveCountyPowerRunContext(PROJECT_ROOT, runId);
-  const bundle = readNormalizedCountyPowerBundle(context.normalizedManifestPath);
+  const bundle = await readNormalizedCountyPowerBundle(context.normalizedManifestPath);
   const countyScoresRunId =
     trimToNull(process.env.COUNTY_SCORES_RUN_ID) ?? `county-market-pressure-${runId}`;
   const refreshEnv: Record<string, string> = {
@@ -366,7 +379,7 @@ async function main(): Promise<void> {
       source,
     });
   } else if (step === "normalize") {
-    finalState = normalizeStep(runId);
+    finalState = await normalizeStep(runId);
   } else if (step === "load") {
     finalState = await loadStep(runId);
   } else if (step === "refresh") {
@@ -378,7 +391,7 @@ async function main(): Promise<void> {
       runId,
       source,
     });
-    normalizeStep(runId);
+    await normalizeStep(runId);
     await loadStep(runId);
     finalState = await refreshStep(runId);
   }

@@ -201,7 +201,11 @@ const { useAppShellVisibility } = await import(
 const { createLayerRuntime } = await import(
   "../../../src/features/layers/layer-runtime.service.ts?county-power-story-layer-test"
 );
-const { countyPowerStoryCatalogLayerIds, countyPowerStoryStyleLayerIds } = await import(
+const {
+  countyPowerStoryCatalogLayerIds,
+  countyPowerStoryStyleLayerIds,
+  defaultCountyPowerStoryChapterId,
+} = await import(
   "../../../src/features/county-power-story/county-power-story.service.ts?county-power-story-layer-test"
 );
 
@@ -659,7 +663,50 @@ describe("county power story layer", () => {
     expect(runtimeVisibility.get("models.county-power-grid-stress")).toBe(false);
     expect(runtimeVisibility.get("models.county-power-queue-pressure")).toBe(true);
     expect(visibility.countyPowerStoryVisibility.value).toMatchObject({
+      chapterId: "queue-pressure-storm",
       storyId: "queue-pressure",
+      visible: true,
+    });
+  });
+
+  it("switches to the story default chapter when changing county power stories", async () => {
+    const visibility = useAppShellVisibility({
+      basemapLayerController: shallowRef(null),
+      boundaryControllers: shallowRef({
+        country: null,
+        county: null,
+        state: null,
+      }),
+      boundaryFacetSelection: shallowRef({
+        country: null,
+        county: null,
+        state: null,
+      }),
+      clearCountyPowerStoryHover: () => undefined,
+      clearPowerHover: () => undefined,
+      clearSelectedCountyPowerStory: () => undefined,
+      clearSelectedParcel: () => undefined,
+      countyPowerStoryController: shallowRef(null),
+      countyPowerStoryVisibility: shallowRef({
+        animationEnabled: true,
+        chapterId: "queue-pressure-storm",
+        chapterVisible: true,
+        seamHazeEnabled: false,
+        storyId: "queue-pressure",
+        threeDimensional: false,
+        visible: true,
+        window: "live",
+      }),
+      gasPipelineController: shallowRef(null),
+      layerRuntime: shallowRef(null),
+      setViewportFacilities: () => undefined,
+    });
+
+    await visibility.setCountyPowerStoryVisible("grid-stress", true);
+
+    expect(visibility.countyPowerStoryVisibility.value).toMatchObject({
+      chapterId: defaultCountyPowerStoryChapterId("grid-stress"),
+      storyId: "grid-stress",
       visible: true,
     });
   });

@@ -10,6 +10,10 @@ import {
 } from "node:fs";
 import { basename, dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  ensureBatchArtifactLayout,
+  resolveBatchArtifactLayout,
+} from "../../packages/ops/src/etl/batch-artifact-layout";
 import type {
   EnvironmentalDataset,
   EnvironmentalRunContext,
@@ -114,25 +118,32 @@ export function resolveRunContext(
     process.env.ENVIRONMENTAL_SYNC_SNAPSHOT_ROOT ??
       join(projectRoot, "var", "environmental-sync", dataset)
   );
-  const runDir = join(datasetRoot, runId);
+  const layout = resolveBatchArtifactLayout({
+    dataset,
+    projectRoot,
+    runId,
+    snapshotRoot: datasetRoot,
+  });
 
   return {
     dataset,
     datasetRoot,
     latestRunPointerPath: join(datasetRoot, "latest.json"),
-    normalizedDir: join(runDir, "normalized"),
-    publishCompletePath: join(runDir, "publish-complete.json"),
-    rawDir: join(runDir, "raw"),
-    runConfigPath: join(runDir, "run-config.json"),
-    runDir,
-    runId,
-    runSummaryPath: join(runDir, "run-summary.json"),
+    normalizedDir: join(layout.runDir, "normalized"),
+    publishCompletePath: join(layout.runDir, "publish-complete.json"),
+    rawDir: join(layout.runDir, "raw"),
+    runConfigPath: join(layout.runDir, "run-config.json"),
+    runSummaryPath: join(layout.runDir, "run-summary.json"),
+    ...layout,
   };
 }
 
 export function ensureRunDirectories(context: EnvironmentalRunContext): void {
   mkdirSync(context.rawDir, { recursive: true });
   mkdirSync(context.normalizedDir, { recursive: true });
+  ensureBatchArtifactLayout({
+    layout: context,
+  });
 }
 
 export function writeJsonFile(path: string, value: unknown): void {

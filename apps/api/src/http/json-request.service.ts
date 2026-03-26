@@ -2,8 +2,6 @@ import type { Context } from "hono";
 import { jsonError, toDebugDetails } from "@/http/api-response";
 import type { ReadJsonBodyArgs, ReadJsonBodyResult } from "./json-request.service.types";
 
-export type { ReadJsonBodyResult } from "./json-request.service.types";
-
 const JSON_CONTENT_TYPE_RE = /^application\/([a-z-+.]+\+)?json(\s*;.*)?$/i;
 const PAYLOAD_TOO_LARGE_RE = /payload too large/i;
 

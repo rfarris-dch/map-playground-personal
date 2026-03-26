@@ -9,13 +9,13 @@ import {
 import { FacilityPerspectiveSchema } from "@map-migration/geo-kernel/facility-perspective";
 import { z } from "zod";
 import { FacilityCorePropertiesSchema } from "./_facility-core.js";
+import { PaginationSchema, SortDirectionSchema } from "./_pagination.js";
 import {
   PageQuerySchema,
   PageSizeQuerySchema,
   paginationOffsetGuard,
   trimmedEnumWithDefault,
 } from "./_query-parsing.js";
-import { PaginationSchema, SortDirectionSchema } from "./_pagination.js";
 
 export const FacilitySortBySchema = z.enum([
   "facilityName",
@@ -59,10 +59,9 @@ export const FacilitiesTableRequestSchema = z
     perspective: trimmedEnumWithDefault(FacilityPerspectiveSchema, "colocation"),
     sortBy: trimmedEnumWithDefault(FacilitySortBySchema, "facilityName"),
     sortOrder: trimmedEnumWithDefault(SortDirectionSchema, "asc"),
-    datasetVersion: z.preprocess(
-      (v) => (typeof v === "string" ? v.trim() || undefined : v),
-      z.string().min(1)
-    ).optional(),
+    datasetVersion: z
+      .preprocess((v) => (typeof v === "string" ? v.trim() || undefined : v), z.string().min(1))
+      .optional(),
   })
   .superRefine(paginationOffsetGuard);
 

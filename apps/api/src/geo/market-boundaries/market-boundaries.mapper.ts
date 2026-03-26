@@ -1,4 +1,7 @@
-import { MultiPolygonGeometrySchema, PolygonGeometrySchema } from "@map-migration/geo-kernel/geometry";
+import {
+  MultiPolygonGeometrySchema,
+  PolygonGeometrySchema,
+} from "@map-migration/geo-kernel/geometry";
 import type {
   MarketBoundaryFeature,
   MarketBoundaryLevel,

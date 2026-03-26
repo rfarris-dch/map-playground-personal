@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { z } from "zod";
 
 // ---------------------------------------------------------------------------
 // Route-builder / request-schema alignment
@@ -179,7 +178,7 @@ describe("representative payload parse tests", () => {
       generatedAt: "2025-01-01T00:00:00.000Z",
       enabled: true,
       mode: "external",
-      intervalMs: 3600000,
+      intervalMs: 3_600_000,
       requireStartupSuccess: false,
       snapshotRoot: "/data/snapshots",
       latestRunId: "run-1",
@@ -191,7 +190,7 @@ describe("representative payload parse tests", () => {
         isRunning: false,
         startedAt: "2025-01-01T00:00:00.000Z",
         endedAt: "2025-01-01T00:00:00.000Z",
-        durationMs: 120000,
+        durationMs: 120_000,
         exitCode: 0,
         summary: "OK",
         progress: null,

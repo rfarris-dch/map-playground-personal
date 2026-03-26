@@ -24,20 +24,60 @@ function workspaceSubpathExports(): Plugin {
   const packagesDir = fileURLToPath(new URL("../../packages", import.meta.url));
   const cache = new Map<string, string>();
 
+  function readDistFile(target: unknown): string | null {
+    if (typeof target === "string") {
+      return target;
+    }
+
+    if (typeof target !== "object" || target === null) {
+      return null;
+    }
+
+    const defaultTarget = Reflect.get(target, "default");
+    return typeof defaultTarget === "string" ? defaultTarget : null;
+  }
+
+  function readPackageSubpathEntries(entry: fs.Dirent): readonly [string, string][] {
+    if (!entry.isDirectory()) {
+      return [];
+    }
+
+    const pkgJsonPath = path.join(packagesDir, entry.name, "package.json");
+    if (!fs.existsSync(pkgJsonPath)) {
+      return [];
+    }
+
+    const pkg = JSON.parse(fs.readFileSync(pkgJsonPath, "utf8"));
+    if (!(pkg.exports && pkg.name)) {
+      return [];
+    }
+
+    const results: [string, string][] = [];
+    for (const [subpath, target] of Object.entries(pkg.exports)) {
+      if (subpath === ".") {
+        continue;
+      }
+
+      const distFile = readDistFile(target);
+      if (distFile === null) {
+        continue;
+      }
+
+      const importSpecifier = `${pkg.name}/${subpath.slice(2)}`;
+      results.push([importSpecifier, path.join(packagesDir, entry.name, distFile)]);
+    }
+
+    return results;
+  }
+
   function buildCache(): void {
-    if (cache.size > 0) return;
+    if (cache.size > 0) {
+      return;
+    }
+
     for (const entry of fs.readdirSync(packagesDir, { withFileTypes: true })) {
-      if (!entry.isDirectory()) continue;
-      const pkgJsonPath = path.join(packagesDir, entry.name, "package.json");
-      if (!fs.existsSync(pkgJsonPath)) continue;
-      const pkg = JSON.parse(fs.readFileSync(pkgJsonPath, "utf8"));
-      if (!pkg.exports || !pkg.name) continue;
-      for (const [subpath, target] of Object.entries(pkg.exports)) {
-        if (subpath === ".") continue;
-        const distFile = typeof target === "string" ? target : (target as Record<string, string>).default;
-        if (!distFile) continue;
-        const importSpecifier = `${pkg.name}/${subpath.slice(2)}`;
-        cache.set(importSpecifier, path.join(packagesDir, entry.name, distFile));
+      for (const [importSpecifier, resolvedPath] of readPackageSubpathEntries(entry)) {
+        cache.set(importSpecifier, resolvedPath);
       }
     }
   }
@@ -46,7 +86,9 @@ function workspaceSubpathExports(): Plugin {
     name: "workspace-subpath-exports",
     enforce: "pre",
     resolveId(source) {
-      if (!source.startsWith("@map-migration/")) return null;
+      if (!source.startsWith("@map-migration/")) {
+        return null;
+      }
       buildCache();
       return cache.get(source) ?? null;
     },
@@ -81,7 +123,10 @@ export default defineConfig({
     port: Number.isFinite(mapWebPort) ? mapWebPort : 5143,
     strictPort: true,
     fs: {
-      allow: [fileURLToPath(new URL(".", import.meta.url)), fileURLToPath(new URL("../../packages", import.meta.url))],
+      allow: [
+        fileURLToPath(new URL(".", import.meta.url)),
+        fileURLToPath(new URL("../../packages", import.meta.url)),
+      ],
     },
     proxy: {
       "/api": {

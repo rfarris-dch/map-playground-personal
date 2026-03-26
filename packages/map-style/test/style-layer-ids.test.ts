@@ -1,19 +1,23 @@
 import { describe, expect, it } from "bun:test";
+import { LAYER_IDS } from "@map-migration/map-layer-catalog";
 import {
+  findFirstLabelStyleLayerId,
+  findFirstPresentStyleLayerId,
   getBoundaryStyleLayerIds,
   getCatalogStyleLayerIds,
   getCountyPowerStoryExtrusionLayerId,
   getCountyPowerStoryStyleLayerIds,
   getFacilitiesStyleLayerIds,
+  getFacilityPlacementAnchorLayerIds,
   getFloodStyleLayerIds,
-  getHyperscaleLeasedStyleLayerIds,
   getHydroBasinsStyleLayerIds,
+  getHyperscaleLeasedStyleLayerIds,
+  getOverlayPlacementAnchorLayerIds,
   getParcelsStyleLayerIds,
   getPowerStyleLayerIds,
   validateLayerOrder,
 } from "@/index";
 import type { StaticCatalogLayerId } from "@/index.types";
-import { LAYER_IDS } from "@map-migration/map-layer-catalog";
 
 describe("style layer ids", () => {
   it("keeps the exact derived ids for boundary, flood, facilities, and parcels layers", () => {
@@ -26,8 +30,9 @@ describe("style layer ids", () => {
       fill500LayerId: "environmental-flood-500-fill",
     });
     expect(getFacilitiesStyleLayerIds("facilities.colocation")).toEqual({
+      heatmapLayerId: "facilities.colocation.heatmap",
       clusterLayerId: "facilities.colocation.clusters",
-      clusterCountLayerId: "facilities.colocation.cluster-count",
+      iconFallbackLayerId: "facilities.colocation.icon-fallback",
       pointLayerId: "facilities.colocation.points",
     });
     expect(getParcelsStyleLayerIds()).toEqual({
@@ -40,8 +45,9 @@ describe("style layer ids", () => {
     });
     expect(getCountyPowerStoryExtrusionLayerId()).toBe("models.county-power-3d.fill-extrusion");
     expect(getFacilitiesStyleLayerIds("facilities.enterprise")).toEqual({
+      heatmapLayerId: "facilities.enterprise.heatmap",
       clusterLayerId: "facilities.enterprise.clusters",
-      clusterCountLayerId: "facilities.enterprise.cluster-count",
+      iconFallbackLayerId: "facilities.enterprise.icon-fallback",
       pointLayerId: "facilities.enterprise.points",
     });
     expect(getHyperscaleLeasedStyleLayerIds()).toEqual({
@@ -94,13 +100,15 @@ describe("style layer ids", () => {
       "environmental-hydro-basins-huc10-label",
     ]);
     expect(getCatalogStyleLayerIds("facilities.colocation")).toEqual([
+      "facilities.colocation.heatmap",
       "facilities.colocation.clusters",
-      "facilities.colocation.cluster-count",
+      "facilities.colocation.icon-fallback",
       "facilities.colocation.points",
     ]);
     expect(getCatalogStyleLayerIds("facilities.enterprise")).toEqual([
+      "facilities.enterprise.heatmap",
       "facilities.enterprise.clusters",
-      "facilities.enterprise.cluster-count",
+      "facilities.enterprise.icon-fallback",
       "facilities.enterprise.points",
     ]);
     expect(getCatalogStyleLayerIds("facilities.hyperscale-leased")).toEqual([
@@ -159,5 +167,79 @@ describe("style layer ids", () => {
     ).toContain(
       "parcelOutlinesAboveCountyPower3d failed: models.county-power-3d.fill-extrusion must be before property.parcels"
     );
+  });
+
+  it("keeps placement anchors aligned with the actual facility render layer ids", () => {
+    expect(getFacilityPlacementAnchorLayerIds()).toEqual([
+      "hyperscale-leased-voronoi.fill",
+      "hyperscale-leased-voronoi.line",
+      "facilities.colocation.heatmap",
+      "facilities.colocation.clusters",
+      "facilities.colocation.icon-fallback",
+      "facilities.colocation.points",
+      "facilities.hyperscale.heatmap",
+      "facilities.hyperscale.clusters",
+      "facilities.hyperscale.icon-fallback",
+      "facilities.hyperscale.points",
+      "facilities.enterprise.heatmap",
+      "facilities.enterprise.clusters",
+      "facilities.enterprise.icon-fallback",
+      "facilities.enterprise.points",
+    ]);
+    expect(getOverlayPlacementAnchorLayerIds()).toEqual([
+      "property.parcels.fill",
+      "property.parcels",
+      "hyperscale-leased-voronoi.fill",
+      "hyperscale-leased-voronoi.line",
+      "facilities.colocation.heatmap",
+      "facilities.colocation.clusters",
+      "facilities.colocation.icon-fallback",
+      "facilities.colocation.points",
+      "facilities.hyperscale.heatmap",
+      "facilities.hyperscale.clusters",
+      "facilities.hyperscale.icon-fallback",
+      "facilities.hyperscale.points",
+      "facilities.enterprise.heatmap",
+      "facilities.enterprise.clusters",
+      "facilities.enterprise.icon-fallback",
+      "facilities.enterprise.points",
+    ]);
+  });
+
+  it("finds the first present anchor layer and first label layer from map state", () => {
+    const presentLayerIds = new Set(["facilities.enterprise.points"]);
+    const mapWithAnchors = {
+      getStyle() {
+        return {
+          version: 8,
+          sources: {},
+          layers: [
+            {
+              id: "background",
+              type: "background",
+              paint: {
+                "background-color": "#f8f7f3",
+              },
+            },
+            {
+              id: "places.label",
+              type: "symbol",
+              source: "openmaptiles",
+              layout: {
+                "text-field": ["get", "name"],
+              },
+            },
+          ],
+        };
+      },
+      hasLayer(layerId: string) {
+        return presentLayerIds.has(layerId);
+      },
+    };
+
+    expect(findFirstPresentStyleLayerId(mapWithAnchors, getFacilityPlacementAnchorLayerIds())).toBe(
+      "facilities.enterprise.points"
+    );
+    expect(findFirstLabelStyleLayerId(mapWithAnchors)).toBe("places.label");
   });
 });

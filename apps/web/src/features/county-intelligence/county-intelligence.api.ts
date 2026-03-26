@@ -12,12 +12,6 @@ import {
   buildCountyScoresStatusRoute,
 } from "@map-migration/http-contracts/api-routes";
 import {
-  type CountyScoresResponse,
-  CountyScoresResponseSchema,
-  type CountyScoresStatusResponse,
-  CountyScoresStatusResponseSchema,
-} from "@map-migration/http-contracts/county-intelligence-http";
-import {
   type CountyScoresCoverageResponse,
   CountyScoresCoverageResponseSchema,
   type CountyScoresDebugResponse,
@@ -25,61 +19,19 @@ import {
   type CountyScoresResolutionResponse,
   CountyScoresResolutionResponseSchema,
 } from "@map-migration/http-contracts/county-intelligence-debug-http";
+import {
+  type CountyScoresResponse,
+  CountyScoresResponseSchema,
+  type CountyScoresStatusResponse,
+  CountyScoresStatusResponseSchema,
+} from "@map-migration/http-contracts/county-intelligence-http";
 import type { Effect } from "effect";
-import type {
-  CountyScoresCoverageFetchResult,
-  CountyScoresDebugFetchResult,
-  CountyScoresFetchResult,
-  CountyScoresResolutionFetchResult,
-  CountyScoresStatusFetchResult,
-} from "@/features/county-intelligence/county-intelligence.types";
-
-export function fetchCountyScores(
-  countyIds: readonly string[],
-  init: RequestInit = {}
-): Promise<CountyScoresFetchResult> {
-  return apiRequestJson(
-    buildCountyScoresRoute({
-      countyIds,
-    }),
-    CountyScoresResponseSchema,
-    init
-  );
-}
+import type { CountyScoresStatusFetchResult } from "@/features/county-intelligence/county-intelligence.types";
 
 export function fetchCountyScoresStatus(
   init: RequestInit = {}
 ): Promise<CountyScoresStatusFetchResult> {
   return apiRequestJson(buildCountyScoresStatusRoute(), CountyScoresStatusResponseSchema, init);
-}
-
-export function fetchCountyScoresCoverage(
-  init: RequestInit = {}
-): Promise<CountyScoresCoverageFetchResult> {
-  return apiRequestJson(buildCountyScoresCoverageRoute(), CountyScoresCoverageResponseSchema, init);
-}
-
-export function fetchCountyScoresResolution(
-  init: RequestInit = {}
-): Promise<CountyScoresResolutionFetchResult> {
-  return apiRequestJson(
-    buildCountyScoresResolutionRoute(),
-    CountyScoresResolutionResponseSchema,
-    init
-  );
-}
-
-export function fetchCountyScoresDebug(
-  countyIds: readonly string[],
-  init: RequestInit = {}
-): Promise<CountyScoresDebugFetchResult> {
-  return apiRequestJson(
-    buildCountyScoresDebugRoute({
-      countyIds,
-    }),
-    CountyScoresDebugResponseSchema,
-    init
-  );
 }
 
 export function fetchCountyScoresEffect(

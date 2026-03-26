@@ -12,6 +12,10 @@ export function defaultSnapshotRootForDataset(
   dataset: string,
   env: NodeJS.ProcessEnv = process.env
 ): string {
+  if (dataset === "county-power") {
+    return env.COUNTY_POWER_SNAPSHOT_ROOT ?? join("var", "county-power-sync");
+  }
+
   if (dataset === "environmental-flood") {
     return (
       env.ENVIRONMENTAL_FLOOD_SNAPSHOT_ROOT ??
@@ -26,6 +30,14 @@ export function defaultSnapshotRootForDataset(
       env.ENVIRONMENTAL_SYNC_SNAPSHOT_ROOT ??
       join("var", "environmental-sync", "environmental-hydro-basins")
     );
+  }
+
+  if (dataset === "boundaries") {
+    return env.BOUNDARIES_SNAPSHOT_ROOT ?? join("var", "boundaries-sync");
+  }
+
+  if (dataset === "market-boundaries") {
+    return env.MARKET_BOUNDARIES_SNAPSHOT_ROOT ?? join("var", "market-boundaries-sync");
   }
 
   return env.PARCEL_SYNC_OUTPUT_DIR ?? "var/parcels-sync";

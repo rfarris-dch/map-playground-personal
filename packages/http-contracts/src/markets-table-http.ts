@@ -3,13 +3,13 @@
  * specific to the markets table endpoint.
  */
 import { z } from "zod";
+import { PaginationSchema, SortDirectionSchema } from "./_pagination.js";
 import {
   PageQuerySchema,
   PageSizeQuerySchema,
   paginationOffsetGuard,
   trimmedEnumWithDefault,
 } from "./_query-parsing.js";
-import { PaginationSchema, SortDirectionSchema } from "./_pagination.js";
 
 export const MarketSortBySchema = z.enum([
   "name",

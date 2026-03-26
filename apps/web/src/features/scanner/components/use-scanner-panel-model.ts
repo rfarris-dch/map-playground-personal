@@ -14,9 +14,9 @@ export interface ScannerPanelProps {
   readonly summary: SpatialAnalysisSummaryModel;
 }
 
-export type ScannerTab = "colocation" | "facilities" | "hyperscale" | "overview";
+type ScannerTab = "colocation" | "facilities" | "hyperscale" | "overview";
 
-export interface MetricRow {
+interface MetricRow {
   readonly label: string;
   readonly value: string;
 }

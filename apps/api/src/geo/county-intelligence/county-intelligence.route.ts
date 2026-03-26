@@ -1,13 +1,5 @@
 import { ApiRoutes } from "@map-migration/http-contracts/api-routes";
 import {
-  type CountyScoresRequest,
-  CountyScoresRequestSchema,
-  type CountyScoresResponse,
-  CountyScoresResponseSchema,
-  type CountyScoresStatusResponse,
-  CountyScoresStatusResponseSchema,
-} from "@map-migration/http-contracts/county-intelligence-http";
-import {
   type CountyScoresCoverageResponse,
   CountyScoresCoverageResponseSchema,
   type CountyScoresDebugRequest,
@@ -17,6 +9,14 @@ import {
   type CountyScoresResolutionResponse,
   CountyScoresResolutionResponseSchema,
 } from "@map-migration/http-contracts/county-intelligence-debug-http";
+import {
+  type CountyScoresRequest,
+  CountyScoresRequestSchema,
+  type CountyScoresResponse,
+  CountyScoresResponseSchema,
+  type CountyScoresStatusResponse,
+  CountyScoresStatusResponseSchema,
+} from "@map-migration/http-contracts/county-intelligence-http";
 import type { Env, Hono } from "hono";
 import {
   queryCountyScores,

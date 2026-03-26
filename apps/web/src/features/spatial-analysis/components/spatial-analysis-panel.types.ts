@@ -7,8 +7,6 @@ import type { SpatialAnalysisSummaryModel } from "@/features/spatial-analysis/sp
 
 type SpatialAnalysisSelectionSummary = SpatialAnalysisSummaryResponse["summary"];
 
-export type SpatialAnalysisPanelPerspectiveSummary = SpatialAnalysisSelectionSummary["colocation"];
-
 export type SpatialAnalysisPanelMarketSelection = Omit<
   SpatialAnalysisSelectionSummary["marketSelection"],
   "markets"

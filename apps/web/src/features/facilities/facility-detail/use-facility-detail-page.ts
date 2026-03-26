@@ -59,5 +59,3 @@ export function useFacilityDetailPage() {
     isError: query.isError,
   };
 }
-
-export type FacilityDetailPage = ReturnType<typeof useFacilityDetailPage>;

@@ -1,3 +1,5 @@
+import type { BatchRunArtifactLayout } from "./batch-artifact-layout.types";
+
 export type CountyPowerBundleVersion = "county-power-v1";
 export interface CountyPowerSourceDescriptor {
   readonly path: string;
@@ -337,17 +339,14 @@ export interface CountyPowerNormalizedBundle {
   readonly transmission: readonly CountyTransmissionRecord[];
   readonly utilityContext: readonly CountyUtilityContextRecord[];
 }
-export interface CountyPowerRunContext {
+export interface CountyPowerRunContext extends BatchRunArtifactLayout {
   readonly latestRunPointerPath: string;
   readonly normalizedDir: string;
   readonly normalizedManifestPath: string;
   readonly rawDir: string;
   readonly rawManifestPath: string;
   readonly runConfigPath: string;
-  readonly runDir: string;
-  readonly runId: string;
   readonly runSummaryPath: string;
-  readonly snapshotRoot: string;
 }
 export interface CountyPowerRunConfig {
   readonly createdAt: string;

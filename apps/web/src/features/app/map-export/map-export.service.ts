@@ -151,7 +151,7 @@ async function createPdfBlobFromCapturedImage(
   return new Blob([new Uint8Array(pdfBytes)], { type: "application/pdf" });
 }
 
-export function captureMapImage(args: CaptureMapImageArgs): Promise<Blob> {
+function captureMapImage(args: CaptureMapImageArgs): Promise<Blob> {
   const type = mimeTypeForImageFormat(args.format);
   const captureOptions =
     args.format === "jpeg" && typeof args.quality === "number"

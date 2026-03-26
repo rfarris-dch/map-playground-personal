@@ -55,13 +55,13 @@ const EARTH_RADIUS_KM = 6371;
 
 type Position = readonly [number, number];
 
-export interface ChapterVisibilityFlags {
+interface ChapterVisibilityFlags {
   readonly chapterId: CountyPowerStoryChapterId;
   readonly chapterVisible: boolean;
   readonly seamHazeEnabled: boolean;
 }
 
-export interface AnimatedRouteFeatureProperties {
+interface AnimatedRouteFeatureProperties {
   readonly capacityProxyMw: number;
   readonly color: string;
   readonly frictionScore: number;
@@ -222,7 +222,7 @@ function operatorPaletteIndex(value: string): number {
   return hash;
 }
 
-export function countyPowerOperatorColor(value: string | null | undefined): string {
+function countyPowerOperatorColor(value: string | null | undefined): string {
   const normalized = normalizeOperatorName(value);
   if (normalized.length === 0) {
     return "#64748b";
@@ -311,7 +311,7 @@ function boundaryCentroid(feature: MarketBoundaryFeature): Position | null {
   return [(bounds.west + bounds.east) / 2, (bounds.south + bounds.north) / 2];
 }
 
-export function dominantWholesaleOperator(
+function dominantWholesaleOperator(
   rowsByCounty: ReadonlyMap<string, CountyPowerStoryRow>
 ): string | null {
   const operatorScores = new Map<string, number>();

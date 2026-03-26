@@ -12,13 +12,13 @@
     readonly label: string;
   }
 
-  export interface ParcelDropdownState {
+  interface ParcelDropdownState {
     readonly dataset: string;
     readonly davPercent: string;
     readonly styleAcres: string;
   }
 
-  export interface AppFilterPanelProps {
+  interface AppFilterPanelProps {
     readonly activeFloodZones: ReadonlySet<string>;
     readonly activeGasCapacities: ReadonlySet<string>;
     readonly activeGasStatuses: ReadonlySet<string>;

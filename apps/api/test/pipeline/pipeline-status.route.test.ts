@@ -138,6 +138,6 @@ describe("pipeline status route", () => {
     expect(response.status).toBe(200);
     expect(payload.dataset.dataset).toBe("hydro-basins");
     expect(payload.dataset.displayName).toBe("Hydro Basins");
-    expect(payload.platform.orchestration).toBe("dagster");
+    expect(payload.platform.orchestration).toBe("manifest-runner");
   });
 });

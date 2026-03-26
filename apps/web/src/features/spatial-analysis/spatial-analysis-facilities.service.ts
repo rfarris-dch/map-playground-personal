@@ -1,6 +1,6 @@
 import type { CommissionedSemantic } from "@map-migration/geo-kernel/commissioned-semantic";
-import { toLifecycleDisplayLabel } from "@/features/spatial-analysis/facility-lifecycle";
 import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
+import { toLifecycleDisplayLabel } from "@/features/spatial-analysis/facility-lifecycle";
 import type { SpatialAnalysisFacilityComparable } from "@/features/spatial-analysis/spatial-analysis-facilities.service.types";
 
 function perspectiveSortRank(perspective: FacilityPerspective): number {

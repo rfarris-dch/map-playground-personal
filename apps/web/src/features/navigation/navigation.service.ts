@@ -3,12 +3,8 @@ import type { RouteLocationRaw } from "vue-router";
 import { buildMapContextTransferQuery } from "@/features/map-context-transfer/map-context-transfer.service";
 import type {
   AppNavigationItem,
-  CompanyDashboardRouteParams,
-  CompanyMapRouteParams,
   FacilityDetailRouteParams,
   FacilityNavigationItem,
-  MarketDashboardRouteParams,
-  MarketMapRouteParams,
   ProviderDetailRouteParams,
 } from "@/features/navigation/navigation.types";
 
@@ -70,46 +66,6 @@ function buildRouteLocationWithMapContext(
 
 export function buildGlobalMapRoute(context?: MapContextTransfer): RouteLocationRaw {
   return buildRouteLocationWithMapContext("/map", context);
-}
-
-export function buildMarketMapRoute(
-  params: MarketMapRouteParams,
-  context?: MapContextTransfer
-): RouteLocationRaw {
-  return buildRouteLocationWithMapContext(
-    `/markets/${encodeURIComponent(params.marketSlug)}/map`,
-    context
-  );
-}
-
-export function buildCompanyMapRoute(
-  params: CompanyMapRouteParams,
-  context?: MapContextTransfer
-): RouteLocationRaw {
-  return buildRouteLocationWithMapContext(
-    `/companies/${encodeURIComponent(params.companyKind)}/${encodeURIComponent(params.companySlug)}/map`,
-    context
-  );
-}
-
-export function buildMarketDashboardRoute(
-  params: MarketDashboardRouteParams,
-  context?: MapContextTransfer
-): RouteLocationRaw {
-  return buildRouteLocationWithMapContext(
-    `/markets/${encodeURIComponent(params.marketSlug)}/dashboard`,
-    context
-  );
-}
-
-export function buildCompanyDashboardRoute(
-  params: CompanyDashboardRouteParams,
-  context?: MapContextTransfer
-): RouteLocationRaw {
-  return buildRouteLocationWithMapContext(
-    `/companies/${encodeURIComponent(params.companyKind)}/${encodeURIComponent(params.companySlug)}/dashboard`,
-    context
-  );
 }
 
 function resolveFacilitiesPagePath(context?: MapContextTransfer): string {

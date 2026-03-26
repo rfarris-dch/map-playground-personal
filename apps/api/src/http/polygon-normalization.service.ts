@@ -9,7 +9,7 @@ interface PolygonNormalizationRow {
   readonly normalized_geometry_text: string | null;
 }
 
-export interface NormalizedPolygonGeometry {
+interface NormalizedPolygonGeometry {
   readonly geometryText: string;
   readonly invalidReason: string | null;
   readonly wasRepaired: boolean;

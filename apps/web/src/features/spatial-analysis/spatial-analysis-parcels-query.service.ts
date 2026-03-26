@@ -1,16 +1,11 @@
-import {
-  type ApiEffectError,
-  type ApiEffectSuccess,
-  toApiResultFailure,
-} from "@map-migration/core-runtime/api";
-import { runEffectPromise } from "@map-migration/core-runtime/effect";
+import type { ApiEffectError, ApiEffectSuccess } from "@map-migration/core-runtime/api";
 import type { Warning } from "@map-migration/geo-kernel/warning";
 import type { SourceMode } from "@map-migration/http-contracts/api-response-meta";
 import type {
   ParcelEnrichRequest,
   ParcelsFeatureCollection,
 } from "@map-migration/http-contracts/parcels-http";
-import { Data, Effect, Either } from "effect";
+import { Data, Effect } from "effect";
 import { fetchParcelsBySelectionEffect } from "@/features/measure/measure-analysis.api";
 import type {
   FetchSpatialAnalysisParcelsPagesArgs,
@@ -248,31 +243,4 @@ export function fetchSpatialAnalysisParcelsPagesEffect(
 
     return buildSpatialAnalysisParcelsSuccessResult(state);
   });
-}
-
-export async function fetchSpatialAnalysisParcelsPages(
-  args: FetchSpatialAnalysisParcelsPagesArgs
-): Promise<SpatialAnalysisParcelsPagesResult> {
-  const result: Either.Either<
-    SpatialAnalysisParcelsPagesSuccessResult,
-    ApiEffectError | ApiIngestionRunMismatchError
-  > = await runEffectPromise(
-    Effect.either(fetchSpatialAnalysisParcelsPagesEffect(args)),
-    args.signal
-  );
-
-  if (Either.isRight(result)) {
-    return result.right;
-  }
-
-  if (result.left instanceof ApiIngestionRunMismatchError) {
-    return {
-      ok: false,
-      reason: "ingestion-run-mismatch",
-      requestId: result.left.requestId,
-      expectedIngestionRunId: result.left.expectedIngestionRunId,
-      actualIngestionRunId: result.left.actualIngestionRunId,
-    };
-  }
-  return toApiResultFailure(result.left);
 }

@@ -7,8 +7,8 @@ import type {
   FacilitiesStyleLayerIds,
   FloodCatalogLayerId,
   FloodStyleLayerIds,
-  HyperscaleLeasedStyleLayerIds,
   HydroBasinsStyleLayerIds,
+  HyperscaleLeasedStyleLayerIds,
   MarketBoundaryCatalogLayerId,
   MarketBoundaryStyleLayerIds,
   ParcelsStyleLayerIds,
@@ -47,8 +47,9 @@ export function getFacilitiesStyleLayerIds(
   layerId: FacilitiesCatalogLayerId
 ): FacilitiesStyleLayerIds {
   return {
+    heatmapLayerId: `${layerId}.heatmap`,
     clusterLayerId: `${layerId}.clusters`,
-    clusterCountLayerId: `${layerId}.cluster-count`,
+    iconFallbackLayerId: `${layerId}.icon-fallback`,
     pointLayerId: `${layerId}.points`,
   };
 }
@@ -133,8 +134,9 @@ export function getCatalogStyleLayerIds(layerId: StaticCatalogLayerId): readonly
   ) {
     const facilitiesLayers = getFacilitiesStyleLayerIds(layerId);
     return [
+      facilitiesLayers.heatmapLayerId,
       facilitiesLayers.clusterLayerId,
-      facilitiesLayers.clusterCountLayerId,
+      facilitiesLayers.iconFallbackLayerId,
       facilitiesLayers.pointLayerId,
     ];
   }

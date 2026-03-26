@@ -1,8 +1,10 @@
+import type { BatchRunArtifactLayout } from "../../packages/ops/src/etl/batch-artifact-layout.types";
+
 export type EnvironmentalDataset = "environmental-flood" | "environmental-hydro-basins";
 
 export type EnvironmentalSyncStep = "extract" | "normalize";
 
-export interface EnvironmentalRunContext {
+export interface EnvironmentalRunContext extends BatchRunArtifactLayout {
   readonly dataset: EnvironmentalDataset;
   readonly datasetRoot: string;
   readonly latestRunPointerPath: string;
@@ -10,8 +12,6 @@ export interface EnvironmentalRunContext {
   readonly publishCompletePath: string;
   readonly rawDir: string;
   readonly runConfigPath: string;
-  readonly runDir: string;
-  readonly runId: string;
   readonly runSummaryPath: string;
 }
 

@@ -86,10 +86,6 @@ export interface CountyPowerStoryMountResult {
   readonly status: LayerStatus;
 }
 
-export interface CountyPowerStorySelectionDetail {
-  readonly row: CountyPowerStoryRow | null;
-}
-
 export type CountyPowerStoryGeometryFetchResult =
   import("@map-migration/core-runtime/api").ApiResult<CountyPowerStoryGeometryResponse>;
 export type CountyPowerStorySnapshotFetchResult =

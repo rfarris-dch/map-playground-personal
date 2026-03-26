@@ -1,6 +1,5 @@
 import { MapContextTransferSchema } from "@map-migration/http-contracts/map-context-transfer";
 import type { SpatialAnalysisDashboardState } from "@/features/spatial-analysis/spatial-analysis-dashboard.types";
-import type { SpatialAnalysisSummaryModel } from "@/features/spatial-analysis/spatial-analysis-summary.types";
 
 const SPATIAL_ANALYSIS_DASHBOARD_STORAGE_KEY = "map.spatial-analysis-dashboard";
 
@@ -47,26 +46,6 @@ export function saveSpatialAnalysisDashboardState(nextState: SpatialAnalysisDash
   }
 
   window.sessionStorage.setItem(SPATIAL_ANALYSIS_DASHBOARD_STORAGE_KEY, JSON.stringify(nextState));
-}
-
-export function saveMeasureAnalysisDashboard(summary: SpatialAnalysisSummaryModel): void {
-  saveSpatialAnalysisDashboardState({
-    isFiltered: false,
-    title: "Selection Dashboard",
-    source: "selection",
-    createdAt: new Date().toISOString(),
-    summary,
-  });
-}
-
-export function saveScannerAnalysisDashboard(summary: SpatialAnalysisSummaryModel): void {
-  saveSpatialAnalysisDashboardState({
-    isFiltered: false,
-    title: "Scanner Dashboard",
-    source: "scanner",
-    createdAt: new Date().toISOString(),
-    summary,
-  });
 }
 
 export function loadSpatialAnalysisDashboardState(): SpatialAnalysisDashboardState | null {

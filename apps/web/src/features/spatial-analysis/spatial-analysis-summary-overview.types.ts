@@ -1,8 +1,6 @@
 import type { SpatialAnalysisPanelSummary } from "@/features/spatial-analysis/components/spatial-analysis-panel.types";
 import type { SpatialAnalysisProviderSummaryItem } from "@/features/spatial-analysis/spatial-analysis-provider-summary.types";
 
-export type SpatialAnalysisOverviewPerspectiveSummary = SpatialAnalysisPanelSummary["colocation"];
-
 export type SpatialAnalysisOverviewProviderSummary = SpatialAnalysisProviderSummaryItem;
 
 export type SpatialAnalysisOverviewSummary = Pick<

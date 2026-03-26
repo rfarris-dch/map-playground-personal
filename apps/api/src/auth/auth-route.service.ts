@@ -41,7 +41,7 @@ function useSecureCookies(c: Context): boolean {
   return requestUrl.protocol === "https:" && !isLoopbackRequest(c);
 }
 
-export function readMapAppAuthSession(c: Context): AuthSession | null {
+function readMapAppAuthSession(c: Context): AuthSession | null {
   const config = getMapAppAuthConfig();
   const sessionToken = getCookie(c, config.sessionCookieName);
   if (typeof sessionToken !== "string" || sessionToken.length === 0) {

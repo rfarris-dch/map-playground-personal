@@ -1,12 +1,10 @@
-import { runEffectPromise } from "@map-migration/core-runtime/effect";
 import {
   assertTileManifestMatchesDataset,
   type TileDataset,
   type TilePublishManifest,
 } from "@map-migration/geo-tiles";
-import { loadTilePublishManifestEffect } from "@map-migration/geo-tiles/effect";
+import { loadTilePublishManifest } from "@map-migration/geo-tiles/effect";
 import type { IMap } from "@map-migration/map-engine";
-import { Effect, Either } from "effect";
 
 interface ManifestBackedLayerState {
   cachedManifest: TilePublishManifest | null;
@@ -16,7 +14,7 @@ interface ManifestBackedLayerState {
   sourceInitialized: boolean;
 }
 
-export interface ManifestBackedLayerBootstrap {
+interface ManifestBackedLayerBootstrap {
   destroy(): void;
   initializeSource(): Promise<void>;
   isReady(): boolean;
@@ -69,23 +67,18 @@ export function mountManifestBackedLayerBootstrap(
       }
 
       const sourceInitializationPromise = (async (): Promise<void> => {
-        const result = await runEffectPromise(
-          Effect.either(
-            loadTilePublishManifestEffect({
-              manifestPath: options.manifestPath,
-            })
-          )
-        );
-
-        if (Either.isLeft(result)) {
-          throw result.left;
-        }
+        const manifest = await loadTilePublishManifest({
+          contextLabel: options.contextLabel,
+          manifestPath: options.manifestPath,
+          ...(typeof options.preserveNetworkErrorCause === "boolean"
+            ? { preserveNetworkErrorCause: options.preserveNetworkErrorCause }
+            : {}),
+        });
 
         if (state.destroyed) {
           return;
         }
 
-        const manifest = result.right.data;
         if (typeof options.dataset !== "undefined") {
           assertTileManifestMatchesDataset(
             manifest,

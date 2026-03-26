@@ -1,29 +1,29 @@
 export interface LayerOrderInvariants {
   countyPower3dBelowColocation: readonly [string, string];
+  countyPower3dBelowEnterprise: readonly [string, string];
   countyPower3dBelowHyperscale: readonly [string, string];
   countyPowerGridStressBelowColocation: readonly [string, string];
+  countyPowerGridStressBelowEnterprise: readonly [string, string];
   countyPowerGridStressBelowHyperscale: readonly [string, string];
   countyPowerMarketStructureBelowColocation: readonly [string, string];
+  countyPowerMarketStructureBelowEnterprise: readonly [string, string];
   countyPowerMarketStructureBelowHyperscale: readonly [string, string];
   countyPowerPolicyWatchBelowColocation: readonly [string, string];
+  countyPowerPolicyWatchBelowEnterprise: readonly [string, string];
   countyPowerPolicyWatchBelowHyperscale: readonly [string, string];
   countyPowerQueuePressureBelowColocation: readonly [string, string];
+  countyPowerQueuePressureBelowEnterprise: readonly [string, string];
   countyPowerQueuePressureBelowHyperscale: readonly [string, string];
   flood100BelowParcelOutlines: readonly [string, string];
   flood500BelowParcelOutlines: readonly [string, string];
   hydroLabelsBelowFacilityPoints: readonly [string, string];
   hydroLinesBelowParcelOutlines: readonly [string, string];
+  hyperscaleLeasedFillBelowParcelOutlines: readonly [string, string];
   marketBoundaryBelowColocation: readonly [string, string];
   parcelOutlinesAboveCountyPower3d: readonly [string, string];
   parcelOutlinesAboveCountyPowerGridStress: readonly [string, string];
   parcelOutlinesAboveCountyPowerMarketStructure: readonly [string, string];
   parcelOutlinesAboveCountyPowerPolicyWatch: readonly [string, string];
   parcelOutlinesAboveCountyPowerQueuePressure: readonly [string, string];
-  countyPower3dBelowEnterprise: readonly [string, string];
-  countyPowerGridStressBelowEnterprise: readonly [string, string];
-  countyPowerMarketStructureBelowEnterprise: readonly [string, string];
-  countyPowerPolicyWatchBelowEnterprise: readonly [string, string];
-  countyPowerQueuePressureBelowEnterprise: readonly [string, string];
-  hyperscaleLeasedFillBelowParcelOutlines: readonly [string, string];
   submarketBoundaryBelowColocation: readonly [string, string];
 }

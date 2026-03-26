@@ -195,25 +195,6 @@ function joinCacheFill(key: string, loadFresh: () => Promise<string>): Promise<s
   return started;
 }
 
-export async function assertFacilitiesCacheReachable(): Promise<boolean> {
-  if (!isCacheAvailable()) {
-    return false;
-  }
-
-  if (redisClient === null) {
-    return false;
-  }
-
-  try {
-    await redisClient.ping();
-    clearRedisUnavailable();
-    return true;
-  } catch {
-    markRedisUnavailable();
-    return false;
-  }
-}
-
 export function createFacilitiesCacheHeaders(args: {
   readonly cacheStatus: FacilitiesCacheStatus;
   readonly dataVersion: string;

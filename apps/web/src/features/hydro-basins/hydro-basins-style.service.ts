@@ -4,7 +4,7 @@ import type {
   SymbolLayerSpecification,
 } from "maplibre-gl";
 
-export interface HydroBasinsZoomBand {
+interface HydroBasinsZoomBand {
   readonly maxZoom: number;
   readonly minZoom: number;
 }
@@ -34,7 +34,7 @@ const HYDRO_ZOOM_BANDS: Readonly<
   },
 };
 
-export function hydroBasinsZoomBand(level: keyof typeof HYDRO_ZOOM_BANDS): HydroBasinsZoomBand {
+function hydroBasinsZoomBand(level: keyof typeof HYDRO_ZOOM_BANDS): HydroBasinsZoomBand {
   return HYDRO_ZOOM_BANDS[level];
 }
 

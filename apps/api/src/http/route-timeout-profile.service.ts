@@ -1,6 +1,6 @@
 import type { ApiAppOptions } from "@/app.types";
 
-export type RouteTimeoutProfile = "default" | "facilities" | "parcels" | "selection";
+type RouteTimeoutProfile = "default" | "facilities" | "parcels" | "selection";
 const routeTimeoutProfiles = new Map<string, Exclude<RouteTimeoutProfile, "default">>();
 
 export function resolveRouteTimeoutMs(

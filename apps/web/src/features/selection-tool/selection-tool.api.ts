@@ -1,5 +1,5 @@
-import type { ApiEffectError, ApiEffectSuccess, ApiResult } from "@map-migration/core-runtime/api";
-import { apiRequestJson, apiRequestJsonEffect } from "@map-migration/core-runtime/api";
+import type { ApiEffectError, ApiEffectSuccess } from "@map-migration/core-runtime/api";
+import { apiRequestJsonEffect } from "@map-migration/core-runtime/api";
 import { buildMarketsSelectionRoute } from "@map-migration/http-contracts/api-routes";
 import {
   type MarketSelectionResponse,
@@ -9,8 +9,6 @@ import {
 import type { Effect } from "effect";
 import { buildJsonPostRequestInit } from "@/lib/api/api-request-init.service";
 
-type MarketsSelectionResult = ApiResult<MarketSelectionResponse>;
-
 function buildMarketsSelectionRequestInit(
   request: MarketsSelectionRequest,
   signal?: AbortSignal
@@ -19,17 +17,6 @@ function buildMarketsSelectionRequestInit(
     body: request,
     signal,
   });
-}
-
-export function fetchMarketsBySelection(
-  request: MarketsSelectionRequest,
-  signal?: AbortSignal
-): Promise<MarketsSelectionResult> {
-  return apiRequestJson(
-    buildMarketsSelectionRoute(),
-    MarketsSelectionResponseSchema,
-    buildMarketsSelectionRequestInit(request, signal)
-  );
 }
 
 export function fetchMarketsBySelectionEffect(

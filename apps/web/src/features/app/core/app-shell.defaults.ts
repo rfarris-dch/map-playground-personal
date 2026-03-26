@@ -3,29 +3,14 @@ import type {
   AppShellToolPanel,
   BoundaryFacetOptionsState,
   BoundaryFacetSelectionState,
-  BoundaryVisibilityState,
   FiberSourceLayerOptionsState,
   FiberSourceLayerSelectionState,
   FiberVisibilityState,
-  FloodVisibilityState,
   PerspectiveStatusState,
-  PerspectiveVisibilityState,
 } from "@/features/app/core/app-shell.types";
-import {
-  buildInitialBasemapVisibilityState,
-  buildInitialBoundaryVisibilityState,
-  buildInitialFiberVisibilityState,
-  buildInitialFloodVisibilityState,
-  buildInitialHydroBasinsVisible,
-  buildInitialParcelsVisible,
-  buildInitialPerspectiveVisibilityState,
-  buildInitialPowerVisibilityState,
-  buildInitialWaterVisible,
-} from "@/features/app/visibility/app-shell-visibility.service";
-import type { BasemapVisibilityState } from "@/features/basemap/basemap.types";
+import { buildInitialFiberVisibilityState } from "@/features/app/visibility/app-shell-visibility.service";
 import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";
 import type { ParcelsStatus } from "@/features/parcels/parcels.types";
-import type { PowerVisibilityState } from "@/features/power/power.types";
 import type { SketchMeasureState } from "@/features/sketch-measure/sketch-measure.types";
 
 export function initialParcelsStatus(): ParcelsStatus {
@@ -61,18 +46,6 @@ export function initialPerspectiveStatusState(): PerspectiveStatusState {
   };
 }
 
-export function initialPerspectiveVisibilityState(): PerspectiveVisibilityState {
-  return buildInitialPerspectiveVisibilityState();
-}
-
-export function initialBoundaryVisibilityState(): BoundaryVisibilityState {
-  return buildInitialBoundaryVisibilityState();
-}
-
-export function initialFloodVisibilityState(): FloodVisibilityState {
-  return buildInitialFloodVisibilityState();
-}
-
 export function initialBoundaryFacetOptionsState(): BoundaryFacetOptionsState {
   return {
     county: [],
@@ -105,26 +78,6 @@ export function initialFiberSourceLayerSelectionState(): FiberSourceLayerSelecti
     metro: [],
     longhaul: [],
   };
-}
-
-export function initialPowerVisibilityState(): PowerVisibilityState {
-  return buildInitialPowerVisibilityState();
-}
-
-export function initialParcelsVisible(): boolean {
-  return buildInitialParcelsVisible();
-}
-
-export function initialHydroBasinsVisible(): boolean {
-  return buildInitialHydroBasinsVisible();
-}
-
-export function initialWaterVisible(): boolean {
-  return buildInitialWaterVisible();
-}
-
-export function initialBasemapVisibilityState(): BasemapVisibilityState {
-  return buildInitialBasemapVisibilityState();
 }
 
 export function isSamePerspective(

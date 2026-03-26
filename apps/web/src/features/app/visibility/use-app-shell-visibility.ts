@@ -50,6 +50,7 @@ import {
 } from "@/features/basemap/basemap.service";
 import type { BasemapLayerId, BasemapVisibilityState } from "@/features/basemap/basemap.types";
 import type { BoundaryLayerId } from "@/features/boundaries/boundaries.types";
+import { defaultCountyPowerStoryChapterId } from "@/features/county-power-story/county-power-story.service";
 import type {
   CountyPowerStoryId,
   CountyPowerStoryVisibilityState,
@@ -338,10 +339,15 @@ export function useAppShellVisibility(options: UseAppShellVisibilityOptions) {
     storyId: CountyPowerStoryId,
     visible: boolean
   ): Promise<void> {
+    const nextChapterId =
+      countyPowerStoryVisibility.value.storyId === storyId
+        ? countyPowerStoryVisibility.value.chapterId
+        : defaultCountyPowerStoryChapterId(storyId);
+
     updateCountyPowerStoryVisibility(
       withCountyPowerStoryVisibility({
         state: countyPowerStoryVisibility.value,
-        ...(visible ? { storyId } : {}),
+        ...(visible ? { chapterId: nextChapterId, storyId } : {}),
         visible,
       })
     );
@@ -350,8 +356,14 @@ export function useAppShellVisibility(options: UseAppShellVisibilityOptions) {
   }
 
   async function setCountyPowerStoryStoryId(storyId: CountyPowerStoryId): Promise<void> {
+    const nextChapterId =
+      countyPowerStoryVisibility.value.storyId === storyId
+        ? countyPowerStoryVisibility.value.chapterId
+        : defaultCountyPowerStoryChapterId(storyId);
+
     updateCountyPowerStoryVisibility(
       withCountyPowerStoryVisibility({
+        chapterId: nextChapterId,
         state: countyPowerStoryVisibility.value,
         storyId,
       })

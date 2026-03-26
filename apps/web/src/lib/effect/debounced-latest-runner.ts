@@ -6,12 +6,12 @@ import {
   type LatestRunnerOptions,
 } from "@/lib/effect/latest-runner";
 
-export interface DebouncedLatestRunnerOptions extends LatestRunnerOptions {
+interface DebouncedLatestRunnerOptions extends LatestRunnerOptions {
   readonly debounceMs: number;
   readonly runtime?: BrowserEffectRuntime;
 }
 
-export interface DebouncedLatestRunner extends LatestRunner {}
+interface DebouncedLatestRunner extends LatestRunner {}
 
 export function createDebouncedLatestRunner(
   options: DebouncedLatestRunnerOptions

@@ -1,8 +1,6 @@
 import type { PowerLayerId } from "@/features/power/power.types";
 import type { PowerLayerMetadata } from "./power.service.types";
 
-export type { PowerLayerMetadata } from "./power.service.types";
-
 const POWER_LAYER_IDS: readonly PowerLayerId[] = ["transmission", "substations", "plants"];
 
 const POWER_LAYER_METADATA: Readonly<Record<PowerLayerId, PowerLayerMetadata>> = {

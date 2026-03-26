@@ -3,8 +3,6 @@ import type {
   ResolvePaginationResult,
 } from "./pagination-params.service.types";
 
-export type { PaginationParams } from "./pagination-params.service.types";
-
 function parseInteger(value: string): number | null {
   if (value.trim().length === 0) {
     return null;

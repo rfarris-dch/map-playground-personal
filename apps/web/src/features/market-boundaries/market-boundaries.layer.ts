@@ -6,7 +6,10 @@ import type {
   MapExpression,
   MapPointerEvent,
 } from "@map-migration/map-engine";
-import { getMarketBoundaryStyleLayerIds } from "@map-migration/map-style";
+import {
+  findFirstLabelStyleLayerId,
+  getMarketBoundaryStyleLayerIds,
+} from "@map-migration/map-style";
 import { Effect, Either } from "effect";
 import { fetchMarketBoundariesEffect } from "@/features/market-boundaries/api";
 import {
@@ -54,38 +57,6 @@ export function mountMarketBoundaryLayer(
   const fillLayerId = styleLayerIds.fillLayerId;
   const outlineLayerId = styleLayerIds.outlineLayerId;
   const state = initialMarketBoundaryLayerState(options.colorMode);
-
-  function readStyleLayerId(layer: unknown): string | null {
-    if (typeof layer !== "object" || layer === null) {
-      return null;
-    }
-
-    const maybeLayerId = Reflect.get(layer, "id");
-    if (typeof maybeLayerId !== "string" || maybeLayerId.trim().length === 0) {
-      return null;
-    }
-
-    return maybeLayerId;
-  }
-
-  function findFirstLabelLayerId(): string | undefined {
-    const style = map.getStyle();
-    const styleLayers = style.layers ?? [];
-
-    for (const styleLayer of styleLayers) {
-      const layerType = Reflect.get(styleLayer, "type");
-      if (layerType !== "symbol") {
-        continue;
-      }
-
-      const layerIdFromStyle = readStyleLayerId(styleLayer);
-      if (typeof layerIdFromStyle === "string") {
-        return layerIdFromStyle;
-      }
-    }
-
-    return undefined;
-  }
 
   function setLayersVisible(visible: boolean): void {
     map.setLayerVisibility(fillLayerId, visible);
@@ -149,7 +120,7 @@ export function mountMarketBoundaryLayer(
       });
     }
 
-    const labelLayerId = findFirstLabelLayerId();
+    const labelLayerId = findFirstLabelStyleLayerId(map);
 
     if (!map.hasLayer(fillLayerId)) {
       map.addLayer(

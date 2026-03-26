@@ -7,7 +7,7 @@ import {
 import { countyPowerStoryLayerId } from "@/features/app/core/app-shell.constants";
 import type {
   CountyPowerStoryCatalogLayerId,
-  CountyPowerStoryVisibleLayerId,
+  CountyPowerStoryChapterId,
 } from "./county-power-story.types";
 
 export const COUNTY_POWER_STORY_SOURCE_ID = "county-power-story.source";
@@ -24,15 +24,6 @@ export function countyPowerStoryCatalogLayerIds(): readonly CountyPowerStoryCata
     "models.county-power-market-structure",
     "models.county-power-policy-watch",
     "models.county-power-3d",
-  ];
-}
-
-export function countyPowerStoryVisibleLayerIds(): readonly CountyPowerStoryVisibleLayerId[] {
-  return [
-    "models.county-power-grid-stress",
-    "models.county-power-queue-pressure",
-    "models.county-power-market-structure",
-    "models.county-power-policy-watch",
   ];
 }
 
@@ -68,14 +59,22 @@ export function countyPowerStoryExtrusionLayerId(): string {
   return getCountyPowerStoryExtrusionLayerId();
 }
 
-export function countyPowerStoryEmptySourceData(): {
-  readonly features: never[];
-  readonly type: "FeatureCollection";
-} {
-  return {
-    type: "FeatureCollection",
-    features: [],
-  };
+export function defaultCountyPowerStoryChapterId(
+  storyId: CountyPowerStoryId
+): CountyPowerStoryChapterId {
+  if (storyId === "grid-stress") {
+    return "transmission-current";
+  }
+
+  if (storyId === "queue-pressure") {
+    return "queue-pressure-storm";
+  }
+
+  if (storyId === "market-structure") {
+    return "transfer-friction";
+  }
+
+  return "policy-shockwaves";
 }
 
 function morphValue(propertyName: string): MapExpression {

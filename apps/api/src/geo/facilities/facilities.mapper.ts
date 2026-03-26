@@ -5,7 +5,7 @@ import {
   parseLeaseOrOwn,
 } from "@map-migration/geo-kernel/commissioned-semantic";
 import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
-import { type Geometry, GeometrySchema, PointGeometrySchema } from "@map-migration/geo-kernel/geometry";
+import { type Geometry, GeometrySchema } from "@map-migration/geo-kernel/geometry";
 import type {
   FacilitiesDetailFeature,
   FacilitiesFeature,

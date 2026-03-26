@@ -27,7 +27,7 @@
   const title = computed(() => `${datasetDefinition.value.displayName} Pipeline Monitor`);
   const description = computed(
     () =>
-      `${datasetDefinition.value.description} Shared Dagster-style asset status for the current dataset.`
+      `${datasetDefinition.value.description} Shared manifest-runner step status for the current dataset.`
   );
 
   function setDataset(nextDataset: PipelineDataset): void {

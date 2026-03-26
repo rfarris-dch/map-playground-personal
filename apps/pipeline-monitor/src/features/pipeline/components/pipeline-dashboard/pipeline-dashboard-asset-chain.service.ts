@@ -4,7 +4,7 @@ type PipelineDashboardRun = PipelineStatusResponse["run"];
 type PipelineDashboardState = PipelineDashboardRun["states"][number];
 const ASSET_TOKEN_SPLIT_RE = /[_-]+/u;
 
-export interface PipelineAssetChainRow {
+interface PipelineAssetChainRow {
   readonly assetKey: string;
   readonly label: string;
   readonly status: "completed" | "failed" | "pending" | "running";
@@ -34,10 +34,6 @@ function normalizeAssetToken(token: string): string {
 
   if (normalized === "postgis") {
     return "PostGIS";
-  }
-
-  if (normalized === "dagster") {
-    return "Dagster";
   }
 
   if (normalized === "martin") {

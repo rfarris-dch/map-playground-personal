@@ -7,8 +7,8 @@ import type {
   FacilitiesStyleLayerIds,
   FloodCatalogLayerId,
   FloodStyleLayerIds,
-  HyperscaleLeasedStyleLayerIds,
   HydroBasinsStyleLayerIds,
+  HyperscaleLeasedStyleLayerIds,
   MarketBoundaryCatalogLayerId,
   MarketBoundaryStyleLayerIds,
   ParcelsStyleLayerIds,
@@ -24,12 +24,18 @@ import {
   getCountyPowerStoryStyleLayerIds as readCountyPowerStoryStyleLayerIds,
   getFacilitiesStyleLayerIds as readFacilitiesStyleLayerIds,
   getFloodStyleLayerIds as readFloodStyleLayerIds,
-  getHyperscaleLeasedStyleLayerIds as readHyperscaleLeasedStyleLayerIds,
   getHydroBasinsStyleLayerIds as readHydroBasinsStyleLayerIds,
+  getHyperscaleLeasedStyleLayerIds as readHyperscaleLeasedStyleLayerIds,
   getMarketBoundaryStyleLayerIds as readMarketBoundaryStyleLayerIds,
   getParcelsStyleLayerIds as readParcelsStyleLayerIds,
   getPowerStyleLayerIds as readPowerStyleLayerIds,
 } from "./style-layer-ids";
+import {
+  getFacilityPlacementAnchorLayerIds as readFacilityPlacementAnchorLayerIds,
+  findFirstLabelStyleLayerId as readFirstLabelStyleLayerId,
+  findFirstPresentStyleLayerId as readFirstPresentStyleLayerId,
+  getOverlayPlacementAnchorLayerIds as readOverlayPlacementAnchorLayerIds,
+} from "./style-layer-placement";
 
 export type {
   BoundaryCatalogLayerId,
@@ -40,9 +46,9 @@ export type {
   FacilitiesStyleLayerIds,
   FloodCatalogLayerId,
   FloodStyleLayerIds,
+  HydroBasinsStyleLayerIds,
   HyperscaleLeasedCatalogLayerId,
   HyperscaleLeasedStyleLayerIds,
-  HydroBasinsStyleLayerIds,
   MarketBoundaryCatalogLayerId,
   MarketBoundaryStyleLayerIds,
   ParcelsStyleLayerIds,
@@ -100,6 +106,27 @@ export function getPowerStyleLayerIds(layerId: PowerCatalogLayerId): readonly st
 
 export function getCatalogStyleLayerIds(layerId: StaticCatalogLayerId): readonly string[] {
   return readCatalogStyleLayerIds(layerId);
+}
+
+export function getFacilityPlacementAnchorLayerIds(): readonly string[] {
+  return readFacilityPlacementAnchorLayerIds();
+}
+
+export function getOverlayPlacementAnchorLayerIds(): readonly string[] {
+  return readOverlayPlacementAnchorLayerIds();
+}
+
+export function findFirstPresentStyleLayerId(
+  map: Parameters<typeof readFirstPresentStyleLayerId>[0],
+  layerIds: Parameters<typeof readFirstPresentStyleLayerId>[1]
+): string | undefined {
+  return readFirstPresentStyleLayerId(map, layerIds);
+}
+
+export function findFirstLabelStyleLayerId(
+  map: Parameters<typeof readFirstLabelStyleLayerId>[0]
+): string | undefined {
+  return readFirstLabelStyleLayerId(map);
 }
 
 export function createBaseStyle(name = "Map Platform Core"): StyleDocument {

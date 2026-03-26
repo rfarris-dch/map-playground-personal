@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
-export interface ApiRequestContextStorageValue {
+interface ApiRequestContextStorageValue {
   readonly requestId: string;
   readonly signal: AbortSignal;
 }

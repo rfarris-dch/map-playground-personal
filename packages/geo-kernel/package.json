@@ -11,7 +11,7 @@
     "test": "echo 'no tests yet'",
     "ci:check": "bun run typecheck && bun run test",
     "lint": "biome check .",
-    "dev": "tsc -w -p tsconfig.json & tsc-alias -w -p tsconfig.json --resolve-full-paths --resolve-full-extension .js"
+    "dev": "bun run build && (tsc -w -p tsconfig.json & tsc-alias -w -p tsconfig.json --resolve-full-paths --resolve-full-extension .js)"
   },
   "dependencies": {
     "zod": "^4.3.6"

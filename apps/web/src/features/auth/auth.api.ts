@@ -12,7 +12,7 @@ import {
 } from "@map-migration/http-contracts/auth-http";
 import type { MapAppLoginCredentials } from "@/features/auth/auth.types";
 
-export class MapAppAuthApiError extends Error {
+class MapAppAuthApiError extends Error {
   readonly status: number;
 
   constructor(message: string, status: number) {

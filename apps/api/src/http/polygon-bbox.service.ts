@@ -3,7 +3,7 @@ import type { BBox } from "@map-migration/geo-kernel/geometry";
 type PolygonCoordinate = readonly [number, number];
 type PolygonRing = readonly PolygonCoordinate[];
 
-export interface PolygonGeometryLike {
+interface PolygonGeometryLike {
   readonly coordinates: readonly PolygonRing[];
 }
 

@@ -211,7 +211,11 @@ export class FakeMap implements IMap {
   }
 
   hasLayer(layerId: string): boolean {
-    return this.addedLayers.has(layerId);
+    if (this.addedLayers.has(layerId)) {
+      return true;
+    }
+
+    return (this.style.layers ?? []).some((layer) => layer.id === layerId);
   }
 
   hasSource(sourceId: string): boolean {

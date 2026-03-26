@@ -6,7 +6,7 @@ import type {
   MarketBoundarySourceData,
 } from "@/features/market-boundaries/market-boundaries.types";
 
-export interface MarketBoundaryHeatStop {
+interface MarketBoundaryHeatStop {
   readonly color: string;
   readonly value: number;
 }
@@ -51,40 +51,6 @@ function toInterpolationStops(stops: readonly MarketBoundaryHeatStop[]): Array<n
 
 export function marketBoundaryLayerIds(): MarketBoundaryLayerId[] {
   return ["market", "submarket"];
-}
-
-export function marketBoundaryHeatStops(
-  colorMode: MarketBoundaryColorMode
-): readonly MarketBoundaryHeatStop[] {
-  if (colorMode === "vacancy") {
-    return VACANCY_HEAT_STOPS;
-  }
-
-  if (colorMode === "absorption") {
-    return ABSORPTION_HEAT_STOPS;
-  }
-
-  return POWER_HEAT_STOPS;
-}
-
-export function normalizeMarketBoundaryRegionIds(
-  regionIds: readonly string[] | null
-): readonly string[] | null {
-  if (regionIds === null) {
-    return null;
-  }
-
-  const deduped = new Set<string>();
-  for (const regionId of regionIds) {
-    const normalizedRegionId = regionId.trim();
-    if (normalizedRegionId.length === 0) {
-      continue;
-    }
-
-    deduped.add(normalizedRegionId);
-  }
-
-  return [...deduped];
 }
 
 export function reconcileMarketBoundaryFacetSelection(

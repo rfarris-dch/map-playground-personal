@@ -1,6 +1,6 @@
 import { runEffectPromise } from "@map-migration/core-runtime/effect";
 import type { IMap, MapPointerEvent } from "@map-migration/map-engine";
-import { getBoundaryStyleLayerIds } from "@map-migration/map-style";
+import { findFirstLabelStyleLayerId, getBoundaryStyleLayerIds } from "@map-migration/map-style";
 import { Effect, Either } from "effect";
 import { fetchBoundaryPowerEffect } from "@/features/boundaries/api";
 import {
@@ -45,38 +45,6 @@ export function mountBoundaryLayer(
   const inactiveOutlineColor = layerId === "state" ? "#94a3b8" : "#0f172a";
   const state = initialBoundaryLayerState();
 
-  function readStyleLayerId(layer: unknown): string | null {
-    if (typeof layer !== "object" || layer === null) {
-      return null;
-    }
-
-    const maybeLayerId = Reflect.get(layer, "id");
-    if (typeof maybeLayerId !== "string" || maybeLayerId.trim().length === 0) {
-      return null;
-    }
-
-    return maybeLayerId;
-  }
-
-  function findFirstLabelLayerId(): string | undefined {
-    const style = map.getStyle();
-    const styleLayers = style.layers ?? [];
-
-    for (const styleLayer of styleLayers) {
-      const layerType = Reflect.get(styleLayer, "type");
-      if (layerType !== "symbol") {
-        continue;
-      }
-
-      const layerIdFromStyle = readStyleLayerId(styleLayer);
-      if (typeof layerIdFromStyle === "string") {
-        return layerIdFromStyle;
-      }
-    }
-
-    return undefined;
-  }
-
   function setLayersVisible(visible: boolean): void {
     map.setLayerVisibility(fillLayerId, visible);
     map.setLayerVisibility(outlineLayerId, visible);
@@ -115,7 +83,7 @@ export function mountBoundaryLayer(
       });
     }
 
-    const labelLayerId = findFirstLabelLayerId();
+    const labelLayerId = findFirstLabelStyleLayerId(map);
 
     if (!map.hasLayer(fillLayerId)) {
       map.addLayer(

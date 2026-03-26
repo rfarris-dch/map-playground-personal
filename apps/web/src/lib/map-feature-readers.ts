@@ -32,7 +32,7 @@ export function readStringProperty(properties: unknown, key: string): string | n
   return toNonEmptyString(readProperty(properties, key));
 }
 
-export function readNumberProperty(properties: unknown, key: string): number | null {
+function readNumberProperty(properties: unknown, key: string): number | null {
   const value = readProperty(properties, key);
   if (typeof value === "number" && Number.isFinite(value)) {
     return value;

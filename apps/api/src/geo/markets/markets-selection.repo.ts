@@ -4,28 +4,6 @@ import type { MarketSelectionRow, MarketsSelectionQuery } from "./markets-select
 
 export type { MarketSelectionRow } from "./markets-selection.repo.types";
 
-export async function getSelectionAreaSqKm(geometryGeoJson: string): Promise<number> {
-  const rows = await runQuery<{ readonly selection_area_sq_km: number | string }>(
-    `
-SELECT
-  ${equalAreaSqKmSql("ST_SetSRID(ST_GeomFromGeoJSON($1), 4326)")} AS selection_area_sq_km;
-`,
-    [geometryGeoJson]
-  );
-
-  const selectionAreaSqKm = rows[0]?.selection_area_sq_km;
-  if (typeof selectionAreaSqKm === "number") {
-    return selectionAreaSqKm;
-  }
-
-  if (typeof selectionAreaSqKm === "string" && selectionAreaSqKm.trim().length > 0) {
-    const parsed = Number(selectionAreaSqKm);
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-
-  return 0;
-}
-
 export function listMarketsBySelection(
   query: MarketsSelectionQuery
 ): Promise<readonly MarketSelectionRow[]> {

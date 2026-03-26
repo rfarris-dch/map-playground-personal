@@ -13,6 +13,11 @@ import {
 import { dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import type { Writable } from "node:stream";
+import { fileURLToPath } from "node:url";
+import {
+  ensureBatchArtifactLayout,
+  resolveBatchArtifactLayout,
+} from "../packages/ops/src/etl/batch-artifact-layout";
 import type {
   ArcgisCountResponse,
   ArcgisLayerMetadata,
@@ -28,6 +33,8 @@ import type {
   SyncRunSummary,
   SyncStateArgs,
 } from "./refresh-parcels.types";
+
+const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 const BASE_STATES: readonly string[] = [
   "AL",
@@ -1721,7 +1728,16 @@ async function main(): Promise<void> {
   const cli = parseCliArgs();
   const runId = cli.runId;
   const runDir = join(cli.outputDir, runId);
+  const artifactLayout = resolveBatchArtifactLayout({
+    dataset: "parcels",
+    projectRoot: PROJECT_ROOT,
+    runId,
+    snapshotRoot: cli.outputDir,
+  });
   ensureDirectory(runDir);
+  ensureBatchArtifactLayout({
+    layout: artifactLayout,
+  });
   const runConfigPath = join(runDir, RUN_CONFIG_FILE_NAME);
 
   if (cli.verifyRunConfigOnly) {

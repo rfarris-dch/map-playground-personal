@@ -1,6 +1,6 @@
 import { AuthLoginRequestSchema } from "@map-migration/http-contracts/auth-http";
 
-export interface MapAppAuthUpstreamLoginResult {
+interface MapAppAuthUpstreamLoginResult {
   readonly email: string;
   readonly name: string | null;
 }

@@ -64,8 +64,9 @@ export interface FloodStyleLayerIds {
 }
 
 export interface FacilitiesStyleLayerIds {
-  readonly clusterCountLayerId: string;
   readonly clusterLayerId: string;
+  readonly heatmapLayerId: string;
+  readonly iconFallbackLayerId: string;
   readonly pointLayerId: string;
 }
 

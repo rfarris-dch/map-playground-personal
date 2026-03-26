@@ -13,8 +13,8 @@
     buildSpatialAnalysisOverviewProviders,
     buildSpatialAnalysisOverviewStatusItems,
     buildSpatialAnalysisParcelCandidateSummary,
-    type SpatialAnalysisOverviewSummary,
   } from "@/features/spatial-analysis/spatial-analysis-summary-overview.service";
+  import type { SpatialAnalysisOverviewSummary } from "@/features/spatial-analysis/spatial-analysis-summary-overview.types";
 
   interface SpatialAnalysisSummaryOverviewProps {
     readonly facilities: readonly SpatialAnalysisFacilityRecord[];

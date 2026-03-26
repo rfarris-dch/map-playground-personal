@@ -14,7 +14,7 @@ interface TablePageResponse<TRow> {
   readonly rows: readonly TRow[];
 }
 
-export interface UseInfiniteTablePageOptions<TSort extends string, TRow, TExtra = object> {
+interface UseInfiniteTablePageOptions<TSort extends string, TRow, TExtra = object> {
   readonly defaultSortDesc?: boolean;
   readonly defaultSortId: TSort;
   readonly extraParams?: TExtra;
@@ -34,7 +34,7 @@ export interface UseInfiniteTablePageOptions<TSort extends string, TRow, TExtra 
   readonly sortByColumnId: Record<string, TSort>;
 }
 
-export interface UseInfiniteTablePageReturn<TRow> {
+interface UseInfiniteTablePageReturn<TRow> {
   readonly flattenedRows: ComputedRef<TRow[]>;
   readonly hasNextPage: ComputedRef<boolean>;
   readonly isFetching: ComputedRef<boolean>;

@@ -7,7 +7,3 @@ export function shouldRefreshViewportData(snapshot: MapInteractionSnapshot): boo
 
   return snapshot.eventType === "moveend" && snapshot.interactionType !== "rotate-only";
 }
-
-export function shouldRefreshRenderedOverlays(snapshot: MapInteractionSnapshot): boolean {
-  return snapshot.eventType === "moveend";
-}

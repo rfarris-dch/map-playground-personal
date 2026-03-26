@@ -1,9 +1,9 @@
-export interface DonutChartInputSegment {
+interface DonutChartInputSegment {
   readonly color: string;
   readonly value: number;
 }
 
-export interface DonutChartArcSegment {
+interface DonutChartArcSegment {
   readonly color: string;
   readonly path: string | null;
 }

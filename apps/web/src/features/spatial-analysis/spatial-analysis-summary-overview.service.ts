@@ -10,15 +10,6 @@ import type {
   SpatialAnalysisOverviewSummary,
 } from "@/features/spatial-analysis/spatial-analysis-summary-overview.types";
 
-export type {
-  SpatialAnalysisOverviewMetrics,
-  SpatialAnalysisOverviewParcelCandidate,
-  SpatialAnalysisOverviewParcelCandidateSummary,
-  SpatialAnalysisOverviewProviderSummary,
-  SpatialAnalysisOverviewStatusItem,
-  SpatialAnalysisOverviewSummary,
-} from "@/features/spatial-analysis/spatial-analysis-summary-overview.types";
-
 function toStatusTone(label: string): SpatialAnalysisOverviewStatusItem["tone"] {
   if (label === "Operational") {
     return "emerald";

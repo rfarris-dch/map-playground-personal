@@ -23,7 +23,7 @@ export function trimQueryValue(value: unknown): unknown {
 }
 
 /** Parse a numeric query-string value, returning the number or the original value for Zod to reject. */
-export function parseQueryInteger(value: unknown): unknown {
+function parseQueryInteger(value: unknown): unknown {
   const normalized = trimQueryValue(value);
   if (typeof normalized === "undefined") {
     return undefined;
@@ -42,7 +42,7 @@ export function parseQueryInteger(value: unknown): unknown {
 }
 
 /** Parse a comma-delimited bbox query param into a BBox object. */
-export function parseBboxQuery(value: unknown): unknown {
+function parseBboxQuery(value: unknown): unknown {
   if (typeof value !== "string") {
     return value;
   }

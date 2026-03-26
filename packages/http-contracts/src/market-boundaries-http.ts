@@ -1,6 +1,9 @@
-import { MultiPolygonGeometrySchema, PolygonGeometrySchema } from "@map-migration/geo-kernel/geometry";
+import {
+  MultiPolygonGeometrySchema,
+  PolygonGeometrySchema,
+} from "@map-migration/geo-kernel/geometry";
 import { z } from "zod";
-import { trimQueryValue, trimmedEnumWithDefault } from "./_query-parsing.js";
+import { trimmedEnumWithDefault, trimQueryValue } from "./_query-parsing.js";
 import { ResponseMetaSchema } from "./api-response-meta.js";
 
 export const MarketBoundaryLevelSchema = z.enum(["market", "submarket"]);

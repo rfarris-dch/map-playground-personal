@@ -841,7 +841,7 @@ function removeStoredMapContextTransfers(storage: Storage, tokenToPreserve?: str
   }
 }
 
-export function createSessionStorageMapContextTransferStore(): MapContextTransferStore {
+function createSessionStorageMapContextTransferStore(): MapContextTransferStore {
   return {
     load(token: string): MapContextTransfer | null {
       if (typeof window === "undefined") {

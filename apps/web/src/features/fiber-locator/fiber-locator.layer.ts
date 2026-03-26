@@ -1,5 +1,8 @@
 import { buildFiberLocatorVectorTileRoute } from "@map-migration/http-contracts/api-routes";
-import { getFacilitiesStyleLayerIds } from "@map-migration/map-style";
+import {
+  findFirstPresentStyleLayerId,
+  getFacilityPlacementAnchorLayerIds,
+} from "@map-migration/map-style";
 import { fiberLocatorLineColor } from "@/features/fiber-locator/fiber-locator.service";
 import type {
   FiberLocatorLayerController,
@@ -10,10 +13,7 @@ import type {
 
 const FIBER_SOURCE_LAYER_ID_RE = /[^a-z0-9._-]+/gi;
 const FIBER_MIN_ZOOM = 4;
-const FACILITIES_LAYER_ANCHORS: readonly string[] = [
-  ...Object.values(getFacilitiesStyleLayerIds("facilities.colocation")),
-  ...Object.values(getFacilitiesStyleLayerIds("facilities.hyperscale")),
-];
+const FACILITIES_LAYER_ANCHORS = getFacilityPlacementAnchorLayerIds();
 
 function createSourceId(lineId: FiberLocatorLayerOptions["lineId"]): string {
   return `fiber-locator.${lineId}`;
@@ -76,13 +76,7 @@ function applyVisibility(options: FiberLocatorLayerOptions, state: FiberLocatorL
 }
 
 function resolveBeforeLayerId(options: FiberLocatorLayerOptions): string | undefined {
-  for (const anchorLayerId of FACILITIES_LAYER_ANCHORS) {
-    if (options.map.hasLayer(anchorLayerId)) {
-      return anchorLayerId;
-    }
-  }
-
-  return undefined;
+  return findFirstPresentStyleLayerId(options.map, FACILITIES_LAYER_ANCHORS);
 }
 
 function reconcileRenderLayers(

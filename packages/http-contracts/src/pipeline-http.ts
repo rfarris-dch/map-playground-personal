@@ -11,7 +11,7 @@ export const PipelineDatasetSchema = z.enum(["parcels", "flood", "hydro-basins"]
 export const PipelineDatasetFamilySchema = z.enum(["parcels", "environmental"]);
 
 export const PipelinePlatformSchema = z.object({
-  orchestration: z.literal("dagster"),
+  orchestration: z.literal("manifest-runner"),
   canonicalStore: z.literal("postgis"),
   tileBuild: z.literal("planetiler"),
   tileServe: z.literal("martin"),
@@ -40,7 +40,7 @@ export type PipelineDatasetDescriptor = z.infer<typeof PipelineDatasetDescriptor
 export type PipelineStatusResponse = z.infer<typeof PipelineStatusResponseSchema>;
 
 export const PIPELINE_PLATFORM: PipelinePlatform = Object.freeze({
-  orchestration: "dagster",
+  orchestration: "manifest-runner",
   canonicalStore: "postgis",
   tileBuild: "planetiler",
   tileServe: "martin",

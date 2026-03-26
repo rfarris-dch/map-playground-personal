@@ -8,7 +8,6 @@ import {
 import { mountMarketBoundaryLayer } from "@/features/market-boundaries/market-boundaries.layer";
 import {
   marketBoundaryLayerIds,
-  normalizeMarketBoundaryRegionIds,
   reconcileMarketBoundaryFacetSelection,
 } from "@/features/market-boundaries/market-boundaries.service";
 import type {
@@ -70,19 +69,6 @@ function setMarketBoundaryFacetOptions(
     [layerId]: normalizedSelection,
   };
   marketBoundaryControllerForId(options, layerId)?.setIncludedRegionIds(normalizedSelection);
-}
-
-export function setMarketBoundarySelectedRegionIds(
-  options: UseAppShellMapLifecycleOptions,
-  layerId: MarketBoundaryLayerId,
-  selectedRegionIds: readonly string[] | null
-): void {
-  const normalizedRegionIds = normalizeMarketBoundaryRegionIds(selectedRegionIds);
-  options.state.marketBoundaryFacetSelection.value = {
-    ...options.state.marketBoundaryFacetSelection.value,
-    [layerId]: normalizedRegionIds,
-  };
-  marketBoundaryControllerForId(options, layerId)?.setIncludedRegionIds(normalizedRegionIds);
 }
 
 export function initializeMarketBoundaryRuntime(options: UseAppShellMapLifecycleOptions): void {

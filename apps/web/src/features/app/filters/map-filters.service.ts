@@ -2,7 +2,6 @@ import type { MapExpression } from "@map-migration/map-engine";
 import type {
   FacilitiesFeature,
   FacilitiesFilterPredicate,
-  FacilityStatusFilterId,
   MapFiltersState,
 } from "./map-filters.types";
 import { FACILITY_STATUS_TO_SEMANTIC } from "./map-filters.types";
@@ -254,10 +253,4 @@ function parseAcreRange(value: string): { min: number | null; max: number | null
     "100+": { min: 100, max: null },
   };
   return ranges[value] ?? null;
-}
-
-export function resolveAllowedSemantics(
-  statuses: ReadonlySet<FacilityStatusFilterId>
-): Set<string> {
-  return new Set([...statuses].flatMap((id) => FACILITY_STATUS_TO_SEMANTIC[id]));
 }

@@ -53,7 +53,7 @@ function perspectiveForClusterLayerId(
   return null;
 }
 
-export function toFacilityHoverState(
+function toFacilityHoverState(
   feature: {
     id: unknown;
     geometry?: { type: string; coordinates: unknown };

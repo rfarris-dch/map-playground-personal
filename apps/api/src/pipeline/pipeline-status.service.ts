@@ -4,10 +4,10 @@ import {
   type PipelineDataset,
   type PipelineStatusResponse,
 } from "@map-migration/http-contracts/pipeline-http";
-import { getDagsterPipelineStatusSnapshot } from "./dagster-pipeline-status.service";
+import { getPipelineRunnerStatusSnapshot } from "./pipeline-runner-status.service";
 
 export function getPipelineStatusPayload(dataset: PipelineDataset) {
-  return getDagsterPipelineStatusSnapshot(dataset);
+  return getPipelineRunnerStatusSnapshot(dataset);
 }
 
 export async function getPipelineStatusResponse(

@@ -1,9 +1,5 @@
 import type { ApiEffectError, ApiEffectSuccess } from "@map-migration/core-runtime/api";
-import {
-  type ApiResult,
-  apiRequestJson,
-  apiRequestJsonEffect,
-} from "@map-migration/core-runtime/api";
+import { apiRequestJsonEffect } from "@map-migration/core-runtime/api";
 import { buildSpatialAnalysisHistoryRoute } from "@map-migration/http-contracts/api-routes";
 import {
   type SpatialAnalysisHistoryRequest,
@@ -13,11 +9,9 @@ import {
 import type { Effect } from "effect";
 import { buildJsonPostRequestInit } from "@/lib/api/api-request-init.service";
 
-export interface FetchSpatialAnalysisHistoryOptions {
+interface FetchSpatialAnalysisHistoryOptions {
   readonly signal?: AbortSignal;
 }
-
-export type SpatialAnalysisHistoryResult = ApiResult<SpatialAnalysisHistoryResponse>;
 
 function buildSpatialAnalysisHistoryRequestInit(
   request: SpatialAnalysisHistoryRequest,
@@ -27,17 +21,6 @@ function buildSpatialAnalysisHistoryRequestInit(
     body: request,
     signal: options.signal,
   });
-}
-
-export function fetchSpatialAnalysisHistory(
-  request: SpatialAnalysisHistoryRequest,
-  options: FetchSpatialAnalysisHistoryOptions
-): Promise<SpatialAnalysisHistoryResult> {
-  return apiRequestJson(
-    buildSpatialAnalysisHistoryRoute(),
-    SpatialAnalysisHistoryResponseSchema,
-    buildSpatialAnalysisHistoryRequestInit(request, options)
-  );
 }
 
 export function fetchSpatialAnalysisHistoryEffect(

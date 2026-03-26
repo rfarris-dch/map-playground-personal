@@ -3,44 +3,43 @@
  * all domain-specific table contracts.
  */
 
+// biome-ignore-all lint/performance/noBarrelFile: public package contract entrypoint is intentional.
+
 // Shared primitives
 export {
-  PaginationSchema,
-  SortDirectionSchema,
   type Pagination,
+  PaginationSchema,
   type SortDirection,
+  SortDirectionSchema,
 } from "./_pagination.js";
-
+export {
+  type FacilitiesTableRequest,
+  FacilitiesTableRequestSchema,
+  type FacilitiesTableResponse,
+  FacilitiesTableResponseSchema,
+  type FacilitySortBy,
+  FacilitySortBySchema,
+  type FacilityTableRow,
+  FacilityTableRowSchema,
+} from "./facilities-table-http.js";
 // Domain-specific table contracts
 export {
-  MarketSortBySchema,
-  MarketTableRowSchema,
-  MarketsTableResponseSchema,
-  MarketsTableRequestSchema,
   type MarketSortBy,
-  type MarketTableRow,
-  type MarketsTableResponse,
+  MarketSortBySchema,
   type MarketsTableRequest,
+  MarketsTableRequestSchema,
+  type MarketsTableResponse,
+  MarketsTableResponseSchema,
+  type MarketTableRow,
+  MarketTableRowSchema,
 } from "./markets-table-http.js";
-
 export {
-  ProviderSortBySchema,
-  ProviderTableRowSchema,
-  ProvidersTableResponseSchema,
-  ProvidersTableRequestSchema,
   type ProviderSortBy,
-  type ProviderTableRow,
-  type ProvidersTableResponse,
+  ProviderSortBySchema,
   type ProvidersTableRequest,
+  ProvidersTableRequestSchema,
+  type ProvidersTableResponse,
+  ProvidersTableResponseSchema,
+  type ProviderTableRow,
+  ProviderTableRowSchema,
 } from "./providers-table-http.js";
-
-export {
-  FacilitySortBySchema,
-  FacilityTableRowSchema,
-  FacilitiesTableResponseSchema,
-  FacilitiesTableRequestSchema,
-  type FacilitySortBy,
-  type FacilityTableRow,
-  type FacilitiesTableResponse,
-  type FacilitiesTableRequest,
-} from "./facilities-table-http.js";

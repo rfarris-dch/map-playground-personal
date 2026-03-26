@@ -5,16 +5,19 @@
  * have been moved to api-defaults.ts. This file only contains route
  * paths, headers, and URL builder functions.
  */
+
+// biome-ignore-all lint/performance/noBarrelFile: public package contract entrypoint is intentional.
+
 import type { FacilityPerspective } from "@map-migration/geo-kernel/facility-perspective";
 import type { BBox } from "@map-migration/geo-kernel/geometry";
 import { formatBboxParam } from "@map-migration/geo-kernel/geometry";
 import { z } from "zod";
+import type { SortDirection } from "./_pagination.js";
 import type { BoundaryPowerLevel } from "./boundaries-http.js";
 import type { CountyPowerStoryId, CountyPowerStoryWindow } from "./county-power-story-http.js";
 import type { MarketBoundaryLevel } from "./market-boundaries-http.js";
 import type { ParcelGeometryMode, ParcelProfile } from "./parcels-http.js";
 import { isPipelineDataset, type PipelineDataset } from "./pipeline-http.js";
-import type { SortDirection } from "./_pagination.js";
 
 // ---------------------------------------------------------------------------
 // Re-exports from api-defaults.ts for backwards compatibility
@@ -22,11 +25,11 @@ import type { SortDirection } from "./_pagination.js";
 
 export {
   ApiDefaults,
-  ApiQueryDefaults,
-  resolveDataVersion,
   type ApiDefaultsTable,
+  ApiQueryDefaults,
   type ApiQueryDefaultsTable,
   type DataVersionResolveOptions,
+  resolveDataVersion,
 } from "./api-defaults.js";
 
 // ---------------------------------------------------------------------------
@@ -286,10 +289,7 @@ export function buildBoundaryPowerRoute(level: BoundaryPowerLevel): string {
  * FIX: version parameter is now explicit via the `version` arg instead of
  * being silently hardcoded to "4". Callers must pass the version they want.
  */
-export function buildMarketBoundariesRoute(
-  level: MarketBoundaryLevel,
-  version?: string
-): string {
+export function buildMarketBoundariesRoute(level: MarketBoundaryLevel, version?: string): string {
   const params = new URLSearchParams();
   params.set("level", level);
   if (typeof version === "string") {

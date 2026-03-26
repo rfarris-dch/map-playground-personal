@@ -1,11 +1,12 @@
-import { makeParcelSnapshotId } from "@/features/parcels/parcel-snapshot-id";
 import { createPmtilesSourceUrl, type VectorTilesetSchemaContract } from "@map-migration/geo-tiles";
 import type { IMap, MapClickEvent } from "@map-migration/map-engine";
 import {
-  getFacilitiesStyleLayerIds,
+  findFirstPresentStyleLayerId,
+  getFacilityPlacementAnchorLayerIds,
   getParcelsStyleLayerIds,
   validateLayerOrder,
 } from "@map-migration/map-style";
+import { makeParcelSnapshotId } from "@/features/parcels/parcel-snapshot-id";
 import type { ParcelFeatureTarget } from "@/features/parcels/parcels.layer.types";
 import {
   createStressGovernor,
@@ -155,19 +156,10 @@ function appendParcelViewportFacetFeature(
   accumulator.distTransmissionMax = transmissionRange.max;
 }
 
-const FACILITIES_LAYER_IDS: readonly string[] = [
-  ...Object.values(getFacilitiesStyleLayerIds("facilities.colocation")),
-  ...Object.values(getFacilitiesStyleLayerIds("facilities.hyperscale")),
-];
+const FACILITIES_LAYER_IDS = getFacilityPlacementAnchorLayerIds();
 
 function resolveBeforeLayerId(map: IMap): string | undefined {
-  for (const layerId of FACILITIES_LAYER_IDS) {
-    if (map.hasLayer(layerId)) {
-      return layerId;
-    }
-  }
-
-  return undefined;
+  return findFirstPresentStyleLayerId(map, FACILITIES_LAYER_IDS);
 }
 
 export function mountParcelsLayer(

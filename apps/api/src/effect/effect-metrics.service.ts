@@ -69,14 +69,14 @@ interface EffectSummaryMetricSnapshot {
   readonly tags: readonly EffectMetricTag[];
 }
 
-export type EffectMetricSnapshot =
+type EffectMetricSnapshot =
   | EffectCounterMetricSnapshot
   | EffectFrequencyMetricSnapshot
   | EffectGaugeMetricSnapshot
   | EffectHistogramMetricSnapshot
   | EffectSummaryMetricSnapshot;
 
-export interface EffectIssueSnapshot {
+interface EffectIssueSnapshot {
   readonly description: string | null;
   readonly metricKind: EffectMetricSnapshot["kind"];
   readonly name: string;
@@ -85,7 +85,7 @@ export interface EffectIssueSnapshot {
   readonly value: number | string;
 }
 
-export interface EffectIssuesSnapshot {
+interface EffectIssuesSnapshot {
   readonly devToolsConnection: string | null;
   readonly generatedAt: string;
   readonly issueCount: number;

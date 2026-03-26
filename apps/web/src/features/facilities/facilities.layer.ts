@@ -194,6 +194,8 @@ export function mountFacilitiesLayer(
   const sourceId = toFacilitiesCatalogLayerId(perspective);
   const styleLayerIds = getFacilitiesStyleLayerIds(sourceId);
   const clusterLayerId = styleLayerIds.clusterLayerId;
+  const heatmapLayerId = styleLayerIds.heatmapLayerId;
+  const iconFallbackLayerId = styleLayerIds.iconFallbackLayerId;
   const pointLayerId = styleLayerIds.pointLayerId;
   const minZoom = options.minZoom ?? 0;
   const limit = options.limit ?? 2000;
@@ -206,8 +208,6 @@ export function mountFacilitiesLayer(
   const hoverCircleColor = perspective === "hyperscale" ? "#059669" : "#2563eb";
   const selectedCircleColor = perspective === "hyperscale" ? "#047857" : "#1d4ed8";
 
-  const heatmapLayerId = `${sourceId}.heatmap`;
-  const iconFallbackLayerId = `${sourceId}.icon-fallback`;
   const logoBaseUrl = toAbsoluteAppUrl("/api/geo/facilities/provider-logos");
   const loadedLogos = new Set<string>();
   const failedLogos = new Set<string>();

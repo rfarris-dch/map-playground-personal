@@ -3,7 +3,7 @@ import type { Router } from "vue-router";
 import { saveSpatialAnalysisDashboardState } from "@/features/spatial-analysis/spatial-analysis-dashboard.service";
 import type { SpatialAnalysisSummaryModel } from "@/features/spatial-analysis/spatial-analysis-summary.types";
 
-export interface OpenDashboardCommand {
+interface OpenDashboardCommand {
   readonly isFiltered: boolean;
   readonly mapContext?: MapContextTransfer | undefined;
   readonly source: "selection" | "scanner";
@@ -11,7 +11,7 @@ export interface OpenDashboardCommand {
   readonly title: string;
 }
 
-export function hasDashboardResults(summary: SpatialAnalysisSummaryModel): boolean {
+function hasDashboardResults(summary: SpatialAnalysisSummaryModel): boolean {
   return (
     (summary.history?.pointCount ?? 0) > 0 ||
     summary.summary.totalCount > 0 ||

@@ -1,5 +1,9 @@
 import { createPmtilesSourceUrl, type TilePublishManifest } from "@map-migration/geo-tiles";
-import { getCatalogStyleLayerIds, getHydroBasinsStyleLayerIds } from "@map-migration/map-style";
+import {
+  findFirstPresentStyleLayerId,
+  getHydroBasinsStyleLayerIds,
+  getOverlayPlacementAnchorLayerIds,
+} from "@map-migration/map-style";
 import { initialLayerStatus, type LayerStatus } from "@/features/layers/layer-runtime.types";
 import { resolveEnvironmentalHydroBasinsManifestPath } from "@/features/tiles/tile-manifest-config.service";
 import { mountManifestBackedLayerBootstrap } from "@/lib/manifest-backed-layer.service";
@@ -21,11 +25,7 @@ const HYDRO_BASINS_VISUAL_LEVEL = "huc6";
 const HYDRO_BASINS_VISUAL_MIN_ZOOM = 5;
 const HYDRO_BASINS_VISUAL_MAX_ZOOM = 22;
 const HYDRO_BASINS_FILL_LAYER_IDS: readonly string[] = ["environmental-hydro-basins-huc6-fill"];
-const UPPER_BOUND_LAYER_ANCHORS: readonly string[] = [
-  ...getCatalogStyleLayerIds("property.parcels"),
-  ...getCatalogStyleLayerIds("facilities.colocation"),
-  ...getCatalogStyleLayerIds("facilities.hyperscale"),
-];
+const UPPER_BOUND_LAYER_ANCHORS = getOverlayPlacementAnchorLayerIds();
 
 interface HydroBasinsState {
   status: LayerStatus;
@@ -42,13 +42,7 @@ function initialState(): HydroBasinsState {
 }
 
 function resolveBeforeLayerId(map: MountHydroBasinsLayerOptions["map"]): string | undefined {
-  for (const layerId of UPPER_BOUND_LAYER_ANCHORS) {
-    if (map.hasLayer(layerId)) {
-      return layerId;
-    }
-  }
-
-  return undefined;
+  return findFirstPresentStyleLayerId(map, UPPER_BOUND_LAYER_ANCHORS);
 }
 
 function setLayerVisibility(

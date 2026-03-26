@@ -2,8 +2,6 @@ import {
   type ApiEffectError,
   type ApiEffectSuccess,
   ApiNetworkError,
-  type ApiResult,
-  apiRequestJson,
   apiRequestJsonEffect,
 } from "@map-migration/core-runtime/api";
 import { buildSpatialAnalysisSummaryRoute } from "@map-migration/http-contracts/api-routes";
@@ -20,12 +18,10 @@ import {
   withParcelIngestionRunIdHeader,
 } from "@/lib/api/api-request-init.service";
 
-export interface FetchSpatialAnalysisSummaryOptions {
+interface FetchSpatialAnalysisSummaryOptions {
   readonly expectedParcelIngestionRunId: string | null;
   readonly signal?: AbortSignal;
 }
-
-export type SpatialAnalysisSummaryResult = ApiResult<SpatialAnalysisSummaryResponse>;
 
 function withFacilitiesDatasetVersion(
   request: SpatialAnalysisSummaryRequest,
@@ -55,19 +51,6 @@ function buildSpatialAnalysisSummaryRequestInit(
       options.expectedParcelIngestionRunId
     ),
     facilitiesDatasetVersion
-  );
-}
-
-export function fetchSpatialAnalysisSummary(
-  request: SpatialAnalysisSummaryRequest,
-  options: FetchSpatialAnalysisSummaryOptions
-): Promise<SpatialAnalysisSummaryResult> {
-  return resolveFacilitiesDatasetVersionPromise().then((facilitiesDatasetVersion) =>
-    apiRequestJson(
-      buildSpatialAnalysisSummaryRoute(),
-      SpatialAnalysisSummaryResponseSchema,
-      buildSpatialAnalysisSummaryRequestInit(request, options, facilitiesDatasetVersion)
-    )
   );
 }
 

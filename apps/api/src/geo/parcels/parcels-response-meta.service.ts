@@ -6,11 +6,8 @@ import type {
   ParcelResponseMeta,
   ParcelsFeatureCollection,
 } from "@map-migration/http-contracts/parcels-http";
-import { parseBooleanFlag } from "@/config/env-parsing.service";
 import { buildResponseMeta } from "@/http/response-meta.service";
 import { getApiRuntimeConfig } from "@/http/runtime-config";
-
-export const EXPOSE_SYNC_INTERNALS = parseBooleanFlag(process.env.EXPOSE_SYNC_INTERNALS, false);
 
 function sanitizeWarnings(warnings: readonly Warning[]): Warning[] {
   return warnings.map((warning) => ({

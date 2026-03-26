@@ -5,13 +5,13 @@ import { recordRouteEffectFailure } from "@/effect/effect-failure-trail.service"
 import { runWithApiRequestContextStorage } from "@/http/api-request-context-storage.service";
 import { jsonError, resolveRequestId, toDebugDetails, withRequestId } from "./api-response";
 
-export interface ApiRequestContextService {
+interface ApiRequestContextService {
   readonly honoContext: HonoContext;
   readonly requestId: string;
   readonly signal: AbortSignal;
 }
 
-export interface ApiRequestLoggerService {
+interface ApiRequestLoggerService {
   debug(...args: readonly unknown[]): void;
   error(...args: readonly unknown[]): void;
 }
@@ -32,7 +32,7 @@ export class ApiRequestContext extends EffectContext.Tag("ApiRequestContext")<
   ApiRequestContextService
 >() {}
 
-export class ApiRequestLogger extends EffectContext.Tag("ApiRequestLogger")<
+class ApiRequestLogger extends EffectContext.Tag("ApiRequestLogger")<
   ApiRequestLogger,
   ApiRequestLoggerService
 >() {}
@@ -48,10 +48,6 @@ export class ApiRouteError extends Data.TaggedError("ApiRouteError")<{
 
 export function routeError(args: ApiRouteErrorArgs): ApiRouteError {
   return new ApiRouteError(args);
-}
-
-export function failRoute(args: ApiRouteErrorArgs): Effect.Effect<never, ApiRouteError> {
-  return Effect.fail(routeError(args));
 }
 
 function isAbortError(error: unknown): boolean {

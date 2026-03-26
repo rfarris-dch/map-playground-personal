@@ -8,7 +8,7 @@ import { routeError } from "@/http/effect-route";
  * Stacks, internal state, and debug blobs are intentionally excluded so this
  * is safe to return in any environment.
  */
-export interface ValidationIssue {
+interface ValidationIssue {
   readonly code: string;
   readonly message: string;
   readonly path: readonly (string | number)[];
@@ -21,7 +21,7 @@ export interface ValidationIssue {
  * has an `issues` array (like `ZodError`), each issue's `path`, `code`, and
  * `message` are extracted. Otherwise returns an empty array.
  */
-export function extractValidationIssues(error: unknown): readonly ValidationIssue[] {
+function extractValidationIssues(error: unknown): readonly ValidationIssue[] {
   if (
     error === null ||
     error === undefined ||
@@ -90,32 +90,4 @@ export function validationRouteError(args: {
     details: { issues },
   };
   return routeError(errorArgs);
-}
-
-/**
- * Same payload shape as `validationRouteError` but returned as a plain
- * `JsonErrorArgs`-compatible object for call sites that use `responseError`
- * directly (e.g. the fiber-locator proxy which returns `Response` instead
- * of throwing).
- */
-export function validationErrorArgs(args: {
-  readonly code?: string;
-  readonly message: string;
-  readonly requestId: string;
-  readonly zodError: unknown;
-}): {
-  readonly code: string;
-  readonly details: { readonly issues: readonly ValidationIssue[] };
-  readonly httpStatus: 400;
-  readonly message: string;
-  readonly requestId: string;
-} {
-  const issues = extractValidationIssues(args.zodError);
-  return {
-    httpStatus: 400,
-    code: args.code ?? "BAD_REQUEST",
-    message: args.message,
-    requestId: args.requestId,
-    details: { issues },
-  };
 }

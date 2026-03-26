@@ -428,7 +428,7 @@ function fetchFacilitiesByResolvedDatasetVersionEffect(
   return awaitInflightFacilitiesBboxRequestEffect(nextRequest, args.perspective, signal);
 }
 
-export function fetchFacilitiesDatasetManifestEffect() {
+function fetchFacilitiesDatasetManifestEffect() {
   return Effect.tryPromise({
     try: async () => {
       const storedManifestCacheRecord = readStoredFacilitiesDatasetManifest();
@@ -484,7 +484,7 @@ export function fetchFacilitiesDatasetManifestEffect() {
   });
 }
 
-export function resolveFacilitiesDatasetVersionEffect() {
+function resolveFacilitiesDatasetVersionEffect() {
   const cachedManifest = readCachedFacilitiesDatasetManifest();
   if (cachedManifest !== null) {
     return Effect.succeed(cachedManifest.manifest.current.version);

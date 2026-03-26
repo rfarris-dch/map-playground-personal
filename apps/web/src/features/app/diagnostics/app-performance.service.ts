@@ -295,7 +295,7 @@ function installDebugApi(): void {
   };
 }
 
-export function resetAppPerformanceSnapshot(): void {
+function resetAppPerformanceSnapshot(): void {
   counters.clear();
   measurements.clear();
   lastResetAt = nowIsoString();
@@ -304,7 +304,7 @@ export function resetAppPerformanceSnapshot(): void {
   clearScheduledAppPerformanceExport();
 }
 
-export function getSnapshot(): AppPerformanceSnapshot {
+function getSnapshot(): AppPerformanceSnapshot {
   return {
     counters: cloneCounterSnapshots(),
     generatedAt: nowIsoString(),

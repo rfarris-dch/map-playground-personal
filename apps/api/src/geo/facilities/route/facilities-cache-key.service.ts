@@ -90,7 +90,7 @@ export function hashFacilitiesCachePayload(value: string): string {
   return hashValue(value);
 }
 
-export function canonicalizeFacilitiesSelectionPerspectives(
+function canonicalizeFacilitiesSelectionPerspectives(
   perspectives: readonly FacilityPerspective[]
 ): FacilityPerspective[] {
   return [...new Set(perspectives)].sort((left, right) => left.localeCompare(right));

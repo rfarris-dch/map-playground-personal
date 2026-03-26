@@ -1,20 +1,13 @@
 import type { BBox } from "@map-migration/geo-kernel/geometry";
-import type { ParcelSnapshotId } from "@/features/parcels/parcel-snapshot-id";
 import type { TileDataset, TilePublishManifest } from "@map-migration/geo-tiles";
 import type { MapExpression } from "@map-migration/map-engine";
 import type { MapInteractionCoordinator } from "@/features/app/interaction/map-interaction.types";
 
-export type { TileDataset, TileManifestEntry, TilePublishManifest } from "@map-migration/geo-tiles";
+export type { TileDataset, TilePublishManifest } from "@map-migration/geo-tiles";
 
 export interface SelectedParcelRef {
   readonly expectedIngestionRunId?: string;
   readonly parcelId: string;
-}
-
-export function toParcelSnapshotId(ref: SelectedParcelRef): ParcelSnapshotId | null {
-  return typeof ref.expectedIngestionRunId === "string" && ref.expectedIngestionRunId.length > 0
-    ? { parcelId: ref.parcelId, ingestionRunId: ref.expectedIngestionRunId }
-    : null;
 }
 
 export type ParcelsGuardrailReason = "stress" | "tile-cap" | "viewport-span";

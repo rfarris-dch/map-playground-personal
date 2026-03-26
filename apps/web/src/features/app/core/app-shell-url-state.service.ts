@@ -8,7 +8,7 @@ import {
 } from "@/features/map-context-transfer/map-context-transfer.service";
 import type { UseAppShellUrlStateOptions } from "./app-shell-url-state.types";
 
-export interface SelfAuthoredQuerySignatureRegistry {
+interface SelfAuthoredQuerySignatureRegistry {
   add(signature: string): void;
   clear(signature: string): void;
   consume(signature: string): boolean;

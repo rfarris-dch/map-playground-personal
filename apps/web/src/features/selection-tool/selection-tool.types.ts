@@ -1,10 +1,6 @@
-import type { SpatialAnalysisSummaryRequest } from "@map-migration/http-contracts/spatial-analysis-summary-http";
-import type { ShallowRef } from "vue";
 import type { PerspectiveVisibilityState } from "@/features/app/core/app-shell.types";
-import type { MeasureState } from "@/features/measure/measure.types";
 import type { SpatialAnalysisSummaryModel } from "@/features/spatial-analysis/spatial-analysis-summary.types";
 
-export type SelectionToolSummary = SpatialAnalysisSummaryModel;
 export type SelectionToolAnalysisSummary = SpatialAnalysisSummaryModel;
 
 export type SelectionToolProgressStageKey = "facilities" | "history" | "markets" | "parcels";
@@ -52,12 +48,3 @@ export type QuerySelectionToolSummaryResult =
       };
     }
   | { readonly ok: false; readonly reason: "aborted" };
-
-export interface UseSelectionToolOptions {
-  readonly expectedParcelsIngestionRunId: ShallowRef<string | null>;
-  readonly includeParcels: ShallowRef<boolean>;
-  readonly measureState: ShallowRef<MeasureState>;
-  readonly visiblePerspectives: ShallowRef<PerspectiveVisibilityState>;
-}
-
-export type SpatialAnalysisSummaryRequestInput = SpatialAnalysisSummaryRequest;

@@ -1,6 +1,10 @@
 import { createPmtilesSourceUrl, type TilePublishManifest } from "@map-migration/geo-tiles";
 import type { IMap } from "@map-migration/map-engine";
-import { getCatalogStyleLayerIds, getFloodStyleLayerIds } from "@map-migration/map-style";
+import {
+  findFirstPresentStyleLayerId,
+  getFloodStyleLayerIds,
+  getOverlayPlacementAnchorLayerIds,
+} from "@map-migration/map-style";
 import { initialLayerStatus, type LayerStatus } from "@/features/layers/layer-runtime.types";
 import { resolveEnvironmentalFloodManifestPath } from "@/features/tiles/tile-manifest-config.service";
 import { mountManifestBackedLayerBootstrap } from "@/lib/manifest-backed-layer.service";
@@ -19,11 +23,7 @@ import {
 const FLOOD_DATASET = "environmental-flood";
 const FLOOD_SOURCE_ID = "environmental-flood";
 const DEFAULT_SOURCE_LAYER = "flood-hazard";
-const UPPER_BOUND_LAYER_ANCHORS: readonly string[] = [
-  ...getCatalogStyleLayerIds("property.parcels"),
-  ...getCatalogStyleLayerIds("facilities.colocation"),
-  ...getCatalogStyleLayerIds("facilities.hyperscale"),
-];
+const UPPER_BOUND_LAYER_ANCHORS = getOverlayPlacementAnchorLayerIds();
 
 interface FloodLayerState {
   flood100Visible: boolean;
@@ -40,13 +40,7 @@ function initialState(): FloodLayerState {
 }
 
 function resolveBeforeLayerId(map: IMap): string | undefined {
-  for (const layerId of UPPER_BOUND_LAYER_ANCHORS) {
-    if (map.hasLayer(layerId)) {
-      return layerId;
-    }
-  }
-
-  return undefined;
+  return findFirstPresentStyleLayerId(map, UPPER_BOUND_LAYER_ANCHORS);
 }
 
 function ensureFloodSource(

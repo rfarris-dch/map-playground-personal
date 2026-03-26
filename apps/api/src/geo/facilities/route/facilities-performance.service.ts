@@ -53,7 +53,7 @@ interface FacilitiesPerformanceState {
   readonly perspectives: Map<string, PerspectiveAccumulator>;
 }
 
-export interface RecordFacilitiesBboxMetricsArgs {
+interface RecordFacilitiesBboxMetricsArgs {
   readonly boundDatasetVersion: string;
   readonly cacheStatus: FacilitiesCacheStatus | null;
   readonly canonicalBboxKey: string;
@@ -129,7 +129,7 @@ const state: FacilitiesPerformanceState = {
   perspectives: new Map(),
 };
 
-let lastResetAt = new Date().toISOString();
+const lastResetAt = new Date().toISOString();
 
 function updateMeasurement(accumulator: MeasurementAccumulator, value: number): void {
   if (!Number.isFinite(value)) {
@@ -163,22 +163,6 @@ function getPerspectiveAccumulator(perspective: string): PerspectiveAccumulator 
   const created = createPerspectiveAccumulator();
   state.perspectives.set(perspective, created);
   return created;
-}
-
-export function resetFacilitiesPerformanceSnapshot(): void {
-  state.cache.configured = false;
-  state.cache.hitCount = 0;
-  state.cache.missCount = 0;
-  state.cache.redisUnavailableCount = 0;
-  state.cache.singleflightJoinedCount = 0;
-  state.cache.staleCount = 0;
-  state.cache.valueBytes = createMeasurementAccumulator();
-  state.cache.writeSkippedPayloadTooLargeCount = 0;
-  state.db.clientAbortCount = 0;
-  state.db.queueWaitMs = createMeasurementAccumulator();
-  state.db.statementTimeoutCount = 0;
-  state.perspectives.clear();
-  lastResetAt = new Date().toISOString();
 }
 
 export function setFacilitiesCacheConfigured(configured: boolean): void {

@@ -26,6 +26,7 @@ import type {
 import { defaultBasemapVisibilityState } from "@/features/basemap/basemap.service";
 import type { BasemapVisibilityState } from "@/features/basemap/basemap.types";
 import type { BoundaryLayerId } from "@/features/boundaries/boundaries.types";
+import { defaultCountyPowerStoryChapterId } from "@/features/county-power-story/county-power-story.service";
 import type {
   CountyPowerStoryId,
   CountyPowerStoryVisibilityState,
@@ -110,14 +111,16 @@ export function buildInitialPowerVisibilityState(
 export function buildInitialCountyPowerStoryVisibilityState(
   catalog: LayerCatalog = DEFAULT_LAYER_CATALOG
 ): CountyPowerStoryVisibilityState {
+  const initialStoryId: CountyPowerStoryId = "grid-stress";
+
   return {
     animationEnabled: true,
-    chapterId: "operator-heartbeat",
+    chapterId: defaultCountyPowerStoryChapterId(initialStoryId),
     chapterVisible: true,
     seamHazeEnabled: false,
-    storyId: "grid-stress",
+    storyId: initialStoryId,
     threeDimensional: readCatalogDefaultVisible(COUNTY_POWER_STORY_3D_LAYER_ID, catalog),
-    visible: readCatalogDefaultVisible(countyPowerStoryLayerId("grid-stress"), catalog),
+    visible: readCatalogDefaultVisible(countyPowerStoryLayerId(initialStoryId), catalog),
     window: "live",
   };
 }

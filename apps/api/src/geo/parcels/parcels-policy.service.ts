@@ -9,11 +9,11 @@ export const PARCELS_MAX_TILESET_TILES = parsePositiveIntFlag(
   process.env.PARCELS_MAX_TILESET_TILES,
   512
 );
-export const PARCELS_MAX_BBOX_WIDTH_DEGREES = parsePositiveFloatFlag(
+const PARCELS_MAX_BBOX_WIDTH_DEGREES = parsePositiveFloatFlag(
   process.env.PARCELS_MAX_BBOX_WIDTH_DEGREES,
   2
 );
-export const PARCELS_MAX_BBOX_HEIGHT_DEGREES = parsePositiveFloatFlag(
+const PARCELS_MAX_BBOX_HEIGHT_DEGREES = parsePositiveFloatFlag(
   process.env.PARCELS_MAX_BBOX_HEIGHT_DEGREES,
   2
 );

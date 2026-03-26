@@ -2,7 +2,7 @@ import { parsePositiveIntFlag } from "@/config/env-parsing.service";
 
 const TRAILING_SLASH_PATTERN = /\/+$/;
 
-export interface MapAppAuthConfig {
+interface MapAppAuthConfig {
   readonly allowedEmailDomain: string;
   readonly sessionCookieName: string;
   readonly sessionSecret: string;

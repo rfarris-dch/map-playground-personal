@@ -20,7 +20,12 @@ import type {
   MapRenderedFeature,
 } from "@map-migration/map-engine";
 import { DEFAULT_LAYER_CATALOG } from "@map-migration/map-layer-catalog";
-import { getFacilitiesStyleLayerIds, validateLayerOrder } from "@map-migration/map-style";
+import {
+  findFirstLabelStyleLayerId,
+  findFirstPresentStyleLayerId,
+  getFacilityPlacementAnchorLayerIds,
+  validateLayerOrder,
+} from "@map-migration/map-style";
 import { Effect, Either } from "effect";
 import { countyPowerStoryLayerId } from "@/features/app/core/app-shell.constants";
 import { fetchCountyScoresStatus } from "@/features/county-intelligence/county-intelligence.api";
@@ -47,6 +52,7 @@ import {
   countyPowerStoryOutlineDashExpression,
   countyPowerStoryOutlineWidthExpression,
   countyPowerStoryStyleLayerIds,
+  defaultCountyPowerStoryChapterId,
   storyIdFromCatalogLayerId,
 } from "./county-power-story.service";
 import type {
@@ -198,68 +204,11 @@ function buildSnapshotCacheKey(args: {
   return `${args.storyId}:${args.window}:${publicationKey}`;
 }
 
-function readStyleLayerId(layer: unknown): string | null {
-  if (typeof layer !== "object" || layer === null) {
-    return null;
-  }
-
-  const maybeLayerId = Reflect.get(layer, "id");
-  if (typeof maybeLayerId !== "string" || maybeLayerId.trim().length === 0) {
-    return null;
-  }
-
-  return maybeLayerId;
-}
-
-function findFirstLabelLayerId(map: IMap): string | undefined {
-  const style = map.getStyle();
-  const styleLayers = style.layers ?? [];
-
-  for (const styleLayer of styleLayers) {
-    if (Reflect.get(styleLayer, "type") !== "symbol") {
-      continue;
-    }
-
-    const styleLayerId = readStyleLayerId(styleLayer);
-    if (typeof styleLayerId === "string") {
-      return styleLayerId;
-    }
-  }
-
-  return undefined;
-}
-
-function facilityAnchorLayerIds(): readonly string[] {
-  const colocation = getFacilitiesStyleLayerIds("facilities.colocation");
-  const hyperscale = getFacilitiesStyleLayerIds("facilities.hyperscale");
-
-  return [
-    "hyperscale-leased-voronoi.fill",
-    "hyperscale-leased-voronoi.line",
-    "facilities.colocation.heatmap",
-    colocation.clusterLayerId,
-    "facilities.colocation.icon-fallback",
-    colocation.pointLayerId,
-    "facilities.hyperscale.heatmap",
-    hyperscale.clusterLayerId,
-    "facilities.hyperscale.icon-fallback",
-    hyperscale.pointLayerId,
-  ];
-}
-
 function findCountyPowerInsertBeforeId(map: IMap): string | undefined {
-  const style = map.getStyle();
-  const styleLayers = style.layers ?? [];
-  const facilityLayerIds = new Set(facilityAnchorLayerIds());
-
-  for (const styleLayer of styleLayers) {
-    const styleLayerId = readStyleLayerId(styleLayer);
-    if (typeof styleLayerId === "string" && facilityLayerIds.has(styleLayerId)) {
-      return styleLayerId;
-    }
-  }
-
-  return findFirstLabelLayerId(map);
+  return (
+    findFirstPresentStyleLayerId(map, getFacilityPlacementAnchorLayerIds()) ??
+    findFirstLabelStyleLayerId(map)
+  );
 }
 
 function readCountyFipsFromFeature(feature: MapRenderedFeature): string | null {
@@ -484,10 +433,11 @@ export function mountCountyPowerStoryLayer(
   options: MountCountyPowerStoryLayerOptions = {}
 ): CountyPowerStoryMountResult {
   const statusState: { value: LayerStatus } = { value: initialLayerStatus() };
+  const initialStoryId: CountyPowerStoryId = "grid-stress";
   const state: CountyPowerStoryLayerState = {
     activeSnapshotKey: null,
     animationEnabled: true,
-    chapterId: "operator-heartbeat",
+    chapterId: defaultCountyPowerStoryChapterId(initialStoryId),
     chapterVisible: true,
     countyGeometryFeatures: [],
     countyGeometryRequest: null,
@@ -513,7 +463,7 @@ export function mountCountyPowerStoryLayer(
     seamHazeEnabled: false,
     selectedCountyFips: null,
     snapshotCache: new Map<string, CountyPowerStorySnapshotCacheEntry>(),
-    storyId: "grid-stress",
+    storyId: initialStoryId,
     styleReady: false,
     submarketFeatures: [],
     threeDimensional: false,

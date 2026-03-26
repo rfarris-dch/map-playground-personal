@@ -20,7 +20,7 @@ function retryDelayMs(attempt: number): number {
   return 250 * 2 ** Math.max(0, attempt);
 }
 
-export function copyTileHeaders(headers: Headers): Headers {
+function copyTileHeaders(headers: Headers): Headers {
   return PASS_THROUGH_TILE_HEADER_NAMES.reduce((copiedHeaders, headerName) => {
     const headerValue = headers.get(headerName);
     if (typeof headerValue === "string") {

@@ -3,7 +3,6 @@ import type {
   SpatialAnalysisArea,
   SpatialAnalysisCountyScores,
   SpatialAnalysisCountyScoresStatus,
-  SpatialAnalysisPolicyEntry,
   SpatialAnalysisSummaryCoverage,
   SpatialAnalysisSummaryProvenance,
   SpatialAnalysisSummaryRequest,
@@ -14,7 +13,6 @@ import type { SpatialAnalysisHistoryModel } from "@/features/spatial-analysis/sp
 
 export type SpatialAnalysisCoverageModel = SpatialAnalysisSummaryCoverage;
 export type SpatialAnalysisMetaModel = SpatialAnalysisSummaryResponse["meta"];
-export type SpatialAnalysisPolicyEntryModel = SpatialAnalysisPolicyEntry;
 export type SpatialAnalysisPolicyModel = SpatialAnalysisSummaryResponse["policy"];
 export type SpatialAnalysisProvenanceModel = SpatialAnalysisSummaryProvenance;
 export type SpatialAnalysisAreaModel = Omit<SpatialAnalysisArea, "countyIds"> & {

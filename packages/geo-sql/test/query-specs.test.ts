@@ -17,6 +17,8 @@ const ENDPOINT_CLASSES = new Set([
 ]);
 const LOCAL_FACILITY_TABLE_RE =
   /serve\.(facility_site|facility_site_fast|hyperscale_site|hyperscale_site_fast)/;
+const UNSUPPORTED_FACILITY_PERSPECTIVE_RE = /unsupported facility perspective/i;
+const UNSUPPORTED_RE = /unsupported/i;
 
 describe("geo-sql query specs", () => {
   it("keeps each public query spec internally consistent", () => {
@@ -159,10 +161,10 @@ describe("geo-sql query specs", () => {
 
   it("rejects enterprise perspective for polygon and detail queries", () => {
     expect(() => getFacilitiesPolygonQuerySpec("enterprise")).toThrow(
-      /unsupported facility perspective/i
+      UNSUPPORTED_FACILITY_PERSPECTIVE_RE
     );
     expect(() => getFacilityDetailQuerySpec("enterprise")).toThrow(
-      /unsupported facility perspective/i
+      UNSUPPORTED_FACILITY_PERSPECTIVE_RE
     );
   });
 
@@ -193,8 +195,8 @@ describe("geo-sql query specs", () => {
     }
 
     for (const perspective of bboxOnlyPerspectives) {
-      expect(() => getFacilitiesPolygonQuerySpec(perspective)).toThrow(/unsupported/i);
-      expect(() => getFacilityDetailQuerySpec(perspective)).toThrow(/unsupported/i);
+      expect(() => getFacilitiesPolygonQuerySpec(perspective)).toThrow(UNSUPPORTED_RE);
+      expect(() => getFacilityDetailQuerySpec(perspective)).toThrow(UNSUPPORTED_RE);
     }
   });
 

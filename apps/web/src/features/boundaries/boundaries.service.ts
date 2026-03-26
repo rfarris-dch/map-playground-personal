@@ -6,8 +6,6 @@ import type {
 } from "@/features/boundaries/boundaries.types";
 import type { BoundaryHeatStop } from "./boundaries.service.types";
 
-export type { BoundaryHeatStop } from "./boundaries.service.types";
-
 const BOUNDARY_HEAT_STOPS: readonly BoundaryHeatStop[] = [
   { value: 0, color: "#eef2ff" },
   { value: 100, color: "#c7d2fe" },
@@ -60,10 +58,6 @@ export function reconcileBoundaryFacetSelection(
   const availableRegionIds = new Set(options.map((option) => option.regionId));
   const nextSelection = selectedRegionIds.filter((regionId) => availableRegionIds.has(regionId));
   return nextSelection.length === options.length ? null : nextSelection;
-}
-
-export function boundaryHeatStops(): readonly BoundaryHeatStop[] {
-  return BOUNDARY_HEAT_STOPS;
 }
 
 export function emptyBoundarySourceData(): BoundarySourceData {

@@ -47,6 +47,7 @@ import {
 } from "@/features/app/market-boundary/app-shell-market-boundary-runtime.service";
 import type { BasemapLayerVisibilityController } from "@/features/basemap/basemap.types";
 import type { BoundaryHoverState } from "@/features/boundaries/boundaries.types";
+import { defaultCountyPowerStoryChapterId } from "@/features/county-power-story/county-power-story.service";
 import type {
   CountyPowerStoryHoverState,
   CountyPowerStoryMountResult,
@@ -116,12 +117,13 @@ export function useAppShellState(): UseAppShellStateResult {
   });
   const marketBoundaryColorMode = shallowRef<MarketBoundaryColorMode>("power");
   const countyPowerStoryController = shallowRef<CountyPowerStoryMountResult | null>(null);
+  const initialCountyPowerStoryId: CountyPowerStoryVisibilityState["storyId"] = "grid-stress";
   const countyPowerStoryVisibility = shallowRef<CountyPowerStoryVisibilityState>({
     animationEnabled: true,
-    chapterId: "operator-heartbeat",
+    chapterId: defaultCountyPowerStoryChapterId(initialCountyPowerStoryId),
     chapterVisible: true,
     seamHazeEnabled: false,
-    storyId: "grid-stress",
+    storyId: initialCountyPowerStoryId,
     threeDimensional: false,
     visible: false,
     window: "live",

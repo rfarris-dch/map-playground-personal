@@ -1,12 +1,16 @@
 import { afterEach, describe, expect, it } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import {
   buildCountyPowerLoadPayload,
   decodeCountyPowerBundleManifest,
+  ensureCountyPowerRunDirectories,
   materializeCountyPowerManifest,
   normalizeCountyPowerBundle,
+  readNormalizedCountyPowerBundle,
+  resolveCountyPowerRunContext,
+  writeCountyPowerSilverParquet,
 } from "../../src/etl/county-power-sync";
 
 const tempPaths: string[] = [];
@@ -327,6 +331,365 @@ afterEach(() => {
 });
 
 describe("county-power-sync", () => {
+  it("dual-writes normalized NDJSON tables to silver Parquet and registers the lake artifacts", async () => {
+    const projectRoot = createTempDir();
+    const context = resolveCountyPowerRunContext(
+      projectRoot,
+      "county-power-sync-2026-03-25T12-00-00Z"
+    );
+
+    ensureCountyPowerRunDirectories(context);
+    writeJson(context.rawManifestPath, createManifest());
+    writeCanonicalBundleFiles(context.rawDir);
+    writeNdjson(join(context.rawDir, "power-market-context.ndjson"), [
+      {
+        balancingAuthority: "ERCOT",
+        countyFips: "48453",
+        loadZone: "LCRA",
+        marketStructure: "organized_market",
+        meteoZone: "Austin/San Antonio (TX215)",
+        operatorWeatherZone: "South Central",
+        operatorZoneConfidence: "medium",
+        operatorZoneLabel: "LCRA",
+        operatorZoneType: "load_zone",
+        weatherZone: "South Central",
+        wholesaleOperator: "ERCOT",
+      },
+    ]);
+    writeNdjson(join(context.rawDir, "utility-context.ndjson"), [
+      {
+        competitiveAreaType: "choice",
+        countyFips: "48453",
+        dominantUtilityId: "oncor",
+        dominantUtilityName: "Oncor Electric Delivery",
+        primaryTduOrUtility: "Oncor",
+        retailChoicePenetrationShare: 0.82,
+        retailChoiceStatus: "choice",
+        territoryType: "tdu",
+        utilities: [
+          {
+            retailChoiceStatus: "choice",
+            territoryType: "tdu",
+            utilityId: "oncor",
+            utilityName: "Oncor Electric Delivery",
+          },
+        ],
+        utilityCount: 1,
+      },
+    ]);
+    writeNdjson(join(context.rawDir, "transmission.ndjson"), [
+      {
+        countyFips: "48453",
+        miles138kvPlus: 96.4,
+        miles230kvPlus: 42.8,
+        miles345kvPlus: 18.1,
+        miles500kvPlus: 0,
+        miles69kvPlus: 128.2,
+        miles765kvPlus: 0,
+      },
+    ]);
+    writeNdjson(join(context.rawDir, "gas.ndjson"), [
+      {
+        countyFips: "48453",
+        gasPipelineMileageCounty: 42.5,
+        gasPipelinePresenceFlag: true,
+      },
+    ]);
+    writeNdjson(join(context.rawDir, "fiber.ndjson"), [
+      {
+        countyFips: "48453",
+        fiberPresenceFlag: true,
+      },
+    ]);
+    writeNdjson(join(context.rawDir, "congestion.ndjson"), [
+      {
+        avgRtCongestionComponent: 4.8,
+        countyFips: "48453",
+        negativePriceHourShare: 0.07,
+        p95ShadowPrice: 29.4,
+        topConstraints: [
+          {
+            constraintId: "ercot-west-001",
+            flowMw: 410,
+            hoursBound: 38,
+            label: "West export interface",
+            limitMw: 450,
+            operator: "ERCOT",
+            shadowPrice: 29.4,
+            voltageKv: 345,
+          },
+        ],
+      },
+    ]);
+    writeNdjson(join(context.rawDir, "grid-friction.ndjson"), [
+      {
+        confidence: "high",
+        congestionProxyScore: 18.4,
+        countyFips: "48453",
+        heatmapSignalAvailable: true,
+        marketWithdrawalPrior: 0.12,
+        medianDaysInQueueActive: 540,
+        pastDueShare: 0.18,
+        plannedTransmissionUpgradeCount: 2,
+        statusMix: {
+          active: 1,
+        },
+      },
+    ]);
+    writeNdjson(join(context.rawDir, "policy-events.ndjson"), [
+      {
+        affectedSitingDimension: "generation_siting",
+        confidenceClass: "official",
+        countyFips: "48453",
+        eventDate: "2026-03-08",
+        eventId: "tx-policy-001",
+        eventType: "community_solar",
+        evidenceSummary: "Texas community solar legislation advanced in committee.",
+        jurisdictionKey: "48453",
+        jurisdictionLevel: "county",
+        marketId: "ercot",
+        moratoriumStatus: "none",
+        policyDirection: "supportive",
+        policyStatus: "active",
+        policyType: "community_solar",
+        sentimentDirection: "positive",
+        sourceUrl: "https://example.com/policy/events/tx-policy-001",
+        stateAbbrev: "TX",
+        title: "Community Solar Committee Vote",
+      },
+    ]);
+    writeNdjson(join(context.rawDir, "policy-snapshots.ndjson"), [
+      {
+        countyFips: "48453",
+        countyTaggedEventShare: 0.5,
+        moratoriumStatus: "none",
+        policyConstraintScore: 12.4,
+        policyEventCount: 2,
+        policyMappingConfidence: "high",
+        policyMomentumScore: 18.5,
+        publicSentimentScore: 0.41,
+      },
+    ]);
+    writeNdjson(join(context.rawDir, "queue-projects.ndjson"), [
+      {
+        countyFips: "48453",
+        fuelType: "battery_storage",
+        latestSourceAsOfDate: "2026-03-20",
+        marketId: "ercot",
+        nativeStatus: "study",
+        projectId: "ercot-queue-001",
+        queueCountyConfidence: "high",
+        queueName: "ERCOT GIS",
+        queuePoiLabel: "Austin Energy",
+        queueResolverType: "explicit_county",
+        sourceSystem: "ercot-gis",
+        stageGroup: "active_study",
+        stateAbbrev: "TX",
+      },
+    ]);
+    writeNdjson(join(context.rawDir, "queue-county-resolutions.ndjson"), [
+      {
+        allocationShare: 1,
+        countyFips: "48453",
+        marketId: "ercot",
+        projectId: "ercot-queue-001",
+        queuePoiLabel: "Austin Energy",
+        resolverConfidence: "high",
+        resolverType: "explicit_county",
+        sourceLocationLabel: "Travis County",
+        sourceSystem: "ercot-gis",
+        stateAbbrev: "TX",
+      },
+    ]);
+    writeNdjson(join(context.rawDir, "queue-snapshots.ndjson"), [
+      {
+        capacityMw: 120,
+        completionPrior: 0.3,
+        countyFips: "48453",
+        daysInQueueActive: 540,
+        expectedOperationDate: "2027-06-01",
+        isPastDue: false,
+        marketId: "ercot",
+        nativeStatus: "study",
+        projectId: "ercot-queue-001",
+        queueDate: "2024-09-05",
+        queueStatus: "active",
+        signedIa: true,
+        sourceSystem: "ercot-gis",
+        stageGroup: "active_study",
+        stateAbbrev: "TX",
+        transmissionUpgradeCostUsd: 1_250_000,
+        transmissionUpgradeCount: 2,
+        withdrawalPrior: 0.12,
+      },
+    ]);
+
+    const normalized = normalizeCountyPowerBundle({
+      normalizedDir: context.normalizedDir,
+      normalizedManifestPath: context.normalizedManifestPath,
+      rawManifestPath: context.rawManifestPath,
+    });
+    const toSnakeCase = (value: string): string =>
+      value.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
+    const normalizedSourcesByLayer = new Map(
+      Object.entries(normalized.manifest.datasets).map(([datasetKey, descriptor]) => [
+        toSnakeCase(datasetKey),
+        join(context.normalizedDir, descriptor.path),
+      ])
+    );
+    const artifacts = await writeCountyPowerSilverParquet({
+      bundle: normalized,
+      context,
+      runner: (options) => {
+        const outputPaths = [...options.sql.matchAll(/TO '([^']+)'/g)].map((match) => match[1]);
+        for (const rawOutputPath of outputPaths) {
+          const outputPath = rawOutputPath?.replaceAll("''", "'") ?? "";
+          let parquetOutputPath = outputPath;
+          if (!outputPath.endsWith(".parquet")) {
+            if (outputPath.includes("table=policy_events")) {
+              parquetOutputPath = join(outputPath, "state_abbrev=TX", "part-0.parquet");
+            } else if (outputPath.includes("table=queue_")) {
+              parquetOutputPath = join(
+                outputPath,
+                "source_system=ercot-gis",
+                "state_abbrev=TX",
+                "part-0.parquet"
+              );
+            } else {
+              parquetOutputPath = join(outputPath, "part-0.parquet");
+            }
+          }
+
+          mkdirSync(dirname(parquetOutputPath), {
+            recursive: true,
+          });
+          writeFileSync(parquetOutputPath, "parquet-fixture");
+        }
+
+        return {
+          durationMs: 1,
+          exitCode: 0,
+          stderr: "",
+          stdout: "",
+        };
+      },
+    });
+
+    expect(artifacts).toHaveLength(20);
+    expect(
+      artifacts.some(
+        (artifact) =>
+          artifact.layer === "queue_projects" &&
+          artifact.partitionKeys.includes("source_system") &&
+          artifact.partitionKeys.includes("state_abbrev")
+      )
+    ).toBe(true);
+    expect(
+      existsSync(join(context.silverPlainDir, "table=power_market_context", "part-0.parquet"))
+    ).toBe(true);
+    expect(
+      existsSync(
+        join(
+          context.silverPlainDir,
+          "table=queue_projects",
+          "source_system=ercot-gis",
+          "state_abbrev=TX",
+          "part-0.parquet"
+        )
+      )
+    ).toBe(true);
+
+    const persistedLakeManifest = JSON.parse(readFileSync(context.lakeManifestPath, "utf8")) as {
+      readonly artifacts: readonly Array<{
+        readonly layer: string;
+        readonly partitionKeys: readonly string[];
+        readonly relativePath: string;
+      }>;
+    };
+    const persistedNormalizedManifest = JSON.parse(
+      readFileSync(context.normalizedManifestPath, "utf8")
+    ) as {
+      readonly datasets: {
+        readonly powerMarketContext: {
+          readonly path: string;
+        };
+        readonly queueProjects: {
+          readonly path: string;
+        };
+      };
+    };
+
+    expect(persistedLakeManifest.artifacts).toHaveLength(20);
+    expect(
+      persistedLakeManifest.artifacts.some(
+        (artifact) =>
+          artifact.layer === "power_market_context" &&
+          artifact.relativePath === "silver/plain/table=power_market_context"
+      )
+    ).toBe(true);
+    expect(
+      persistedLakeManifest.artifacts.some(
+        (artifact) =>
+          artifact.layer === "queue_projects" &&
+          artifact.relativePath === "silver/plain/table=queue_projects"
+      )
+    ).toBe(true);
+    expect(
+      persistedLakeManifest.artifacts.every((artifact) => artifact.partitionKeys[0] === "table")
+    ).toBe(true);
+    expect(persistedNormalizedManifest.datasets.powerMarketContext.path).toBe(
+      "../silver/plain/table=power_market_context"
+    );
+    expect(persistedNormalizedManifest.datasets.queueProjects.path).toBe(
+      "../silver/plain/table=queue_projects"
+    );
+
+    const rereadBundle = await readNormalizedCountyPowerBundle(
+      context.normalizedManifestPath,
+      (options) => {
+        const outputPaths = [...options.sql.matchAll(/TO '([^']+)'/g)].map((match) => match[1]);
+        for (const rawOutputPath of outputPaths) {
+          const outputPath = rawOutputPath?.replaceAll("''", "'") ?? "";
+          const layer = basename(outputPath, ".ndjson");
+          const sourcePath = normalizedSourcesByLayer.get(layer);
+          if (typeof sourcePath !== "string") {
+            throw new Error(`Missing normalized source fixture for ${layer}`);
+          }
+
+          mkdirSync(dirname(outputPath), {
+            recursive: true,
+          });
+          writeFileSync(outputPath, readFileSync(sourcePath, "utf8"));
+        }
+
+        return Promise.resolve({
+          durationMs: 1,
+          exitCode: 0,
+          stderr: "",
+          stdout: "",
+        });
+      }
+    );
+    const rereadPayload = buildCountyPowerLoadPayload(rereadBundle, {
+      modelVersion: "county-power-v1",
+      sourcePullTimestamp: "2026-03-23T12:00:00Z",
+    });
+
+    expect(rereadBundle.manifest.datasets.queueProjects.path).toBe(
+      "../silver/plain/table=queue_projects"
+    );
+    expect(rereadPayload.utilityContext[0]?.utilityCount).toBe(1);
+    expect(rereadPayload.powerMarketContext[0]).toMatchObject({
+      countyGeoid: "48453",
+      wholesaleOperator: "ERCOT",
+    });
+    expect(rereadPayload.queueProjects[0]).toMatchObject({
+      projectId: "ercot-queue-001",
+      sourceSystem: "ercot-gis",
+      stateAbbrev: "TX",
+    });
+  });
+
   it("decodes the canonical bundle manifest", () => {
     const manifest = decodeCountyPowerBundleManifest(createManifest());
 

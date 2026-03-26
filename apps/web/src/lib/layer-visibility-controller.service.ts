@@ -5,7 +5,7 @@ interface LayerVisibilityControllerState {
   visible: boolean;
 }
 
-export interface LayerVisibilityController {
+interface LayerVisibilityController {
   destroy(): void;
   setVisible(visible: boolean): void;
 }

@@ -1,9 +1,6 @@
 import type { BoundaryFacetOption } from "@/features/boundaries/boundaries.types";
 import type { FacilitiesStatus } from "@/features/facilities/facilities.types";
-import type {
-  FiberLocatorSourceLayerOption,
-  FiberLocatorStatus,
-} from "@/features/fiber-locator/fiber-locator.types";
+import type { FiberLocatorSourceLayerOption } from "@/features/fiber-locator/fiber-locator.types";
 
 export type AppShellToolPanel = "layers" | "selection" | "sketch-measure" | null;
 
@@ -58,5 +55,3 @@ export interface FiberSourceLayerSelectionState {
   readonly longhaul: readonly string[];
   readonly metro: readonly string[];
 }
-
-export type FiberStatusState = FiberLocatorStatus;

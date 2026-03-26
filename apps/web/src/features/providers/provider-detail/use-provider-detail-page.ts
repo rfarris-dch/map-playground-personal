@@ -61,5 +61,3 @@ export function useProviderDetailPage() {
     isError: query.isError,
   };
 }
-
-export type ProviderDetailPage = ReturnType<typeof useProviderDetailPage>;

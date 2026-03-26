@@ -26,7 +26,7 @@ interface RuntimeFailureMetadata {
   readonly source: string;
 }
 
-export interface SupervisorRequestMetadata {
+interface SupervisorRequestMetadata {
   readonly method: string;
   readonly path: string;
   readonly requestId: string;

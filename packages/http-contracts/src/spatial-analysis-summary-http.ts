@@ -1,12 +1,8 @@
-import {
-  CommissionedSemanticSchema,
-  LeaseOrOwnSchema,
-} from "@map-migration/geo-kernel/commissioned-semantic";
 import { FacilityPerspectiveSchema } from "@map-migration/geo-kernel/facility-perspective";
 import { PointGeometrySchema, PolygonGeometrySchema } from "@map-migration/geo-kernel/geometry";
 import { WarningSchema } from "@map-migration/geo-kernel/warning";
 import { z } from "zod";
-import { FacilityCorePropertiesSchema, FacilityHttpPerspectiveSchema } from "./_facility-core.js";
+import { FacilityCorePropertiesSchema } from "./_facility-core.js";
 import { trimQueryValue } from "./_query-parsing.js";
 import { PolicyDatasetSchema, QueryGranularitySchema } from "./analysis-policy-http.js";
 import { ResponseMetaSchema } from "./api-response-meta.js";

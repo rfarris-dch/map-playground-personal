@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "build": "rimraf dist && tsc -p tsconfig.json && tsc-alias -p tsconfig.json --resolve-full-paths --resolve-full-extension .js",
+    "build:dev": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json --resolve-full-paths --resolve-full-extension .js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "ci:check": "bun run typecheck && bun run test",
     "lint": "biome check .",
-    "dev": "tsc -w -p tsconfig.json & tsc-alias -w -p tsconfig.json --resolve-full-paths --resolve-full-extension .js"
+    "dev": "bun run build:dev && (tsc -w -p tsconfig.json & tsc-alias -w -p tsconfig.json --resolve-full-paths --resolve-full-extension .js)"
   },
   "dependencies": {
     "@map-migration/geo-kernel": "workspace:*",

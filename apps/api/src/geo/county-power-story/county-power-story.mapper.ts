@@ -1,4 +1,7 @@
-import { MultiPolygonGeometrySchema, PolygonGeometrySchema } from "@map-migration/geo-kernel/geometry";
+import {
+  MultiPolygonGeometrySchema,
+  PolygonGeometrySchema,
+} from "@map-migration/geo-kernel/geometry";
 import type { CountyScore } from "@map-migration/http-contracts/county-intelligence-http";
 import type {
   CountyPowerStoryBand,
@@ -42,7 +45,9 @@ function readGeometry(input: unknown): CountyPowerStoryGeometryFeature["geometry
     return multiPolygon.data;
   }
 
-  throw new Error("Invalid county power story geometry: geometry did not match Polygon/MultiPolygon schema");
+  throw new Error(
+    "Invalid county power story geometry: geometry did not match Polygon/MultiPolygon schema"
+  );
 }
 
 function readRequiredText(value: string | null | undefined, fieldName: string): string {

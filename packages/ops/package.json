@@ -20,6 +20,10 @@
     "@types/node": "^25.5.0"
   },
   "exports": {
+    "./etl/batch-artifact-layout": {
+      "types": "./dist/etl/batch-artifact-layout.d.ts",
+      "default": "./dist/etl/batch-artifact-layout.js"
+    },
     "./etl/atomic-file-store": {
       "types": "./dist/etl/atomic-file-store.d.ts",
       "default": "./dist/etl/atomic-file-store.js"
@@ -43,6 +47,18 @@
     "./etl/project-paths": {
       "types": "./dist/etl/project-paths.d.ts",
       "default": "./dist/etl/project-paths.js"
+    },
+    "./etl/duckdb-bootstrap": {
+      "types": "./dist/etl/duckdb-bootstrap.d.ts",
+      "default": "./dist/etl/duckdb-bootstrap.js"
+    },
+    "./etl/duckdb-runner": {
+      "types": "./dist/etl/duckdb-runner.d.ts",
+      "default": "./dist/etl/duckdb-runner.js"
+    },
+    "./etl/pipeline-runner": {
+      "types": "./dist/etl/pipeline-runner.d.ts",
+      "default": "./dist/etl/pipeline-runner.js"
     }
   },
   "files": [

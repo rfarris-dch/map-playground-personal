@@ -11,6 +11,8 @@ if [[ "${api_base_url}" == "${health_url}" ]]; then
 fi
 
 facilities_manifest_url="${MAP_API_FACILITIES_MANIFEST_URL:-${api_base_url}/api/geo/facilities/manifest}"
+county_scores_status_url="${MAP_API_COUNTY_SCORES_STATUS_URL:-${api_base_url}/api/geo/counties/scores/status}"
+county_power_story_url="${MAP_API_COUNTY_POWER_STORY_URL:-${api_base_url}/api/geo/county-power/story/grid-stress?window=live}"
 facilities_bbox_colocation="${MAP_API_FACILITIES_BBOX_COLOCATION:--77.75,38.55,-76.85,39.15}"
 facilities_bbox_hyperscale="${MAP_API_FACILITIES_BBOX_HYPERSCALE:--77.75,38.55,-76.85,39.15}"
 facilities_selection_geometry="${MAP_API_FACILITIES_SELECTION_GEOMETRY:-{\"type\":\"Polygon\",\"coordinates\":[[[-77.55,38.65],[-76.95,38.65],[-76.95,39.05],[-77.55,39.05],[-77.55,38.65]]]}}"
@@ -77,11 +79,13 @@ if [[ "${health_ok}" != "true" ]]; then
 fi
 
 manifest_file="$(mktemp)"
+county_scores_status_file="$(mktemp)"
+county_power_story_file="$(mktemp)"
 colocation_file="$(mktemp)"
 hyperscale_file="$(mktemp)"
 detail_file="$(mktemp)"
 selection_file="$(mktemp)"
-trap 'rm -f "${manifest_file}" "${colocation_file}" "${hyperscale_file}" "${detail_file}" "${selection_file}"' EXIT
+trap 'rm -f "${manifest_file}" "${county_scores_status_file}" "${county_power_story_file}" "${colocation_file}" "${hyperscale_file}" "${detail_file}" "${selection_file}"' EXIT
 
 curl_json "${manifest_file}" "${facilities_manifest_url}"
 dataset_version="$(json_eval 'data.current?.version' < "${manifest_file}")"
@@ -90,6 +94,38 @@ if [[ -z "${dataset_version}" ]]; then
   exit 1
 fi
 printf '[health] facilities manifest ok %s (version=%s)\n' "${facilities_manifest_url}" "${dataset_version}"
+
+curl_json "${county_scores_status_file}" "${county_scores_status_url}"
+county_scores_dataset_available="$(
+  json_eval 'data.datasetAvailable === true ? "true" : "false"' < "${county_scores_status_file}"
+)"
+county_scores_publication_run_id="$(
+  json_eval 'typeof data.publicationRunId === "string" ? data.publicationRunId : ""' < "${county_scores_status_file}"
+)"
+county_scores_row_count="$(json_eval 'Number.isFinite(data.rowCount) ? data.rowCount : -1' < "${county_scores_status_file}")"
+if [[ "${county_scores_dataset_available}" != "true" || -z "${county_scores_publication_run_id}" || "${county_scores_row_count}" -le 0 ]]; then
+  echo "[health] county scores status did not report a published dataset" >&2
+  exit 1
+fi
+printf '[health] county scores status ok publicationRunId=%s rowCount=%s\n' "${county_scores_publication_run_id}" "${county_scores_row_count}"
+
+curl_json "${county_power_story_file}" "${county_power_story_url}"
+county_power_story_publication_run_id="$(
+  json_eval 'typeof data.publicationRunId === "string" ? data.publicationRunId : ""' < "${county_power_story_file}"
+)"
+county_power_story_id="$(json_eval 'typeof data.storyId === "string" ? data.storyId : ""' < "${county_power_story_file}")"
+county_power_story_row_count="$(
+  json_eval 'Array.isArray(data.rows) ? data.rows.length : -1' < "${county_power_story_file}"
+)"
+if [[ "${county_power_story_publication_run_id}" != "${county_scores_publication_run_id}" ]]; then
+  echo "[health] county power story publication does not match county scores status" >&2
+  exit 1
+fi
+if [[ "${county_power_story_id}" != "grid-stress" || "${county_power_story_row_count}" -le 0 ]]; then
+  echo "[health] county power story route did not return a usable dataset" >&2
+  exit 1
+fi
+printf '[health] county power story ok publicationRunId=%s rowCount=%s\n' "${county_power_story_publication_run_id}" "${county_power_story_row_count}"
 
 curl_json \
   "${colocation_file}" \

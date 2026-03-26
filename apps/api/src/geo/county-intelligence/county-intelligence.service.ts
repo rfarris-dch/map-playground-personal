@@ -1,8 +1,4 @@
 import type {
-  CountyScore,
-  CountyScoresStatusResponse,
-} from "@map-migration/http-contracts/county-intelligence-http";
-import type {
   CountyCongestionSnapshotDebug,
   CountyOperatorZoneDebug,
   CountyQueuePoiReferenceDebug,
@@ -12,6 +8,10 @@ import type {
   CountyScoresDebugCounty,
   CountyScoresResolutionSource,
 } from "@map-migration/http-contracts/county-intelligence-debug-http";
+import type {
+  CountyScore,
+  CountyScoresStatusResponse,
+} from "@map-migration/http-contracts/county-intelligence-http";
 import { mapCountyScoreRow } from "@/geo/county-intelligence/county-intelligence.mapper";
 import type {
   CountyCongestionDebugRow,

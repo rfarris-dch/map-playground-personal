@@ -160,11 +160,6 @@ LIMIT 1;
   return state;
 }
 
-export function clearFacilitiesDatasetManifestStateCache(): void {
-  globalThis.__MAP_API_FACILITIES_DATASET_MANIFEST_CACHE__ = undefined;
-  globalThis.__MAP_API_FACILITIES_DATASET_MANIFEST_REQUEST__ = null;
-}
-
 export function getFacilitiesDatasetManifestState(
   signal?: AbortSignal
 ): Promise<FacilitiesDatasetManifestState> {

@@ -7,7 +7,7 @@ import type {
   FacilitiesStatus,
 } from "@/features/facilities/facilities.types";
 
-export interface FacilitiesBboxCacheEntry {
+interface FacilitiesBboxCacheEntry {
   readonly bbox: BBox;
   readonly features: FacilitiesFeatureCollection["features"];
   readonly requestId: string;
@@ -16,15 +16,6 @@ export interface FacilitiesBboxCacheEntry {
 
 export function emptyFacilitiesSourceData(): FacilitiesSourceData {
   return { type: "FeatureCollection", features: [] };
-}
-
-export function facilitiesCollectionToSourceData(
-  collection: FacilitiesFeatureCollection
-): FacilitiesSourceData {
-  return {
-    type: "FeatureCollection",
-    features: collection.features,
-  };
 }
 
 function roundTo(value: number, decimals: number): number {

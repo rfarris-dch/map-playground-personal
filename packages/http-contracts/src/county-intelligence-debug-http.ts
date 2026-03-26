@@ -5,13 +5,13 @@
  * tooling contracts — coverage, resolution, and detailed debug schemas.
  */
 import { z } from "zod";
+import { parseCommaSeparated } from "./_query-parsing.js";
 import { ResponseMetaSchema } from "./api-response-meta.js";
 import {
   CountyConfidenceBadgeSchema,
   CountyFipsSchema,
   CountyScoreSchema,
 } from "./county-intelligence-http.js";
-import { parseCommaSeparated } from "./_query-parsing.js";
 
 // ---------------------------------------------------------------------------
 // Coverage

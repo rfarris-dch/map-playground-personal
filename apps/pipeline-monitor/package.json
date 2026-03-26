@@ -13,7 +13,6 @@
   },
   "dependencies": {
     "@map-migration/core-runtime": "workspace:*",
-    "@map-migration/geo-kernel": "workspace:*",
     "@map-migration/http-contracts": "workspace:*",
     "effect": "^3.21.0",
     "vue": "^3.5.30"
