@@ -440,18 +440,30 @@ function assertFloodValidationRow(row: FloodCanonicalGeoParquetValidationRow): v
 function collectFloodValidationCounts(
   rows: readonly FloodCanonicalGeoParquetValidationRow[]
 ): FloodCanonicalGeoParquetValidationCounts {
-  const counts: FloodCanonicalGeoParquetValidationCounts = {
-    "100": 0,
-    "500": 0,
-    full: 0,
-  };
+  let hundredYearCount = 0;
+  let fiveHundredYearCount = 0;
+  let fullCount = 0;
 
   for (const row of rows) {
     assertFloodValidationRow(row);
-    counts[row.flood_band] = row.row_count;
+
+    if (row.flood_band === "100") {
+      hundredYearCount = row.row_count;
+      continue;
+    }
+    if (row.flood_band === "500") {
+      fiveHundredYearCount = row.row_count;
+      continue;
+    }
+
+    fullCount = row.row_count;
   }
 
-  return counts;
+  return {
+    "100": hundredYearCount,
+    "500": fiveHundredYearCount,
+    full: fullCount,
+  };
 }
 
 function publishStagedFloodVersion(spec: FloodCanonicalGeoParquetArtifactSpec): void {
