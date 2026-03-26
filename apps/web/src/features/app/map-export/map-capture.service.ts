@@ -35,18 +35,34 @@ async function waitForAnimationFrame(): Promise<void> {
 }
 
 async function waitForMapIdle(map: IMap): Promise<void> {
+  await waitForMapEvent(
+    map,
+    "idle",
+    "[map-export] Timed out waiting for export map to become idle."
+  );
+}
+
+async function waitForMapLoad(map: IMap): Promise<void> {
+  await waitForMapEvent(map, "load", "[map-export] Timed out waiting for export map to load.");
+}
+
+async function waitForMapEvent(
+  map: IMap,
+  event: "idle" | "load",
+  timeoutMessage: string
+): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     let settled = false;
     let timeoutHandle = 0;
 
-    const onIdle = (): void => {
+    const onEvent = (): void => {
       if (settled) {
         return;
       }
 
       settled = true;
       window.clearTimeout(timeoutHandle);
-      map.off("idle", onIdle);
+      map.off(event, onEvent);
       resolve();
     };
 
@@ -56,16 +72,31 @@ async function waitForMapIdle(map: IMap): Promise<void> {
       }
 
       settled = true;
-      map.off("idle", onIdle);
-      reject(new Error("[map-export] Timed out waiting for export map to become idle."));
+      map.off(event, onEvent);
+      reject(new Error(timeoutMessage));
     }, EXPORT_MAP_LOAD_TIMEOUT_MS);
 
-    map.on("idle", onIdle);
+    map.on(event, onEvent);
   });
 }
 
 function cloneMapStyle(map: IMap) {
   return structuredClone(map.getStyle());
+}
+
+function mirrorRuntimeImages(sourceMap: IMap, exportMap: IMap): void {
+  for (const imageId of sourceMap.listImageIds()) {
+    if (exportMap.hasImage(imageId)) {
+      continue;
+    }
+
+    const imageData = sourceMap.getImageData(imageId);
+    if (imageData === null) {
+      continue;
+    }
+
+    exportMap.addImage(imageId, imageData);
+  }
 }
 
 async function withTemporaryExportMap<T>(
@@ -86,6 +117,9 @@ async function withTemporaryExportMap<T>(
   });
 
   try {
+    await waitForMapLoad(exportMap);
+    mirrorRuntimeImages(sourceMap, exportMap);
+    exportMap.triggerRepaint();
     await waitForMapIdle(exportMap);
     await waitForAnimationFrame();
     return await run(exportMap);

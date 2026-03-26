@@ -5,6 +5,10 @@ import type {
   MapImageExportFormat,
   MapViewExportFormat,
 } from "@/features/app/map-export/map-export.types";
+import {
+  composeMapCaptureWithCurrentOverlay,
+  loadBlobImage,
+} from "@/features/app/map-export/map-export-render.service";
 
 function extensionForFormat(format: MapViewExportFormat): string {
   if (format === "png") {
@@ -118,23 +122,6 @@ function downloadBlobFile(blob: Blob, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
-async function loadBlobImage(blob: Blob): Promise<HTMLImageElement> {
-  const imageUrl = URL.createObjectURL(blob);
-
-  return await new Promise<HTMLImageElement>((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => {
-      URL.revokeObjectURL(imageUrl);
-      resolve(image);
-    };
-    image.onerror = () => {
-      URL.revokeObjectURL(imageUrl);
-      reject(new Error("[map] Failed to load captured map image."));
-    };
-    image.src = imageUrl;
-  });
-}
-
 async function createPdfBlobFromCapturedImage(
   blob: Blob,
   pageSize: { readonly height: number; readonly width: number }
@@ -151,7 +138,7 @@ async function createPdfBlobFromCapturedImage(
   return new Blob([new Uint8Array(pdfBytes)], { type: "application/pdf" });
 }
 
-function captureMapImage(args: CaptureMapImageArgs): Promise<Blob> {
+async function captureMapImage(args: CaptureMapImageArgs): Promise<Blob> {
   const type = mimeTypeForImageFormat(args.format);
   const captureOptions =
     args.format === "jpeg" && typeof args.quality === "number"
@@ -163,10 +150,25 @@ function captureMapImage(args: CaptureMapImageArgs): Promise<Blob> {
           type,
         };
 
-  return captureMapImageForExport({
+  const capturedBlob = await captureMapImageForExport({
     captureOptions,
     map: args.map,
   });
+
+  return await composeMapCaptureWithCurrentOverlay(
+    typeof args.quality === "number"
+      ? {
+          capturedBlob,
+          mapContainer: args.mapContainer,
+          quality: args.quality,
+          type,
+        }
+      : {
+          capturedBlob,
+          mapContainer: args.mapContainer,
+          type,
+        }
+  );
 }
 
 export async function exportMapView(args: ExportMapViewArgs): Promise<void> {
@@ -176,11 +178,13 @@ export async function exportMapView(args: ExportMapViewArgs): Promise<void> {
         ? {
             format: "jpeg",
             map: args.map,
+            mapContainer: args.mapContainer,
             quality: args.quality,
           }
         : {
             format: "jpeg",
             map: args.map,
+            mapContainer: args.mapContainer,
           }
     );
     const pdfBlob = await createPdfBlobFromCapturedImage(capturedBlob, args.map.getCanvasSize());
@@ -193,11 +197,13 @@ export async function exportMapView(args: ExportMapViewArgs): Promise<void> {
       ? {
           format: args.format,
           map: args.map,
+          mapContainer: args.mapContainer,
           quality: args.quality,
         }
       : {
           format: args.format,
           map: args.map,
+          mapContainer: args.mapContainer,
         }
   );
 

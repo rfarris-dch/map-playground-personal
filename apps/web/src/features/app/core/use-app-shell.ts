@@ -229,14 +229,15 @@ export function useAppShell() {
 
   async function exportCurrentMapView(format: MapViewExportFormat): Promise<void> {
     const map = state.map.value;
-    if (map === null || isMapExporting.value) {
+    const mapContainer = state.mapContainer.value;
+    if (map === null || mapContainer === null || isMapExporting.value) {
       return;
     }
 
     isMapExporting.value = true;
 
     try {
-      await exportMapView({ format, map });
+      await exportMapView({ format, map, mapContainer });
     } catch (error: unknown) {
       console.error("[map] current map export failed", error);
     } finally {
@@ -245,7 +246,9 @@ export function useAppShell() {
   }
 
   const mapExportDisabledReason = computed(() =>
-    state.map.value === null ? "Map is still initializing." : null
+    state.map.value === null || state.mapContainer.value === null
+      ? "Map is still initializing."
+      : null
   );
 
   function setPerspectiveViewMode(

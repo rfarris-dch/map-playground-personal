@@ -15,6 +15,7 @@
     "@map-migration/core-runtime": "workspace:*",
     "@map-migration/geo-kernel": "workspace:*",
     "@map-migration/geo-tiles": "workspace:*",
+    "@html2canvas/html2canvas": "^1.6.3",
     "@map-migration/http-contracts": "workspace:*",
     "@map-migration/map-engine": "workspace:*",
     "@map-migration/map-layer-catalog": "workspace:*",

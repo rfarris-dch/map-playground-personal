@@ -7,6 +7,7 @@ import type {
   MapClickEvent,
   MapControl,
   MapExpression,
+  MapImageData,
   MapLayerSpecification,
   MapPointerEvent,
   MapPointLike,
@@ -53,7 +54,7 @@ export class FakeMap implements IMap {
     [];
   readonly addedImages = new Map<
     string,
-    ImageBitmap | HTMLImageElement | ImageData | StyleImageInterface
+    ImageBitmap | HTMLImageElement | ImageData | MapImageData | StyleImageInterface
   >();
   readonly addedLayers = new Map<
     string,
@@ -67,7 +68,8 @@ export class FakeMap implements IMap {
     readonly marker: IMapMarker;
   }> = [];
   destroyed = false;
-  readonly eventHandlers: Record<"load" | "moveend", Set<() => void>> = {
+  readonly eventHandlers: Record<"idle" | "load" | "moveend", Set<() => void>> = {
+    idle: new Set(),
     load: new Set(),
     moveend: new Set(),
   };
@@ -113,7 +115,14 @@ export class FakeMap implements IMap {
 
   addImage(
     id: string,
-    image: ImageBitmap | HTMLImageElement | ImageData | StyleImageInterface
+    image: ImageBitmap | HTMLImageElement | ImageData | MapImageData | StyleImageInterface
+  ): void {
+    this.addedImages.set(id, image);
+  }
+
+  replaceImage(
+    id: string,
+    image: ImageBitmap | HTMLImageElement | ImageData | MapImageData | StyleImageInterface
   ): void {
     this.addedImages.set(id, image);
   }
@@ -157,7 +166,7 @@ export class FakeMap implements IMap {
     this.destroyed = true;
   }
 
-  emit(event: "load" | "moveend"): void {
+  emit(event: "idle" | "load" | "moveend"): void {
     for (const handler of this.eventHandlers[event]) {
       handler();
     }
@@ -180,6 +189,38 @@ export class FakeMap implements IMap {
 
   getCenter(): LngLat {
     return this.center;
+  }
+
+  getImageData(id: string): MapImageData | null {
+    const image = this.addedImages.get(id);
+    if (typeof image === "undefined") {
+      return null;
+    }
+
+    if (typeof ImageData !== "undefined" && image instanceof ImageData) {
+      return {
+        width: image.width,
+        height: image.height,
+        data: image.data,
+      };
+    }
+
+    if (
+      typeof image.width === "number" &&
+      typeof image.height === "number" &&
+      typeof Reflect.get(image, "data") !== "undefined"
+    ) {
+      const data = Reflect.get(image, "data");
+      if (data instanceof Uint8Array || data instanceof Uint8ClampedArray) {
+        return {
+          width: image.width,
+          height: image.height,
+          data,
+        };
+      }
+    }
+
+    return null;
   }
 
   getClusterExpansionZoom(): Promise<number> {
@@ -226,7 +267,11 @@ export class FakeMap implements IMap {
     return Promise.reject(new Error("loadImage not implemented in FakeMap"));
   }
 
-  off(event: "load" | "moveend", handler: () => void): void {
+  listImageIds(): readonly string[] {
+    return [...this.addedImages.keys()];
+  }
+
+  off(event: "idle" | "load" | "moveend", handler: () => void): void {
     this.eventHandlers[event].delete(handler);
   }
 
@@ -250,7 +295,7 @@ export class FakeMap implements IMap {
     /* stub */
   }
 
-  on(event: "load" | "moveend", handler: () => void): void {
+  on(event: "idle" | "load" | "moveend", handler: () => void): void {
     this.eventHandlers[event].add(handler);
   }
 

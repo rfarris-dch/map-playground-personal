@@ -31,11 +31,17 @@ export interface MapCaptureImageOptions {
   readonly type?: "image/jpeg" | "image/png";
 }
 
+export interface MapImageData {
+  readonly data: Uint8Array | Uint8ClampedArray;
+  readonly height: number;
+  readonly width: number;
+}
+
 export interface IMap {
   addControl(control: MapControl, position?: MapControlPosition): void;
   addImage(
     id: string,
-    image: ImageBitmap | HTMLImageElement | ImageData | StyleImageInterface
+    image: ImageBitmap | HTMLImageElement | ImageData | MapImageData | StyleImageInterface
   ): void;
   addLayer(layerSpec: MapLayerSpecification, beforeId?: string): void;
   addSource(id: string, spec: MapSourceSpecification): void;
@@ -54,6 +60,7 @@ export interface IMap {
     clusterId: number,
     limit: number
   ): Promise<MapRenderedFeature[]>;
+  getImageData(id: string): MapImageData | null;
   getPitch(): number;
   getProjection(): MapProjectionSpecification;
   getStyle(): MapStyleSpecification;
@@ -62,6 +69,7 @@ export interface IMap {
   hasLayer(layerId: string): boolean;
   hasSource(sourceId: string): boolean;
   isLayerVisible(layerId: string): boolean;
+  listImageIds(): readonly string[];
   loadImage(url: string): Promise<ImageBitmap | HTMLImageElement | ImageData>;
   off(event: "idle" | "load" | "moveend", handler: () => void): void;
   offClick(handler: (event: MapClickEvent) => void): void;
@@ -86,7 +94,7 @@ export interface IMap {
   removeSource(sourceId: string): void;
   replaceImage(
     id: string,
-    image: ImageBitmap | HTMLImageElement | ImageData | StyleImageInterface
+    image: ImageBitmap | HTMLImageElement | ImageData | MapImageData | StyleImageInterface
   ): void;
   setFeatureState(target: FeatureStateTarget, state: Record<string, unknown>): void;
   setGeoJSONSourceData(sourceId: string, data: unknown): void;

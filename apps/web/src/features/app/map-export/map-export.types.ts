@@ -6,6 +6,7 @@ export type MapViewExportFormat = "jpeg" | "pdf" | "png";
 export interface CaptureMapImageArgs {
   readonly format: MapImageExportFormat;
   readonly map: IMap;
+  readonly mapContainer: HTMLElement;
   readonly quality?: number;
 }
 
@@ -13,5 +14,6 @@ export interface ExportMapViewArgs {
   readonly filenamePrefix?: string;
   readonly format: MapViewExportFormat;
   readonly map: IMap;
+  readonly mapContainer: HTMLElement;
   readonly quality?: number;
 }

@@ -26,6 +26,7 @@ import type {
   MapCreateOptions,
   MapErrorHandler,
   MapExpression,
+  MapImageData,
   MapLayerSpecification,
   MapLifecycleError,
   MapPointerEvent,
@@ -59,6 +60,7 @@ export type {
   MapCreateOptions,
   MapErrorHandler,
   MapExpression,
+  MapImageData,
   MapLayerSpecification,
   MapLifecycleError,
   MapPointerEvent,
@@ -201,14 +203,24 @@ class MapLibreEngine implements IMap {
 
   addImage(
     id: string,
-    image: ImageBitmap | HTMLImageElement | ImageData | import("maplibre-gl").StyleImageInterface
+    image:
+      | ImageBitmap
+      | HTMLImageElement
+      | ImageData
+      | MapImageData
+      | import("maplibre-gl").StyleImageInterface
   ): void {
     this.map.addImage(id, image);
   }
 
   replaceImage(
     id: string,
-    image: ImageBitmap | HTMLImageElement | ImageData | import("maplibre-gl").StyleImageInterface
+    image:
+      | ImageBitmap
+      | HTMLImageElement
+      | ImageData
+      | MapImageData
+      | import("maplibre-gl").StyleImageInterface
   ): void {
     if (typeof this.map.getImage(id) !== "undefined") {
       this.map.removeImage(id);
@@ -264,6 +276,10 @@ class MapLibreEngine implements IMap {
 
   hasImage(id: string): boolean {
     return this.map.hasImage(id);
+  }
+
+  listImageIds(): readonly string[] {
+    return this.map.listImages();
   }
 
   hasSource(sourceId: string): boolean {
@@ -354,6 +370,19 @@ class MapLibreEngine implements IMap {
   getCenter(): LngLat {
     const center = this.map.getCenter();
     return [center.lng, center.lat];
+  }
+
+  getImageData(id: string): MapImageData | null {
+    const image = this.map.getImage(id);
+    if (typeof image === "undefined") {
+      return null;
+    }
+
+    return {
+      width: image.data.width,
+      height: image.data.height,
+      data: new Uint8Array(image.data.data),
+    };
   }
 
   getBearing(): number {
