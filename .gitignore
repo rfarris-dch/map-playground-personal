@@ -26,6 +26,8 @@ tmp/
 .playwright-cli/
 __pycache__/
 *.pyc
+/planning/
+/next-phase.md
 
 # OS/editor
 .DS_Store
