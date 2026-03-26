@@ -7,6 +7,7 @@ export interface QuickViewCard {
   readonly availablePowerMw: number | null;
   readonly city: string | null;
   readonly commissionedPowerMw: number | null;
+  readonly facilityCode: string | null;
   readonly facilityName: string;
   readonly id: string;
   readonly perspective: FacilityPerspective;

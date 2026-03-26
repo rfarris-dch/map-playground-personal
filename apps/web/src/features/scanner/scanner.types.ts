@@ -1,13 +1,17 @@
 import type { FacilitiesFeatureCollection } from "@map-migration/http-contracts/facilities-http";
 import type { ParcelsFeatureCollection } from "@map-migration/http-contracts/parcels-http";
-import type { SpatialAnalysisSummaryResponse } from "@map-migration/http-contracts/spatial-analysis-summary-http";
-import type { SpatialAnalysisFacilityRecord } from "@/features/spatial-analysis/spatial-analysis-facilities.types";
+import type {
+  SpatialAnalysisSummaryFacilityRecord,
+  SpatialAnalysisSummaryResponse,
+} from "@map-migration/http-contracts/spatial-analysis-summary-http";
 import type { SpatialAnalysisParcelRecord } from "@/features/spatial-analysis/spatial-analysis-parcels.types";
 import type { SpatialAnalysisProviderSummaryItem } from "@/features/spatial-analysis/spatial-analysis-provider-summary.types";
 
 type SpatialAnalysisSelectionSummary = SpatialAnalysisSummaryResponse["summary"];
 
-export type ScannerFacility = SpatialAnalysisFacilityRecord;
+export interface ScannerFacility extends SpatialAnalysisSummaryFacilityRecord {
+  readonly facilityCode: string | null;
+}
 
 export type ScannerPerspectiveSummary = SpatialAnalysisSelectionSummary["colocation"];
 

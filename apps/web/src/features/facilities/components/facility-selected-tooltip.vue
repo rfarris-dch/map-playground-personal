@@ -1,6 +1,10 @@
 <script setup lang="ts">
   import type { IMap } from "@map-migration/map-engine";
   import { computed, ref, watch } from "vue";
+  import {
+    buildFacilityPopupAddressText,
+    buildFacilityPopupCodeText,
+  } from "@/features/facilities/facility-popup.service";
   import type { FacilityHoverState } from "@/features/facilities/hover.types";
   import {
     type NearbyInfrastructureResult,
@@ -33,14 +37,10 @@
   );
 
   const codeText = computed(() => {
-    const code = props.state.facilityCode;
-    if (code === null || code.toLowerCase() === "null") {
-      return null;
-    }
-    if (code.toLowerCase() === props.state.providerName.toLowerCase()) {
-      return null;
-    }
-    return code;
+    return buildFacilityPopupCodeText({
+      facilityCode: props.state.facilityCode,
+      providerName: props.state.providerName,
+    });
   });
 
   const marketLine = computed(() => {
@@ -48,20 +48,14 @@
   });
 
   const fullAddress = computed(() => {
-    const parts: string[] = [];
-    if (props.state.address) {
-      parts.push(props.state.address);
-    }
-    if (props.state.city) {
-      parts.push(props.state.city);
-    }
-    if (props.state.stateAbbrev) {
-      parts.push(props.state.stateAbbrev);
-    }
-    if (parts.length === 0 && props.state.facilityName) {
-      return props.state.facilityName;
-    }
-    return parts.join(", ") || null;
+    return buildFacilityPopupAddressText({
+      address: props.state.address,
+      city: props.state.city,
+      facilityCode: props.state.facilityCode,
+      facilityName: props.state.facilityName,
+      providerName: props.state.providerName,
+      stateAbbrev: props.state.stateAbbrev,
+    });
   });
 
   interface Metric {

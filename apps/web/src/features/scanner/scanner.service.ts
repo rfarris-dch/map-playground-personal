@@ -68,6 +68,7 @@ function toScannerFacility(
     city: readNullableText(feature.properties.city),
     countyFips: normalizeCountyFips(feature.properties.countyFips),
     perspective: feature.properties.perspective,
+    facilityCode: readNullableText(feature.properties.facilityCode),
     facilityId: feature.properties.facilityId,
     facilityName: resolveDisplayName(feature.properties.facilityName, "Unknown facility"),
     providerId: feature.properties.providerId,

@@ -19,6 +19,7 @@ describe("scanner service", () => {
             commissionedPowerMw: 12,
             commissionedSemantic: "operational",
             countyFips: null,
+            facilityCode: "CRR-1",
             facilityId: "colo:1",
             facilityName: "Visible Facility",
             leaseOrOwn: null,
@@ -43,6 +44,7 @@ describe("scanner service", () => {
     expect(summary.totalCount).toBe(1);
     expect(summary.facilities).toHaveLength(1);
     expect(summary.facilities[0]?.countyFips).toBeNull();
+    expect(summary.facilities[0]?.facilityCode).toBe("CRR-1");
     expect(summary.countyIds).toEqual([]);
   });
 });

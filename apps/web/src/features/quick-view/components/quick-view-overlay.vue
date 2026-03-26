@@ -1,6 +1,10 @@
 <script setup lang="ts">
   import type { IMap } from "@map-migration/map-engine";
   import { onBeforeUnmount, shallowRef, watch } from "vue";
+  import {
+    buildFacilityPopupAddressText,
+    buildFacilityPopupCodeText,
+  } from "@/features/facilities/facility-popup.service";
   import { buildQuickViewLayout } from "@/features/quick-view/quick-view.service";
   import type { QuickViewCard } from "@/features/quick-view/quick-view.types";
   import type { ScannerFacility } from "@/features/scanner/scanner.types";
@@ -103,24 +107,21 @@
   }
 
   function getCardCode(card: QuickViewCard): string | null {
-    if (card.facilityName.toLowerCase() === card.providerName.toLowerCase()) {
-      return null;
-    }
-    return card.facilityName;
+    return buildFacilityPopupCodeText({
+      facilityCode: card.facilityCode,
+      providerName: card.providerName,
+    });
   }
 
   function getCardAddress(card: QuickViewCard): string | null {
-    const parts: string[] = [];
-    if (card.address) {
-      parts.push(card.address);
-    }
-    if (card.city) {
-      parts.push(card.city);
-    }
-    if (card.stateAbbrev) {
-      parts.push(card.stateAbbrev);
-    }
-    return parts.length > 0 ? parts.join(", ") : null;
+    return buildFacilityPopupAddressText({
+      address: card.address,
+      city: card.city,
+      facilityCode: card.facilityCode,
+      facilityName: card.facilityName,
+      providerName: card.providerName,
+      stateAbbrev: card.stateAbbrev,
+    });
   }
 
   function getCardMetrics(card: QuickViewCard): CardMetric[] {

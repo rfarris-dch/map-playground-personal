@@ -1,6 +1,10 @@
 <script setup lang="ts">
   import { computed, shallowRef, watch } from "vue";
   import MapTooltipShell from "@/components/map/map-tooltip-shell.vue";
+  import {
+    buildFacilityPopupAddressText,
+    buildFacilityPopupCodeText,
+  } from "@/features/facilities/facility-popup.service";
   import type { FacilityHoverState } from "@/features/facilities/hover.types";
 
   interface Props {
@@ -66,14 +70,11 @@
     if (state === null) {
       return null;
     }
-    const code = state.facilityCode;
-    if (code === null || code.toLowerCase() === "null") {
-      return null;
-    }
-    if (code.toLowerCase() === state.providerName.toLowerCase()) {
-      return null;
-    }
-    return code;
+
+    return buildFacilityPopupCodeText({
+      facilityCode: state.facilityCode,
+      providerName: state.providerName,
+    });
   });
 
   const addressText = computed(() => {
@@ -81,17 +82,15 @@
     if (state === null) {
       return null;
     }
-    const parts: string[] = [];
-    if (state.address) {
-      parts.push(state.address);
-    }
-    if (state.city) {
-      parts.push(state.city);
-    }
-    if (state.stateAbbrev) {
-      parts.push(state.stateAbbrev);
-    }
-    return parts.length > 0 ? parts.join(", ") : null;
+
+    return buildFacilityPopupAddressText({
+      address: state.address,
+      city: state.city,
+      facilityCode: state.facilityCode,
+      facilityName: state.facilityName,
+      providerName: state.providerName,
+      stateAbbrev: state.stateAbbrev,
+    });
   });
 
   function formatCompact(value: number): string {

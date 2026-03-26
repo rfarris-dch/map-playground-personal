@@ -87,6 +87,7 @@ export function buildQuickViewLayout(input: QuickViewLayoutInput): QuickViewLayo
       availablePowerMw: facility.availablePowerMw,
       city: facility.city,
       commissionedPowerMw: facility.commissionedPowerMw,
+      facilityCode: facility.facilityCode,
       facilityName: facility.facilityName,
       perspective: facility.perspective,
       plannedPowerMw: facility.plannedPowerMw,
