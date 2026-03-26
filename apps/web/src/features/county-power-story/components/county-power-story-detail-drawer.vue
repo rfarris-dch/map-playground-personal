@@ -8,6 +8,8 @@
     formatMetric,
   } from "@/features/county-intelligence/county-intelligence-display.service";
   import type { CountyPowerStorySelectionState } from "@/features/county-power-story/county-power-story.types";
+  import { resolveLaunchPolicyMarketTreatment } from "@/features/launch-policy/launch-policy.service";
+  import { useLaunchPolicy } from "@/features/launch-policy/use-launch-policy";
   import CountyPowerContextPanel from "@/features/spatial-analysis/components/county-power-context-panel.vue";
 
   interface CountyPowerStoryDetailDrawerProps {
@@ -18,6 +20,7 @@
   }
 
   const props = defineProps<CountyPowerStoryDetailDrawerProps>();
+  const { launchPolicy } = useLaunchPolicy();
 
   const emit = defineEmits<{
     close: [];
@@ -52,6 +55,17 @@
     return props.selectedCounty.stateAbbrev === null
       ? countyName
       : `${countyName}, ${props.selectedCounty.stateAbbrev}`;
+  });
+
+  const marketTreatment = computed(() => {
+    if (launchPolicy.value === null) {
+      return null;
+    }
+
+    return resolveLaunchPolicyMarketTreatment(
+      launchPolicy.value,
+      props.detailRow?.primaryMarketId ?? null
+    );
   });
 </script>
 
@@ -88,6 +102,36 @@
         <span v-if="props.detailRow !== null" class="ml-auto text-[10px] text-muted-foreground">
           Updated {{ formatDateTime(props.detailRow.lastUpdatedAt) }}
         </span>
+      </div>
+
+      <div
+        v-if="marketTreatment !== null"
+        class="launch-treatment-summary mb-4 rounded-md px-3 py-2"
+      >
+        <div class="text-[10px] font-semibold uppercase tracking-wider text-foreground/45">
+          Corridor Treatment
+        </div>
+        <div class="mt-1 flex items-center gap-2">
+          <span
+            class="inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+            :class="
+              marketTreatment.isValidated
+                ? 'bg-emerald-500/10 text-emerald-700'
+                : 'bg-sky-500/10 text-sky-700'
+            "
+          >
+            {{ marketTreatment.label }}
+          </span>
+          <span
+            v-if="marketTreatment.marketName !== null"
+            class="text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+          >
+            {{ marketTreatment.marketName }}
+          </span>
+        </div>
+        <p class="mb-0 mt-1 text-[11px] leading-relaxed text-foreground/70">
+          {{ marketTreatment.summary }}
+        </p>
       </div>
 
       <section v-if="props.detailRow !== null" class="space-y-4">
@@ -139,5 +183,12 @@
   .metric-card {
     background: linear-gradient(135deg, rgba(0, 0, 0, 0.02) 0%, rgba(0, 0, 0, 0.04) 100%);
     border: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  .launch-treatment-summary {
+    background:
+      linear-gradient(180deg, rgba(248, 250, 252, 0.98) 0%, rgba(241, 245, 249, 0.96) 100%),
+      rgba(248, 250, 252, 0.98);
+    border: 1px solid rgba(15, 23, 42, 0.08);
   }
 </style>

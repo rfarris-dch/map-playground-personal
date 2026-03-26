@@ -32,6 +32,10 @@
       "types": "./dist/etl/cli-config.d.ts",
       "default": "./dist/etl/cli-config.js"
     },
+    "./etl/county-adjacency": {
+      "types": "./dist/etl/county-adjacency.d.ts",
+      "default": "./dist/etl/county-adjacency.js"
+    },
     "./etl/county-power-public-us": {
       "types": "./dist/etl/county-power-public-us.d.ts",
       "default": "./dist/etl/county-power-public-us.js"
@@ -39,6 +43,10 @@
     "./etl/county-power-sync": {
       "types": "./dist/etl/county-power-sync.d.ts",
       "default": "./dist/etl/county-power-sync.js"
+    },
+    "./etl/county-power-parity": {
+      "types": "./dist/etl/county-power-parity.d.ts",
+      "default": "./dist/etl/county-power-parity.js"
     },
     "./etl/command-runner": {
       "types": "./dist/etl/command-runner.d.ts",

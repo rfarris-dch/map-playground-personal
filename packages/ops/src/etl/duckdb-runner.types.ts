@@ -13,4 +13,6 @@ export interface DuckDbCliOptions {
   readonly outputMode?: DuckDbOutputMode;
   readonly readOnly?: boolean;
   readonly sql: string;
+  readonly stderrCaptureMaxBytes?: number;
+  readonly stdoutCaptureMaxBytes?: number;
 }

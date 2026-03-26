@@ -327,8 +327,24 @@ function buildDatasetDefinitions(
           ],
         },
         {
-          assetKey: "flood100_tilesource",
+          assetKey: "flood_canonical_geoparquet",
           deps: ["canonical_flood_hazard"],
+          phase: "loading",
+          commands: [
+            {
+              command: "bun",
+              args: [
+                "run",
+                join(projectRoot, "scripts", "refresh-environmental-flood.ts"),
+                "--run-id={run_id}",
+                "--step=export-geoparquet",
+              ],
+            },
+          ],
+        },
+        {
+          assetKey: "flood100_tilesource",
+          deps: ["flood_canonical_geoparquet"],
           phase: "building",
           commands: [
             {
@@ -343,7 +359,7 @@ function buildDatasetDefinitions(
         },
         {
           assetKey: "flood500_tilesource",
-          deps: ["canonical_flood_hazard"],
+          deps: ["flood_canonical_geoparquet"],
           phase: "building",
           commands: [
             {

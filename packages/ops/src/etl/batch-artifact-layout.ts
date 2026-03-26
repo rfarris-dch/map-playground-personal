@@ -1,10 +1,11 @@
 import { join, resolve } from "node:path";
-import { ensureDirectory, writeJsonAtomic } from "./atomic-file-store";
+import { ensureDirectory, readJsonOption, writeJsonAtomic } from "./atomic-file-store";
 import type {
   BatchArtifactDataset,
   BatchRunArtifactLayout,
   CreateLakeManifestRecordInput,
   DatasetLakeConventionRecord,
+  LakeManifestArtifactRecord,
   LakeManifestRecord,
 } from "./batch-artifact-layout.types";
 import { DEFAULT_DUCKDB_BOOTSTRAP_EXTENSIONS, writeDuckDbBootstrapSql } from "./duckdb-bootstrap";
@@ -25,6 +26,7 @@ const DATASET_LAKE_CONVENTIONS: Record<BatchArtifactDataset, DatasetLakeConventi
     notes: [
       "Boundary GeoParquet sidecars should be versioned and published from file-native canonical geometry.",
       "Adjacency edges stay plain Parquet and are treated as graph/mart artifacts.",
+      "County adjacency artifacts must preserve shared_boundary_meters and point_touch so catchment rollups can distinguish shared-edge and point-touch neighbors.",
     ],
     partitionRules: [
       {
@@ -38,7 +40,8 @@ const DATASET_LAKE_CONVENTIONS: Record<BatchArtifactDataset, DatasetLakeConventi
       },
       {
         artifactFamily: "adjacency-edges",
-        description: "Boundary-derived graph outputs such as county adjacency.",
+        description:
+          "Boundary-derived graph outputs such as county adjacency, preserving shared_boundary_meters and point_touch for later catchment weighting.",
         format: "parquet",
         partitionKeys: ["boundary_version"],
         phase: "gold",
@@ -80,6 +83,15 @@ const DATASET_LAKE_CONVENTIONS: Record<BatchArtifactDataset, DatasetLakeConventi
         partitionKeys: ["publication_run_id"],
         phase: "gold",
         relativeLayoutTemplate: "gold/plain/mart=<name>/publication_run_id=<run>/part-*.parquet",
+      },
+      {
+        artifactFamily: "publication-parity",
+        description:
+          "Publication-time parity QA artifacts for Postgres-vs-Parquet validation summaries and assertions.",
+        format: "parquet",
+        partitionKeys: [],
+        phase: "qa",
+        relativeLayoutTemplate: "qa/<assertions|profile>.parquet",
       },
     ],
   },
@@ -236,6 +248,113 @@ function defaultDuckDbDatasetRoot(dataset: BatchArtifactDataset, env: NodeJS.Pro
   }
 }
 
+function isJsonRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function decodeLakeManifestArtifactRecord(value: unknown): LakeManifestArtifactRecord {
+  if (!isJsonRecord(value)) {
+    throw new Error("Expected lake manifest artifact record");
+  }
+
+  const { format, layer, partitionKeys, phase, relativePath } = value;
+  if (format !== "geoparquet" && format !== "parquet") {
+    throw new Error("Expected artifact format to be parquet or geoparquet");
+  }
+  if (typeof layer !== "string") {
+    throw new Error("Expected artifact layer to be a string");
+  }
+  if (
+    !(
+      Array.isArray(partitionKeys) &&
+      partitionKeys.every((partitionKey) => typeof partitionKey === "string")
+    )
+  ) {
+    throw new Error("Expected artifact partition keys to be a string array");
+  }
+  if (
+    phase !== "gold-plain" &&
+    phase !== "gold-spatial" &&
+    phase !== "lake-plain" &&
+    phase !== "lake-spatial" &&
+    phase !== "qa-plain" &&
+    phase !== "silver-plain" &&
+    phase !== "silver-spatial"
+  ) {
+    throw new Error("Expected artifact phase to be a known batch artifact phase");
+  }
+  if (typeof relativePath !== "string") {
+    throw new Error("Expected artifact relative path to be a string");
+  }
+
+  return {
+    format,
+    layer,
+    partitionKeys,
+    phase,
+    relativePath,
+  };
+}
+
+function decodeExistingLakeManifestRecord(value: unknown): {
+  readonly artifacts: readonly LakeManifestArtifactRecord[];
+  readonly createdAt: string | null;
+} {
+  if (!isJsonRecord(value)) {
+    throw new Error("Expected lake manifest record");
+  }
+
+  const { artifacts, createdAt } = value;
+  if (!Array.isArray(artifacts)) {
+    throw new Error("Expected lake manifest artifacts to be an array");
+  }
+  if (createdAt !== undefined && createdAt !== null && typeof createdAt !== "string") {
+    throw new Error("Expected lake manifest createdAt to be a string when present");
+  }
+
+  return {
+    artifacts: artifacts.map((artifact) => decodeLakeManifestArtifactRecord(artifact)),
+    createdAt: createdAt ?? null,
+  };
+}
+
+function prepareBatchArtifactLayout(layout: BatchRunArtifactLayout): void {
+  ensureDirectory(layout.snapshotRoot);
+  ensureDirectory(layout.runDir);
+  ensureDirectory(layout.lakeDatasetRoot);
+  ensureDirectory(layout.duckdbDatasetRoot);
+  ensureDirectory(layout.silverPlainDir);
+  ensureDirectory(layout.silverSpatialDir);
+  ensureDirectory(layout.goldPlainDir);
+  ensureDirectory(layout.goldSpatialDir);
+  ensureDirectory(layout.runDuckDbDir);
+  ensureDirectory(layout.qaDir);
+  ensureDirectory(layout.manifestsDir);
+  writeDuckDbBootstrapSql(layout.runDuckDbBootstrapPath);
+}
+
+function buildLakeManifestArtifactKey(artifact: LakeManifestArtifactRecord): string {
+  return `${artifact.phase}:${artifact.layer}:${artifact.relativePath}`;
+}
+
+function mergeArtifactRecords(
+  existing: readonly LakeManifestArtifactRecord[],
+  additions: readonly LakeManifestArtifactRecord[]
+): readonly LakeManifestArtifactRecord[] {
+  const merged = new Map<string, LakeManifestArtifactRecord>();
+
+  for (const artifact of existing) {
+    merged.set(buildLakeManifestArtifactKey(artifact), artifact);
+  }
+  for (const artifact of additions) {
+    merged.set(buildLakeManifestArtifactKey(artifact), artifact);
+  }
+
+  return [...merged.values()].sort((left, right) =>
+    buildLakeManifestArtifactKey(left).localeCompare(buildLakeManifestArtifactKey(right))
+  );
+}
+
 export function resolveBatchArtifactLayout(args: {
   readonly dataset: BatchArtifactDataset;
   readonly env?: NodeJS.ProcessEnv;
@@ -335,21 +454,32 @@ export function resolveDatasetLakeConvention(
 export function ensureBatchArtifactLayout(args: CreateLakeManifestRecordInput): LakeManifestRecord {
   const manifest = createLakeManifestRecord(args);
 
-  ensureDirectory(args.layout.snapshotRoot);
-  ensureDirectory(args.layout.runDir);
-  ensureDirectory(args.layout.lakeDatasetRoot);
-  ensureDirectory(args.layout.duckdbDatasetRoot);
-  ensureDirectory(args.layout.silverPlainDir);
-  ensureDirectory(args.layout.silverSpatialDir);
-  ensureDirectory(args.layout.goldPlainDir);
-  ensureDirectory(args.layout.goldSpatialDir);
-  ensureDirectory(args.layout.runDuckDbDir);
-  ensureDirectory(args.layout.qaDir);
-  ensureDirectory(args.layout.manifestsDir);
+  prepareBatchArtifactLayout(args.layout);
+  writeJsonAtomic(args.layout.lakeManifestPath, manifest);
+
+  return manifest;
+}
+
+export function mergeLakeManifestArtifacts(
+  args: CreateLakeManifestRecordInput
+): LakeManifestRecord {
+  prepareBatchArtifactLayout(args.layout);
+
+  const existingManifest =
+    readJsonOption(args.layout.lakeManifestPath, decodeExistingLakeManifestRecord) ??
+    createLakeManifestRecord({
+      layout: args.layout,
+      ...(args.dataVersion === undefined ? {} : { dataVersion: args.dataVersion }),
+      ...(args.effectiveDate === undefined ? {} : { effectiveDate: args.effectiveDate }),
+      ...(args.month === undefined ? {} : { month: args.month }),
+    });
+  const manifest = createLakeManifestRecord({
+    ...args,
+    artifacts: mergeArtifactRecords(existingManifest.artifacts, args.artifacts ?? []),
+    ...(existingManifest.createdAt === null ? {} : { createdAt: existingManifest.createdAt }),
+  });
 
   writeJsonAtomic(args.layout.lakeManifestPath, manifest);
-  writeDuckDbBootstrapSql(args.layout.runDuckDbBootstrapPath);
-
   return manifest;
 }
 

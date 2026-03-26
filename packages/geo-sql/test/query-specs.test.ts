@@ -55,6 +55,7 @@ describe("geo-sql query specs", () => {
     expect(query.sql).toContain("/* facilities:bbox:colocation */");
     expect(query.sql).toContain("facility.longitude");
     expect(query.sql).toContain("facility.latitude");
+    expect(query.sql).toContain("facility.facility_code");
     expect(query.sql).toContain("ORDER BY");
     expect(query.sql).toContain("LIMIT $5");
   });
@@ -109,6 +110,7 @@ describe("geo-sql query specs", () => {
     expect(polygonQuery.sql).toContain("/* facilities:polygon:hyperscale */");
     expect(polygonQuery.sql).toContain("facility.longitude");
     expect(polygonQuery.sql).toContain("facility.latitude");
+    expect(polygonQuery.sql).toContain("facility.facility_code");
     expect(polygonQuery.sql).toContain("ORDER BY");
     expect(polygonQuery.sql).toContain("LIMIT $2");
     expect(detailQuery.params).toEqual(["facility-123"]);

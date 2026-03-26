@@ -2,7 +2,7 @@ import type { BatchRunArtifactLayout } from "../../packages/ops/src/etl/batch-ar
 
 export type EnvironmentalDataset = "environmental-flood" | "environmental-hydro-basins";
 
-export type EnvironmentalSyncStep = "extract" | "normalize";
+export type EnvironmentalSyncStep = "export-geoparquet" | "extract" | "load" | "normalize";
 
 export interface EnvironmentalRunContext extends BatchRunArtifactLayout {
   readonly dataset: EnvironmentalDataset;

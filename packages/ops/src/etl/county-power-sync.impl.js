@@ -1160,66 +1160,127 @@ async function replaceEffectiveSnapshot(sql, args) {
     await sql.unsafe(statement.sql, statement.params).execute();
   }
 }
+function createTempTableName(prefix) {
+  const randomSuffix = Math.random().toString(36).slice(2, 10);
+  return `${prefix}_${Date.now().toString(36)}_${randomSuffix}`;
+}
 async function upsertQueueProjects(sql, records) {
+  if (records.length === 0) {
+    return;
+  }
+  const sourceSystems = [...new Set(records.map((record) => record.sourceSystem))];
+  const tempTableName = createTempTableName("fact_gen_queue_project_stage");
+  const columns = [
+    { cast: "::text", name: "project_id", readValue: (row) => row.projectId },
+    { cast: "::text", name: "source_system", readValue: (row) => row.sourceSystem },
+    { cast: "::text", name: "queue_name", readValue: (row) => row.queueName },
+    { cast: "::text", name: "market_id", readValue: (row) => row.marketId },
+    { cast: "::text", name: "county_geoid", readValue: (row) => row.countyGeoid },
+    { cast: "::text", name: "state_abbrev", readValue: (row) => row.stateAbbrev },
+    { cast: "::text", name: "fuel_type", readValue: (row) => row.fuelType },
+    { cast: "::text", name: "native_status", readValue: (row) => row.nativeStatus },
+    { cast: "::text", name: "stage_group", readValue: (row) => row.stageGroup },
+    {
+      cast: "::text",
+      name: "queue_county_confidence",
+      readValue: (row) => row.queueCountyConfidence,
+    },
+    { cast: "::text", name: "queue_poi_label", readValue: (row) => row.queuePoiLabel },
+    { cast: "::text", name: "queue_resolver_type", readValue: (row) => row.queueResolverType },
+    {
+      cast: "::date",
+      name: "latest_source_as_of_date",
+      readValue: (row) => row.latestSourceAsOfDate,
+    },
+    {
+      cast: "::timestamptz",
+      name: "latest_source_pull_ts",
+      readValue: (row) => row.sourcePullTimestamp,
+    },
+    { cast: "::text", name: "model_version", readValue: (row) => row.modelVersion },
+  ];
+  await sql
+    .unsafe(
+      `CREATE TEMP TABLE ${tempTableName} (LIKE analytics.fact_gen_queue_project INCLUDING DEFAULTS)`
+    )
+    .execute();
   for (const batch of chunkRecords(records, INSERT_BATCH_SIZE)) {
     if (batch.length === 0) {
       continue;
     }
-    const statement = buildBatchInsertStatement(
-      "analytics.fact_gen_queue_project",
-      [
-        { cast: "::text", name: "project_id", readValue: (row) => row.projectId },
-        { cast: "::text", name: "source_system", readValue: (row) => row.sourceSystem },
-        { cast: "::text", name: "queue_name", readValue: (row) => row.queueName },
-        { cast: "::text", name: "market_id", readValue: (row) => row.marketId },
-        { cast: "::text", name: "county_geoid", readValue: (row) => row.countyGeoid },
-        { cast: "::text", name: "state_abbrev", readValue: (row) => row.stateAbbrev },
-        { cast: "::text", name: "fuel_type", readValue: (row) => row.fuelType },
-        { cast: "::text", name: "native_status", readValue: (row) => row.nativeStatus },
-        { cast: "::text", name: "stage_group", readValue: (row) => row.stageGroup },
-        {
-          cast: "::text",
-          name: "queue_county_confidence",
-          readValue: (row) => row.queueCountyConfidence,
-        },
-        { cast: "::text", name: "queue_poi_label", readValue: (row) => row.queuePoiLabel },
-        { cast: "::text", name: "queue_resolver_type", readValue: (row) => row.queueResolverType },
-        {
-          cast: "::date",
-          name: "latest_source_as_of_date",
-          readValue: (row) => row.latestSourceAsOfDate,
-        },
-        {
-          cast: "::timestamptz",
-          name: "latest_source_pull_ts",
-          readValue: (row) => row.sourcePullTimestamp,
-        },
-        { cast: "::text", name: "model_version", readValue: (row) => row.modelVersion },
-      ],
-      batch
-    );
-    await sql
-      .unsafe(
-        `${statement.sql}
-        ON CONFLICT (project_id) DO UPDATE SET
-          source_system = EXCLUDED.source_system,
-          queue_name = EXCLUDED.queue_name,
-          market_id = EXCLUDED.market_id,
-          county_geoid = EXCLUDED.county_geoid,
-          state_abbrev = EXCLUDED.state_abbrev,
-          fuel_type = EXCLUDED.fuel_type,
-          native_status = EXCLUDED.native_status,
-          stage_group = EXCLUDED.stage_group,
-          queue_county_confidence = EXCLUDED.queue_county_confidence,
-          queue_poi_label = EXCLUDED.queue_poi_label,
-          queue_resolver_type = EXCLUDED.queue_resolver_type,
-          latest_source_as_of_date = EXCLUDED.latest_source_as_of_date,
-          latest_source_pull_ts = EXCLUDED.latest_source_pull_ts,
-          model_version = EXCLUDED.model_version`,
-        statement.params
-      )
-      .execute();
+    const statement = buildBatchInsertStatement(tempTableName, columns, batch);
+    await sql.unsafe(statement.sql, statement.params).execute();
   }
+  await sql
+    .unsafe(
+      `
+      DELETE FROM analytics.fact_gen_queue_project AS target
+      WHERE target.source_system = ANY($1::text[])
+        AND NOT EXISTS (
+          SELECT 1
+          FROM ${tempTableName} AS staged
+          WHERE staged.project_id = target.project_id
+            AND staged.source_system = target.source_system
+        )
+    `,
+      [sourceSystems]
+    )
+    .execute();
+  await sql
+    .unsafe(
+      `
+      INSERT INTO analytics.fact_gen_queue_project (
+        project_id,
+        source_system,
+        queue_name,
+        market_id,
+        county_geoid,
+        state_abbrev,
+        fuel_type,
+        native_status,
+        stage_group,
+        queue_county_confidence,
+        queue_poi_label,
+        queue_resolver_type,
+        latest_source_as_of_date,
+        latest_source_pull_ts,
+        model_version
+      )
+      SELECT
+        staged.project_id,
+        staged.source_system,
+        staged.queue_name,
+        staged.market_id,
+        staged.county_geoid,
+        staged.state_abbrev,
+        staged.fuel_type,
+        staged.native_status,
+        staged.stage_group,
+        staged.queue_county_confidence,
+        staged.queue_poi_label,
+        staged.queue_resolver_type,
+        staged.latest_source_as_of_date,
+        staged.latest_source_pull_ts,
+        staged.model_version
+      FROM ${tempTableName} AS staged
+      ON CONFLICT (project_id) DO UPDATE SET
+        source_system = EXCLUDED.source_system,
+        queue_name = EXCLUDED.queue_name,
+        market_id = EXCLUDED.market_id,
+        county_geoid = EXCLUDED.county_geoid,
+        state_abbrev = EXCLUDED.state_abbrev,
+        fuel_type = EXCLUDED.fuel_type,
+        native_status = EXCLUDED.native_status,
+        stage_group = EXCLUDED.stage_group,
+        queue_county_confidence = EXCLUDED.queue_county_confidence,
+        queue_poi_label = EXCLUDED.queue_poi_label,
+        queue_resolver_type = EXCLUDED.queue_resolver_type,
+        latest_source_as_of_date = EXCLUDED.latest_source_as_of_date,
+        latest_source_pull_ts = EXCLUDED.latest_source_pull_ts,
+        model_version = EXCLUDED.model_version
+    `
+    )
+    .execute();
 }
 async function replaceQueueCountyResolutions(sql, records, effectiveDate) {
   const sourceSystems = [...new Set(records.map((record) => record.sourceSystem))];

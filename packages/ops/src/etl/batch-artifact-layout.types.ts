@@ -8,7 +8,14 @@ export type BatchArtifactDataset =
 
 export type BatchArtifactFormat = "geoparquet" | "parquet";
 
-export type BatchArtifactPhase = "gold-plain" | "gold-spatial" | "silver-plain" | "silver-spatial";
+export type BatchArtifactPhase =
+  | "gold-plain"
+  | "gold-spatial"
+  | "lake-plain"
+  | "lake-spatial"
+  | "qa-plain"
+  | "silver-plain"
+  | "silver-spatial";
 
 export type DuckDbRequiredExtension = "httpfs" | "postgres" | "spatial";
 

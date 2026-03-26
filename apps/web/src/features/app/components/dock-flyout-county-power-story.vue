@@ -3,8 +3,11 @@
     CountyPowerStoryId,
     CountyPowerStoryWindow,
   } from "@map-migration/http-contracts/county-power-story-http";
+  import { computed } from "vue";
   import Switch from "@/components/ui/switch/switch.vue";
   import type { CountyPowerStoryChapterId } from "@/features/county-power-story/county-power-story.types";
+  import { listValidatedCorridorMarketLabels } from "@/features/launch-policy/launch-policy.service";
+  import { useLaunchPolicy } from "@/features/launch-policy/use-launch-policy";
 
   interface CountyPowerStoryChapterOption {
     readonly description: string;
@@ -31,6 +34,7 @@
   }
 
   const props = defineProps<DockFlyoutCountyPowerStoryProps>();
+  const { launchPolicy, launchPolicyError, launchPolicyLoading } = useLaunchPolicy();
 
   const emit = defineEmits<{
     "update:animation-enabled": [enabled: boolean];
@@ -105,6 +109,14 @@
 
     return "Moratorium and sentiment watch mode for counties with elevated local policy friction.";
   }
+
+  const validatedMarketLabels = computed(() => {
+    if (launchPolicy.value === null) {
+      return [];
+    }
+
+    return listValidatedCorridorMarketLabels(launchPolicy.value);
+  });
 </script>
 
 <template>
@@ -123,6 +135,52 @@
       <p class="mb-0 text-[11px] leading-relaxed text-muted-foreground">
         {{ storySummary(props.storyId) }}
       </p>
+    </section>
+
+    <section data-flyout-section class="space-y-2.5">
+      <div class="text-[10px] font-semibold uppercase tracking-wider text-foreground/50">
+        Launch Posture
+      </div>
+
+      <p v-if="launchPolicyLoading" class="mb-0 text-[11px] leading-relaxed text-muted-foreground">
+        Loading launch posture...
+      </p>
+
+      <div
+        v-else-if="launchPolicyError"
+        class="launch-policy-card launch-policy-card-error rounded-md px-3 py-2"
+      >
+        <p class="mb-0 text-[11px] leading-relaxed">{{ launchPolicyError }}</p>
+      </div>
+
+      <template v-else-if="launchPolicy !== null">
+        <div class="launch-policy-card rounded-md px-3 py-2">
+          <p class="mb-0 text-[11px] leading-relaxed text-foreground/80">
+            {{ launchPolicy.copy.gtmSafeSummary }}
+          </p>
+        </div>
+
+        <div class="space-y-1">
+          <div class="text-[10px] font-semibold uppercase tracking-wider text-foreground/45">
+            Validated Corridor Markets
+          </div>
+          <div class="flex flex-wrap gap-1.5">
+            <span
+              v-for="marketLabel in validatedMarketLabels"
+              :key="marketLabel"
+              class="launch-policy-badge inline-flex rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide"
+            >
+              {{ marketLabel }}
+            </span>
+          </div>
+        </div>
+
+        <div class="launch-policy-card rounded-md px-3 py-2">
+          <p class="mb-0 text-[11px] leading-relaxed text-muted-foreground">
+            {{ launchPolicy.copy.countyNonPriorityCorridorCopy }}
+          </p>
+        </div>
+      </template>
     </section>
 
     <section data-flyout-section class="space-y-2.5">
@@ -272,5 +330,26 @@
 
   .chapter-btn.is-active {
     background: rgba(0, 0, 0, 0.04) !important;
+  }
+
+  .launch-policy-card {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.98) 100%),
+      rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+  }
+
+  .launch-policy-card-error {
+    color: rgba(153, 27, 27, 0.9);
+    background:
+      linear-gradient(180deg, rgba(254, 242, 242, 0.96) 0%, rgba(254, 226, 226, 0.92) 100%),
+      rgba(254, 242, 242, 0.96);
+    border-color: rgba(239, 68, 68, 0.18);
+  }
+
+  .launch-policy-badge {
+    color: rgba(14, 116, 144, 0.92);
+    background: rgba(14, 165, 233, 0.08);
+    border: 1px solid rgba(2, 132, 199, 0.18);
   }
 </style>

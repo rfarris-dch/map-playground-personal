@@ -108,6 +108,7 @@ export interface ApiRoutesTable {
   readonly fiberLocatorVectorTile: string;
   readonly health: string;
   readonly healthAlias: string;
+  readonly launchPolicy: string;
   readonly marketBoundaries: string;
   readonly markets: string;
   readonly marketsSelection: string;
@@ -170,6 +171,7 @@ export const ApiRoutes = Object.freeze<ApiRoutesTable>({
   facilitiesManifest: "/api/geo/facilities/manifest",
   facilitiesSelection: "/api/geo/facilities/selection",
   facilitiesTable: "/api/geo/facilities/table",
+  launchPolicy: "/api/geo/launch-policy",
   marketBoundaries: "/api/geo/market-boundaries",
   markets: "/api/geo/markets",
   marketsSelection: "/api/geo/markets/selection",
@@ -249,6 +251,10 @@ export function buildFacilitiesBboxRoute(args: FacilitiesBboxRouteArgs): string 
 
 export function buildFacilitiesManifestRoute(): string {
   return ApiRoutes.facilitiesManifest;
+}
+
+export function buildLaunchPolicyRoute(): string {
+  return ApiRoutes.launchPolicy;
 }
 
 export function buildAppPerformanceDebugRoute(): string {

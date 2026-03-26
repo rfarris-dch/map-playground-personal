@@ -1,8 +1,19 @@
 import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { ensureDirectory, fileExists, readJson, writeJsonAtomic } from "./atomic-file-store";
-import { ensureBatchArtifactLayout, resolveBatchArtifactLayout } from "./batch-artifact-layout";
+import {
+  ensureBatchArtifactLayout,
+  mergeLakeManifestArtifacts,
+  resolveBatchArtifactLayout,
+} from "./batch-artifact-layout";
 import type { LakeManifestArtifactRecord } from "./batch-artifact-layout.types";
+import { writeCountyPowerGoldMartFiles } from "./county-power-gold-marts";
+import type { CountyPowerGoldMirrorExporter } from "./county-power-gold-marts.types";
+import { validateCountyPowerPublicationParity as validateCountyPowerPublicationParityImplementation } from "./county-power-parity";
+import type {
+  CountyPowerParityCsvExporter,
+  CountyPowerParityDuckDbRunner,
+} from "./county-power-parity.types";
 import {
   buildCountyPowerLoadPayload as buildCountyPowerLoadPayloadImplementation,
   closeCountyPowerSql as closeCountyPowerSqlImplementation,
@@ -816,6 +827,56 @@ export function writeCountyPowerSilverParquet(args: {
     bundle: args.bundle,
     context: args.context,
     runner: args.runner ?? runDuckDbCli,
+  });
+}
+
+export async function writeCountyPowerGoldMarts(args: {
+  readonly context: CountyPowerRunContext;
+  readonly env?: NodeJS.ProcessEnv;
+  readonly exporter?: CountyPowerGoldMirrorExporter;
+  readonly manifest: CountyPowerBundleManifest;
+  readonly publicationRunId: string;
+  readonly runner?: CountyPowerDuckDbRunner;
+}): Promise<readonly LakeManifestArtifactRecord[]> {
+  const artifacts = await writeCountyPowerGoldMartFiles({
+    context: args.context,
+    ...(args.env === undefined ? {} : { env: args.env }),
+    ...(args.exporter === undefined ? {} : { exporter: args.exporter }),
+    manifest: args.manifest,
+    publicationRunId: args.publicationRunId,
+    ...(args.runner === undefined ? {} : { runner: args.runner }),
+  });
+
+  mergeLakeManifestArtifacts({
+    artifacts,
+    dataVersion: args.manifest.dataVersion,
+    effectiveDate: args.manifest.effectiveDate,
+    layout: args.context,
+    month: args.manifest.month,
+  });
+
+  return artifacts;
+}
+
+export function validateCountyPowerPublicationParity(args: {
+  readonly context: CountyPowerRunContext;
+  readonly emitQa?: boolean;
+  readonly env?: NodeJS.ProcessEnv;
+  readonly exporter?: CountyPowerParityCsvExporter;
+  readonly failFast?: boolean;
+  readonly manifest: CountyPowerBundleManifest;
+  readonly publicationRunId: string;
+  readonly runner?: CountyPowerParityDuckDbRunner;
+}) {
+  return validateCountyPowerPublicationParityImplementation({
+    context: args.context,
+    ...(args.emitQa === undefined ? {} : { emitQa: args.emitQa }),
+    ...(args.env === undefined ? {} : { env: args.env }),
+    ...(args.exporter === undefined ? {} : { exporter: args.exporter }),
+    ...(args.failFast === undefined ? {} : { failFast: args.failFast }),
+    manifest: args.manifest,
+    publicationRunId: args.publicationRunId,
+    ...(args.runner === undefined ? {} : { runner: args.runner }),
   });
 }
 

@@ -23,6 +23,7 @@ coverage
 
 # local automation artifacts
 tmp/
+.agents/
 .playwright-cli/
 __pycache__/
 *.pyc

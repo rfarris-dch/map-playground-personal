@@ -65,5 +65,19 @@ export function runDuckDbCli(options: DuckDbCliOptions): Promise<RunBufferedComm
     command: invocation.command,
     ...(options.cwd === undefined ? {} : { cwd: options.cwd }),
     ...(env === undefined ? {} : { env }),
+    ...(options.stderrCaptureMaxBytes === undefined
+      ? {}
+      : {
+          stderr: {
+            captureMaxBytes: options.stderrCaptureMaxBytes,
+          },
+        }),
+    ...(options.stdoutCaptureMaxBytes === undefined
+      ? {}
+      : {
+          stdout: {
+            captureMaxBytes: options.stdoutCaptureMaxBytes,
+          },
+        }),
   });
 }

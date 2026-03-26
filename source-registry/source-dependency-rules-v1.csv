@@ -1,0 +1,13 @@
+dependency_rule_id,registry_version,source_id,downstream_object_type,downstream_object_id,role_in_downstream,requiredness,warn_if_days_stale,degrade_if_days_stale,suppress_if_days_stale,suppress_if_missing,precision_tier_c_allowed_for_primary,allowed_roles,truth_mode_cap,confidence_cap,surface_scopes,geography_scope,effective_from,effective_to
+county-adjacency-catchment,registry-v1,census-county-adjacency-2025,score,county_market_pressure_catchment,primary,required,365,730,1095,true,false,primary,full,high,county,county,2026-03-26,
+county-market-pressure-utility-context,registry-v1,eia-861,score,county_market_pressure_primary,primary,required,365,730,1095,true,false,primary|validation,full,high,county,county,2026-03-26,
+queue-supply-timeline-primary,registry-v1,interconnection-fyi,model_input,supply_timeline_probability_bands,primary,required,14,30,60,true,false,primary|validation,derived_screening,medium,county|corridor,market,2026-03-26,
+queue-county-score-context-only,registry-v1,interconnection-fyi,score,county_market_pressure_primary,contextual,optional,14,30,60,false,false,contextual|validation,context_only,low,county,county,2026-03-26,
+corridor-transmission-defining,registry-v1,transmission-lines-arcgis,feature,corridor_ribbon,primary,required,180,365,730,true,false,primary|validation,validated_screening,high,corridor,corridor,2026-03-26,
+corridor-hub-substation-context,registry-v1,hifld-electric-substations,feature,corridor_hub,primary,enhancing,180,365,730,false,false,primary|validation,validated_screening,medium,corridor|parcel,corridor,2026-03-26,
+corridor-fiber-route-diversity,registry-v1,fiberlocator,feature,corridor_route_diversity,primary,enhancing,60,120,240,false,false,primary|validation,derived_screening,medium,corridor|parcel,corridor,2026-03-26,
+corridor-gas-context-only,registry-v1,eia-bts-gas-pipelines,feature,corridor_gas_context,contextual,optional,365,730,1095,false,false,contextual|validation,context_only,low,corridor|parcel,corridor,2026-03-26,
+parcel-geometry-required,registry-v1,regrid-parcels,feature,parcel_geometry,primary,required,30,90,180,true,false,primary,full,high,parcel,parcel,2026-03-26,
+parcel-zoning-missingness,registry-v1,regrid-parcels,feature,parcel_zoning_gate,primary,required,30,90,180,true,false,primary|validation,full,medium,parcel,parcel,2026-03-26,
+parcel-flood-missingness,registry-v1,fema-nfhl,feature,parcel_flood_gate,primary,required,30,90,180,true,false,primary|validation,full,high,parcel,parcel,2026-03-26,
+policy-watch-primary,registry-v1,eq-research,packet_section,policy_watch_summary,primary,required,14,30,60,true,false,primary|validation,derived_screening,medium,county|corridor|parcel,state,2026-03-26,

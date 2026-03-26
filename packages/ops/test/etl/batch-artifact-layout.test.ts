@@ -5,6 +5,7 @@ import { join } from "node:path";
 import {
   createLakeManifestRecord,
   ensureBatchArtifactLayout,
+  mergeLakeManifestArtifacts,
   resolveBatchArtifactLayout,
   resolveDatasetLakeConvention,
 } from "../../src/etl/batch-artifact-layout";
@@ -104,6 +105,120 @@ describe("ensureBatchArtifactLayout", () => {
     expect(persisted.standards.geometryColumn).toBe("geom");
   });
 
+  it("merges new gold artifacts without clobbering existing silver registrations", () => {
+    const projectRoot = createTempDir();
+    const layout = resolveBatchArtifactLayout({
+      dataset: "county-power",
+      projectRoot,
+      runId: "county-power-sync-2026-03-25T12-00-00Z",
+    });
+
+    ensureBatchArtifactLayout({
+      artifacts: [
+        {
+          format: "parquet",
+          layer: "queue_projects",
+          partitionKeys: ["table", "source_system", "state_abbrev"],
+          phase: "silver-plain",
+          relativePath: "silver/plain/table=queue_projects",
+        },
+      ],
+      dataVersion: "2026-03-25",
+      effectiveDate: "2026-03-25",
+      layout,
+      month: "2026-03-01",
+    });
+
+    const merged = mergeLakeManifestArtifacts({
+      artifacts: [
+        {
+          format: "parquet",
+          layer: "qa_congestion",
+          partitionKeys: ["publication_run_id"],
+          phase: "gold-plain",
+          relativePath:
+            "gold/plain/mart=qa_congestion/publication_run_id=county-market-pressure-run-001",
+        },
+      ],
+      dataVersion: "2026-03-25",
+      effectiveDate: "2026-03-25",
+      layout,
+      month: "2026-03-01",
+    });
+
+    expect(merged.artifacts).toHaveLength(2);
+    expect(
+      merged.artifacts.some(
+        (artifact) =>
+          artifact.layer === "queue_projects" &&
+          artifact.relativePath === "silver/plain/table=queue_projects"
+      )
+    ).toBe(true);
+    expect(
+      merged.artifacts.some(
+        (artifact) =>
+          artifact.layer === "qa_congestion" &&
+          artifact.relativePath ===
+            "gold/plain/mart=qa_congestion/publication_run_id=county-market-pressure-run-001"
+      )
+    ).toBe(true);
+  });
+
+  it("accepts lake-spatial artifacts alongside run-scoped registrations", () => {
+    const projectRoot = createTempDir();
+    const layout = resolveBatchArtifactLayout({
+      dataset: "environmental-flood",
+      projectRoot,
+      runId: "environmental-flood-2026-03-25T12-00-00Z",
+    });
+
+    ensureBatchArtifactLayout({
+      artifacts: [
+        {
+          format: "geoparquet",
+          layer: "flood_hazard",
+          partitionKeys: ["data_version", "flood_band", "source_state_unit"],
+          phase: "lake-spatial",
+          relativePath: "data_version=2026-03-25",
+        },
+      ],
+      dataVersion: "2026-03-25",
+      layout,
+    });
+
+    const merged = mergeLakeManifestArtifacts({
+      artifacts: [
+        {
+          format: "parquet",
+          layer: "parity_profile",
+          partitionKeys: [],
+          phase: "qa-plain",
+          relativePath: "qa/profile.parquet",
+        },
+      ],
+      dataVersion: "2026-03-25",
+      layout,
+    });
+
+    expect(merged.artifacts).toHaveLength(2);
+    expect(
+      merged.artifacts.some(
+        (artifact) =>
+          artifact.layer === "flood_hazard" &&
+          artifact.phase === "lake-spatial" &&
+          artifact.relativePath === "data_version=2026-03-25"
+      )
+    ).toBe(true);
+    expect(
+      merged.artifacts.some(
+        (artifact) =>
+          artifact.layer === "parity_profile" &&
+          artifact.phase === "qa-plain" &&
+          artifact.relativePath === "qa/profile.parquet"
+      )
+    ).toBe(true);
+  });
+
   it("persists the explicit standards and dataset convention contract", () => {
     const projectRoot = createTempDir();
     const layout = resolveBatchArtifactLayout({
@@ -168,7 +283,7 @@ describe("resolveDatasetLakeConvention", () => {
     const marketBoundaries = resolveDatasetLakeConvention("market-boundaries");
     const parcels = resolveDatasetLakeConvention("parcels");
 
-    expect(countyPower.partitionRules).toHaveLength(3);
+    expect(countyPower.partitionRules).toHaveLength(4);
     expect(countyPower.partitionRules[1]?.partitionKeys).toEqual([
       "data_version",
       "table",

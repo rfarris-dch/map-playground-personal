@@ -27,6 +27,7 @@ import { registerFacilitiesRoute } from "@/geo/facilities/facilities.route";
 import { registerFiberLocatorRoute } from "@/geo/fiber-locator/fiber-locator.route";
 import { registerHyperscaleRoute } from "@/geo/hyperscale/hyperscale.route";
 import { registerInsightRoute } from "@/geo/insight/insight.route";
+import { registerLaunchPolicyRoute } from "@/geo/launch-policy/launch-policy.route";
 import { registerMarketBoundariesRoute } from "@/geo/market-boundaries/market-boundaries.route";
 import { registerMarketsRoute } from "@/geo/markets/markets.route";
 import { registerParcelsRoute } from "@/geo/parcels/parcels.route";
@@ -229,6 +230,7 @@ export function createApiApp(options: CreateApiAppOptions = {}): Hono {
   registerAnalysisHistoryRoute(app);
   registerAnalysisSummaryRoute(app);
   registerInsightRoute(app);
+  registerLaunchPolicyRoute(app);
   registerCompaniesRoute(app);
   registerHyperscaleRoute(app);
   registerFiberLocatorRoute(app);

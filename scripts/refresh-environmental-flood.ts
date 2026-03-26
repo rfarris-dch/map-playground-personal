@@ -19,6 +19,8 @@ import {
 import { basename, dirname, join } from "node:path";
 import { createInterface } from "node:readline";
 import type { Writable } from "node:stream";
+import { mergeLakeManifestArtifacts } from "../packages/ops/src/etl/batch-artifact-layout";
+import { writeFloodCanonicalGeoParquet } from "../packages/ops/src/etl/environmental-flood-geoparquet";
 import {
   ensureRunDirectories,
   materializeSource,
@@ -39,7 +41,10 @@ import {
   writeJsonFile,
   writeRunConfig,
 } from "./environmental/environmental-sync.service";
-import type { RunConfigRecord } from "./environmental/environmental-sync.types";
+import type {
+  EnvironmentalSyncStep,
+  RunConfigRecord,
+} from "./environmental/environmental-sync.types";
 
 const STRICT_FLOOD_100_ZONE_SQL = "'A', 'AE', 'AH', 'AO', 'AR', 'A99', 'V', 'VE'";
 const DEFAULT_FEMA_FLOOD_LAYER_URL =
@@ -2241,8 +2246,18 @@ function toOgrPostgresConnectionString(databaseUrl: string): string {
   return `PG:${parts.join(" ")}`;
 }
 
-function currentStep(): string {
-  return requireArg("--step");
+function currentStep(): EnvironmentalSyncStep {
+  const step = requireArg("--step");
+  if (
+    step !== "extract" &&
+    step !== "normalize" &&
+    step !== "load" &&
+    step !== "export-geoparquet"
+  ) {
+    throw new Error("Unsupported --step value for environmental flood sync.");
+  }
+
+  return step;
 }
 
 function resolveFloodLoadSourcePath(defaultPath: string): string {
@@ -2926,6 +2941,37 @@ async function loadStep(): Promise<void> {
   });
 }
 
+async function exportGeoparquetStep(): Promise<void> {
+  const context = resolveRunContext("environmental-flood", import.meta.url);
+  ensureRunDirectories(context);
+
+  const runConfig = readRunConfig(context.runConfigPath);
+  const databaseUrl = requireDatabaseUrl();
+  const exportResult = await writeFloodCanonicalGeoParquet({
+    context,
+    dataVersion: runConfig.dataVersion,
+    databaseUrl,
+    runId: runConfig.runId,
+  });
+
+  mergeLakeManifestArtifacts({
+    artifacts: [exportResult.artifact],
+    dataVersion: runConfig.dataVersion,
+    layout: context,
+  });
+
+  const currentRunSummary = readJsonRecord(context.runSummaryPath) ?? {};
+  writeJsonFile(context.runSummaryPath, {
+    ...currentRunSummary,
+    geoParquetExport: {
+      artifactRelativePath: exportResult.artifact.relativePath,
+      completedAt: new Date().toISOString(),
+      counts: exportResult.counts,
+      lakeVersionRootPath: exportResult.publishedVersionRootPath,
+    },
+  });
+}
+
 async function main(): Promise<void> {
   const step = currentStep();
   if (step === "extract") {
@@ -2934,6 +2980,8 @@ async function main(): Promise<void> {
     await normalizeStep();
   } else if (step === "load") {
     await loadStep();
+  } else if (step === "export-geoparquet") {
+    await exportGeoparquetStep();
   } else {
     throw new Error(`Unsupported step: ${step}`);
   }

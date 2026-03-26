@@ -89,6 +89,10 @@
       "types": "./dist/fiber-locator-http.d.ts",
       "default": "./dist/fiber-locator-http.js"
     },
+    "./launch-policy-http": {
+      "types": "./dist/launch-policy-http.d.ts",
+      "default": "./dist/launch-policy-http.js"
+    },
     "./map-context-transfer": {
       "types": "./dist/map-context-transfer.d.ts",
       "default": "./dist/map-context-transfer.js"

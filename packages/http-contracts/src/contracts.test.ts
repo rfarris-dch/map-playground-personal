@@ -70,6 +70,12 @@ describe("route-builder / request-schema alignment", () => {
     const withoutVersion = buildMarketBoundariesRoute("market");
     expect(withoutVersion).not.toContain("v=");
   });
+
+  it("buildLaunchPolicyRoute points at the launch policy endpoint", async () => {
+    const { buildLaunchPolicyRoute } = await import("./api-routes.js");
+
+    expect(buildLaunchPolicyRoute()).toBe("/api/geo/launch-policy");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -230,6 +236,7 @@ describe("export-map snapshot", () => {
     "./facilities-table-http",
     "./facilities-performance-http",
     "./fiber-locator-http",
+    "./launch-policy-http",
     "./map-context-transfer",
     "./market-boundaries-http",
     "./market-metrics-http",

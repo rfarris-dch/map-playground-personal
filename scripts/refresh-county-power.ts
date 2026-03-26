@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { writeJsonAtomic } from "../packages/ops/src/etl/atomic-file-store";
+import { readJson, writeJsonAtomic } from "../packages/ops/src/etl/atomic-file-store";
 import { ensureBatchArtifactLayout } from "../packages/ops/src/etl/batch-artifact-layout";
 import { findCliArgValue, trimToNull } from "../packages/ops/src/etl/cli-config";
 import { runBufferedCommand } from "../packages/ops/src/etl/command-runner";
@@ -10,13 +10,16 @@ import {
   buildCountyPowerLoadPayload,
   closeCountyPowerSql,
   createCountyPowerRunId,
+  decodeCountyPowerBundleManifest,
   ensureCountyPowerRunDirectories,
   loadCountyPowerPayload,
   materializeCountyPowerManifest,
   normalizeCountyPowerBundle,
   readNormalizedCountyPowerBundle,
   resolveCountyPowerRunContext,
+  validateCountyPowerPublicationParity,
   verifyCountyPowerRunConfig,
+  writeCountyPowerGoldMarts,
   writeCountyPowerRunConfig,
   writeCountyPowerSilverParquet,
 } from "../packages/ops/src/etl/county-power-sync";
@@ -299,7 +302,7 @@ async function loadStep(runId: string): Promise<StepState> {
 
 async function refreshStep(runId: string): Promise<StepState> {
   const context = resolveCountyPowerRunContext(PROJECT_ROOT, runId);
-  const bundle = await readNormalizedCountyPowerBundle(context.normalizedManifestPath);
+  const manifest = readJson(context.normalizedManifestPath, decodeCountyPowerBundleManifest);
   const countyScoresRunId =
     trimToNull(process.env.COUNTY_SCORES_RUN_ID) ?? `county-market-pressure-${runId}`;
   const refreshEnv: Record<string, string> = {
@@ -310,7 +313,7 @@ async function refreshStep(runId: string): Promise<StepState> {
       }
       return result;
     }, {}),
-    COUNTY_SCORES_DATA_VERSION: bundle.manifest.dataVersion,
+    COUNTY_SCORES_DATA_VERSION: manifest.dataVersion,
     COUNTY_SCORES_RUN_ID: countyScoresRunId,
   };
 
@@ -319,27 +322,52 @@ async function refreshStep(runId: string): Promise<StepState> {
     [join(PROJECT_ROOT, "scripts/refresh-county-scores.sh")],
     refreshEnv
   );
-
-  writeJsonAtomic(context.latestRunPointerPath, {
-    dataVersion: bundle.manifest.dataVersion,
-    effectiveDate: bundle.manifest.effectiveDate,
-    month: bundle.manifest.month,
-    runId,
-    updatedAt: new Date().toISOString(),
+  const goldArtifacts = await writeCountyPowerGoldMarts({
+    context,
+    env: refreshEnv,
+    manifest,
+    publicationRunId: countyScoresRunId,
   });
+  const parityValidation = await validateCountyPowerPublicationParity({
+    context,
+    env: refreshEnv,
+    manifest,
+    publicationRunId: countyScoresRunId,
+  });
+
   writeJsonAtomic(context.runSummaryPath, {
     countyScoresRunId,
-    dataVersion: bundle.manifest.dataVersion,
-    effectiveDate: bundle.manifest.effectiveDate,
-    month: bundle.manifest.month,
+    dataVersion: manifest.dataVersion,
+    effectiveDate: manifest.effectiveDate,
+    goldParquetArtifacts: goldArtifacts.map((artifact) => artifact.relativePath),
+    month: manifest.month,
+    parityValidation: {
+      failedAssertions: parityValidation.failedAssertions,
+      qaAssertionsPath: parityValidation.qaAssertionsPath,
+      qaProfilePath: parityValidation.qaProfilePath,
+      status: parityValidation.passed ? "passed" : "failed",
+      validatedAt: parityValidation.validatedAt,
+    },
     runId,
     step: "refresh",
   });
+  if (!parityValidation.passed) {
+    throw new Error(
+      `county power parity validation failed with ${String(parityValidation.failedAssertions)} blocking assertions`
+    );
+  }
+  writeJsonAtomic(context.latestRunPointerPath, {
+    dataVersion: manifest.dataVersion,
+    effectiveDate: manifest.effectiveDate,
+    month: manifest.month,
+    runId,
+    updatedAt: new Date().toISOString(),
+  });
 
   return {
-    dataVersion: bundle.manifest.dataVersion,
-    effectiveDate: bundle.manifest.effectiveDate,
-    month: bundle.manifest.month,
+    dataVersion: manifest.dataVersion,
+    effectiveDate: manifest.effectiveDate,
+    month: manifest.month,
     runId,
   };
 }
