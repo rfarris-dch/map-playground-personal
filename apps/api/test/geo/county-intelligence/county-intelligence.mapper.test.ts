@@ -9,6 +9,7 @@ function createCountyScoreRow(): CountyScoreRow {
     balancing_authority: "ERCOT",
     competitive_area_type: "choice",
     confidence_badge: "high",
+    coverage_confidence: "high",
     congestion_proxy_score: 36,
     county_fips: "48453",
     county_name: "Travis County",
@@ -16,11 +17,13 @@ function createCountyScoreRow(): CountyScoreRow {
     deferred_reason_codes_json: [],
     demand_momentum_qoq: 0.12,
     demand_pressure_score: 74.2,
+    evidence_confidence: "high",
     expected_mw_0_24m: 120,
     expected_mw_24_60m: 60,
     expected_supply_mw_0_36m: 80,
     expected_supply_mw_36_60m: 40,
     fiber_presence_flag: true,
+    freshness_state: "fresh",
     formula_version: "county-market-pressure-v1",
     freshness_score: 92,
     gas_pipeline_mileage_county: 88.6,
@@ -40,6 +43,7 @@ function createCountyScoreRow(): CountyScoreRow {
     market_withdrawal_prior: 0.18,
     median_days_in_queue_active: 540,
     moratorium_status: "watch",
+    method_confidence: "medium",
     narrative_summary:
       "Demand and supply signals are mixed, pointing to a balanced county profile.",
     negative_price_hour_share: 0.07,
@@ -85,6 +89,7 @@ function createCountyScoreRow(): CountyScoreRow {
     },
     source_volatility: "medium",
     state_abbrev: "TX",
+    suppression_state: "none",
     supply_timeline_score: 55.1,
     top_drivers_json: [],
     top_constraints_json: [
@@ -151,6 +156,13 @@ describe("mapCountyScoreRow", () => {
       wholesaleOperator: "ERCOT",
     });
     expect(result.retailStructure.primaryTduOrUtility).toBe("Oncor");
+    expect(result.confidence).toEqual({
+      evidenceConfidence: "high",
+      methodConfidence: "medium",
+      coverageConfidence: "high",
+      freshnessState: "fresh",
+      suppressionState: "none",
+    });
     expect(result.retailStructure.utilityContext.utilities).toHaveLength(1);
     expect(result.isBorderCounty).toBe(false);
     expect(result.transmissionContext.miles345kvPlus).toBe(18.1);

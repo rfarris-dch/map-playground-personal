@@ -30,6 +30,7 @@ describe("style layer ids", () => {
       fill500LayerId: "environmental-flood-500-fill",
     });
     expect(getFacilitiesStyleLayerIds("facilities.colocation")).toEqual({
+      clusterCountLayerId: "facilities.colocation.cluster-count",
       heatmapLayerId: "facilities.colocation.heatmap",
       clusterLayerId: "facilities.colocation.clusters",
       iconFallbackLayerId: "facilities.colocation.icon-fallback",
@@ -45,6 +46,7 @@ describe("style layer ids", () => {
     });
     expect(getCountyPowerStoryExtrusionLayerId()).toBe("models.county-power-3d.fill-extrusion");
     expect(getFacilitiesStyleLayerIds("facilities.enterprise")).toEqual({
+      clusterCountLayerId: "facilities.enterprise.cluster-count",
       heatmapLayerId: "facilities.enterprise.heatmap",
       clusterLayerId: "facilities.enterprise.clusters",
       iconFallbackLayerId: "facilities.enterprise.icon-fallback",
@@ -101,15 +103,17 @@ describe("style layer ids", () => {
     ]);
     expect(getCatalogStyleLayerIds("facilities.colocation")).toEqual([
       "facilities.colocation.heatmap",
-      "facilities.colocation.clusters",
       "facilities.colocation.icon-fallback",
       "facilities.colocation.points",
+      "facilities.colocation.clusters",
+      "facilities.colocation.cluster-count",
     ]);
     expect(getCatalogStyleLayerIds("facilities.enterprise")).toEqual([
       "facilities.enterprise.heatmap",
-      "facilities.enterprise.clusters",
       "facilities.enterprise.icon-fallback",
       "facilities.enterprise.points",
+      "facilities.enterprise.clusters",
+      "facilities.enterprise.cluster-count",
     ]);
     expect(getCatalogStyleLayerIds("facilities.hyperscale-leased")).toEqual([
       "hyperscale-leased-voronoi.fill",
@@ -174,17 +178,20 @@ describe("style layer ids", () => {
       "hyperscale-leased-voronoi.fill",
       "hyperscale-leased-voronoi.line",
       "facilities.colocation.heatmap",
-      "facilities.colocation.clusters",
       "facilities.colocation.icon-fallback",
       "facilities.colocation.points",
+      "facilities.colocation.clusters",
+      "facilities.colocation.cluster-count",
       "facilities.hyperscale.heatmap",
-      "facilities.hyperscale.clusters",
       "facilities.hyperscale.icon-fallback",
       "facilities.hyperscale.points",
+      "facilities.hyperscale.clusters",
+      "facilities.hyperscale.cluster-count",
       "facilities.enterprise.heatmap",
-      "facilities.enterprise.clusters",
       "facilities.enterprise.icon-fallback",
       "facilities.enterprise.points",
+      "facilities.enterprise.clusters",
+      "facilities.enterprise.cluster-count",
     ]);
     expect(getOverlayPlacementAnchorLayerIds()).toEqual([
       "property.parcels.fill",
@@ -192,17 +199,20 @@ describe("style layer ids", () => {
       "hyperscale-leased-voronoi.fill",
       "hyperscale-leased-voronoi.line",
       "facilities.colocation.heatmap",
-      "facilities.colocation.clusters",
       "facilities.colocation.icon-fallback",
       "facilities.colocation.points",
+      "facilities.colocation.clusters",
+      "facilities.colocation.cluster-count",
       "facilities.hyperscale.heatmap",
-      "facilities.hyperscale.clusters",
       "facilities.hyperscale.icon-fallback",
       "facilities.hyperscale.points",
+      "facilities.hyperscale.clusters",
+      "facilities.hyperscale.cluster-count",
       "facilities.enterprise.heatmap",
-      "facilities.enterprise.clusters",
       "facilities.enterprise.icon-fallback",
       "facilities.enterprise.points",
+      "facilities.enterprise.clusters",
+      "facilities.enterprise.cluster-count",
     ]);
   });
 

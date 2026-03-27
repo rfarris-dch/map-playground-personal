@@ -6,9 +6,16 @@ export function findCliArgValue(argv: readonly string[], name: string): string |
   const normalizedName = normalizeCliArgName(name);
   const prefix = `${normalizedName}=`;
 
-  for (const raw of argv) {
+  for (const [index, raw] of argv.entries()) {
     if (raw.startsWith(prefix)) {
       return raw.slice(prefix.length);
+    }
+
+    if (raw === normalizedName) {
+      const next = argv[index + 1];
+      if (typeof next === "string" && !next.startsWith("--")) {
+        return next;
+      }
     }
   }
 

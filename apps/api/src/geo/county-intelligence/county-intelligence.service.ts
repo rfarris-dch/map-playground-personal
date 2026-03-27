@@ -1,4 +1,13 @@
+import type { DependencyRuntimeEffect } from "@map-migration/core-runtime/confidence-engine";
+import {
+  aggregateDependencyEffects,
+  buildConfidenceTraceRecord,
+  deriveCatchmentLocalOperatorResult,
+} from "@map-migration/core-runtime/confidence-engine";
 import type {
+  CountyCatchmentDebug,
+  CountyConfidenceDependencyDebug,
+  CountyConfidenceTraceDebug,
   CountyCongestionSnapshotDebug,
   CountyOperatorZoneDebug,
   CountyQueuePoiReferenceDebug,
@@ -8,12 +17,15 @@ import type {
   CountyScoresDebugCounty,
   CountyScoresResolutionSource,
 } from "@map-migration/http-contracts/county-intelligence-debug-http";
+import { CountyConfidenceDependencyDebugSchema } from "@map-migration/http-contracts/county-intelligence-debug-http";
 import type {
   CountyScore,
   CountyScoresStatusResponse,
 } from "@map-migration/http-contracts/county-intelligence-http";
 import { mapCountyScoreRow } from "@/geo/county-intelligence/county-intelligence.mapper";
 import type {
+  CountyCatchmentDebugRow,
+  CountyConfidenceTraceRow,
   CountyCongestionDebugRow,
   CountyOperatorZoneDebugRow,
   CountyQueuePoiReferenceDebugRow,
@@ -25,7 +37,10 @@ import type {
   CountyScoresStatusRow,
 } from "@/geo/county-intelligence/county-intelligence.repo";
 import {
+  getCountyCatchmentConfidenceTrace,
+  getCountyConfidenceTrace,
   getCountyScoresStatusSnapshot,
+  listCountyCatchmentDebug,
   listCountyCongestionDebug,
   listCountyOperatorZoneDebug,
   listCountyQueuePoiReferenceDebug,
@@ -52,6 +67,9 @@ const COUNTY_SCORES_RELATION_NAMES: readonly string[] = [
   "analytics.fact_congestion_snapshot",
   "analytics.fact_gen_queue_county_resolution",
   "analytics.fact_publication",
+  "analytics.bridge_county_adjacency",
+  "analytics.v_downstream_confidence_trace_current",
+  "registry.active_sources",
 ];
 
 function compareCountyScores(left: CountyScore, right: CountyScore): number {
@@ -160,6 +178,95 @@ function readNullableUnitInterval(value: number | string | null | undefined): nu
   }
 
   return parsed;
+}
+
+function readTruthMode(
+  value: string | null | undefined
+): "context_only" | "derived_screening" | "full" | "internal_only" | "validated_screening" {
+  const normalized = readNullableText(value)?.toLowerCase();
+  if (
+    normalized === "full" ||
+    normalized === "validated_screening" ||
+    normalized === "derived_screening" ||
+    normalized === "context_only" ||
+    normalized === "internal_only"
+  ) {
+    return normalized;
+  }
+
+  return "internal_only";
+}
+
+function mapCountyConfidenceDependencyDebugEntry(
+  value: unknown
+): CountyConfidenceDependencyDebug | null {
+  const parsed = CountyConfidenceDependencyDebugSchema.safeParse(value);
+  if (!parsed.success) {
+    return null;
+  }
+
+  return parsed.data;
+}
+
+function mapDependencyRuntimeEffect(
+  dependency: CountyConfidenceDependencyDebug
+): DependencyRuntimeEffect {
+  return {
+    accessStatus: dependency.accessStatus,
+    completenessObserved: dependency.completenessObserved,
+    confidenceCap: dependency.confidenceCap,
+    degradeTriggered: dependency.degradeTriggered,
+    downstreamObjectId: dependency.downstreamObjectId,
+    downstreamObjectType: dependency.downstreamObjectType,
+    effectiveFreshnessState: dependency.effectiveFreshnessState,
+    missingTriggered: dependency.missingTriggered,
+    precisionTier: dependency.precisionTier,
+    requiredness: dependency.requiredness,
+    roleInDownstream: dependency.roleInDownstream,
+    sourceAgeDays: dependency.sourceAgeDays,
+    sourceId: dependency.sourceId,
+    sourceName: dependency.sourceName,
+    stalenessState: dependency.stalenessState,
+    suppressTriggered: dependency.suppressTriggered,
+    truthModeCap: dependency.truthModeCap,
+    warnTriggered: dependency.warnTriggered,
+  };
+}
+
+function mapCountyConfidenceTraceRow(
+  row: CountyConfidenceTraceRow,
+  score: CountyScore | null
+): CountyConfidenceTraceDebug | null {
+  if (score === null || !Array.isArray(row.dependencies_json)) {
+    return null;
+  }
+
+  const dependencies = row.dependencies_json.flatMap((entry) => {
+    const dependency = mapCountyConfidenceDependencyDebugEntry(entry);
+    return dependency === null ? [] : [dependency];
+  });
+
+  const aggregated = aggregateDependencyEffects(
+    readNullableText(row.registry_version),
+    dependencies.map(mapDependencyRuntimeEffect)
+  );
+  const truthMode = readTruthMode(row.minimum_truth_mode_cap);
+  const trace = buildConfidenceTraceRecord({
+    aggregated,
+    confidence: score.confidence,
+    truthMode,
+  });
+
+  return {
+    confidence: trace.confidence,
+    dependencies,
+    downstreamObjectId: trace.downstreamObjectId,
+    downstreamObjectType: trace.downstreamObjectType,
+    minimumConstitutiveConfidenceCap: trace.minimumConstitutiveConfidenceCap,
+    registryVersion: trace.registryVersion,
+    truthMode: trace.truthMode,
+    worstRequiredFreshnessState: trace.worstRequiredFreshnessState,
+  };
 }
 
 function readNonNegativeInteger(
@@ -279,6 +386,17 @@ function readNullableConfidenceBadge(
   return null;
 }
 
+function readNullableReplayabilityTier(
+  value: string | null | undefined
+): "best_effort" | "not_replayable" | "strict" | null {
+  const normalized = readNullableText(value);
+  if (normalized === "strict" || normalized === "best_effort" || normalized === "not_replayable") {
+    return normalized;
+  }
+
+  return null;
+}
+
 function hasFeature(availableFeatureFamilies: ReadonlySet<string>, featureName: string): boolean {
   return availableFeatureFamilies.has(featureName);
 }
@@ -312,6 +430,7 @@ function mapCountyScoresStatusRow(
       readNullableText(row.publication_run_id) !== null &&
       rowCount > 0,
     publicationRunId: readNullableText(row.publication_run_id),
+    registryVersion: readNullableText(row.registry_version),
     publishedAt: readNullableIsoDateTime(row.published_at, "published_at"),
     methodologyId: readNullableText(row.methodology_id),
     dataVersion: readNullableText(row.data_version),
@@ -341,6 +460,31 @@ function mapCountyScoresStatusRow(
       "low_confidence_count"
     ),
     freshCountyCount: readNonNegativeInteger(row.fresh_county_count ?? 0, "fresh_county_count"),
+    freshnessStateCounts: {
+      fresh: readNonNegativeInteger(row.freshness_fresh_count ?? 0, "freshness_fresh_count"),
+      aging: readNonNegativeInteger(row.freshness_aging_count ?? 0, "freshness_aging_count"),
+      stale: readNonNegativeInteger(row.freshness_stale_count ?? 0, "freshness_stale_count"),
+      critical: readNonNegativeInteger(
+        row.freshness_critical_count ?? 0,
+        "freshness_critical_count"
+      ),
+      unknown: readNonNegativeInteger(row.freshness_unknown_count ?? 0, "freshness_unknown_count"),
+    },
+    suppressionStateCounts: {
+      none: readNonNegativeInteger(row.suppression_none_count ?? 0, "suppression_none_count"),
+      downgraded: readNonNegativeInteger(
+        row.suppression_downgraded_count ?? 0,
+        "suppression_downgraded_count"
+      ),
+      reviewRequired: readNonNegativeInteger(
+        row.suppression_review_required_count ?? 0,
+        "suppression_review_required_count"
+      ),
+      suppressed: readNonNegativeInteger(
+        row.suppression_suppressed_count ?? 0,
+        "suppression_suppressed_count"
+      ),
+    },
     availableFeatureFamilies: [...availableFeatureFamilies],
     missingFeatureFamilies: [...missingFeatureFamilies],
     featureCoverage: {
@@ -360,6 +504,19 @@ function mapCountyScoresStatusRow(
       utilityTerritories: hasFeature(availableFeatureFamilies, "utility_territories"),
       wholesaleMarkets: hasFeature(availableFeatureFamilies, "wholesale_markets"),
     },
+    reproducibilityAvailable: readBooleanFlag(row.reproducibility_available),
+    replayabilityTier: readNullableReplayabilityTier(row.replayability_tier),
+    configHash: readNullableText(row.config_hash),
+    envelopeHash: readNullableText(row.envelope_hash),
+    sourceVersionCount: readNonNegativeInteger(
+      row.source_version_count ?? 0,
+      "source_version_count"
+    ),
+    ingestionSnapshotCount: readNonNegativeInteger(
+      row.ingestion_snapshot_count ?? 0,
+      "ingestion_snapshot_count"
+    ),
+    replayedFromRunId: readNullableText(row.replayed_from_run_id),
   };
 }
 
@@ -494,6 +651,53 @@ function mapCountyCongestionDebugRow(row: CountyCongestionDebugRow): CountyConge
   };
 }
 
+function mapCountyCatchmentDebugRow(
+  row: CountyCatchmentDebugRow,
+  catchmentTraceRow: CountyConfidenceTraceRow | null
+): CountyCatchmentDebug | null {
+  if (catchmentTraceRow === null || !Array.isArray(catchmentTraceRow.dependencies_json)) {
+    return null;
+  }
+
+  const dependencies = catchmentTraceRow.dependencies_json.flatMap((entry) => {
+    const dependency = mapCountyConfidenceDependencyDebugEntry(entry);
+    return dependency === null ? [] : [dependency];
+  });
+  const neighborCount = readNonNegativeInteger(row.neighbor_count, "neighbor_count");
+  const pointTouchWeightShare = readNullableUnitInterval(row.point_touch_weight_share);
+  const aggregated = aggregateDependencyEffects(
+    readNullableText(catchmentTraceRow.registry_version),
+    dependencies.map(mapDependencyRuntimeEffect)
+  );
+  const result = deriveCatchmentLocalOperatorResult({
+    adjacencyAvailable: neighborCount > 0,
+    aggregated,
+    neighborCount,
+    pointTouchWeightShare,
+    totalWeightMass: readNullableNumber(row.total_weight_mass),
+  });
+
+  return {
+    adjacencySourceId: row.adjacency_source_id,
+    adjacencySourceVersionId: readNullableText(row.adjacency_source_version_id),
+    calibrationVersion: row.calibration_version,
+    confidence: result.confidence,
+    countyFips: row.county_fips,
+    neighborCount,
+    pointTouchNeighborCount: readNonNegativeInteger(
+      row.point_touch_neighbor_count,
+      "point_touch_neighbor_count"
+    ),
+    pointTouchReferenceFamily: row.point_touch_reference_family,
+    pointTouchWeightShare,
+    sharedEdgeNeighborCount: readNonNegativeInteger(
+      row.shared_edge_neighbor_count,
+      "shared_edge_neighbor_count"
+    ),
+    totalWeightMass: readNullableNumber(row.total_weight_mass),
+  };
+}
+
 function deferredCountyIds(rows: readonly CountyScore[]): readonly string[] {
   return rows.filter((row) => row.rankStatus === "deferred").map((row) => row.countyFips);
 }
@@ -558,6 +762,7 @@ export async function queryCountyScores(
     const mappedRows = rows
       .filter((row) => isCountyReferenceAvailable(row))
       .map((row) => mapCountyScoreRow(row))
+      .filter((row) => row.confidence.suppressionState !== "suppressed")
       .sort(compareCountyScores);
 
     return {
@@ -741,13 +946,23 @@ export async function queryCountyScoresDebug(
   const requestedCountyIds = uniqueCountyIds(args.countyIds);
 
   try {
-    const [operatorZoneRows, queueResolutionRows, queuePoiReferenceRows, congestionRows] =
-      await Promise.all([
-        listCountyOperatorZoneDebug(requestedCountyIds),
-        listCountyQueueResolutionDebug(requestedCountyIds),
-        listCountyQueuePoiReferenceDebug(requestedCountyIds),
-        listCountyCongestionDebug(requestedCountyIds),
-      ]);
+    const [
+      operatorZoneRows,
+      queueResolutionRows,
+      queuePoiReferenceRows,
+      congestionRows,
+      catchmentRows,
+      confidenceTraceRow,
+      catchmentTraceRow,
+    ] = await Promise.all([
+      listCountyOperatorZoneDebug(requestedCountyIds),
+      listCountyQueueResolutionDebug(requestedCountyIds),
+      listCountyQueuePoiReferenceDebug(requestedCountyIds),
+      listCountyCongestionDebug(requestedCountyIds),
+      listCountyCatchmentDebug(requestedCountyIds),
+      getCountyConfidenceTrace(),
+      getCountyCatchmentConfidenceTrace(),
+    ]);
 
     const scoreByCountyFips = new Map(
       countyScoresResult.value.rows.map((row) => [row.countyFips, row] as const)
@@ -756,6 +971,7 @@ export async function queryCountyScoresDebug(
     const queueResolutionsByCounty = new Map<string, CountyQueueResolutionDebug[]>();
     const queuePoiReferencesByCounty = new Map<string, CountyQueuePoiReferenceDebug[]>();
     const congestionByCounty = new Map<string, CountyCongestionSnapshotDebug>();
+    const catchmentByCounty = new Map<string, CountyCatchmentDebug>();
 
     for (const row of operatorZoneRows) {
       const mappedRow = mapCountyOperatorZoneDebugRow(row);
@@ -782,7 +998,28 @@ export async function queryCountyScoresDebug(
       congestionByCounty.set(row.county_fips, mapCountyCongestionDebugRow(row));
     }
 
+    for (const row of catchmentRows) {
+      const catchmentDebug = mapCountyCatchmentDebugRow(row, catchmentTraceRow);
+      if (catchmentDebug !== null) {
+        catchmentByCounty.set(row.county_fips, catchmentDebug);
+      }
+    }
+
     const counties: CountyScoresDebugCounty[] = requestedCountyIds.map((countyFips) => ({
+      catchment: catchmentByCounty.get(countyFips) ?? null,
+      confidenceTrace: mapCountyConfidenceTraceRow(
+        confidenceTraceRow ?? {
+          baseline_suppression_state: null,
+          dependencies_json: [],
+          downstream_object_id: "county_market_pressure_primary",
+          downstream_object_type: "score",
+          minimum_constitutive_confidence_cap: null,
+          minimum_truth_mode_cap: null,
+          registry_version: null,
+          worst_required_freshness_state: null,
+        },
+        scoreByCountyFips.get(countyFips) ?? null
+      ),
       congestionSnapshot: congestionByCounty.get(countyFips) ?? null,
       countyFips,
       operatorZones: operatorZonesByCounty.get(countyFips) ?? [],

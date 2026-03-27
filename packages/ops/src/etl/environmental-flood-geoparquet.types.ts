@@ -49,5 +49,6 @@ export interface FloodCanonicalGeoParquetWriteArgs {
   readonly databaseUrl: string;
   readonly dataVersion: string;
   readonly env?: NodeJS.ProcessEnv;
+  readonly expectedCounts?: FloodCanonicalGeoParquetValidationCounts;
   readonly runId: string;
 }

@@ -212,6 +212,13 @@ function createCountyScoresResponse(): CountyScoresResponse {
         stateAbbrev: "TX",
         rankStatus: "ranked",
         attractivenessTier: "balanced",
+        confidence: {
+          evidenceConfidence: "high",
+          methodConfidence: "medium",
+          coverageConfidence: "high",
+          freshnessState: "fresh",
+          suppressionState: "none",
+        },
         confidenceBadge: "high",
         marketPressureIndex: 61.4,
         demandPressureScore: 74.2,
@@ -396,6 +403,7 @@ function createCountyScoresStatusResponse(): CountyScoresStatusResponse {
   return {
     datasetAvailable: true,
     publicationRunId: "county-market-pressure-20260307T000000Z",
+    registryVersion: "registry-v1-20260326T160000Z",
     publishedAt: "2026-03-07T00:00:00.000Z",
     methodologyId: "county-market-pressure-v1",
     dataVersion: "2026-03-07",
@@ -411,6 +419,19 @@ function createCountyScoresStatusResponse(): CountyScoresStatusResponse {
     mediumConfidenceCount: 1000,
     lowConfidenceCount: 421,
     freshCountyCount: 3100,
+    freshnessStateCounts: {
+      fresh: 3100,
+      aging: 80,
+      stale: 30,
+      critical: 11,
+      unknown: 0,
+    },
+    suppressionStateCounts: {
+      none: 2800,
+      downgraded: 380,
+      reviewRequired: 41,
+      suppressed: 0,
+    },
     availableFeatureFamilies: [
       "congestion",
       "demand",

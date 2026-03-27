@@ -17,6 +17,7 @@ fi
 
 SCHEMA_SQL="${ROOT_DIR}/scripts/sql/county-scores-schema.sql"
 ADJACENCY_SCHEMA_SQL="${ROOT_DIR}/scripts/sql/county-adjacency-schema.sql"
+RUN_REPRODUCIBILITY_SCHEMA_SQL="${ROOT_DIR}/scripts/sql/run-reproducibility-schema.sql"
 if [[ ! -f "${SCHEMA_SQL}" ]]; then
   echo "error: schema SQL not found: ${SCHEMA_SQL}" >&2
   exit 1
@@ -27,7 +28,13 @@ if [[ ! -f "${ADJACENCY_SCHEMA_SQL}" ]]; then
   exit 1
 fi
 
+if [[ ! -f "${RUN_REPRODUCIBILITY_SCHEMA_SQL}" ]]; then
+  echo "error: run reproducibility schema SQL not found: ${RUN_REPRODUCIBILITY_SCHEMA_SQL}" >&2
+  exit 1
+fi
+
 psql "${DB_URL}" -v ON_ERROR_STOP=1 -f "${SCHEMA_SQL}"
 psql "${DB_URL}" -v ON_ERROR_STOP=1 -f "${ADJACENCY_SCHEMA_SQL}"
+psql "${DB_URL}" -v ON_ERROR_STOP=1 -f "${RUN_REPRODUCIBILITY_SCHEMA_SQL}"
 
 echo "[county-scores] schema initialized"

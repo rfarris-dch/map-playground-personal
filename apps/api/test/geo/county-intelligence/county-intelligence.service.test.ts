@@ -9,6 +9,10 @@ const getCountyScoresStatusSnapshotMock = mock<() => Promise<unknown>>();
 const listCountyScoresCoverageFieldsMock = mock<() => Promise<readonly unknown[]>>();
 const listCountyScoresCoverageByOperatorMock = mock<() => Promise<readonly unknown[]>>();
 const listCountyScoresResolutionBySourceMock = mock<() => Promise<readonly unknown[]>>();
+const getCountyCatchmentConfidenceTraceMock = mock<() => Promise<unknown>>();
+const getCountyConfidenceTraceMock = mock<() => Promise<unknown>>();
+const listCountyCatchmentDebugMock =
+  mock<(countyIds: readonly string[]) => Promise<readonly unknown[]>>();
 const listCountyOperatorZoneDebugMock =
   mock<(countyIds: readonly string[]) => Promise<readonly unknown[]>>();
 const listCountyQueueResolutionDebugMock =
@@ -19,7 +23,10 @@ const listCountyCongestionDebugMock =
   mock<(countyIds: readonly string[]) => Promise<readonly unknown[]>>();
 
 mock.module("@/geo/county-intelligence/county-intelligence.repo", () => ({
+  getCountyCatchmentConfidenceTrace: getCountyCatchmentConfidenceTraceMock,
+  getCountyConfidenceTrace: getCountyConfidenceTraceMock,
   getCountyScoresStatusSnapshot: getCountyScoresStatusSnapshotMock,
+  listCountyCatchmentDebug: listCountyCatchmentDebugMock,
   listCountyCongestionDebug: listCountyCongestionDebugMock,
   listCountyOperatorZoneDebug: listCountyOperatorZoneDebugMock,
   listCountyQueuePoiReferenceDebug: listCountyQueuePoiReferenceDebugMock,
@@ -34,7 +41,7 @@ mock.module("@/geo/county-intelligence/county-intelligence.mapper", () => ({
   mapCountyScoreRow: mapCountyScoreRowMock,
 }));
 
-const { queryCountyScores, queryCountyScoresStatus } = await import(
+const { queryCountyScores, queryCountyScoresDebug, queryCountyScoresStatus } = await import(
   "../../../src/geo/county-intelligence/county-intelligence.service.ts?county-service-test"
 );
 
@@ -50,6 +57,7 @@ function createPublishedStatusRow() {
     methodology_id: "county-market-pressure-v1",
     data_version: "2026-03-06",
     input_data_version: "dc_pipeline=2026-03-07",
+    registry_version: "registry-v1-20260326T160000Z",
     formula_version: "county-market-pressure-v1",
     row_count: 3221,
     source_county_count: 3221,
@@ -60,6 +68,15 @@ function createPublishedStatusRow() {
     medium_confidence_count: 0,
     low_confidence_count: 3221,
     fresh_county_count: 3221,
+    freshness_fresh_count: 3221,
+    freshness_aging_count: 0,
+    freshness_stale_count: 0,
+    freshness_critical_count: 0,
+    freshness_unknown_count: 0,
+    suppression_none_count: 0,
+    suppression_downgraded_count: 3221,
+    suppression_review_required_count: 0,
+    suppression_suppressed_count: 0,
     available_feature_families: [
       "demand",
       "history",
@@ -82,6 +99,13 @@ function createDeferredCountyRow(
     stateAbbrev,
     rankStatus: "deferred",
     attractivenessTier: "deferred",
+    confidence: {
+      evidenceConfidence: "high",
+      methodConfidence: "unknown",
+      coverageConfidence: "medium",
+      freshnessState: "aging",
+      suppressionState: "downgraded",
+    },
     confidenceBadge: "low",
     marketPressureIndex: null,
     demandPressureScore: countyFips === "06085" ? 82.4 : 70.1,
@@ -216,9 +240,18 @@ function createDeferredCountyRow(
 
 describe("queryCountyScores", () => {
   beforeEach(() => {
+    getCountyCatchmentConfidenceTraceMock.mockReset();
+    getCountyConfidenceTraceMock.mockReset();
     getCountyScoresStatusSnapshotMock.mockReset();
+    listCountyCatchmentDebugMock.mockReset();
+    listCountyCongestionDebugMock.mockReset();
+    listCountyOperatorZoneDebugMock.mockReset();
+    listCountyQueuePoiReferenceDebugMock.mockReset();
+    listCountyQueueResolutionDebugMock.mockReset();
     listCountyScoresMock.mockReset();
     mapCountyScoreRowMock.mockReset();
+    getCountyCatchmentConfidenceTraceMock.mockResolvedValue(null);
+    getCountyConfidenceTraceMock.mockResolvedValue(null);
     getCountyScoresStatusSnapshotMock.mockResolvedValue(createPublishedStatusRow());
   });
 
@@ -263,6 +296,43 @@ describe("queryCountyScores", () => {
     expect(result.value.missingCountyIds).toEqual(["01001"]);
     expect(result.value.deferredCountyIds).toEqual(["06085", "48113"]);
     expect(result.value.blockedCountyIds).toEqual([]);
+  });
+
+  it("hides suppressed county outputs from the primary API response", async () => {
+    listCountyScoresMock.mockResolvedValue([
+      {
+        county_fips: "06085",
+        publication_run_id: "county-market-pressure-20260307T000000Z",
+        has_county_reference: true,
+        has_county_score: true,
+      },
+      {
+        county_fips: "48113",
+        publication_run_id: "county-market-pressure-20260307T000000Z",
+        has_county_reference: true,
+        has_county_score: true,
+      },
+    ]);
+    mapCountyScoreRowMock
+      .mockReturnValueOnce({
+        ...createDeferredCountyRow("06085", "Santa Clara", "CA"),
+        confidence: {
+          ...createDeferredCountyRow("06085", "Santa Clara", "CA").confidence,
+          suppressionState: "suppressed",
+        },
+      })
+      .mockReturnValueOnce(createDeferredCountyRow("48113", "Dallas", "TX"));
+
+    const result = await queryCountyScores({
+      countyIds: ["06085", "48113"],
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      throw new Error("Expected successful county score query");
+    }
+
+    expect(result.value.rows.map((row) => row.countyFips)).toEqual(["48113"]);
   });
 
   it("returns query_failed when the repository rejects", async () => {
@@ -362,6 +432,116 @@ describe("queryCountyScores", () => {
     }
 
     expect(result.value.reason).toBe("source_unavailable");
+  });
+
+  it("returns county debug diagnostics with a populated confidence trace", async () => {
+    listCountyScoresMock.mockResolvedValue([
+      {
+        county_fips: "06085",
+        publication_run_id: "county-market-pressure-20260307T000000Z",
+        has_county_reference: true,
+        has_county_score: true,
+      },
+    ]);
+    mapCountyScoreRowMock.mockReturnValue(createDeferredCountyRow("06085", "Santa Clara", "CA"));
+    listCountyOperatorZoneDebugMock.mockResolvedValue([]);
+    listCountyQueueResolutionDebugMock.mockResolvedValue([]);
+    listCountyQueuePoiReferenceDebugMock.mockResolvedValue([]);
+    listCountyCongestionDebugMock.mockResolvedValue([]);
+    listCountyCatchmentDebugMock.mockResolvedValue([
+      {
+        county_fips: "06085",
+        calibration_version: "county-catchment-spillover-v1",
+        adjacency_source_id: "census-county-adjacency-2025",
+        adjacency_source_version_id: "census-county-adjacency-2025-2025",
+        neighbor_count: 6,
+        shared_edge_neighbor_count: 4,
+        point_touch_neighbor_count: 2,
+        point_touch_reference_family: "competition-intensity",
+        total_weight_mass: 4.1,
+        point_touch_weight_share: 0.024_39,
+      },
+    ]);
+    getCountyConfidenceTraceMock.mockResolvedValue({
+      registry_version: "registry-v1-20260326T223000Z",
+      downstream_object_type: "score",
+      downstream_object_id: "county_market_pressure_primary",
+      minimum_constitutive_confidence_cap: "high",
+      minimum_truth_mode_cap: "full",
+      worst_required_freshness_state: "aging",
+      baseline_suppression_state: "downgraded",
+      dependencies_json: [
+        {
+          sourceId: "eia-861",
+          sourceName: "EIA 861",
+          downstreamObjectType: "score",
+          downstreamObjectId: "county_market_pressure_primary",
+          roleInDownstream: "primary",
+          requiredness: "required",
+          precisionTier: "A",
+          accessStatus: "accessible",
+          stalenessState: "aging",
+          effectiveFreshnessState: "aging",
+          truthModeCap: "full",
+          confidenceCap: "high",
+          completenessObserved: 1,
+          sourceAgeDays: 12,
+          warnTriggered: true,
+          degradeTriggered: false,
+          suppressTriggered: false,
+          missingTriggered: false,
+        },
+      ],
+    });
+    getCountyCatchmentConfidenceTraceMock.mockResolvedValue({
+      registry_version: "registry-v1-20260326T223000Z",
+      downstream_object_type: "score",
+      downstream_object_id: "county_market_pressure_catchment",
+      minimum_constitutive_confidence_cap: "high",
+      minimum_truth_mode_cap: "full",
+      worst_required_freshness_state: "aging",
+      baseline_suppression_state: "downgraded",
+      dependencies_json: [
+        {
+          sourceId: "census-county-adjacency-2025",
+          sourceName: "Census County Adjacency 2025",
+          downstreamObjectType: "score",
+          downstreamObjectId: "county_market_pressure_catchment",
+          roleInDownstream: "primary",
+          requiredness: "required",
+          precisionTier: "A",
+          accessStatus: "accessible",
+          stalenessState: "aging",
+          effectiveFreshnessState: "aging",
+          truthModeCap: "full",
+          confidenceCap: "high",
+          completenessObserved: 1,
+          sourceAgeDays: 10,
+          warnTriggered: true,
+          degradeTriggered: false,
+          suppressTriggered: false,
+          missingTriggered: false,
+        },
+      ],
+    });
+
+    const result = await queryCountyScoresDebug({
+      countyIds: ["06085"],
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      throw new Error("Expected successful county score debug query");
+    }
+
+    expect(result.value.counties[0]?.confidenceTrace?.registryVersion).toBe(
+      "registry-v1-20260326T223000Z"
+    );
+    expect(result.value.counties[0]?.catchment?.adjacencySourceId).toBe(
+      "census-county-adjacency-2025"
+    );
+    expect(result.value.counties[0]?.confidenceTrace?.truthMode).toBe("full");
+    expect(result.value.counties[0]?.confidenceTrace?.dependencies[0]?.warnTriggered).toBe(true);
   });
 
   it("returns county score dataset status when publication metadata exists", async () => {

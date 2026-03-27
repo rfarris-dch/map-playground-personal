@@ -4,6 +4,9 @@ BEGIN;
 -- by scripts/sql/refresh-county-geometry-prep.sql before this rollup runs.
 TRUNCATE TABLE analytics.county_market_pressure_current;
 
+CREATE TEMP TABLE replay_context ON COMMIT DROP AS
+SELECT NULLIF(:'dc_pipeline_replay_run_id', '')::text AS replay_run_id;
+
 CREATE TEMP TABLE current_dc_pipeline_source ON COMMIT DROP AS
 SELECT
   facility.facility_id AS project_id,
@@ -19,7 +22,7 @@ SELECT
   COALESCE(facility.planned_power_mw, 0)::numeric(12, 2) AS planned_power_mw,
   COALESCE(facility.under_construction_power_mw, 0)::numeric(12, 2) AS under_construction_power_mw,
   COALESCE(facility.available_power_mw, 0)::numeric(12, 2) AS available_power_mw,
-  COALESCE(facility.freshness_ts, now()) AS source_pull_ts,
+  COALESCE(facility.freshness_ts, :'run_recorded_at'::timestamptz) AS source_pull_ts,
   COALESCE(facility.source_dataset_date, :'data_version'::date) AS source_as_of_date
 FROM serve.facility_site AS facility
 UNION ALL
@@ -37,9 +40,54 @@ SELECT
   COALESCE(hyperscale.planned_power_mw, 0)::numeric(12, 2) AS planned_power_mw,
   COALESCE(hyperscale.under_construction_power_mw, 0)::numeric(12, 2) AS under_construction_power_mw,
   NULL::numeric(12, 2) AS available_power_mw,
-  COALESCE(hyperscale.freshness_ts, now()) AS source_pull_ts,
+  COALESCE(hyperscale.freshness_ts, :'run_recorded_at'::timestamptz) AS source_pull_ts,
   COALESCE(hyperscale.source_dataset_date, :'data_version'::date) AS source_as_of_date
 FROM serve.hyperscale_site AS hyperscale;
+
+DELETE FROM current_dc_pipeline_source
+WHERE EXISTS (
+  SELECT 1
+  FROM replay_context
+  WHERE replay_context.replay_run_id IS NOT NULL
+);
+
+INSERT INTO current_dc_pipeline_source (
+  project_id,
+  source_system,
+  project_type,
+  provider_id,
+  provider_label,
+  project_name,
+  county_geoid,
+  state_abbrev,
+  commissioned_semantic,
+  commissioned_power_mw,
+  planned_power_mw,
+  under_construction_power_mw,
+  available_power_mw,
+  source_pull_ts,
+  source_as_of_date
+)
+SELECT
+  snapshot.project_id,
+  snapshot.source_system,
+  snapshot.project_type,
+  snapshot.provider_id,
+  snapshot.provider_label,
+  snapshot.project_name,
+  snapshot.county_geoid,
+  snapshot.state_abbrev,
+  snapshot.commissioned_semantic,
+  snapshot.commissioned_power_mw,
+  snapshot.planned_power_mw,
+  snapshot.under_construction_power_mw,
+  snapshot.available_power_mw,
+  snapshot.source_pull_ts,
+  snapshot.source_as_of_date
+FROM analytics.fact_dc_pipeline_snapshot AS snapshot
+JOIN replay_context
+  ON replay_context.replay_run_id = snapshot.publication_run_id
+WHERE replay_context.replay_run_id IS NOT NULL;
 
 INSERT INTO analytics.fact_dc_pipeline_project (
   project_id,
@@ -64,10 +112,10 @@ SELECT
   source.project_name,
   source.county_geoid,
   source.state_abbrev,
-  now(),
+  :'run_recorded_at'::timestamptz,
   source.source_as_of_date,
   source.source_pull_ts,
-  :'formula_version'::text
+  :'model_version'::text
 FROM current_dc_pipeline_source AS source
 ON CONFLICT (project_id) DO UPDATE
 SET
@@ -120,7 +168,7 @@ SELECT
   source.source_pull_ts,
   source.source_as_of_date,
   :'data_version'::date,
-  :'formula_version'::text
+  :'model_version'::text
 FROM current_dc_pipeline_source AS source
 ON CONFLICT (publication_run_id, project_id) DO UPDATE
 SET
@@ -776,6 +824,26 @@ source_availability AS (
     ) AS infrastructure_available,
     true AS narratives_available
 ),
+county_confidence_registry AS (
+  SELECT
+    confidence_trace.registry_version,
+    confidence_trace.minimum_constitutive_confidence_cap,
+    confidence_trace.minimum_truth_mode_cap,
+    confidence_trace.worst_required_freshness_state,
+    confidence_trace.required_source_count,
+    confidence_trace.unavailable_required_source_count,
+    confidence_trace.suppressible_missing_required_count,
+    confidence_trace.critical_required_source_count,
+    confidence_trace.stale_required_source_count,
+    confidence_trace.aging_required_source_count,
+    confidence_trace.baseline_suppression_state
+  FROM analytics.resolve_downstream_confidence_trace(
+    :'registry_version'::text,
+    :'run_recorded_at'::date
+  ) AS confidence_trace
+  WHERE confidence_trace.downstream_object_type = 'score'
+    AND confidence_trace.downstream_object_id = 'county_market_pressure_primary'
+),
 county_rollup AS (
   SELECT
     county.county_geoid,
@@ -1107,7 +1175,7 @@ county_rollup AS (
       COALESCE(utility_context.source_pull_ts, '-infinity'::timestamptz),
       COALESCE(transmission.source_pull_ts, '-infinity'::timestamptz),
       COALESCE(congestion.source_pull_ts, '-infinity'::timestamptz),
-      now()
+      :'run_recorded_at'::timestamptz
     ) AS last_updated_at,
     GREATEST(
       COALESCE((SELECT data_version FROM runtime) - demand.latest_source_as_of_date, 0),
@@ -1288,7 +1356,7 @@ final_rows AS (
         THEN 'low'
       WHEN score.congestion_proxy_score IS NOT NULL OR score.heatmap_signal_flag IS NOT NULL THEN 'high'
       ELSE 'medium'
-    END AS confidence_badge,
+    END AS legacy_confidence_badge,
     CASE
       WHEN score.moratorium_status = 'active' THEN 100::numeric
       WHEN NOT score.demand_available
@@ -1351,7 +1419,6 @@ final_rows AS (
           CASE WHEN NOT score.demand_available THEN 'MISSING_DEMAND_BASELINE' END,
           CASE WHEN NOT score.supply_timeline_available THEN 'MISSING_QUEUE_BASELINE' END,
           CASE WHEN NOT score.policy_available THEN 'MISSING_POLICY_BASELINE' END,
-          CASE WHEN score.freshness_score < 60 THEN 'STALE_SOURCE' END,
           CASE WHEN score.is_seam_county AND NOT score.market_seams_available THEN 'LOW_CONFIDENCE_MAPPING' END
         ],
         NULL::text
@@ -1433,6 +1500,183 @@ final_rows AS (
     score.source_provenance_json
   FROM scored AS score
 ),
+confidence_base AS (
+  SELECT
+    final_rows.*,
+    county_registry.minimum_constitutive_confidence_cap,
+    county_registry.minimum_truth_mode_cap,
+    county_registry.baseline_suppression_state,
+    COALESCE(county_registry.unavailable_required_source_count, 0) AS unavailable_required_source_count,
+    CASE
+      WHEN COALESCE(county_registry.unavailable_required_source_count, 0) > 0 THEN 'critical'
+      WHEN COALESCE(county_registry.worst_required_freshness_state, 'unknown') <> 'unknown'
+        THEN county_registry.worst_required_freshness_state
+      WHEN COALESCE(final_rows.freshness_score, 0) >= 85 THEN 'fresh'
+      WHEN COALESCE(final_rows.freshness_score, 0) >= 70 THEN 'aging'
+      WHEN COALESCE(final_rows.freshness_score, 0) >= 50 THEN 'stale'
+      ELSE 'critical'
+    END AS freshness_state
+  FROM final_rows
+  LEFT JOIN county_confidence_registry AS county_registry
+    ON TRUE
+),
+confidence_inputs AS (
+  SELECT
+    confidence_base.*,
+    CASE
+      WHEN confidence_base.unavailable_required_source_count > 0 THEN 25::numeric
+      WHEN confidence_base.freshness_state = 'fresh' THEN 100::numeric
+      WHEN confidence_base.freshness_state = 'aging' THEN 75::numeric
+      WHEN confidence_base.freshness_state = 'stale' THEN 55::numeric
+      WHEN confidence_base.freshness_state = 'critical' THEN 25::numeric
+      ELSE confidence_base.freshness_score
+    END AS compatibility_freshness_score
+  FROM confidence_base
+),
+confidence_rows AS (
+  SELECT
+    confidence_inputs.county_geoid,
+    confidence_inputs.county_name,
+    confidence_inputs.state_abbrev,
+    confidence_inputs.rank_status,
+    confidence_inputs.attractiveness_tier,
+    CASE
+      WHEN confidence_inputs.demand_pressure_score IS NOT NULL
+        AND COALESCE(confidence_inputs.minimum_constitutive_confidence_cap, 'unknown') <> 'unknown'
+        THEN confidence_inputs.minimum_constitutive_confidence_cap
+      WHEN confidence_inputs.demand_pressure_score IS NULL THEN 'low'
+      ELSE 'unknown'
+    END AS evidence_confidence,
+    CASE
+      WHEN confidence_inputs.is_seam_county
+        AND 'LOW_CONFIDENCE_MAPPING' = ANY(
+          ARRAY(
+            SELECT jsonb_array_elements_text(confidence_inputs.deferred_reason_codes_json)
+          )
+        )
+        THEN 'low'
+      WHEN confidence_inputs.operator_zone_confidence = 'low'
+        OR confidence_inputs.policy_mapping_confidence = 'low'
+        THEN 'low'
+      WHEN confidence_inputs.operator_zone_confidence = 'medium'
+        OR confidence_inputs.policy_mapping_confidence = 'medium'
+        THEN 'medium'
+      WHEN confidence_inputs.operator_zone_confidence = 'high'
+        OR confidence_inputs.policy_mapping_confidence = 'high'
+        THEN 'high'
+      WHEN COALESCE(confidence_inputs.minimum_constitutive_confidence_cap, 'unknown') = 'unknown'
+        THEN 'unknown'
+      ELSE 'medium'
+    END AS method_confidence,
+    CASE
+      WHEN confidence_inputs.demand_pressure_score IS NULL THEN 'low'
+      WHEN confidence_inputs.is_seam_county
+        AND 'LOW_CONFIDENCE_MAPPING' = ANY(
+          ARRAY(
+            SELECT jsonb_array_elements_text(confidence_inputs.deferred_reason_codes_json)
+          )
+        )
+        THEN 'low'
+      ELSE 'high'
+    END AS coverage_confidence,
+    confidence_inputs.freshness_state,
+    CASE
+      WHEN COALESCE(confidence_inputs.baseline_suppression_state, 'none') = 'review_required'
+        THEN 'review_required'
+      WHEN COALESCE(confidence_inputs.baseline_suppression_state, 'none') = 'downgraded'
+        THEN 'downgraded'
+      WHEN confidence_inputs.rank_status = 'deferred'
+        OR confidence_inputs.is_seam_county
+        THEN 'downgraded'
+      ELSE 'none'
+    END AS suppression_state,
+    CASE
+      WHEN confidence_inputs.unavailable_required_source_count > 0 THEN 'low'
+      WHEN confidence_inputs.freshness_state = 'critical' THEN 'low'
+      WHEN confidence_inputs.rank_status = 'deferred' THEN 'low'
+      WHEN confidence_inputs.freshness_state = 'stale' THEN 'medium'
+      ELSE confidence_inputs.legacy_confidence_badge
+    END AS confidence_badge,
+    confidence_inputs.market_pressure_index,
+    confidence_inputs.demand_pressure_score,
+    confidence_inputs.supply_timeline_score,
+    confidence_inputs.grid_friction_score,
+    confidence_inputs.policy_constraint_score,
+    confidence_inputs.compatibility_freshness_score AS freshness_score,
+    confidence_inputs.source_volatility,
+    confidence_inputs.last_updated_at,
+    confidence_inputs.narrative_summary,
+    CASE
+      WHEN confidence_inputs.freshness_state IN ('stale', 'critical')
+        AND NOT (confidence_inputs.deferred_reason_codes_json @> '["STALE_SOURCE"]'::jsonb)
+        THEN confidence_inputs.deferred_reason_codes_json || '["STALE_SOURCE"]'::jsonb
+      ELSE confidence_inputs.deferred_reason_codes_json
+    END AS deferred_reason_codes_json,
+    confidence_inputs.what_changed_30d_json,
+    confidence_inputs.what_changed_60d_json,
+    confidence_inputs.what_changed_90d_json,
+    confidence_inputs.pillar_value_states_json,
+    confidence_inputs.expected_mw_0_24m,
+    confidence_inputs.expected_mw_24_60m,
+    confidence_inputs.recent_commissioned_mw_24m,
+    confidence_inputs.demand_momentum_qoq,
+    confidence_inputs.provider_entry_count_12m,
+    confidence_inputs.expected_supply_mw_0_36m,
+    confidence_inputs.expected_supply_mw_36_60m,
+    confidence_inputs.signed_ia_mw,
+    confidence_inputs.queue_mw_active,
+    confidence_inputs.queue_project_count_active,
+    confidence_inputs.median_days_in_queue_active,
+    confidence_inputs.past_due_share,
+    confidence_inputs.market_withdrawal_prior,
+    confidence_inputs.congestion_proxy_score,
+    confidence_inputs.planned_upgrade_count,
+    confidence_inputs.heatmap_signal_flag,
+    confidence_inputs.policy_momentum_score,
+    confidence_inputs.moratorium_status,
+    confidence_inputs.public_sentiment_score,
+    confidence_inputs.policy_event_count,
+    confidence_inputs.county_tagged_event_share,
+    confidence_inputs.policy_mapping_confidence,
+    confidence_inputs.wholesale_operator,
+    confidence_inputs.market_structure,
+    confidence_inputs.balancing_authority,
+    confidence_inputs.load_zone,
+    confidence_inputs.weather_zone,
+    confidence_inputs.operator_zone_label,
+    confidence_inputs.operator_zone_type,
+    confidence_inputs.operator_zone_confidence,
+    confidence_inputs.operator_weather_zone,
+    confidence_inputs.meteo_zone,
+    confidence_inputs.retail_choice_status,
+    confidence_inputs.competitive_area_type,
+    confidence_inputs.transmission_miles_69kv_plus,
+    confidence_inputs.transmission_miles_138kv_plus,
+    confidence_inputs.transmission_miles_230kv_plus,
+    confidence_inputs.transmission_miles_345kv_plus,
+    confidence_inputs.transmission_miles_500kv_plus,
+    confidence_inputs.transmission_miles_765kv_plus,
+    confidence_inputs.gas_pipeline_presence_flag,
+    confidence_inputs.gas_pipeline_mileage_county,
+    confidence_inputs.fiber_presence_flag,
+    confidence_inputs.primary_market_id,
+    confidence_inputs.primary_tdu_or_utility,
+    confidence_inputs.utility_context_json,
+    confidence_inputs.is_border_county,
+    confidence_inputs.is_seam_county,
+    confidence_inputs.queue_storage_mw,
+    confidence_inputs.queue_solar_mw,
+    confidence_inputs.queue_wind_mw,
+    confidence_inputs.queue_avg_age_days,
+    confidence_inputs.queue_withdrawal_rate,
+    confidence_inputs.recent_online_mw,
+    confidence_inputs.avg_rt_congestion_component,
+    confidence_inputs.p95_shadow_price,
+    confidence_inputs.negative_price_hour_share,
+    confidence_inputs.top_constraints_json,
+    confidence_inputs.source_provenance_json
+  FROM confidence_inputs
+),
 top_drivers AS (
   SELECT
     row.county_geoid,
@@ -1440,7 +1684,7 @@ top_drivers AS (
       jsonb_agg(driver.driver_json ORDER BY driver.ordinal) FILTER (WHERE driver.driver_json IS NOT NULL),
       '[]'::jsonb
     ) AS top_drivers_json
-  FROM final_rows AS row
+  FROM confidence_rows AS row
   CROSS JOIN LATERAL (
     VALUES
       (
@@ -1535,6 +1779,11 @@ SELECT
   row.state_abbrev,
   row.rank_status,
   row.attractiveness_tier,
+  row.evidence_confidence,
+  row.method_confidence,
+  row.coverage_confidence,
+  row.freshness_state,
+  row.suppression_state,
   row.confidence_badge,
   row.market_pressure_index,
   row.demand_pressure_score,
@@ -1610,7 +1859,7 @@ SELECT
   row.negative_price_hour_share,
   row.top_constraints_json,
   row.source_provenance_json
-FROM final_rows AS row
+FROM confidence_rows AS row
 LEFT JOIN top_drivers AS driver
   ON driver.county_geoid = row.county_geoid;
 
@@ -1621,6 +1870,11 @@ INSERT INTO analytics.fact_market_analysis_score_snapshot (
   state_abbrev,
   rank_status,
   attractiveness_tier,
+  evidence_confidence,
+  method_confidence,
+  coverage_confidence,
+  freshness_state,
+  suppression_state,
   confidence_badge,
   market_pressure_index,
   demand_pressure_score,
@@ -1860,6 +2114,11 @@ SELECT
   stage.state_abbrev,
   stage.rank_status,
   stage.attractiveness_tier,
+  stage.evidence_confidence,
+  stage.method_confidence,
+  stage.coverage_confidence,
+  stage.freshness_state,
+  stage.suppression_state,
   stage.confidence_badge,
   stage.market_pressure_index,
   stage.demand_pressure_score,
@@ -1937,7 +2196,7 @@ SELECT
   stage.source_provenance_json,
   :'formula_version'::text,
   input_versions.input_data_version,
-  :'formula_version'::text
+  :'model_version'::text
 FROM county_market_pressure_stage AS stage
 CROSS JOIN input_versions;
 
@@ -1974,6 +2233,11 @@ INSERT INTO analytics.county_market_pressure_current (
   publication_run_id,
   rank_status,
   attractiveness_tier,
+  evidence_confidence,
+  method_confidence,
+  coverage_confidence,
+  freshness_state,
+  suppression_state,
   confidence_badge,
   market_pressure_index,
   demand_pressure_score,
@@ -2060,6 +2324,11 @@ SELECT
   snapshot.publication_run_id,
   snapshot.rank_status,
   snapshot.attractiveness_tier,
+  snapshot.evidence_confidence,
+  snapshot.method_confidence,
+  snapshot.coverage_confidence,
+  snapshot.freshness_state,
+  snapshot.suppression_state,
   snapshot.confidence_badge,
   snapshot.market_pressure_index,
   snapshot.demand_pressure_score,
@@ -2149,6 +2418,7 @@ INSERT INTO analytics.fact_publication (
   formula_version,
   data_version,
   input_data_version,
+  registry_version,
   source_versions_json,
   available_feature_families,
   missing_feature_families,
@@ -2161,6 +2431,15 @@ INSERT INTO analytics.fact_publication (
   medium_confidence_count,
   low_confidence_count,
   fresh_county_count,
+  freshness_fresh_count,
+  freshness_aging_count,
+  freshness_stale_count,
+  freshness_critical_count,
+  freshness_unknown_count,
+  suppression_none_count,
+  suppression_downgraded_count,
+  suppression_review_required_count,
+  suppression_suppressed_count,
   published_at,
   as_of_date,
   notes
@@ -2329,17 +2608,30 @@ counts AS (
     COUNT(*) FILTER (WHERE confidence_badge = 'high')::integer AS high_confidence_count,
     COUNT(*) FILTER (WHERE confidence_badge = 'medium')::integer AS medium_confidence_count,
     COUNT(*) FILTER (WHERE confidence_badge = 'low')::integer AS low_confidence_count,
-    COUNT(*) FILTER (WHERE freshness_score >= 70)::integer AS fresh_county_count
+    COUNT(*) FILTER (WHERE freshness_state = 'fresh')::integer AS fresh_county_count,
+    COUNT(*) FILTER (WHERE freshness_state = 'fresh')::integer AS freshness_fresh_count,
+    COUNT(*) FILTER (WHERE freshness_state = 'aging')::integer AS freshness_aging_count,
+    COUNT(*) FILTER (WHERE freshness_state = 'stale')::integer AS freshness_stale_count,
+    COUNT(*) FILTER (WHERE freshness_state = 'critical')::integer AS freshness_critical_count,
+    COUNT(*) FILTER (WHERE freshness_state = 'unknown')::integer AS freshness_unknown_count,
+    COUNT(*) FILTER (WHERE suppression_state = 'none')::integer AS suppression_none_count,
+    COUNT(*) FILTER (WHERE suppression_state = 'downgraded')::integer
+      AS suppression_downgraded_count,
+    COUNT(*) FILTER (WHERE suppression_state = 'review_required')::integer
+      AS suppression_review_required_count,
+    COUNT(*) FILTER (WHERE suppression_state = 'suppressed')::integer
+      AS suppression_suppressed_count
   FROM county_market_pressure_stage
 )
 SELECT
   :'run_id'::text,
   'published',
-  :'formula_version'::text,
+  :'model_version'::text,
   :'methodology_id'::text,
   :'formula_version'::text,
   :'data_version'::text,
   snapshot.input_data_version,
+  :'registry_version'::text,
   publication_versions.source_versions_json,
   feature_families.available_feature_families,
   ARRAY(
@@ -2374,7 +2666,16 @@ SELECT
   counts.medium_confidence_count,
   counts.low_confidence_count,
   counts.fresh_county_count,
-  now(),
+  counts.freshness_fresh_count,
+  counts.freshness_aging_count,
+  counts.freshness_stale_count,
+  counts.freshness_critical_count,
+  counts.freshness_unknown_count,
+  counts.suppression_none_count,
+  counts.suppression_downgraded_count,
+  counts.suppression_review_required_count,
+  counts.suppression_suppressed_count,
+  :'run_recorded_at'::timestamptz,
   :'data_version'::date,
   jsonb_build_object(
     'summary',
@@ -2397,6 +2698,7 @@ SET
   formula_version = EXCLUDED.formula_version,
   data_version = EXCLUDED.data_version,
   input_data_version = EXCLUDED.input_data_version,
+  registry_version = EXCLUDED.registry_version,
   source_versions_json = EXCLUDED.source_versions_json,
   available_feature_families = EXCLUDED.available_feature_families,
   missing_feature_families = EXCLUDED.missing_feature_families,
@@ -2409,6 +2711,15 @@ SET
   medium_confidence_count = EXCLUDED.medium_confidence_count,
   low_confidence_count = EXCLUDED.low_confidence_count,
   fresh_county_count = EXCLUDED.fresh_county_count,
+  freshness_fresh_count = EXCLUDED.freshness_fresh_count,
+  freshness_aging_count = EXCLUDED.freshness_aging_count,
+  freshness_stale_count = EXCLUDED.freshness_stale_count,
+  freshness_critical_count = EXCLUDED.freshness_critical_count,
+  freshness_unknown_count = EXCLUDED.freshness_unknown_count,
+  suppression_none_count = EXCLUDED.suppression_none_count,
+  suppression_downgraded_count = EXCLUDED.suppression_downgraded_count,
+  suppression_review_required_count = EXCLUDED.suppression_review_required_count,
+  suppression_suppressed_count = EXCLUDED.suppression_suppressed_count,
   published_at = EXCLUDED.published_at,
   as_of_date = EXCLUDED.as_of_date,
   notes = EXCLUDED.notes;

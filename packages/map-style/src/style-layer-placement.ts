@@ -19,17 +19,20 @@ function createFacilityPlacementAnchorLayerIds(): readonly string[] {
     leasedLayers.fillLayerId,
     leasedLayers.lineLayerId,
     colocationLayers.heatmapLayerId,
-    colocationLayers.clusterLayerId,
     colocationLayers.iconFallbackLayerId,
     colocationLayers.pointLayerId,
+    colocationLayers.clusterLayerId,
+    colocationLayers.clusterCountLayerId,
     hyperscaleLayers.heatmapLayerId,
-    hyperscaleLayers.clusterLayerId,
     hyperscaleLayers.iconFallbackLayerId,
     hyperscaleLayers.pointLayerId,
+    hyperscaleLayers.clusterLayerId,
+    hyperscaleLayers.clusterCountLayerId,
     enterpriseLayers.heatmapLayerId,
-    enterpriseLayers.clusterLayerId,
     enterpriseLayers.iconFallbackLayerId,
     enterpriseLayers.pointLayerId,
+    enterpriseLayers.clusterLayerId,
+    enterpriseLayers.clusterCountLayerId,
   ]);
 }
 

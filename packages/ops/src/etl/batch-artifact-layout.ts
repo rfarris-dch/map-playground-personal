@@ -111,6 +111,15 @@ const DATASET_LAKE_CONVENTIONS: Record<BatchArtifactDataset, DatasetLakeConventi
         relativeLayoutTemplate:
           "data_version=<date>/flood_band=<100|500|full>/source_state_unit=<unit>/part-*.parquet",
       },
+      {
+        artifactFamily: "tile-input-parity",
+        description:
+          "Flood tile-input parity QA artifacts comparing the file-native GeoPackage handoff against legacy PostGIS overlay tables.",
+        format: "parquet",
+        partitionKeys: [],
+        phase: "qa",
+        relativeLayoutTemplate: "qa/<assertions|profile>.parquet",
+      },
     ],
   },
   "environmental-hydro-basins": {

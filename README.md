@@ -6,7 +6,6 @@ Monorepo for the mapping stack used in this workspace.
 
 - `apps/web`: Vue 3 + Vite map application built on MapLibre.
 - `apps/api`: Hono API for facilities, parcels, boundaries, providers, markets, and sync status.
-- `apps/pipeline-monitor`: Vue dashboard for parcel pipeline monitoring.
 - `packages/http-contracts`: shared Zod schemas, API contracts, and route builders.
 - `packages/geo-kernel`: core geometry, facility, and domain types.
 - `packages/map-engine`: MapLibre adapter and shared map runtime interfaces.
@@ -23,7 +22,6 @@ bun install
 bun run dev
 bun run dev:web
 bun run dev:api
-bun run dev:pipeline-monitor
 bun run build
 bun run test
 bun run typecheck
@@ -44,7 +42,7 @@ bun x ultracite check
 
 ## Notes
 
-- The web app and pipeline monitor both use Vite.
+- The web app uses Vite.
 - The API and several packages use Bun-native scripts and test execution.
 - Parcel sync runs through the dedicated worker entrypoint in `apps/api/src/sync-worker.ts`.
 - Market source landing lives in `market_source.*`; canonical market modeling for the hybrid

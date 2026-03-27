@@ -1,5 +1,4 @@
 import type { DiagnosticEvent, DiagnosticSeverity, DiagnosticSourceMode } from "./index.types";
-
 export type { DiagnosticEvent, DiagnosticSeverity, DiagnosticSourceMode } from "./index.types";
 
 export const REQUEST_ID_MAX_LENGTH = 128;

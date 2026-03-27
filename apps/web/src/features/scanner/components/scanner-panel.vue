@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { ArrowRight, ChevronDown, Download, X } from "lucide-vue-next";
+  import { ArrowRight, ChevronDown, Download, Maximize2, Minus, X } from "lucide-vue-next";
   import { nextTick, ref, watch } from "vue";
   import Button from "@/components/ui/button/button.vue";
   import { useGsapStagger } from "@/composables/use-gsap-stagger";
@@ -17,6 +17,7 @@
 
   const {
     activeTab,
+    minimized,
     topCompaniesExpanded,
     analysisSummary,
     headerSubtitle,
@@ -28,11 +29,15 @@
     hyperDonut,
     coloTotalMw,
     hyperTotalMw,
+    topProvidersWithPipeline,
+    topUsersWithPipeline,
     colocationMetrics,
     hyperscaleMetrics,
+    readFacilityCode,
     selectFacility,
     tabClass,
     setActiveTab,
+    toggleMinimized,
   } = useScannerPanelModel(props as ScannerPanelProps, emit);
 
   const facilitiesListRef = ref<HTMLElement | null>(null);
@@ -68,16 +73,46 @@
 <template>
   <aside
     class="pointer-events-auto absolute bottom-4 right-3 z-20 flex w-[min(380px,calc(100vw-2rem))] max-h-[calc(100%-2rem)] flex-col overflow-hidden rounded-lg border border-border bg-card font-sans shadow-md"
-    aria-label="Scanner"
+    aria-label="Map Summary"
   >
-    <div class="flex flex-col gap-4 p-4">
+    <div v-if="minimized" class="flex items-center justify-between px-4 py-3">
+      <span class="text-sm font-semibold text-foreground/85">Map Select</span>
+      <div class="flex items-center gap-1">
+        <button
+          type="button"
+          aria-label="Maximize"
+          class="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded text-muted-foreground focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none hover:bg-muted hover:text-foreground/70"
+          @click="toggleMinimized()"
+        >
+          <Maximize2 class="size-3.5" />
+        </button>
+        <button
+          type="button"
+          aria-label="Close"
+          class="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded text-muted-foreground focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none hover:bg-muted hover:text-foreground/70"
+          @click="emit('close')"
+        >
+          <X class="size-3.5" />
+        </button>
+      </div>
+    </div>
+
+    <div v-else class="flex flex-col gap-4 p-4">
       <header>
         <div class="mb-2 flex items-start justify-between">
           <div class="flex items-baseline gap-2">
-            <span class="text-sm font-semibold text-foreground/85">Scanner</span>
+            <span class="text-sm font-semibold text-foreground/85">Map Summary</span>
             <span class="text-xs text-muted-foreground">{{ headerSubtitle }}</span>
           </div>
           <div class="flex items-center gap-1">
+            <button
+              type="button"
+              aria-label="Minimize"
+              class="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded text-muted-foreground focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none hover:bg-muted hover:text-foreground/70"
+              @click="toggleMinimized()"
+            >
+              <Minus class="size-3.5" />
+            </button>
             <button
               type="button"
               aria-label="Close"
@@ -237,7 +272,7 @@
             @click="topCompaniesExpanded = !topCompaniesExpanded"
           >
             <span class="text-xs font-semibold text-foreground/85">Top Companies</span>
-            <span class="text-xs text-muted-foreground">(Providers &amp; Users)</span>
+            <span class="text-xs text-muted-foreground">(By Total Capacity MW)</span>
             <ChevronDown
               class="size-3.5 text-muted-foreground transition-transform"
               :class="{ 'rotate-180': topCompaniesExpanded }"
@@ -246,16 +281,17 @@
 
           <div v-if="topCompaniesExpanded" class="mt-3 flex gap-6">
             <div class="flex-1">
-              <div class="mb-2 text-xs font-semibold text-muted-foreground">Top Providers</div>
+              <div class="mb-2 text-xs font-semibold text-colocation">Top Providers</div>
               <div class="flex flex-col gap-2">
                 <div
-                  v-for="p in analysisSummary.topColocationProviders.slice(0, 5)"
-                  :key="p.providerId"
+                  v-for="p in topProvidersWithPipeline"
+                  :key="p.providerName"
                   class="text-xs leading-[1.4]"
                 >
-                  <div class="font-medium text-foreground/85">{{ p.providerName }}</div>
-                  <div class="flex gap-3 text-xs text-muted-foreground">
-                    <span>Comm. {{ formatScannerPowerMw(p.commissionedPowerMw) }}</span>
+                  <div class="font-medium text-colocation">{{ p.providerName }}</div>
+                  <div class="flex flex-col gap-0.5 text-xs text-muted-foreground">
+                    <span>Comm./Own. {{ formatScannerPowerMw(p.commissionedPowerMw) }}</span>
+                    <span>Pipeline {{ formatScannerPowerMw(p.pipelinePowerMw) }}</span>
                     <span>Facilities: {{ p.count }}</span>
                   </div>
                 </div>
@@ -263,16 +299,17 @@
             </div>
 
             <div class="flex-1">
-              <div class="mb-2 text-xs font-semibold text-muted-foreground">Top Users</div>
+              <div class="mb-2 text-xs font-semibold text-hyperscale">Top Users</div>
               <div class="flex flex-col gap-2">
                 <div
-                  v-for="p in analysisSummary.topHyperscaleProviders.slice(0, 5)"
-                  :key="p.providerId"
+                  v-for="p in topUsersWithPipeline"
+                  :key="p.providerName"
                   class="text-xs leading-[1.4]"
                 >
-                  <div class="font-medium text-foreground/85">{{ p.providerName }}</div>
-                  <div class="flex gap-3 text-xs text-muted-foreground">
-                    <span>Comm. {{ formatScannerPowerMw(p.commissionedPowerMw) }}</span>
+                  <div class="font-medium text-hyperscale">{{ p.providerName }}</div>
+                  <div class="flex flex-col gap-0.5 text-xs text-muted-foreground">
+                    <span>Comm./Own. {{ formatScannerPowerMw(p.commissionedPowerMw) }}</span>
+                    <span>Pipeline {{ formatScannerPowerMw(p.pipelinePowerMw) }}</span>
                     <span>Facilities: {{ p.count }}</span>
                   </div>
                 </div>
@@ -348,20 +385,20 @@
         class="flex-1 overflow-auto"
       >
         <div
-          class="grid grid-cols-[1fr_70px_52px_40px_40px] gap-x-2 border-b border-border pb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap"
+          class="grid grid-cols-[auto_1fr_68px_52px_52px] gap-x-2 border-b border-border pb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap"
         >
-          <span>Name</span>
-          <span class="text-right">Company</span>
-          <span class="text-right">Comm</span>
+          <span>Code</span>
+          <span>Company</span>
+          <span class="text-right">Com./Own.</span>
           <span class="text-right">UC</span>
-          <span class="text-right">Plan</span>
+          <span class="text-right">Plan.</span>
         </div>
 
         <button
           v-for="facility in topFacilities"
           :key="facility.facilityId"
           type="button"
-          class="grid w-full grid-cols-[1fr_70px_52px_40px_40px] gap-x-2 border-b border-muted py-1.5 text-left text-xs leading-snug transition-colors hover:bg-background whitespace-nowrap"
+          class="grid w-full grid-cols-[auto_1fr_68px_52px_52px] gap-x-2 border-b border-muted py-1.5 text-left text-xs leading-snug transition-colors hover:bg-muted/50 whitespace-nowrap"
           @click="selectFacility(facility)"
         >
           <span class="min-w-0 flex items-center gap-1.5">
@@ -372,22 +409,22 @@
                 'bg-hyperscale': facility.perspective === 'hyperscale',
               }"
             />
-            <span class="truncate text-foreground/85">{{ facility.facilityName }}</span>
+            <span class="truncate text-foreground/85">{{ readFacilityCode(facility) ?? "" }}</span>
           </span>
           <span
-            class="truncate text-right text-muted-foreground"
+            class="truncate text-muted-foreground"
             :title="facility.providerName ?? undefined"
           >
-            {{ facility.providerName ?? "—" }}
+            {{ facility.providerName ?? "\u2014" }}
           </span>
           <span class="text-right text-muted-foreground">
-            {{ facility.commissionedPowerMw === null ? "—" : facility.commissionedPowerMw.toFixed(1) }}
+            {{ facility.commissionedPowerMw === null ? "\u2014" : facility.commissionedPowerMw.toFixed(1) }}
           </span>
           <span class="text-right text-muted-foreground">
-            {{ facility.underConstructionPowerMw === null ? "—" : facility.underConstructionPowerMw.toFixed(1) }}
+            {{ facility.underConstructionPowerMw === null ? "\u2014" : facility.underConstructionPowerMw.toFixed(1) }}
           </span>
           <span class="text-right text-muted-foreground">
-            {{ facility.plannedPowerMw === null ? "—" : facility.plannedPowerMw.toFixed(1) }}
+            {{ facility.plannedPowerMw === null ? "\u2014" : facility.plannedPowerMw.toFixed(1) }}
           </span>
         </button>
       </section>
@@ -396,7 +433,7 @@
         <Button
           variant="glass-active"
           size="sm"
-          class="flex-1 gap-1.5"
+          class="flex-1 gap-1.5 rounded-md bg-[#2563eb] text-white hover:bg-[#2563eb]/90"
           :disabled="dashboardDisabled"
           @click="emit('open-dashboard')"
         >
@@ -406,7 +443,7 @@
         <Button
           variant="glass"
           size="sm"
-          class="flex-1 gap-1.5"
+          class="flex-1 gap-1.5 rounded-md bg-[#2563eb] text-white hover:bg-[#2563eb]/90"
           :disabled="exportDisabled"
           @click="emit('export')"
         >

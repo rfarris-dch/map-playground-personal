@@ -1,0 +1,183 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Dedicated EC2 worker for national flood tile-input packaging and PMTiles candidate builds.
+
+Parameters:
+  InstanceType:
+    Type: String
+    Default: i4i.2xlarge
+    AllowedValues:
+      - i4i.2xlarge
+      - i4i.4xlarge
+      - c7i.4xlarge
+      - r7i.4xlarge
+  AmiId:
+    Type: AWS::EC2::Image::Id
+    Default: ami-0b0b78dcacbab728f
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Default: dch-playground-map-app
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Default: vpc-00c21b0c13702a004
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Default: subnet-0385bd68b18eb96fe
+  ArtifactBucketName:
+    Type: String
+    Default: dch-playground-artifacts-067665647218
+  TileBucketName:
+    Type: String
+    Default: dch-playground-tiles
+  GitBranch:
+    Type: String
+    Default: main
+
+Resources:
+  FloodBuildSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: SSH + outbound SG for the playground flood build worker
+      GroupName: dch-playground-flood-build-worker
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 24.243.60.164/32
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      VpcId: !Ref VpcId
+
+  FloodBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: dch-playground-flood-build-worker-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        - PolicyName: flood-build-worker-s3
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource:
+                  - !Sub arn:aws:s3:::${ArtifactBucketName}
+                  - !Sub arn:aws:s3:::${TileBucketName}
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                Resource:
+                  - !Sub arn:aws:s3:::${ArtifactBucketName}/*
+                  - !Sub arn:aws:s3:::${TileBucketName}/*
+
+  FloodBuildInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: dch-playground-flood-build-worker-profile
+      Roles:
+        - !Ref FloodBuildRole
+
+  FloodBuildInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      IamInstanceProfile: !Ref FloodBuildInstanceProfile
+      ImageId: !Ref AmiId
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      SecurityGroupIds:
+        - !Ref FloodBuildSecurityGroup
+      SubnetId: !Ref SubnetId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            DeleteOnTermination: true
+            Encrypted: true
+            VolumeSize: 200
+            VolumeType: gp3
+      Tags:
+        - Key: Name
+          Value: dch-playground-flood-build-worker
+        - Key: Project
+          Value: map-playground
+        - Key: Role
+          Value: flood-build-worker
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -euxo pipefail
+          dnf update -y
+          dnf install -y \
+            awscli \
+            curl \
+            git \
+            gdal310 \
+            gdal310-libs \
+            gdal310-python-tools \
+            java-21-amazon-corretto-headless \
+            jq \
+            python3 \
+            python3-gdal310 \
+            rsync \
+            sqlite \
+            tar \
+            unzip \
+            util-linux \
+            which
+
+          curl -fsSL https://bun.sh/install | bash -s -- bun-v1.3.6
+          install -d -m 0755 /opt/map-flood-build
+          install -d -m 0755 /mnt/flood-build
+          chown -R ec2-user:ec2-user /opt/map-flood-build /mnt/flood-build
+
+          cat >/etc/profile.d/map-flood-build.sh <<'EOF'
+          export PATH="/home/ec2-user/.duckdb/cli/latest:/home/ec2-user/.bun/bin:/root/.bun/bin:${PATH}"
+          export MAP_FLOOD_BUILD_ROOT="/opt/map-flood-build"
+          export MAP_FLOOD_SCRATCH_ROOT="/mnt/flood-build"
+          export MAP_FLOOD_BUILD_ARTIFACT_BUCKET="${ArtifactBucketName}"
+          export MAP_FLOOD_BUILD_TILE_BUCKET="${TileBucketName}"
+          export MAP_FLOOD_BUILD_BRANCH="${GitBranch}"
+          export OGR_SQLITE_CACHE=1024
+          export OGR_SQLITE_JOURNAL=MEMORY
+          export OGR_SQLITE_PRAGMA=locking_mode=EXCLUSIVE,temp_store=MEMORY
+          export OGR_SQLITE_SYNCHRONOUS=OFF
+          export SQLITE_USE_OGR_VFS=YES
+          EOF
+
+          cat >/usr/local/bin/map-flood-worker-bootstrap <<'EOF'
+          #!/bin/bash
+          set -euxo pipefail
+          source /etc/profile.d/map-flood-build.sh
+          if [[ ! -d "${MAP_FLOOD_BUILD_ROOT}/repo" ]]; then
+            echo "[worker-bootstrap] ERROR: expected repo to be synced to ${MAP_FLOOD_BUILD_ROOT}/repo" >&2
+            exit 1
+          fi
+          cd "${MAP_FLOOD_BUILD_ROOT}/repo"
+          export PATH="/home/ec2-user/.duckdb/cli/latest:/home/ec2-user/.bun/bin:/root/.bun/bin:${PATH}"
+          if ! command -v duckdb >/dev/null 2>&1; then
+            curl -fsSL https://install.duckdb.org | sh
+          fi
+          bun install
+          bash ./scripts/install-planetiler.sh
+          EOF
+          chmod +x /usr/local/bin/map-flood-worker-bootstrap
+
+Outputs:
+  InstanceId:
+    Value: !Ref FloodBuildInstance
+  PrivateIp:
+    Value: !GetAtt FloodBuildInstance.PrivateIp
+  SecurityGroupId:
+    Value: !Ref FloodBuildSecurityGroup
+  InstanceProfileName:
+    Value: !Ref FloodBuildInstanceProfile

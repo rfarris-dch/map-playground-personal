@@ -1,6 +1,13 @@
+import {
+  CATCHMENT_DEBUG_REFERENCE_FAMILY,
+  CATCHMENT_SPILLOVER_CONFIG_VERSION,
+  getCatchmentDebugPointTouchWeight,
+} from "@map-migration/core-runtime/catchment-calibration";
 import { getCountyMetricsQuerySpec } from "@map-migration/geo-sql";
 import { runQuery } from "@/db/postgres";
 import type {
+  CountyCatchmentDebugRow,
+  CountyConfidenceTraceRow,
   CountyCongestionDebugRow,
   CountyOperatorZoneDebugRow,
   CountyQueuePoiReferenceDebugRow,
@@ -13,6 +20,8 @@ import type {
 } from "./county-intelligence.repo.types";
 
 export type {
+  CountyCatchmentDebugRow,
+  CountyConfidenceTraceRow,
   CountyCongestionDebugRow,
   CountyOperatorZoneDebugRow,
   CountyQueuePoiReferenceDebugRow,
@@ -25,6 +34,7 @@ export type {
 } from "./county-intelligence.repo.types";
 
 const TRAILING_SEMICOLON_PATTERN = /;\s*$/;
+const COUNTY_CATCHMENT_POINT_TOUCH_WEIGHT = getCatchmentDebugPointTouchWeight();
 
 function requestedCountyValues(count: number): string {
   return Array.from({ length: count }, (_value, index) => `($${String(index + 1)})`).join(", ");
@@ -50,6 +60,11 @@ SELECT
   county_metrics.publication_run_id,
   county_metrics.rank_status,
   county_metrics.attractiveness_tier,
+  county_metrics.evidence_confidence,
+  county_metrics.method_confidence,
+  county_metrics.coverage_confidence,
+  county_metrics.freshness_state,
+  county_metrics.suppression_state,
   county_metrics.confidence_badge,
   county_metrics.market_pressure_index,
   county_metrics.demand_pressure_score,
@@ -587,11 +602,136 @@ export function listCountyCongestionDebug(
   ]);
 }
 
+function countyCatchmentDebugSql(countyIdCount: number): string {
+  return `
+WITH requested_counties (county_fips) AS (
+  VALUES ${requestedCountyValues(countyIdCount)}
+),
+adjacency_source AS (
+  SELECT
+    active_sources.source_id AS adjacency_source_id,
+    active_sources.current_source_version_id AS adjacency_source_version_id
+  FROM registry.active_sources AS active_sources
+  WHERE active_sources.source_id = 'census-county-adjacency-2025'
+  ORDER BY active_sources.registry_version DESC
+  LIMIT 1
+),
+catchment_stats AS (
+  SELECT
+    adjacency.county_geoid AS county_fips,
+    COUNT(*)::integer AS neighbor_count,
+    COUNT(*) FILTER (WHERE NOT adjacency.point_touch)::integer AS shared_edge_neighbor_count,
+    COUNT(*) FILTER (WHERE adjacency.point_touch)::integer AS point_touch_neighbor_count,
+    SUM(
+      CASE
+        WHEN adjacency.point_touch THEN ${String(COUNTY_CATCHMENT_POINT_TOUCH_WEIGHT)}::numeric
+        ELSE 1::numeric
+      END
+    ) AS total_weight_mass,
+    CASE
+      WHEN SUM(
+        CASE
+          WHEN adjacency.point_touch THEN ${String(COUNTY_CATCHMENT_POINT_TOUCH_WEIGHT)}::numeric
+          ELSE 1::numeric
+        END
+      ) > 0
+        THEN SUM(
+          CASE
+            WHEN adjacency.point_touch THEN ${String(COUNTY_CATCHMENT_POINT_TOUCH_WEIGHT)}::numeric
+            ELSE 0::numeric
+          END
+        ) / SUM(
+          CASE
+            WHEN adjacency.point_touch THEN ${String(COUNTY_CATCHMENT_POINT_TOUCH_WEIGHT)}::numeric
+            ELSE 1::numeric
+          END
+        )
+      ELSE NULL::numeric
+    END AS point_touch_weight_share
+  FROM analytics.bridge_county_adjacency AS adjacency
+  INNER JOIN requested_counties
+    ON requested_counties.county_fips = adjacency.county_geoid
+  GROUP BY adjacency.county_geoid
+)
+SELECT
+  requested_counties.county_fips,
+  '${CATCHMENT_SPILLOVER_CONFIG_VERSION}'::text AS calibration_version,
+  COALESCE(adjacency_source.adjacency_source_id, 'census-county-adjacency-2025')
+    AS adjacency_source_id,
+  adjacency_source.adjacency_source_version_id,
+  '${CATCHMENT_DEBUG_REFERENCE_FAMILY}'::text AS point_touch_reference_family,
+  COALESCE(catchment_stats.neighbor_count, 0)::integer AS neighbor_count,
+  COALESCE(catchment_stats.shared_edge_neighbor_count, 0)::integer AS shared_edge_neighbor_count,
+  COALESCE(catchment_stats.point_touch_neighbor_count, 0)::integer AS point_touch_neighbor_count,
+  catchment_stats.total_weight_mass,
+  catchment_stats.point_touch_weight_share
+FROM requested_counties
+LEFT JOIN catchment_stats
+  ON catchment_stats.county_fips = requested_counties.county_fips
+LEFT JOIN adjacency_source
+  ON TRUE
+ORDER BY requested_counties.county_fips;`;
+}
+
+export function listCountyCatchmentDebug(
+  countyIds: readonly string[]
+): Promise<CountyCatchmentDebugRow[]> {
+  return runQuery<CountyCatchmentDebugRow>(countyCatchmentDebugSql(countyIds.length), [
+    ...countyIds,
+  ]);
+}
+
+const COUNTY_CONFIDENCE_TRACE_SQL = `
+SELECT
+  confidence_trace.registry_version,
+  confidence_trace.downstream_object_type,
+  confidence_trace.downstream_object_id,
+  confidence_trace.minimum_constitutive_confidence_cap,
+  confidence_trace.minimum_truth_mode_cap,
+  confidence_trace.worst_required_freshness_state,
+  confidence_trace.baseline_suppression_state,
+  confidence_trace.dependencies_json
+FROM analytics.v_downstream_confidence_trace_current AS confidence_trace
+WHERE confidence_trace.downstream_object_type = 'score'
+  AND confidence_trace.downstream_object_id = 'county_market_pressure_primary'
+LIMIT 1;`;
+
+export async function getCountyConfidenceTrace(): Promise<CountyConfidenceTraceRow | null> {
+  const rows = await runQuery<CountyConfidenceTraceRow>(COUNTY_CONFIDENCE_TRACE_SQL, []);
+  return rows[0] ?? null;
+}
+
+const COUNTY_CATCHMENT_TRACE_SQL = `
+SELECT
+  confidence_trace.registry_version,
+  confidence_trace.downstream_object_type,
+  confidence_trace.downstream_object_id,
+  confidence_trace.minimum_constitutive_confidence_cap,
+  confidence_trace.minimum_truth_mode_cap,
+  confidence_trace.worst_required_freshness_state,
+  confidence_trace.baseline_suppression_state,
+  confidence_trace.dependencies_json
+FROM analytics.v_downstream_confidence_trace_current AS confidence_trace
+WHERE confidence_trace.downstream_object_type = 'score'
+  AND confidence_trace.downstream_object_id = 'county_market_pressure_catchment'
+LIMIT 1;`;
+
+export async function getCountyCatchmentConfidenceTrace(): Promise<CountyConfidenceTraceRow | null> {
+  const rows = await runQuery<CountyConfidenceTraceRow>(COUNTY_CATCHMENT_TRACE_SQL, []);
+  return rows[0] ?? null;
+}
+
 const COUNTY_SCORES_STATUS_SQL = `
 WITH live_counts AS (
   SELECT
     (SELECT COUNT(*)::integer FROM analytics.county_market_pressure_current) AS row_count,
     (SELECT COUNT(*)::integer FROM analytics.dim_county) AS source_county_count
+),
+latest_reproducibility AS (
+  SELECT *
+  FROM analytics_meta.v_run_reproducibility_summary
+  WHERE surface_scope = 'county'
+    AND run_kind = 'publication'
 ),
 latest_publication AS (
   SELECT
@@ -600,6 +740,7 @@ latest_publication AS (
     published_at,
     data_version,
     input_data_version,
+    registry_version,
     formula_version,
     methodology_id,
     available_feature_families,
@@ -612,7 +753,16 @@ latest_publication AS (
     high_confidence_count,
     medium_confidence_count,
     low_confidence_count,
-    fresh_county_count
+    fresh_county_count,
+    freshness_fresh_count,
+    freshness_aging_count,
+    freshness_stale_count,
+    freshness_critical_count,
+    freshness_unknown_count,
+    suppression_none_count,
+    suppression_downgraded_count,
+    suppression_review_required_count,
+    suppression_suppressed_count
   FROM analytics.fact_publication
   WHERE status = 'published'
   ORDER BY published_at DESC, publication_run_id DESC
@@ -624,6 +774,7 @@ SELECT
   publication.published_at,
   publication.data_version,
   publication.input_data_version,
+  publication.registry_version,
   publication.formula_version,
   publication.methodology_id,
   to_json(COALESCE(publication.available_feature_families, '{}'::text[]))
@@ -638,14 +789,33 @@ SELECT
   publication.high_confidence_count,
   publication.medium_confidence_count,
   publication.low_confidence_count,
-  publication.fresh_county_count
+  publication.fresh_county_count,
+  publication.freshness_fresh_count,
+  publication.freshness_aging_count,
+  publication.freshness_stale_count,
+  publication.freshness_critical_count,
+  publication.freshness_unknown_count,
+  publication.suppression_none_count,
+  publication.suppression_downgraded_count,
+  publication.suppression_review_required_count,
+  publication.suppression_suppressed_count,
+  (reproducibility.run_id IS NOT NULL) AS reproducibility_available,
+  reproducibility.replayability_tier,
+  reproducibility.config_hash,
+  reproducibility.envelope_hash,
+  reproducibility.source_version_count,
+  reproducibility.ingestion_snapshot_count,
+  reproducibility.replayed_from_run_id
 FROM latest_publication AS publication
 CROSS JOIN live_counts
+LEFT JOIN latest_reproducibility AS reproducibility
+  ON reproducibility.run_id = publication.publication_run_id
 UNION ALL
 SELECT
   NULL::text,
   NULL::text,
   NULL::timestamptz,
+  NULL::text,
   NULL::text,
   NULL::text,
   NULL::text,
@@ -660,7 +830,23 @@ SELECT
   0::integer,
   0::integer,
   0::integer,
-  0::integer
+  0::integer,
+  0::integer,
+  0::integer,
+  0::integer,
+  0::integer,
+  0::integer,
+  0::integer,
+  0::integer,
+  0::integer,
+  0::integer,
+  FALSE,
+  NULL::text,
+  NULL::text,
+  NULL::text,
+  0::integer,
+  0::integer,
+  NULL::text
 FROM live_counts
 WHERE NOT EXISTS (SELECT 1 FROM latest_publication);`;
 

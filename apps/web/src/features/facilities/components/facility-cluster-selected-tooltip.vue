@@ -29,7 +29,7 @@
   );
 
   const titleLine = computed(() => {
-    const count = props.state.topProviders.length;
+    const count = props.state.providerCount;
     if (props.state.perspective === "hyperscale") {
       return `${count} Hyperscale Users`;
     }

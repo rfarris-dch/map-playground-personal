@@ -10,6 +10,7 @@ import { GeometrySchema } from "@map-migration/geo-kernel/geometry";
 import { z } from "zod";
 import { ApiErrorResponseSchema } from "./api-error.js";
 import { ResponseMetaSchema } from "./api-response-meta.js";
+import { ConfidenceVectorSchema } from "./confidence-http.js";
 import { ParcelFeatureSchema } from "./parcels-http.js";
 
 export const ParcelScoreConstraintSchema = z.object({
@@ -30,6 +31,7 @@ export const ParcelScoreComponentSchema = z.object({
 export const ScoredParcelSchema = z.object({
   parcel: ParcelFeatureSchema,
   scoreTotal: z.number(),
+  confidence: ConfidenceVectorSchema,
   confidenceScore: z.number(),
   constraints: z.array(ParcelScoreConstraintSchema),
   components: z.array(ParcelScoreComponentSchema),

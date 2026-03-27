@@ -1,10 +1,11 @@
 schema_name: Environmental Flood
-schema_description: Flood hazard overlay tiles built from persisted PostGIS exports.
+schema_description: Flood hazard overlay tiles built from canonical GeoParquet-derived GeoPackage inputs.
 
 sources:
   flood_overlay:
-    type: geojson
+    type: geopackage
     local_path: '${ args.input_path }'
+    projection: 'EPSG:3857'
 
 layers:
   - id: flood-hazard

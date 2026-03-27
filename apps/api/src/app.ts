@@ -32,6 +32,7 @@ import { registerMarketBoundariesRoute } from "@/geo/market-boundaries/market-bo
 import { registerMarketsRoute } from "@/geo/markets/markets.route";
 import { registerParcelsRoute } from "@/geo/parcels/parcels.route";
 import { registerProvidersRoute } from "@/geo/providers/providers.route";
+import { registerRunReproducibilityRoute } from "@/geo/run-reproducibility/run-reproducibility.route";
 import {
   jsonError,
   jsonOk,
@@ -45,7 +46,6 @@ import {
   resolveRouteTimeoutMs,
 } from "@/http/route-timeout-profile.service";
 import { registerTilesRoute } from "@/http/tiles.route";
-import { registerPipelineStatusRoute } from "@/pipeline/pipeline-status.route";
 import type { ApiAppOptions, CreateApiAppOptions } from "./app.types";
 
 const DEFAULT_REQUEST_BODY_LIMIT_BYTES = parsePositiveIntFlag(
@@ -225,7 +225,6 @@ export function createApiApp(options: CreateApiAppOptions = {}): Hono {
   registerAuthRoute(app);
   registerAppPerformanceRoute(app);
   registerEffectMetricsRoute(app);
-  registerPipelineStatusRoute(app);
   registerFacilitiesRoute(app);
   registerAnalysisHistoryRoute(app);
   registerAnalysisSummaryRoute(app);
@@ -241,6 +240,7 @@ export function createApiApp(options: CreateApiAppOptions = {}): Hono {
   registerMarketBoundariesRoute(app);
   registerMarketsRoute(app);
   registerProvidersRoute(app);
+  registerRunReproducibilityRoute(app);
   registerTilesRoute(app);
 
   return app;

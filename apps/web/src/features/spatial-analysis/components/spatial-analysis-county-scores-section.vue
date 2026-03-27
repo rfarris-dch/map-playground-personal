@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { CountyScoresDebugCounty } from "@map-migration/http-contracts/county-intelligence-http";
+  import type { CountyScoresDebugCounty } from "@map-migration/http-contracts/county-intelligence-debug-http";
   import type {
     SpatialAnalysisCountyScores,
     SpatialAnalysisCountyScoresStatus,
@@ -17,8 +17,10 @@
     formatRankStatus,
     formatShare,
     formatSourceVolatility,
+    formatSuppressionState,
     formatTier,
     rankToneClass,
+    suppressionToneClass,
   } from "@/features/county-intelligence/county-intelligence-display.service";
   import { useCountyScoresDiagnostics } from "@/features/county-intelligence/use-county-intelligence-diagnostics";
   import CountyPowerContextPanel from "@/features/spatial-analysis/components/county-power-context-panel.vue";
@@ -42,11 +44,17 @@
   }
 
   const rows = computed(() => props.countyScores?.rows ?? []);
+  const suppressedRows = computed(() =>
+    rows.value.filter((row) => row.confidence.suppressionState === "suppressed")
+  );
+  const visibleRows = computed(() =>
+    rows.value.filter((row) => row.confidence.suppressionState !== "suppressed")
+  );
   const requestedCountyIds = computed(() => props.countyScores?.summary.requestedCountyIds ?? []);
   const missingCountyIds = computed(() => props.countyScores?.summary.missingCountyIds ?? []);
   const deferredCountyIds = computed(() => props.countyScores?.summary.deferredCountyIds ?? []);
   const blockedCountyIds = computed(() => props.countyScores?.summary.blockedCountyIds ?? []);
-  const hasRows = computed(() => rows.value.length > 0);
+  const hasRows = computed(() => visibleRows.value.length > 0);
   const hasMissingCountyIds = computed(() => missingCountyIds.value.length > 0);
   const hasCountySummary = computed(
     () =>
@@ -57,7 +65,7 @@
       blockedCountyIds.value.length > 0
   );
   const rankedCountyCount = computed(
-    () => rows.value.filter((row) => row.rankStatus === "ranked").length
+    () => visibleRows.value.filter((row) => row.rankStatus === "ranked").length
   );
   const diagnosticsEnabled = computed(
     () =>
@@ -115,6 +123,21 @@
 
   function sampleEntries<T>(entries: readonly T[], limit = 3): readonly T[] {
     return entries.slice(0, limit);
+  }
+
+  function sampleOperatorZones(row: CountyScoreRow) {
+    const debugCounty = debugCountyForRow(row);
+    return debugCounty === null ? [] : sampleEntries(debugCounty.operatorZones);
+  }
+
+  function sampleQueueResolutions(row: CountyScoreRow) {
+    const debugCounty = debugCountyForRow(row);
+    return debugCounty === null ? [] : sampleEntries(debugCounty.queueResolutions);
+  }
+
+  function sampleQueuePoiReferences(row: CountyScoreRow) {
+    const debugCounty = debugCountyForRow(row);
+    return debugCounty === null ? [] : sampleEntries(debugCounty.queuePoiReferences);
   }
 </script>
 
@@ -196,8 +219,17 @@
       </div>
 
       <div v-if="hasRows" class="space-y-6">
+        <p
+          v-if="suppressedRows.length > 0"
+          class="rounded-sm border border-border bg-background px-3 py-2 text-xs text-muted-foreground"
+        >
+          {{ suppressedRows.length }}
+          county outputs are hidden because their suppression state is
+          <span class="font-medium text-foreground/70">suppressed</span>.
+        </p>
+
         <div
-          v-for="row in rows"
+          v-for="row in visibleRows"
           :key="row.countyFips"
           class="space-y-3 border-t border-border/60 pt-4"
         >
@@ -220,6 +252,13 @@
               >
                 {{ row.confidenceBadge.toUpperCase() }}
                 confidence
+              </span>
+              <span
+                v-if="row.confidence.suppressionState !== 'none'"
+                class="rounded-sm border px-2.5 py-1 font-medium"
+                :class="suppressionToneClass(row.confidence.suppressionState)"
+              >
+                {{ formatSuppressionState(row.confidence.suppressionState) }}
               </span>
             </div>
           </div>
@@ -378,7 +417,7 @@
                   class="mt-1 mb-0 space-y-1 pl-4"
                 >
                   <li
-                    v-for="zone in sampleEntries(debugCountyForRow(row)?.operatorZones ?? [])"
+                    v-for="zone in sampleOperatorZones(row)"
                     :key="`${zone.wholesaleOperator}-${zone.operatorZoneLabel}-${zone.resolutionMethod}`"
                   >
                     {{ zone.operatorZoneLabel }}
@@ -398,7 +437,7 @@
                   class="mt-1 mb-0 space-y-1 pl-4"
                 >
                   <li
-                    v-for="resolution in sampleEntries(debugCountyForRow(row)?.queueResolutions ?? [])"
+                    v-for="resolution in sampleQueueResolutions(row)"
                     :key="`${resolution.sourceSystem}-${resolution.projectId}`"
                   >
                     {{ resolution.sourceSystem }}
@@ -418,7 +457,7 @@
                   class="mt-1 mb-0 space-y-1 pl-4"
                 >
                   <li
-                    v-for="reference in sampleEntries(debugCountyForRow(row)?.queuePoiReferences ?? [])"
+                    v-for="reference in sampleQueuePoiReferences(row)"
                     :key="`${reference.sourceSystem}-${reference.queuePoiLabel}`"
                   >
                     {{ reference.sourceSystem }}

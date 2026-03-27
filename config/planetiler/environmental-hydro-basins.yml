@@ -1,5 +1,5 @@
 schema_name: Environmental Hydro Basins
-schema_description: Hydro basin polygon, line, and label tiles built from persisted PostGIS exports.
+schema_description: Hydro basin polygon, line, and label tiles built from canonical GeoParquet-derived local inputs.
 
 sources:
   huc4_polygon:

@@ -7,6 +7,12 @@
 import { z } from "zod";
 import { parseCommaSeparated } from "./_query-parsing.js";
 import { ResponseMetaSchema } from "./api-response-meta.js";
+import {
+  ConfidenceVectorSchema,
+  FreshnessStateCountsSchema,
+  SuppressionStateCountsSchema,
+} from "./confidence-http.js";
+import { RunReplayabilityTierSchema } from "./run-reproducibility-http.js";
 
 export const CountyFipsSchema = z.string().regex(/^[0-9]{5}$/);
 
@@ -195,6 +201,7 @@ export const CountyScoreSchema = z.object({
   stateAbbrev: z.string().length(2).nullable(),
   rankStatus: CountyRankStatusSchema,
   attractivenessTier: CountyAttractivenessTierSchema,
+  confidence: ConfidenceVectorSchema,
   confidenceBadge: CountyConfidenceBadgeSchema,
   marketPressureIndex: z.number().finite().nullable(),
   demandPressureScore: z.number().finite().nullable(),
@@ -286,6 +293,7 @@ export const CountyScoresResponseSchema = z.object({
 export const CountyScoresStatusResponseSchema = z.object({
   datasetAvailable: z.boolean(),
   publicationRunId: z.string().min(1).nullable(),
+  registryVersion: z.string().min(1).nullable(),
   publishedAt: z.string().datetime().nullable(),
   methodologyId: z.string().min(1).nullable(),
   dataVersion: z.string().min(1).nullable(),
@@ -300,9 +308,18 @@ export const CountyScoresStatusResponseSchema = z.object({
   mediumConfidenceCount: z.number().int().nonnegative(),
   lowConfidenceCount: z.number().int().nonnegative(),
   freshCountyCount: z.number().int().nonnegative(),
+  freshnessStateCounts: FreshnessStateCountsSchema,
+  suppressionStateCounts: SuppressionStateCountsSchema,
   availableFeatureFamilies: z.array(z.string().min(1)),
   missingFeatureFamilies: z.array(z.string().min(1)),
   featureCoverage: CountyScoreFeatureCoverageSchema,
+  reproducibilityAvailable: z.boolean(),
+  replayabilityTier: RunReplayabilityTierSchema.nullable(),
+  configHash: z.string().min(1).nullable(),
+  envelopeHash: z.string().min(1).nullable(),
+  sourceVersionCount: z.number().int().nonnegative(),
+  ingestionSnapshotCount: z.number().int().nonnegative(),
+  replayedFromRunId: z.string().min(1).nullable(),
   meta: ResponseMetaSchema,
 });
 

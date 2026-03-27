@@ -167,6 +167,13 @@ function createDeferredCountyRow(): CountyScore {
     stateAbbrev: "CA",
     rankStatus: "deferred",
     attractivenessTier: "deferred",
+    confidence: {
+      evidenceConfidence: "high",
+      methodConfidence: "unknown",
+      coverageConfidence: "medium",
+      freshnessState: "aging",
+      suppressionState: "downgraded",
+    },
     confidenceBadge: "low",
     marketPressureIndex: null,
     demandPressureScore: 82.4,
@@ -419,6 +426,7 @@ describe("county scores route", () => {
       value: {
         datasetAvailable: true,
         publicationRunId: "county-market-pressure-20260307T000000Z",
+        registryVersion: "registry-v1-20260326T160000Z",
         publishedAt: "2026-03-07T00:00:00.000Z",
         methodologyId: "county-market-pressure-v1",
         dataVersion: "2026-03-07",
@@ -433,6 +441,19 @@ describe("county scores route", () => {
         mediumConfidenceCount: 0,
         lowConfidenceCount: 3221,
         freshCountyCount: 3221,
+        freshnessStateCounts: {
+          fresh: 3221,
+          aging: 0,
+          stale: 0,
+          critical: 0,
+          unknown: 0,
+        },
+        suppressionStateCounts: {
+          none: 0,
+          downgraded: 3221,
+          reviewRequired: 0,
+          suppressed: 0,
+        },
         availableFeatureFamilies: [
           "demand",
           "history",
@@ -448,6 +469,13 @@ describe("county scores route", () => {
           marketSeams: true,
           narratives: true,
         }),
+        reproducibilityAvailable: true,
+        replayabilityTier: "strict",
+        configHash: "config-hash",
+        envelopeHash: "envelope-hash",
+        sourceVersionCount: 12,
+        ingestionSnapshotCount: 3,
+        replayedFromRunId: null,
       },
     });
 
@@ -585,6 +613,7 @@ describe("county scores route", () => {
       value: {
         datasetAvailable: false,
         publicationRunId: null,
+        registryVersion: null,
         publishedAt: null,
         methodologyId: null,
         dataVersion: null,
@@ -599,9 +628,29 @@ describe("county scores route", () => {
         mediumConfidenceCount: 0,
         lowConfidenceCount: 0,
         freshCountyCount: 0,
+        freshnessStateCounts: {
+          fresh: 0,
+          aging: 0,
+          stale: 0,
+          critical: 0,
+          unknown: 0,
+        },
+        suppressionStateCounts: {
+          none: 0,
+          downgraded: 0,
+          reviewRequired: 0,
+          suppressed: 0,
+        },
         availableFeatureFamilies: [],
         missingFeatureFamilies: [],
         featureCoverage: createFeatureCoverage(),
+        reproducibilityAvailable: false,
+        replayabilityTier: null,
+        configHash: null,
+        envelopeHash: null,
+        sourceVersionCount: 0,
+        ingestionSnapshotCount: 0,
+        replayedFromRunId: null,
       },
     });
 

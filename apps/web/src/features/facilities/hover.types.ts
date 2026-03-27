@@ -43,6 +43,7 @@ export interface ClusterFacilityRow {
 
 export interface FacilityClusterHoverState extends FacilityClusterSummary {
   readonly facilities: readonly ClusterFacilityRow[];
+  readonly providerCount: number;
   readonly screenPoint: readonly [number, number];
   readonly topProviders: readonly ClusterProviderSummary[];
 }

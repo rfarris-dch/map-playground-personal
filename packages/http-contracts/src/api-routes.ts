@@ -17,7 +17,6 @@ import type { BoundaryPowerLevel } from "./boundaries-http.js";
 import type { CountyPowerStoryId, CountyPowerStoryWindow } from "./county-power-story-http.js";
 import type { MarketBoundaryLevel } from "./market-boundaries-http.js";
 import type { ParcelGeometryMode, ParcelProfile } from "./parcels-http.js";
-import { isPipelineDataset, type PipelineDataset } from "./pipeline-http.js";
 
 // ---------------------------------------------------------------------------
 // Re-exports from api-defaults.ts for backwards compatibility
@@ -76,6 +75,19 @@ export interface CountyPowerStoryRouteArgs {
   readonly window?: CountyPowerStoryWindow | undefined;
 }
 
+export interface RunReproducibilityRouteArgs {
+  readonly runId: string;
+  readonly runKind?: "analysis" | "publication" | "replay" | undefined;
+  readonly surfaceScope?: "corridor" | "county" | "parcel" | undefined;
+}
+
+export interface RunReproducibilityDiffRouteArgs {
+  readonly leftRunId: string;
+  readonly rightRunId: string;
+  readonly runKind?: "analysis" | "publication" | "replay" | undefined;
+  readonly surfaceScope?: "corridor" | "county" | "parcel" | undefined;
+}
+
 // ---------------------------------------------------------------------------
 // Route table
 // ---------------------------------------------------------------------------
@@ -113,8 +125,9 @@ export interface ApiRoutesTable {
   readonly markets: string;
   readonly marketsSelection: string;
   readonly parcels: string;
-  readonly pipelines: string;
   readonly providers: string;
+  readonly runReproducibility: string;
+  readonly runReproducibilityDiff: string;
   readonly usgsWaterTile: string;
 }
 
@@ -176,8 +189,9 @@ export const ApiRoutes = Object.freeze<ApiRoutesTable>({
   markets: "/api/geo/markets",
   marketsSelection: "/api/geo/markets/selection",
   providers: "/api/geo/providers",
+  runReproducibility: "/api/geo/run-reproducibility",
+  runReproducibilityDiff: "/api/geo/run-reproducibility/diff",
   parcels: "/api/geo/parcels",
-  pipelines: "/api/pipelines",
   usgsWaterTile: "/api/tiles/usgs-water",
 });
 
@@ -255,6 +269,23 @@ export function buildFacilitiesManifestRoute(): string {
 
 export function buildLaunchPolicyRoute(): string {
   return ApiRoutes.launchPolicy;
+}
+
+export function buildRunReproducibilityRoute(args: RunReproducibilityRouteArgs): string {
+  return appendQueryToRoute(ApiRoutes.runReproducibility, [
+    ["surfaceScope", args.surfaceScope ?? "county"],
+    ["runKind", args.runKind ?? "publication"],
+    ["runId", args.runId],
+  ]);
+}
+
+export function buildRunReproducibilityDiffRoute(args: RunReproducibilityDiffRouteArgs): string {
+  return appendQueryToRoute(ApiRoutes.runReproducibilityDiff, [
+    ["surfaceScope", args.surfaceScope ?? "county"],
+    ["runKind", args.runKind ?? "publication"],
+    ["leftRunId", args.leftRunId],
+    ["rightRunId", args.rightRunId],
+  ]);
 }
 
 export function buildAppPerformanceDebugRoute(): string {
@@ -468,14 +499,6 @@ export function buildFiberLocatorVectorTileRoute(
   y: number | string
 ): string {
   return `${ApiRoutes.fiberLocatorVectorTile}/${encodeURIComponent(layerName)}/${String(z)}/${String(x)}/${String(y)}.pbf`;
-}
-
-export function buildPipelineStatusRoute(dataset: PipelineDataset): string {
-  if (!isPipelineDataset(dataset)) {
-    throw new Error(`Unsupported pipeline dataset "${dataset}"`);
-  }
-
-  return `${ApiRoutes.pipelines}/${dataset}/status`;
 }
 
 export function buildEffectMetricsRoute(): string {

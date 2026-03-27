@@ -314,6 +314,9 @@ function readStringNumberRecord(value, path) {
   const record = readRequiredRecord(value, path);
   const entries = Object.entries(record).reduce((result, entry) => {
     const [key, rawValue] = entry;
+    if (rawValue === null || typeof rawValue === "undefined") {
+      return result;
+    }
     result[key] = readFiniteNumber(rawValue, `${path}.${key}`);
     return result;
   }, {});
@@ -1211,21 +1214,23 @@ async function upsertQueueProjects(sql, records) {
     const statement = buildBatchInsertStatement(tempTableName, columns, batch);
     await sql.unsafe(statement.sql, statement.params).execute();
   }
-  await sql
-    .unsafe(
-      `
-      DELETE FROM analytics.fact_gen_queue_project AS target
-      WHERE target.source_system = ANY($1::text[])
-        AND NOT EXISTS (
-          SELECT 1
-          FROM ${tempTableName} AS staged
-          WHERE staged.project_id = target.project_id
-            AND staged.source_system = target.source_system
-        )
-    `,
-      [sourceSystems]
-    )
-    .execute();
+  for (const sourceSystem of sourceSystems) {
+    await sql
+      .unsafe(
+        `
+        DELETE FROM analytics.fact_gen_queue_project AS target
+        WHERE target.source_system = $1::text
+          AND NOT EXISTS (
+            SELECT 1
+            FROM ${tempTableName} AS staged
+            WHERE staged.project_id = target.project_id
+              AND staged.source_system = target.source_system
+          )
+      `,
+        [sourceSystem]
+      )
+      .execute();
+  }
   await sql
     .unsafe(
       `

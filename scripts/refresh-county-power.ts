@@ -313,6 +313,7 @@ async function refreshStep(runId: string): Promise<StepState> {
       }
       return result;
     }, {}),
+    COUNTY_POWER_RUN_ID: runId,
     COUNTY_SCORES_DATA_VERSION: manifest.dataVersion,
     COUNTY_SCORES_RUN_ID: countyScoresRunId,
   };

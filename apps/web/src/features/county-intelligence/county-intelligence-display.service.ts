@@ -158,6 +158,12 @@ export function formatSourceVolatility(value: CountyScore["sourceVolatility"]): 
   return formatCodeLabel(value);
 }
 
+export function formatSuppressionState(
+  value: CountyScore["confidence"]["suppressionState"]
+): string {
+  return formatCodeLabel(value);
+}
+
 export function formatMarketStructure(
   value: CountyScore["powerMarketContext"]["marketStructure"]
 ): string {
@@ -198,4 +204,20 @@ export function rankToneClass(value: CountyScore["rankStatus"]): string {
   }
 
   return "border-amber-400/40 bg-amber-500/10 text-amber-950";
+}
+
+export function suppressionToneClass(value: CountyScore["confidence"]["suppressionState"]): string {
+  if (value === "suppressed") {
+    return "border-rose-400/40 bg-rose-500/10 text-rose-950";
+  }
+
+  if (value === "review_required") {
+    return "border-orange-400/40 bg-orange-500/10 text-orange-950";
+  }
+
+  if (value === "downgraded") {
+    return "border-amber-400/40 bg-amber-500/10 text-amber-950";
+  }
+
+  return "border-border/60 bg-background text-foreground/70";
 }

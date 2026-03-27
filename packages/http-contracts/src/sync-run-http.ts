@@ -1,9 +1,8 @@
 /**
  * Generic sync/pipeline run status schemas.
  *
- * Extracted from parcels-http so that pipeline-http can compose these
- * without reversing the dependency direction. Both parcels and pipeline
- * status responses extend SyncRunStatusSchema.
+ * Extracted from parcels-http so multiple sync surfaces can compose these
+ * without reversing the dependency direction.
  */
 import { z } from "zod";
 

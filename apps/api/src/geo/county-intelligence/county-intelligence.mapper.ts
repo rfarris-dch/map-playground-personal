@@ -1,3 +1,4 @@
+import { deriveCompatibilityConfidenceBadge } from "@map-migration/http-contracts/confidence-http";
 import type {
   CountyChange,
   CountyConstraintSummary,
@@ -246,6 +247,56 @@ function readConfidenceBadge(
   }
 
   return fallback;
+}
+
+function readConfidenceLevel(
+  value: string | null | undefined,
+  fallback: CountyScore["confidence"]["evidenceConfidence"]
+): CountyScore["confidence"]["evidenceConfidence"] {
+  const normalized = readNormalizedText(value);
+  if (
+    normalized === "high" ||
+    normalized === "medium" ||
+    normalized === "low" ||
+    normalized === "unknown"
+  ) {
+    return normalized;
+  }
+
+  return fallback;
+}
+
+function readFreshnessState(
+  value: string | null | undefined
+): CountyScore["confidence"]["freshnessState"] {
+  const normalized = readNormalizedText(value);
+  if (
+    normalized === "fresh" ||
+    normalized === "aging" ||
+    normalized === "stale" ||
+    normalized === "critical" ||
+    normalized === "unknown"
+  ) {
+    return normalized;
+  }
+
+  return "unknown";
+}
+
+function readSuppressionState(
+  value: string | null | undefined
+): CountyScore["confidence"]["suppressionState"] {
+  const normalized = readNormalizedText(value);
+  if (
+    normalized === "none" ||
+    normalized === "downgraded" ||
+    normalized === "review_required" ||
+    normalized === "suppressed"
+  ) {
+    return normalized;
+  }
+
+  return "none";
 }
 
 function readDriverImpact(value: string | null | undefined): CountyDriver["impact"] {
@@ -657,6 +708,16 @@ export function mapCountyScoreRow(row: CountyScoreRow): CountyScore {
   const topConstraints = mapConstraintSummaryArray(row.top_constraints_json);
   const utilityContext = mapUtilityContext(row.utility_context_json);
   const sourceProvenance = mapSourceProvenance(row.source_provenance_json);
+  const confidence = {
+    evidenceConfidence: readConfidenceLevel(row.evidence_confidence, "unknown"),
+    methodConfidence: readConfidenceLevel(row.method_confidence, "unknown"),
+    coverageConfidence: readConfidenceLevel(row.coverage_confidence, "unknown"),
+    freshnessState: readFreshnessState(row.freshness_state),
+    suppressionState: readSuppressionState(row.suppression_state),
+  };
+  const compatibilityBadge = hasCountyScore
+    ? readConfidenceBadge(row.confidence_badge, deriveCompatibilityConfidenceBadge(confidence))
+    : "low";
 
   return {
     countyFips: readCountyFips(row.county_fips),
@@ -666,7 +727,8 @@ export function mapCountyScoreRow(row: CountyScoreRow): CountyScore {
     attractivenessTier: hasCountyScore
       ? readAttractivenessTier(row.attractiveness_tier, "deferred")
       : "deferred",
-    confidenceBadge: hasCountyScore ? readConfidenceBadge(row.confidence_badge, "low") : "low",
+    confidence,
+    confidenceBadge: compatibilityBadge,
     marketPressureIndex: readNullableNumber(row.market_pressure_index),
     demandPressureScore: readNullableNumber(row.demand_pressure_score),
     supplyTimelineScore: readNullableNumber(row.supply_timeline_score),

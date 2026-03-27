@@ -173,7 +173,7 @@ function writeLatestPointer(snapshotRoot: string, runId: string, updatedAt: stri
   });
 }
 
-function buildDatasetDefinitions(
+export function buildDatasetDefinitions(
   projectRoot: string,
   env: NodeJS.ProcessEnv
 ): Record<PipelineRunnerDataset, PipelineRunnerDatasetDefinition> {
@@ -343,7 +343,7 @@ function buildDatasetDefinitions(
           ],
         },
         {
-          assetKey: "flood100_tilesource",
+          assetKey: "flood_tilesource",
           deps: ["flood_canonical_geoparquet"],
           phase: "building",
           commands: [
@@ -352,29 +352,14 @@ function buildDatasetDefinitions(
               args: [
                 join(projectRoot, "scripts", "refresh-environmental-flood-tilesources.sh"),
                 "{run_id}",
-                "100",
-              ],
-            },
-          ],
-        },
-        {
-          assetKey: "flood500_tilesource",
-          deps: ["flood_canonical_geoparquet"],
-          phase: "building",
-          commands: [
-            {
-              command: "bash",
-              args: [
-                join(projectRoot, "scripts", "refresh-environmental-flood-tilesources.sh"),
-                "{run_id}",
-                "500",
+                "all",
               ],
             },
           ],
         },
         {
           assetKey: "flood_pmtiles",
-          deps: ["flood100_tilesource", "flood500_tilesource"],
+          deps: ["flood_tilesource"],
           phase: "building",
           commands: [
             {
@@ -467,8 +452,24 @@ function buildDatasetDefinitions(
           ],
         },
         {
-          assetKey: "hydro_tilesource",
+          assetKey: "hydro_canonical_geoparquet",
           deps: ["canonical_huc_polygons"],
+          phase: "loading",
+          commands: [
+            {
+              command: "bun",
+              args: [
+                "run",
+                join(projectRoot, "scripts", "refresh-environmental-hydro-basins.ts"),
+                "--run-id={run_id}",
+                "--step=export-geoparquet",
+              ],
+            },
+          ],
+        },
+        {
+          assetKey: "hydro_tilesource",
+          deps: ["hydro_canonical_geoparquet"],
           phase: "building",
           commands: [
             {

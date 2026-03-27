@@ -8,6 +8,12 @@ import { z } from "zod";
 import { parseCommaSeparated } from "./_query-parsing.js";
 import { ResponseMetaSchema } from "./api-response-meta.js";
 import {
+  ConfidenceLevelSchema,
+  ConfidenceVectorSchema,
+  FreshnessStateSchema,
+  TruthModeSchema,
+} from "./confidence-http.js";
+import {
   CountyConfidenceBadgeSchema,
   CountyFipsSchema,
   CountyScoreSchema,
@@ -122,8 +128,56 @@ export const CountyCongestionSnapshotDebugSchema = z.object({
   sourceAsOfDate: z.string().date().nullable(),
 });
 
+export const CountyCatchmentDebugSchema = z.object({
+  countyFips: CountyFipsSchema,
+  adjacencySourceId: z.string().min(1),
+  adjacencySourceVersionId: z.string().min(1).nullable(),
+  calibrationVersion: z.string().min(1),
+  neighborCount: z.number().int().nonnegative(),
+  pointTouchReferenceFamily: z.string().min(1),
+  sharedEdgeNeighborCount: z.number().int().nonnegative(),
+  pointTouchNeighborCount: z.number().int().nonnegative(),
+  totalWeightMass: z.number().finite().nullable(),
+  pointTouchWeightShare: z.number().min(0).max(1).nullable(),
+  confidence: ConfidenceVectorSchema,
+});
+
+export const CountyConfidenceDependencyDebugSchema = z.object({
+  sourceId: z.string().min(1),
+  sourceName: z.string().min(1),
+  downstreamObjectType: z.string().min(1),
+  downstreamObjectId: z.string().min(1),
+  roleInDownstream: z.string().min(1),
+  requiredness: z.string().min(1),
+  precisionTier: z.enum(["A", "B", "C"]),
+  accessStatus: z.string().min(1).nullable(),
+  stalenessState: FreshnessStateSchema.nullable(),
+  effectiveFreshnessState: FreshnessStateSchema,
+  truthModeCap: TruthModeSchema,
+  confidenceCap: ConfidenceLevelSchema.nullable(),
+  completenessObserved: z.number().min(0).max(1).nullable(),
+  sourceAgeDays: z.number().int().nonnegative().nullable(),
+  warnTriggered: z.boolean(),
+  degradeTriggered: z.boolean(),
+  suppressTriggered: z.boolean(),
+  missingTriggered: z.boolean(),
+});
+
+export const CountyConfidenceTraceDebugSchema = z.object({
+  registryVersion: z.string().min(1).nullable(),
+  downstreamObjectType: z.string().min(1),
+  downstreamObjectId: z.string().min(1),
+  minimumConstitutiveConfidenceCap: ConfidenceLevelSchema,
+  worstRequiredFreshnessState: FreshnessStateSchema,
+  confidence: ConfidenceVectorSchema,
+  truthMode: TruthModeSchema,
+  dependencies: z.array(CountyConfidenceDependencyDebugSchema),
+});
+
 export const CountyScoresDebugCountySchema = z.object({
+  catchment: CountyCatchmentDebugSchema.nullable().optional(),
   congestionSnapshot: CountyCongestionSnapshotDebugSchema.nullable(),
+  confidenceTrace: CountyConfidenceTraceDebugSchema.nullable().optional(),
   countyFips: CountyFipsSchema,
   operatorZones: z.array(CountyOperatorZoneDebugSchema),
   queuePoiReferences: z.array(CountyQueuePoiReferenceDebugSchema),
@@ -148,5 +202,8 @@ export type CountyOperatorZoneDebug = z.infer<typeof CountyOperatorZoneDebugSche
 export type CountyQueueResolutionDebug = z.infer<typeof CountyQueueResolutionDebugSchema>;
 export type CountyQueuePoiReferenceDebug = z.infer<typeof CountyQueuePoiReferenceDebugSchema>;
 export type CountyCongestionSnapshotDebug = z.infer<typeof CountyCongestionSnapshotDebugSchema>;
+export type CountyCatchmentDebug = z.infer<typeof CountyCatchmentDebugSchema>;
+export type CountyConfidenceDependencyDebug = z.infer<typeof CountyConfidenceDependencyDebugSchema>;
+export type CountyConfidenceTraceDebug = z.infer<typeof CountyConfidenceTraceDebugSchema>;
 export type CountyScoresDebugCounty = z.infer<typeof CountyScoresDebugCountySchema>;
 export type CountyScoresDebugResponse = z.infer<typeof CountyScoresDebugResponseSchema>;

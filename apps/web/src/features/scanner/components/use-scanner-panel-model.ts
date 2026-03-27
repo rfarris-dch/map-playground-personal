@@ -1,6 +1,7 @@
 import { computed, shallowRef } from "vue";
 import type { SelectedFacilityRef } from "@/features/facilities/facilities.types";
 import { formatScannerPowerMw } from "@/features/scanner/scanner.service";
+import type { ScannerFacility } from "@/features/scanner/scanner.types";
 import type { SpatialAnalysisFacilityRecord } from "@/features/spatial-analysis/spatial-analysis-facilities.types";
 import type { SpatialAnalysisSummaryModel } from "@/features/spatial-analysis/spatial-analysis-summary.types";
 import { buildDonutChartArcSegments } from "@/lib/donut-chart.service";
@@ -19,6 +20,66 @@ type ScannerTab = "colocation" | "facilities" | "hyperscale" | "overview";
 interface MetricRow {
   readonly label: string;
   readonly value: string;
+}
+
+export interface ProviderWithPipeline {
+  readonly commissionedPowerMw: number;
+  readonly count: number;
+  readonly pipelinePowerMw: number;
+  readonly providerName: string;
+}
+
+function isScannerFacility(facility: SpatialAnalysisFacilityRecord): facility is ScannerFacility {
+  return "facilityCode" in facility;
+}
+
+function readFacilityCode(facility: SpatialAnalysisFacilityRecord): string | null {
+  return isScannerFacility(facility) ? facility.facilityCode : null;
+}
+
+function buildProvidersWithPipeline(
+  facilities: readonly SpatialAnalysisFacilityRecord[],
+  perspective: "colocation" | "hyperscale"
+): readonly ProviderWithPipeline[] {
+  const lookup = new Map<string, { commissionedPowerMw: number; count: number; pipelinePowerMw: number }>();
+
+  for (const facility of facilities) {
+    if (facility.perspective !== perspective) {
+      continue;
+    }
+
+    const key = facility.providerName ?? "Unknown";
+    const current = lookup.get(key) ?? { commissionedPowerMw: 0, count: 0, pipelinePowerMw: 0 };
+    const commissioned = typeof facility.commissionedPowerMw === "number" ? facility.commissionedPowerMw : 0;
+    const planned = typeof facility.plannedPowerMw === "number" ? facility.plannedPowerMw : 0;
+    const uc = typeof facility.underConstructionPowerMw === "number" ? facility.underConstructionPowerMw : 0;
+
+    lookup.set(key, {
+      commissionedPowerMw: current.commissionedPowerMw + commissioned,
+      count: current.count + 1,
+      pipelinePowerMw: current.pipelinePowerMw + planned + uc,
+    });
+  }
+
+  return [...lookup.entries()]
+    .map(([providerName, summary]) => ({
+      commissionedPowerMw: summary.commissionedPowerMw,
+      count: summary.count,
+      pipelinePowerMw: summary.pipelinePowerMw,
+      providerName,
+    }))
+    .sort((left, right) => {
+      const totalLeft = left.commissionedPowerMw + left.pipelinePowerMw;
+      const totalRight = right.commissionedPowerMw + right.pipelinePowerMw;
+      if (totalRight !== totalLeft) {
+        return totalRight - totalLeft;
+      }
+      if (right.count !== left.count) {
+        return right.count - left.count;
+      }
+      return left.providerName.localeCompare(right.providerName);
+    })
+    .slice(0, 3);
 }
 
 const COLO_SHADES = [
@@ -57,8 +118,13 @@ export function useScannerPanelModel(
   }
 ) {
   const activeTab = shallowRef<ScannerTab>("overview");
+  const minimized = shallowRef(false);
   const topCompaniesExpanded = shallowRef(false);
   const analysisSummary = computed(() => props.summary.summary);
+
+  function toggleMinimized(): void {
+    minimized.value = !minimized.value;
+  }
 
   const totalCount = computed(() => analysisSummary.value.totalCount);
   const marketCount = computed(() => analysisSummary.value.marketSelection?.matchCount ?? 0);
@@ -121,6 +187,14 @@ export function useScannerPanelModel(
     () =>
       analysisSummary.value.hyperscale.commissionedPowerMw +
       analysisSummary.value.hyperscale.pipelinePowerMw
+  );
+
+  const topProvidersWithPipeline = computed(() =>
+    buildProvidersWithPipeline(analysisSummary.value.facilities, "colocation")
+  );
+
+  const topUsersWithPipeline = computed(() =>
+    buildProvidersWithPipeline(analysisSummary.value.facilities, "hyperscale")
   );
 
   const colocationMetrics = computed<readonly MetricRow[]>(() => [
@@ -211,6 +285,7 @@ export function useScannerPanelModel(
 
   return {
     activeTab,
+    minimized,
     topCompaniesExpanded,
     analysisSummary,
     totalCount,
@@ -226,10 +301,14 @@ export function useScannerPanelModel(
     hyperDonut,
     coloTotalMw,
     hyperTotalMw,
+    topProvidersWithPipeline,
+    topUsersWithPipeline,
     colocationMetrics,
     hyperscaleMetrics,
+    readFacilityCode,
     selectFacility,
     tabClass,
     setActiveTab,
+    toggleMinimized,
   };
 }

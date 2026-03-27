@@ -47,6 +47,7 @@ export function getFacilitiesStyleLayerIds(
   layerId: FacilitiesCatalogLayerId
 ): FacilitiesStyleLayerIds {
   return {
+    clusterCountLayerId: `${layerId}.cluster-count`,
     heatmapLayerId: `${layerId}.heatmap`,
     clusterLayerId: `${layerId}.clusters`,
     iconFallbackLayerId: `${layerId}.icon-fallback`,
@@ -135,9 +136,10 @@ export function getCatalogStyleLayerIds(layerId: StaticCatalogLayerId): readonly
     const facilitiesLayers = getFacilitiesStyleLayerIds(layerId);
     return [
       facilitiesLayers.heatmapLayerId,
-      facilitiesLayers.clusterLayerId,
       facilitiesLayers.iconFallbackLayerId,
       facilitiesLayers.pointLayerId,
+      facilitiesLayers.clusterLayerId,
+      facilitiesLayers.clusterCountLayerId,
     ];
   }
 

@@ -1,6 +1,9 @@
 #!/usr/bin/env bun
 import { existsSync, lstatSync, readdirSync, readFileSync } from "node:fs";
 import { basename, extname, join } from "node:path";
+import { mergeLakeManifestArtifacts } from "../packages/ops/src/etl/batch-artifact-layout";
+import { writeHydroCanonicalGeoParquet } from "../packages/ops/src/etl/environmental-hydro-geoparquet";
+import { loadRunReproducibilityEnvFileIfPresent } from "../packages/ops/src/etl/run-reproducibility";
 import {
   buildBoundaryLineFeatures,
   ensureRunDirectories,
@@ -17,6 +20,7 @@ import {
   resolveOgrDataSourcePath,
   resolveOgrFieldName,
   resolveOgrLayerName,
+  resolveProjectRoot,
   resolveRunContext,
   runCommand,
   verifyRunConfig,
@@ -32,6 +36,7 @@ import type {
 
 const HUC_LEVELS: readonly number[] = [4, 6, 8, 10, 12];
 const HYDRO_BASINS_BUNDLE_LEVEL_PATTERN = /lev01-12/i;
+const PROJECT_ROOT = resolveProjectRoot(import.meta.url);
 
 interface HydroBasinsLevelSource {
   readonly ogrDataSourcePath: string;
@@ -40,11 +45,33 @@ interface HydroBasinsLevelSource {
 
 function currentStep(): string {
   const step = parseArg("--step");
-  if (typeof step !== "string" || step.trim().length === 0) {
-    throw new Error("Missing required argument --step=extract|normalize");
+  if (step !== "extract" && step !== "normalize" && step !== "export-geoparquet") {
+    throw new Error("Missing required argument --step=extract|normalize|export-geoparquet");
   }
 
   return step.trim();
+}
+
+function requireDatabaseUrl(): string {
+  const databaseUrl = process.env.DATABASE_URL ?? process.env.POSTGRES_URL ?? null;
+  if (typeof databaseUrl !== "string" || databaseUrl.trim().length === 0) {
+    throw new Error("Missing DATABASE_URL or POSTGRES_URL for environmental hydro export step.");
+  }
+
+  return databaseUrl.trim();
+}
+
+function readJsonRecord(path: string): Record<string, unknown> | null {
+  if (!existsSync(path)) {
+    return null;
+  }
+
+  const parsed = JSON.parse(readFileSync(path, "utf8"));
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    throw new Error(`Invalid JSON object at ${path}`);
+  }
+
+  return parsed;
 }
 
 function layerEnvName(level: number): string {
@@ -679,11 +706,51 @@ function normalizeStep(): void {
   normalizeGpkgSource(context.runDir, runConfig, dataVersion);
 }
 
-const step = currentStep();
-if (step === "extract") {
-  extractStep();
-} else if (step === "normalize") {
-  normalizeStep();
-} else {
-  throw new Error(`Unsupported step: ${step}`);
+async function exportGeoparquetStep(): Promise<void> {
+  const context = resolveRunContext("environmental-hydro-basins", import.meta.url);
+  ensureRunDirectories(context);
+
+  const runConfig = readRunConfig(context.runConfigPath);
+  const databaseUrl = requireDatabaseUrl();
+  const currentRunSummary = readJsonRecord(context.runSummaryPath) ?? {};
+  const exportResult = await writeHydroCanonicalGeoParquet({
+    context,
+    dataVersion: runConfig.dataVersion,
+    databaseUrl,
+    runId: runConfig.runId,
+  });
+
+  mergeLakeManifestArtifacts({
+    artifacts: [exportResult.artifact],
+    dataVersion: runConfig.dataVersion,
+    layout: context,
+  });
+
+  writeJsonFile(context.runSummaryPath, {
+    ...currentRunSummary,
+    geoParquetExport: {
+      artifactRelativePath: exportResult.artifact.relativePath,
+      completedAt: new Date().toISOString(),
+      counts: exportResult.counts,
+      lakeVersionRootPath: exportResult.publishedVersionRootPath,
+    },
+  });
+}
+
+async function main(): Promise<void> {
+  await loadRunReproducibilityEnvFileIfPresent(PROJECT_ROOT, process.env);
+  const step = currentStep();
+  if (step === "extract") {
+    extractStep();
+  } else if (step === "normalize") {
+    normalizeStep();
+  } else if (step === "export-geoparquet") {
+    await exportGeoparquetStep();
+  } else {
+    throw new Error(`Unsupported step: ${step}`);
+  }
+}
+
+if (import.meta.main) {
+  await main();
 }

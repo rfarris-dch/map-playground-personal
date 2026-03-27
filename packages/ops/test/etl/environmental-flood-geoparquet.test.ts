@@ -82,6 +82,7 @@ describe("buildFloodCanonicalGeoParquetSql", () => {
     expect(sql).toContain(
       "ATTACH 'postgresql://example:example@localhost:5432/map' AS flood_pg (TYPE POSTGRES);"
     );
+    expect(sql).toContain("CREATE OR REPLACE TEMP VIEW flood_source AS");
     expect(sql).toContain("FROM environmental_current.flood_hazard");
     expect(sql).toContain("WHERE run_id = ''environmental-flood-20260326t120000z''");
     expect(sql).toContain("ST_GeomFromWKB(geom_wkb) AS geom");

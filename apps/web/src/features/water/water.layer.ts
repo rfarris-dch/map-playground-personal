@@ -1,5 +1,6 @@
 import { ApiRoutes } from "@map-migration/http-contracts/api-routes";
 import type { IMap } from "@map-migration/map-engine";
+import { findFirstPresentStyleLayerId, getFacilityPlacementAnchorLayerIds } from "@map-migration/map-style";
 import { initialLayerStatus, type LayerStatus } from "@/features/layers/layer-runtime.types";
 import type { WaterLayerVisibilityController } from "@/features/water/water.types";
 import { mountLayerVisibilityController } from "@/lib/layer-visibility-controller.service";
@@ -28,6 +29,7 @@ function ensureWaterLayer(map: IMap, styleLayerId: string): void {
     return;
   }
 
+  const beforeId = findFirstPresentStyleLayerId(map, getFacilityPlacementAnchorLayerIds());
   map.addLayer({
     id: styleLayerId,
     type: "raster",
@@ -36,7 +38,7 @@ function ensureWaterLayer(map: IMap, styleLayerId: string): void {
       "raster-opacity": 0.6,
       "raster-fade-duration": 0,
     },
-  });
+  }, beforeId);
 }
 
 export function mountWaterLayerVisibility(

@@ -1,5 +1,6 @@
 import { createPmtilesSourceUrl } from "@map-migration/geo-tiles";
 import type { IMap, MapExpression } from "@map-migration/map-engine";
+import { findFirstPresentStyleLayerId, getFacilityPlacementAnchorLayerIds } from "@map-migration/map-style";
 import { initialLayerStatus, type LayerStatus } from "@/features/layers/layer-runtime.types";
 import { mountManifestBackedLayerBootstrap } from "@/lib/manifest-backed-layer.service";
 import type { GasPipelineLayerController } from "./gas-pipelines.types";
@@ -40,6 +41,7 @@ function ensureLayers(map: IMap): void {
     return;
   }
 
+  const beforeId = findFirstPresentStyleLayerId(map, getFacilityPlacementAnchorLayerIds());
   map.addLayer({
     id: LINE_LAYER_ID,
     type: "line",
@@ -69,7 +71,7 @@ function ensureLayers(map: IMap): void {
       "line-dasharray": [4, 2],
       "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.6, 6, 1, 9, 1.6, 13, 2.5],
     },
-  });
+  }, beforeId);
 }
 
 export function mountGasPipelineLayer(map: IMap): GasPipelineLayerController {

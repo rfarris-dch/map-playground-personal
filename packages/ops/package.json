@@ -67,6 +67,26 @@
     "./etl/pipeline-runner": {
       "types": "./dist/etl/pipeline-runner.d.ts",
       "default": "./dist/etl/pipeline-runner.js"
+    },
+    "./etl/run-reproducibility": {
+      "types": "./dist/etl/run-reproducibility.d.ts",
+      "default": "./dist/etl/run-reproducibility.js"
+    },
+    "./etl/run-reproducibility-diff": {
+      "types": "./dist/etl/run-reproducibility-diff.d.ts",
+      "default": "./dist/etl/run-reproducibility-diff.js"
+    },
+    "./etl/run-reproducibility-hash": {
+      "types": "./dist/etl/run-reproducibility-hash.d.ts",
+      "default": "./dist/etl/run-reproducibility-hash.js"
+    },
+    "./etl/run-reproducibility-types": {
+      "types": "./dist/etl/run-reproducibility.types.d.ts",
+      "default": "./dist/etl/run-reproducibility.types.js"
+    },
+    "./etl/source-registry-read": {
+      "types": "./dist/etl/source-registry-read.d.ts",
+      "default": "./dist/etl/source-registry-read.js"
     }
   },
   "files": [

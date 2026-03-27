@@ -62,6 +62,7 @@ function readIntegerQuery(databaseUrl: string, sql: string): number {
 }
 
 let testDatabaseUrl = "";
+let registryBackupSchemaName = "";
 
 beforeAll(async () => {
   const env: NodeJS.ProcessEnv = {};
@@ -72,7 +73,28 @@ beforeAll(async () => {
     throw new Error("Missing DATABASE_URL or POSTGRES_URL for source registry tests");
   }
 
-  testDatabaseUrl = baseDatabaseUrl;
+  testDatabaseUrl = baseDatabaseUrl.trim();
+  registryBackupSchemaName = `registry_backup_${Date.now()}_${process.pid}`;
+
+  const registrySchemaExists = readScalarQuery(
+    testDatabaseUrl,
+    "SELECT EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'registry');"
+  );
+  if (registrySchemaExists === "t") {
+    expectCommandSuccess(
+      "psql",
+      [
+        testDatabaseUrl,
+        "-X",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-c",
+        `ALTER SCHEMA registry RENAME TO ${registryBackupSchemaName};`,
+      ],
+      {}
+    );
+  }
+
   expectCommandSuccess(
     "psql",
     [
@@ -104,6 +126,31 @@ afterAll(() => {
     ],
     {}
   );
+
+  if (registryBackupSchemaName.length === 0) {
+    return;
+  }
+
+  const backupSchemaExists = readScalarQuery(
+    testDatabaseUrl,
+    `SELECT EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = '${registryBackupSchemaName}');`
+  );
+  if (backupSchemaExists !== "t") {
+    return;
+  }
+
+  expectCommandSuccess(
+    "psql",
+    [
+      testDatabaseUrl,
+      "-X",
+      "-v",
+      "ON_ERROR_STOP=1",
+      "-c",
+      `ALTER SCHEMA ${registryBackupSchemaName} RENAME TO registry;`,
+    ],
+    {}
+  );
 });
 
 describe("source-registry-publish", () => {
@@ -113,7 +160,7 @@ describe("source-registry-publish", () => {
     expect(bundle.logicalRegistryVersion).toBe("registry-v1");
     expect(bundle.definitions).toHaveLength(38);
     expect(bundle.versions).toHaveLength(38);
-    expect(bundle.dependencyRules).toHaveLength(12);
+    expect(bundle.dependencyRules).toHaveLength(25);
   });
 
   it("generates sortable registry versions and conservative access defaults", () => {
@@ -177,7 +224,7 @@ describe("source-registry-publish", () => {
     );
     expect(
       readIntegerQuery(testDatabaseUrl, "SELECT count(*) FROM registry.source_dependency_rule;")
-    ).toBe(12);
+    ).toBe(25);
     expect(
       readIntegerQuery(testDatabaseUrl, "SELECT count(*) FROM registry.source_runtime_status;")
     ).toBe(38);
@@ -189,7 +236,7 @@ describe("source-registry-publish", () => {
     ).toBe(38);
     expect(
       readIntegerQuery(testDatabaseUrl, "SELECT count(*) FROM registry.downstream_rules;")
-    ).toBe(12);
+    ).toBe(25);
     expect(
       readScalarQuery(
         testDatabaseUrl,
@@ -202,6 +249,18 @@ describe("source-registry-publish", () => {
         "SELECT access_status FROM registry.current_source_status WHERE source_id = 'eq-research';"
       )
     ).toBe("planned");
+    expect(
+      readScalarQuery(
+        testDatabaseUrl,
+        "SELECT staleness_state FROM registry.current_source_status WHERE source_id = 'eia-861';"
+      )
+    ).toBe("aging");
+    expect(
+      readScalarQuery(
+        testDatabaseUrl,
+        "SELECT ingestion_health FROM registry.current_source_status WHERE source_id = 'eia-861';"
+      )
+    ).toBe("healthy");
 
     const failedPublish = runCommand(
       "bun",
@@ -223,7 +282,7 @@ describe("source-registry-publish", () => {
     );
     expect(
       readIntegerQuery(testDatabaseUrl, "SELECT count(*) FROM registry.source_dependency_rule;")
-    ).toBe(12);
+    ).toBe(25);
 
     expectCommandSuccess(
       "bun",
@@ -244,7 +303,13 @@ describe("source-registry-publish", () => {
     );
     expect(
       readIntegerQuery(testDatabaseUrl, "SELECT count(*) FROM registry.source_dependency_rule;")
-    ).toBe(24);
+    ).toBe(50);
+    expect(
+      readIntegerQuery(
+        testDatabaseUrl,
+        "SELECT count(*) FROM registry.downstream_rules WHERE downstream_object_id = 'policy_posture_state';"
+      )
+    ).toBe(1);
     expect(
       readIntegerQuery(testDatabaseUrl, "SELECT count(*) FROM registry.source_runtime_status;")
     ).toBe(38);

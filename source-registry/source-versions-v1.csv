@@ -37,3 +37,5 @@ regrid-parcels:v1,registry-v1,regrid-parcels,licensed-current,2026-03-01,,v1,nat
 eq-research:v1,registry-v1,eq-research,approved-pending,,,v1,national-us-v1,initial_seed,planned,Initial MP-47 source-registry MVP seed.,,2026-03-26,
 fema-nfhl:v1,registry-v1,fema-nfhl,planned-v1,2026-01-01,,v1,national-us-v1,initial_seed,planned,Initial MP-47 source-registry MVP seed.,,2026-03-26,
 eia-bts-gas-pipelines:v1,registry-v1,eia-bts-gas-pipelines,planned-v1,,,v1,national-us-v1,initial_seed,planned,Initial MP-47 source-registry MVP seed.,,2026-03-26,
+internal-facility-site:v1,registry-v1,internal-facility-site,current-live,,,v1,national-us-v1,initial_seed,approved,Initial MP-58 county reproducibility seed.,,2026-03-26,
+internal-hyperscale-site:v1,registry-v1,internal-hyperscale-site,current-live,,,v1,national-us-v1,initial_seed,approved,Initial MP-58 county reproducibility seed.,,2026-03-26,

@@ -76,6 +76,20 @@ describe("route-builder / request-schema alignment", () => {
 
     expect(buildLaunchPolicyRoute()).toBe("/api/geo/launch-policy");
   });
+
+  it("buildRunReproducibilityRoute forwards run identity params", async () => {
+    const { buildRunReproducibilityRoute } = await import("./api-routes.js");
+
+    const url = buildRunReproducibilityRoute({
+      runId: "county-market-pressure-20260326T000000Z",
+      runKind: "publication",
+      surfaceScope: "county",
+    });
+
+    expect(url).toContain("runId=county-market-pressure-20260326T000000Z");
+    expect(url).toContain("runKind=publication");
+    expect(url).toContain("surfaceScope=county");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -211,6 +225,171 @@ describe("representative payload parse tests", () => {
 
     expect(response.run.phase).toBe("completed");
   });
+
+  it("parses corridor, packet, and policy posture confidence payloads", async () => {
+    const { CorridorObjectSchema } = await import("./corridor-http.js");
+    const { PacketSectionSchema } = await import("./packet-http.js");
+    const { PolicyPostureSchema } = await import("./policy-posture-http.js");
+
+    const corridor = CorridorObjectSchema.parse({
+      corridorId: "corridor-dfw-west-001",
+      entityType: "corridor",
+      marketId: "382",
+      marketName: "Dallas",
+      marketTreatment: "validated_market",
+      truthMode: "validated_screening",
+      confidence: {
+        evidenceConfidence: "medium",
+        methodConfidence: "medium",
+        coverageConfidence: "high",
+        freshnessState: "aging",
+        suppressionState: "downgraded",
+      },
+      validationState: "pass",
+      evidenceFamilies: ["transmission", "fiber"],
+      sourceIds: ["transmission-lines-arcgis", "fiberlocator"],
+      routeDiversityScore: 0.74,
+      nearbySubstationCount: 2,
+      centroid: [-96.8, 32.8],
+      geometry: {
+        type: "MultiPolygon",
+        coordinates: [
+          [
+            [
+              [-96.81, 32.79],
+              [-96.79, 32.79],
+              [-96.79, 32.81],
+              [-96.81, 32.81],
+              [-96.81, 32.79],
+            ],
+          ],
+        ],
+      },
+    });
+
+    const packetSection = PacketSectionSchema.parse({
+      packetId: "packet-001",
+      sectionKey: "corridor_access_summary",
+      title: "Corridor Access",
+      audience: "external",
+      objectScope: "parcel",
+      objectId: "parcel-123",
+      truthMode: "derived_screening",
+      confidence: corridor.confidence,
+      sourceIds: ["fiberlocator"],
+      summary: "Derived corridor access remains visible with explicit caveats.",
+    });
+
+    const policyPosture = PolicyPostureSchema.parse({
+      postureId: "policy-texas-001",
+      geographyScope: "state",
+      geographyKey: "TX",
+      effectiveDate: "2026-03-26",
+      truthMode: "derived_screening",
+      confidence: corridor.confidence,
+      sourceIds: ["eq-research"],
+      eventCount: 4,
+      jurisdictionCoverageShare: 0.85,
+      summary: "State posture remains mixed with localized review required.",
+    });
+
+    expect(corridor.entityType).toBe("corridor");
+    expect(packetSection.truthMode).toBe("derived_screening");
+    expect(policyPosture.geographyScope).toBe("state");
+  });
+
+  it("parses county confidence trace debug payloads with dependency effects", async () => {
+    const { CountyConfidenceTraceDebugSchema } = await import(
+      "./county-intelligence-debug-http.js"
+    );
+
+    const trace = CountyConfidenceTraceDebugSchema.parse({
+      registryVersion: "registry-v1-20260326T223000Z",
+      downstreamObjectType: "score",
+      downstreamObjectId: "county_market_pressure_primary",
+      minimumConstitutiveConfidenceCap: "high",
+      worstRequiredFreshnessState: "aging",
+      truthMode: "full",
+      confidence: {
+        evidenceConfidence: "high",
+        methodConfidence: "medium",
+        coverageConfidence: "high",
+        freshnessState: "aging",
+        suppressionState: "downgraded",
+      },
+      dependencies: [
+        {
+          sourceId: "eia-861",
+          sourceName: "EIA 861",
+          downstreamObjectType: "score",
+          downstreamObjectId: "county_market_pressure_primary",
+          roleInDownstream: "primary",
+          requiredness: "required",
+          precisionTier: "A",
+          accessStatus: "accessible",
+          stalenessState: "aging",
+          effectiveFreshnessState: "aging",
+          truthModeCap: "full",
+          confidenceCap: "high",
+          completenessObserved: 1,
+          sourceAgeDays: 12,
+          warnTriggered: true,
+          degradeTriggered: false,
+          suppressTriggered: false,
+          missingTriggered: false,
+        },
+      ],
+    });
+
+    expect(trace.dependencies[0]?.warnTriggered).toBe(true);
+    expect(trace.truthMode).toBe("full");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Confidence helpers
+// ---------------------------------------------------------------------------
+
+describe("confidence helpers preserve no-boost semantics", () => {
+  it("caps levels, freshness, truth mode, and packet suppression conservatively", async () => {
+    const {
+      capConfidenceLevel,
+      capTruthMode,
+      deriveCompatibilityConfidenceBadge,
+      deriveExternalPacketSuppressionState,
+      mergeWorstFreshnessState,
+    } = await import("./confidence-http.js");
+
+    expect(capConfidenceLevel("high", "medium")).toBe("medium");
+    expect(capConfidenceLevel("low", "high")).toBe("low");
+    expect(mergeWorstFreshnessState(["fresh", "stale", "aging"])).toBe("stale");
+    expect(capTruthMode("full", "derived_screening")).toBe("derived_screening");
+    expect(
+      deriveCompatibilityConfidenceBadge({
+        evidenceConfidence: "high",
+        methodConfidence: "high",
+        coverageConfidence: "high",
+        freshnessState: "fresh",
+        suppressionState: "none",
+      })
+    ).toBe("high");
+    expect(
+      deriveCompatibilityConfidenceBadge({
+        evidenceConfidence: "medium",
+        methodConfidence: "high",
+        coverageConfidence: "high",
+        freshnessState: "fresh",
+        suppressionState: "none",
+      })
+    ).toBe("medium");
+    expect(
+      deriveExternalPacketSuppressionState({
+        sectionSuppressionState: "downgraded",
+        upstreamSuppressionState: "none",
+        truthModeCap: "internal_only",
+      })
+    ).toBe("suppressed");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -228,6 +407,8 @@ describe("export-map snapshot", () => {
     "./analysis-policy-http",
     "./app-performance-http",
     "./boundaries-http",
+    "./confidence-http",
+    "./corridor-http",
     "./county-intelligence-http",
     "./county-intelligence-debug-http",
     "./county-power-story-http",
@@ -244,8 +425,10 @@ describe("export-map snapshot", () => {
     "./markets-table-http",
     "./parcels-http",
     "./parcel-scoring-http",
-    "./pipeline-http",
+    "./packet-http",
+    "./policy-posture-http",
     "./providers-table-http",
+    "./run-reproducibility-http",
     "./spatial-analysis-summary-http",
     "./spatial-analysis-history-http",
     "./sync-run-http",

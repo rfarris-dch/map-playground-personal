@@ -277,10 +277,6 @@ function buildItems(
   return result;
 }
 
-function hasAnyVisibleLayer(map: IMap, layerIds: readonly string[]): boolean {
-  return layerIds.some((id) => map.isLayerVisible(id));
-}
-
 function queryFiberSourceLayers(map: IMap, sourceId: string): string[] {
   if (!map.hasSource(sourceId)) {
     return [];
@@ -295,8 +291,7 @@ function queryFiberSourceLayers(map: IMap, sourceId: string): string[] {
       "source" in layer &&
       layer.source === sourceId &&
       "source-layer" in layer &&
-      layer["source-layer"] &&
-      map.isLayerVisible(layer.id)
+      layer["source-layer"]
     ) {
       const sl = layer["source-layer"];
       if (typeof sl === "string" && !layers.includes(sl)) {
@@ -307,19 +302,65 @@ function queryFiberSourceLayers(map: IMap, sourceId: string): string[] {
   return layers;
 }
 
+const PROBE_LAYER_PREFIX = "infra-probe.";
+
+function ensureProbeLayer(
+  map: IMap,
+  sourceId: string,
+  sourceLayer: string
+): void {
+  const probeId = `${PROBE_LAYER_PREFIX}${sourceId}.${sourceLayer}`;
+  if (map.hasLayer(probeId)) {
+    return;
+  }
+  map.addLayer({
+    id: probeId,
+    type: "circle",
+    source: sourceId,
+    "source-layer": sourceLayer,
+    paint: { "circle-radius": 0, "circle-opacity": 0 },
+  });
+}
+
+function ensureInfraProbes(map: IMap): void {
+  if (map.hasSource(POWER_SOURCE_ID)) {
+    ensureProbeLayer(map, POWER_SOURCE_ID, "power_substation_point");
+    ensureProbeLayer(map, POWER_SOURCE_ID, "power_plant_point");
+    ensureProbeLayer(map, POWER_SOURCE_ID, "power_line");
+  }
+  if (map.hasSource(GAS_SOURCE_ID)) {
+    ensureProbeLayer(map, GAS_SOURCE_ID, GAS_SOURCE_LAYER);
+  }
+}
+
+function ensurePowerSource(map: IMap): void {
+  if (map.hasSource(POWER_SOURCE_ID)) {
+    return;
+  }
+
+  map.addSource(POWER_SOURCE_ID, {
+    type: "vector",
+    tiles: ["https://openinframap.org/map/power/{z}/{x}/{y}.pbf"],
+    maxzoom: 17,
+  });
+}
+
 export function queryNearbyInfrastructure(
   map: IMap,
   facilityLng: number,
   facilityLat: number
 ): NearbyInfrastructureResult | null {
-  const hasPower = hasAnyVisibleLayer(map, POWER_LAYER_IDS);
-  const hasGas = map.isLayerVisible(GAS_LAYER_ID);
+  ensurePowerSource(map);
+  ensureInfraProbes(map);
+
+  const hasPowerSource = map.hasSource(POWER_SOURCE_ID);
+  const hasGasSource = map.hasSource(GAS_SOURCE_ID);
 
   const fiberMetroLayers = queryFiberSourceLayers(map, FIBER_METRO_SOURCE_ID);
   const fiberLonghaulLayers = queryFiberSourceLayers(map, FIBER_LONGHAUL_SOURCE_ID);
   const hasFiber = fiberMetroLayers.length > 0 || fiberLonghaulLayers.length > 0;
 
-  if (!(hasPower || hasGas || hasFiber)) {
+  if (!(hasPowerSource || hasGasSource || hasFiber)) {
     return null;
   }
 
@@ -329,7 +370,7 @@ export function queryNearbyInfrastructure(
   let gasPipelines: NearbyInfrastructureItem[] = [];
   let fiberRoutes: NearbyInfrastructureItem[] = [];
 
-  if (hasPower && map.hasSource(POWER_SOURCE_ID)) {
+  if (hasPowerSource) {
     const subFeatures = map.querySourceFeatures(POWER_SOURCE_ID, "power_substation_point");
     const plantFeatures = map.querySourceFeatures(POWER_SOURCE_ID, "power_plant_point");
     const lineFeatures = map.querySourceFeatures(POWER_SOURCE_ID, "power_line");
@@ -351,7 +392,7 @@ export function queryNearbyInfrastructure(
     );
   }
 
-  if (hasGas && map.hasSource(GAS_SOURCE_ID)) {
+  if (hasGasSource) {
     const gasFeatures = map.querySourceFeatures(GAS_SOURCE_ID, GAS_SOURCE_LAYER);
     gasPipelines = buildItems(
       nearestFeatures(gasFeatures, facilityLng, facilityLat),

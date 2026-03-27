@@ -70,6 +70,7 @@ function toSpatialAnalysisCountyScoresStatus(
     featureCoverage: value.featureCoverage,
     formulaVersion: value.formulaVersion,
     freshCountyCount: value.freshCountyCount,
+    freshnessStateCounts: value.freshnessStateCounts,
     highConfidenceCount: value.highConfidenceCount,
     inputDataVersion: value.inputDataVersion,
     lowConfidenceCount: value.lowConfidenceCount,
@@ -79,8 +80,10 @@ function toSpatialAnalysisCountyScoresStatus(
     publicationRunId: value.publicationRunId,
     publishedAt: value.publishedAt,
     rankedCountyCount: value.rankedCountyCount,
+    registryVersion: value.registryVersion,
     rowCount: value.rowCount,
     sourceCountyCount: value.sourceCountyCount,
+    suppressionStateCounts: value.suppressionStateCounts,
   };
 }
 

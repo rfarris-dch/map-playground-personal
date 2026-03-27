@@ -8,9 +8,11 @@ export interface CountyScoreRow {
   readonly county_fips: string;
   readonly county_name: string | null | undefined;
   readonly county_tagged_event_share: number | string | null | undefined;
+  readonly coverage_confidence: string | null | undefined;
   readonly deferred_reason_codes_json: unknown;
   readonly demand_momentum_qoq: number | string | null | undefined;
   readonly demand_pressure_score: number | string | null | undefined;
+  readonly evidence_confidence: string | null | undefined;
   readonly expected_mw_0_24m: number | string | null | undefined;
   readonly expected_mw_24_60m: number | string | null | undefined;
   readonly expected_supply_mw_0_36m: number | string | null | undefined;
@@ -18,6 +20,7 @@ export interface CountyScoreRow {
   readonly fiber_presence_flag: boolean | number | string | null | undefined;
   readonly formula_version: number | string | null | undefined;
   readonly freshness_score: number | string | null | undefined;
+  readonly freshness_state: string | null | undefined;
   readonly gas_pipeline_mileage_county: number | string | null | undefined;
   readonly gas_pipeline_presence_flag: boolean | number | string | null | undefined;
   readonly grid_friction_score: number | string | null | undefined;
@@ -34,6 +37,7 @@ export interface CountyScoreRow {
   readonly market_withdrawal_prior: number | string | null | undefined;
   readonly median_days_in_queue_active: number | string | null | undefined;
   readonly meteo_zone: string | null | undefined;
+  readonly method_confidence: string | null | undefined;
   readonly moratorium_status: string | null | undefined;
   readonly narrative_summary: string | null | undefined;
   readonly negative_price_hour_share: number | string | null | undefined;
@@ -70,6 +74,7 @@ export interface CountyScoreRow {
   readonly source_volatility: string | null | undefined;
   readonly state_abbrev: string | null | undefined;
   readonly supply_timeline_score: number | string | null | undefined;
+  readonly suppression_state: string | null | undefined;
   readonly top_constraints_json: unknown;
   readonly top_drivers_json: unknown;
   readonly transmission_miles_69kv_plus: number | string | null | undefined;
@@ -89,11 +94,19 @@ export interface CountyScoreRow {
 export interface CountyScoresStatusRow {
   readonly available_feature_families: unknown;
   readonly blocked_county_count: number | string | null | undefined;
+  readonly config_hash: string | null | undefined;
   readonly data_version: string | null | undefined;
   readonly deferred_county_count: number | string | null | undefined;
+  readonly envelope_hash: string | null | undefined;
   readonly formula_version: string | null | undefined;
   readonly fresh_county_count: number | string | null | undefined;
+  readonly freshness_aging_count: number | string | null | undefined;
+  readonly freshness_critical_count: number | string | null | undefined;
+  readonly freshness_fresh_count: number | string | null | undefined;
+  readonly freshness_stale_count: number | string | null | undefined;
+  readonly freshness_unknown_count: number | string | null | undefined;
   readonly high_confidence_count: number | string | null | undefined;
+  readonly ingestion_snapshot_count: number | string | null | undefined;
   readonly input_data_version: string | null | undefined;
   readonly low_confidence_count: number | string | null | undefined;
   readonly medium_confidence_count: number | string | null | undefined;
@@ -103,8 +116,17 @@ export interface CountyScoresStatusRow {
   readonly publication_status: string | null | undefined;
   readonly published_at: Date | string | null | undefined;
   readonly ranked_county_count: number | string | null | undefined;
+  readonly registry_version: string | null | undefined;
+  readonly replayability_tier: string | null | undefined;
+  readonly replayed_from_run_id: string | null | undefined;
+  readonly reproducibility_available: boolean | number | string | null | undefined;
   readonly row_count: number | string | null | undefined;
   readonly source_county_count: number | string | null | undefined;
+  readonly source_version_count: number | string | null | undefined;
+  readonly suppression_downgraded_count: number | string | null | undefined;
+  readonly suppression_none_count: number | string | null | undefined;
+  readonly suppression_review_required_count: number | string | null | undefined;
+  readonly suppression_suppressed_count: number | string | null | undefined;
 }
 
 export interface CountyScoresCoverageFieldRow {
@@ -182,4 +204,28 @@ export interface CountyCongestionDebugRow {
   readonly negative_price_hour_share: number | string | null | undefined;
   readonly p95_shadow_price: number | string | null | undefined;
   readonly source_as_of_date: Date | string | null | undefined;
+}
+
+export interface CountyCatchmentDebugRow {
+  readonly adjacency_source_id: string;
+  readonly adjacency_source_version_id: string | null | undefined;
+  readonly calibration_version: string;
+  readonly county_fips: string;
+  readonly neighbor_count: number | string | null | undefined;
+  readonly point_touch_neighbor_count: number | string | null | undefined;
+  readonly point_touch_reference_family: string;
+  readonly point_touch_weight_share: number | string | null | undefined;
+  readonly shared_edge_neighbor_count: number | string | null | undefined;
+  readonly total_weight_mass: number | string | null | undefined;
+}
+
+export interface CountyConfidenceTraceRow {
+  readonly baseline_suppression_state: string | null | undefined;
+  readonly dependencies_json: unknown;
+  readonly downstream_object_id: string;
+  readonly downstream_object_type: string;
+  readonly minimum_constitutive_confidence_cap: string | null | undefined;
+  readonly minimum_truth_mode_cap: string | null | undefined;
+  readonly registry_version: string | null | undefined;
+  readonly worst_required_freshness_state: string | null | undefined;
 }

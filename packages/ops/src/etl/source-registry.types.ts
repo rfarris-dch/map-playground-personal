@@ -149,7 +149,10 @@ export interface SourceRegistryRuntimeSeedRow {
   readonly accessStatus: SourceRegistryAccessStatus;
   readonly currentRegistryVersion: string;
   readonly currentSourceVersionId: string;
+  readonly freshnessAsOf: string | null;
   readonly ingestionHealth: SourceRegistryIngestionHealth;
+  readonly lastSuccessfulIngestAt: string | null;
+  readonly latestProviderUpdateSeenAt: string | null;
   readonly runtimeAlertState: SourceRegistryRuntimeAlertState;
   readonly sourceId: string;
   readonly stalenessState: SourceRegistryStalenessState;

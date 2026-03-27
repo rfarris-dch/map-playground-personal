@@ -81,7 +81,7 @@
       const hover = shell.hoveredFacilityCluster.value;
       if (hover !== null) {
         selectedClusterState.value = hover;
-        selectedFacilityState.value = null;
+        shell.clearSelectedFacility();
       }
     }
   );
@@ -222,6 +222,7 @@
     :detail="parcelDetail"
     :is-loading="isParcelDetailLoading"
     :is-error="isParcelDetailError"
+    :map="shell.map.value"
     @close="shell.clearSelectedParcel"
   />
 </template>

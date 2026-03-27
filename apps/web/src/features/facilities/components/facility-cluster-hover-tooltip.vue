@@ -36,7 +36,7 @@
     if (state === null) {
       return "";
     }
-    const providerCount = state.topProviders.length;
+    const providerCount = state.providerCount;
     const facilityCount = state.facilityCount;
     const providerLabel = state.perspective === "hyperscale" ? "Users" : "Providers";
     return `${providerCount} ${providerLabel} • ${facilityCount} Facilities`;

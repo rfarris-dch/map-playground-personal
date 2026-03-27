@@ -1,5 +1,10 @@
 import type { IMap, MapExpression } from "@map-migration/map-engine";
-import { getPowerStyleLayerIds, type PowerCatalogLayerId } from "@map-migration/map-style";
+import {
+  findFirstPresentStyleLayerId,
+  getFacilityPlacementAnchorLayerIds,
+  getPowerStyleLayerIds,
+  type PowerCatalogLayerId,
+} from "@map-migration/map-style";
 import { initialLayerStatus, type LayerStatus } from "@/features/layers/layer-runtime.types";
 import type { PowerLayerId, PowerLayerVisibilityController } from "@/features/power/power.types";
 import type { PowerLayerMountResult } from "./power.layer.types";
@@ -41,6 +46,7 @@ function ensurePowerSource(map: IMap): void {
 
 function ensurePowerLayers(map: IMap): void {
   ensurePowerSource(map);
+  const beforeId = findFirstPresentStyleLayerId(map, getFacilityPlacementAnchorLayerIds());
 
   if (!map.hasLayer("power.transmission")) {
     map.addLayer({
@@ -66,7 +72,7 @@ function ensurePowerLayers(map: IMap): void {
         "line-opacity": 0.75,
         "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.6, 9, 1.2, 13, 2.2],
       },
-    });
+    }, beforeId);
   }
 
   if (!map.hasLayer("power.substations-area")) {
@@ -97,7 +103,7 @@ function ensurePowerLayers(map: IMap): void {
         ],
         "circle-radius": ["interpolate", ["linear"], ["zoom"], 0, 4.2, 6, 6.8, 10, 9.5, 14, 12],
       },
-    });
+    }, beforeId);
   }
 
   if (!map.hasLayer("power.substations")) {
@@ -130,7 +136,7 @@ function ensurePowerLayers(map: IMap): void {
           ["case", ["boolean", ["feature-state", "hover"], false], 8.2, 7],
         ],
       },
-    });
+    }, beforeId);
   }
 
   if (!map.hasLayer("power.plants-area")) {
@@ -163,7 +169,7 @@ function ensurePowerLayers(map: IMap): void {
           ["case", ["boolean", ["feature-state", "hover"], false], 0.24, 0.08],
         ],
       },
-    });
+    }, beforeId);
   }
 
   if (!map.hasLayer("power.plants")) {
@@ -196,7 +202,7 @@ function ensurePowerLayers(map: IMap): void {
           ["case", ["boolean", ["feature-state", "hover"], false], 7.1, 6.3],
         ],
       },
-    });
+    }, beforeId);
   }
 }
 

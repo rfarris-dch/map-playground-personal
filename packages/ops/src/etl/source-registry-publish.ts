@@ -10,13 +10,16 @@ import type {
   SourceRegistryCsvRow,
   SourceRegistryDefaultRole,
   SourceRegistryDownstreamObjectType,
+  SourceRegistryIngestionHealth,
   SourceRegistryLaunchCriticality,
   SourceRegistryPublishOptions,
   SourceRegistryPublishPaths,
   SourceRegistryPublishSummary,
   SourceRegistryRequiredness,
+  SourceRegistryRuntimeAlertState,
   SourceRegistryRuntimeSeedRow,
   SourceRegistrySeedBundle,
+  SourceRegistryStalenessState,
   SourceRegistryStatus,
   SourceRegistrySurfaceScope,
   SourceRegistryTruthModeCap,
@@ -99,6 +102,7 @@ const SOURCE_DEPENDENCY_RULE_HEADERS = [
 ];
 
 const LOGICAL_REGISTRY_VERSION_RE = /^registry-v\d+$/;
+const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
 
 let sourceRegistrySqlClient: BunSqlClient | null = null;
 
@@ -859,9 +863,142 @@ export function resolveSourceRegistryAccessStatus(
   return "planned";
 }
 
+function parseSeedTimestamp(value: string | null): Date | null {
+  if (value === null) {
+    return null;
+  }
+
+  const trimmedValue = value.trim();
+  if (trimmedValue.length === 0) {
+    return null;
+  }
+
+  const timestamp =
+    trimmedValue.includes("T") || trimmedValue.endsWith("Z")
+      ? trimmedValue
+      : `${trimmedValue}T00:00:00Z`;
+  const parsedTimestamp = new Date(timestamp);
+  if (Number.isNaN(parsedTimestamp.getTime())) {
+    throw new Error(`Invalid source registry timestamp: ${value}`);
+  }
+
+  return parsedTimestamp;
+}
+
+function selectSourceVersionFreshnessTimestamp(version: SourceVersionSeedRow): Date | null {
+  const sourceAsOfTimestamp = parseSeedTimestamp(version.sourceAsOfDate);
+  if (sourceAsOfTimestamp !== null) {
+    return sourceAsOfTimestamp;
+  }
+
+  return parseSeedTimestamp(version.sourceReleaseDate);
+}
+
+interface SourceRegistryFreshnessThresholds {
+  readonly agingDays: number;
+  readonly freshDays: number;
+  readonly staleDays: number;
+}
+
+function resolveSourceRegistryFreshnessThresholds(
+  providerUpdateCadence: string
+): SourceRegistryFreshnessThresholds | null {
+  switch (providerUpdateCadence) {
+    case "near_real_time":
+      return { agingDays: 7, freshDays: 2, staleDays: 14 };
+    case "continuous":
+    case "ongoing":
+      return { agingDays: 30, freshDays: 7, staleDays: 60 };
+    case "contract_defined":
+    case "monthly_or_quarterly":
+      return { agingDays: 120, freshDays: 45, staleDays: 240 };
+    case "irregular":
+    case "periodic":
+      return { agingDays: 365, freshDays: 90, staleDays: 730 };
+    case "annual":
+    case "monthly_and_annual":
+      return { agingDays: 730, freshDays: 365, staleDays: 1095 };
+    case "ad_hoc":
+    case "as_received":
+    case "review_cycle":
+      return null;
+    default:
+      return null;
+  }
+}
+
+function resolveSourceRegistryStalenessState(
+  providerUpdateCadence: string,
+  publishedAt: Date,
+  freshnessTimestamp: Date | null,
+  accessStatus: SourceRegistryAccessStatus,
+  approvalStatus: SourceRegistryApprovalStatus
+): SourceRegistryStalenessState {
+  if (
+    accessStatus !== "accessible" ||
+    approvalStatus !== "approved" ||
+    freshnessTimestamp === null
+  ) {
+    return "unknown";
+  }
+
+  const thresholds = resolveSourceRegistryFreshnessThresholds(providerUpdateCadence);
+  if (thresholds === null) {
+    return "unknown";
+  }
+
+  const ageInDays = Math.max(
+    0,
+    Math.floor((publishedAt.getTime() - freshnessTimestamp.getTime()) / MILLISECONDS_PER_DAY)
+  );
+  if (ageInDays <= thresholds.freshDays) {
+    return "fresh";
+  }
+  if (ageInDays <= thresholds.agingDays) {
+    return "aging";
+  }
+  if (ageInDays <= thresholds.staleDays) {
+    return "stale";
+  }
+
+  return "critical";
+}
+
+function resolveSourceRegistryIngestionHealth(
+  accessStatus: SourceRegistryAccessStatus,
+  approvalStatus: SourceRegistryApprovalStatus,
+  freshnessTimestamp: Date | null
+): SourceRegistryIngestionHealth {
+  if (accessStatus !== "accessible" || approvalStatus !== "approved") {
+    return "not_run";
+  }
+
+  if (freshnessTimestamp === null) {
+    return "degraded";
+  }
+
+  return "healthy";
+}
+
+function resolveSourceRegistryRuntimeAlertState(
+  stalenessState: SourceRegistryStalenessState,
+  ingestionHealth: SourceRegistryIngestionHealth
+): SourceRegistryRuntimeAlertState {
+  if (stalenessState === "critical") {
+    return "blocking";
+  }
+
+  if (stalenessState === "stale" || ingestionHealth === "degraded") {
+    return "warning";
+  }
+
+  return "none";
+}
+
 export function resolveInitialSourceRegistryRuntimeRows(
   bundle: SourceRegistrySeedBundle,
-  registryVersion: string
+  registryVersion: string,
+  publishedAt: Date
 ): readonly SourceRegistryRuntimeSeedRow[] {
   const versionsBySourceId = new Map<string, SourceVersionSeedRow[]>();
   for (const version of bundle.versions) {
@@ -885,14 +1022,38 @@ export function resolveInitialSourceRegistryRuntimeRows(
       throw new Error(`Missing source version for runtime status seeding: ${definition.sourceId}`);
     }
 
+    const accessStatus = resolveSourceRegistryAccessStatus(definition.integrationState);
+    const freshnessTimestamp = selectSourceVersionFreshnessTimestamp(currentVersion);
+    const stalenessState = resolveSourceRegistryStalenessState(
+      definition.providerUpdateCadence,
+      publishedAt,
+      freshnessTimestamp,
+      accessStatus,
+      currentVersion.approvalStatus
+    );
+    const ingestionHealth = resolveSourceRegistryIngestionHealth(
+      accessStatus,
+      currentVersion.approvalStatus,
+      freshnessTimestamp
+    );
+    const runtimeAlertState = resolveSourceRegistryRuntimeAlertState(
+      stalenessState,
+      ingestionHealth
+    );
+    const freshnessTimestampIso = freshnessTimestamp?.toISOString() ?? null;
+
     return {
       sourceId: definition.sourceId,
       currentRegistryVersion: registryVersion,
       currentSourceVersionId: currentVersion.sourceVersionId,
-      stalenessState: "unknown",
-      ingestionHealth: "not_run",
-      accessStatus: resolveSourceRegistryAccessStatus(definition.integrationState),
-      runtimeAlertState: "none",
+      freshnessAsOf: freshnessTimestampIso,
+      stalenessState,
+      ingestionHealth,
+      accessStatus,
+      lastSuccessfulIngestAt:
+        currentVersion.approvalStatus === "approved" ? publishedAt.toISOString() : null,
+      latestProviderUpdateSeenAt: freshnessTimestampIso,
+      runtimeAlertState,
     };
   });
 }
@@ -1183,6 +1344,9 @@ async function upsertSourceRuntimeStatus(
       source_id,
       current_registry_version,
       current_source_version_id,
+      freshness_as_of,
+      last_successful_ingest_at,
+      latest_provider_update_seen_at,
       staleness_state,
       ingestion_health,
       access_status,
@@ -1191,6 +1355,9 @@ async function upsertSourceRuntimeStatus(
       ${row.sourceId},
       ${row.currentRegistryVersion},
       ${row.currentSourceVersionId},
+      ${row.freshnessAsOf},
+      ${row.lastSuccessfulIngestAt},
+      ${row.latestProviderUpdateSeenAt},
       ${row.stalenessState},
       ${row.ingestionHealth},
       ${row.accessStatus},
@@ -1200,6 +1367,9 @@ async function upsertSourceRuntimeStatus(
     SET
       current_registry_version = EXCLUDED.current_registry_version,
       current_source_version_id = EXCLUDED.current_source_version_id,
+      freshness_as_of = EXCLUDED.freshness_as_of,
+      last_successful_ingest_at = EXCLUDED.last_successful_ingest_at,
+      latest_provider_update_seen_at = EXCLUDED.latest_provider_update_seen_at,
       staleness_state = EXCLUDED.staleness_state,
       ingestion_health = EXCLUDED.ingestion_health,
       access_status = EXCLUDED.access_status,
@@ -1228,7 +1398,7 @@ export async function publishSourceRegistry(
       : generateSourceRegistryVersion(publishedAt);
 
   const bundle = await readSourceRegistrySeedBundle(options.projectRoot);
-  const runtimeRows = resolveInitialSourceRegistryRuntimeRows(bundle, registryVersion);
+  const runtimeRows = resolveInitialSourceRegistryRuntimeRows(bundle, registryVersion, publishedAt);
   const sqlClient = getSourceRegistrySqlClient();
 
   await sqlClient.begin("read write", async (sql) => {

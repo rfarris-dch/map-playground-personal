@@ -3,7 +3,7 @@ interface DonutChartInputSegment {
   readonly value: number;
 }
 
-interface DonutChartArcSegment {
+export interface DonutChartArcSegment {
   readonly color: string;
   readonly path: string | null;
 }

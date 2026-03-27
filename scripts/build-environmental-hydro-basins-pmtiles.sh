@@ -16,6 +16,12 @@ except Exception:
     raise SystemExit(0)
 
 run_id = payload.get("runId")
+if not isinstance(run_id, str) or not run_id.strip():
+    current = payload.get("current")
+    if isinstance(current, dict):
+        candidate = current.get("ingestionRunId")
+        if isinstance(candidate, str) and candidate.strip():
+            run_id = candidate
 if isinstance(run_id, str) and run_id.strip():
     print(run_id.strip())
 PY
@@ -46,20 +52,20 @@ PLANETILER_THREADS="${ENVIRONMENTAL_HYDRO_TILE_THREADS:-4}"
 PLANETILER_SCHEMA_PATH="${ROOT_DIR}/config/planetiler/environmental-hydro-basins.yml"
 
 SOURCE_FILES=(
-  "${SOURCE_ROOT}/huc4-polygon.geojson"
-  "${SOURCE_ROOT}/huc4-line.geojson"
-  "${SOURCE_ROOT}/huc4-label.geojson"
-  "${SOURCE_ROOT}/huc6-polygon.geojson"
-  "${SOURCE_ROOT}/huc6-line.geojson"
-  "${SOURCE_ROOT}/huc6-label.geojson"
-  "${SOURCE_ROOT}/huc8-polygon.geojson"
-  "${SOURCE_ROOT}/huc8-line.geojson"
-  "${SOURCE_ROOT}/huc8-label.geojson"
-  "${SOURCE_ROOT}/huc10-polygon.geojson"
-  "${SOURCE_ROOT}/huc10-line.geojson"
-  "${SOURCE_ROOT}/huc10-label.geojson"
-  "${SOURCE_ROOT}/huc12-polygon.geojson"
-  "${SOURCE_ROOT}/huc12-line.geojson"
+  "${SOURCE_ROOT}/huc4-polygon.geojsonl"
+  "${SOURCE_ROOT}/huc4-line.geojsonl"
+  "${SOURCE_ROOT}/huc4-label.geojsonl"
+  "${SOURCE_ROOT}/huc6-polygon.geojsonl"
+  "${SOURCE_ROOT}/huc6-line.geojsonl"
+  "${SOURCE_ROOT}/huc6-label.geojsonl"
+  "${SOURCE_ROOT}/huc8-polygon.geojsonl"
+  "${SOURCE_ROOT}/huc8-line.geojsonl"
+  "${SOURCE_ROOT}/huc8-label.geojsonl"
+  "${SOURCE_ROOT}/huc10-polygon.geojsonl"
+  "${SOURCE_ROOT}/huc10-line.geojsonl"
+  "${SOURCE_ROOT}/huc10-label.geojsonl"
+  "${SOURCE_ROOT}/huc12-polygon.geojsonl"
+  "${SOURCE_ROOT}/huc12-line.geojsonl"
 )
 
 for source_file in "${SOURCE_FILES[@]}"; do
@@ -72,7 +78,7 @@ done
 mkdir -p "${OUT_DIR}"
 
 echo "[tiles] building environmental hydro basins PMTiles with Planetiler" >&2
-echo "[tiles] dataset=${DATASET} source_root=${SOURCE_ROOT} z=${MIN_Z}-${MAX_Z} threads=${PLANETILER_THREADS}" >&2
+echo "[tiles] dataset=${DATASET} source_root=${SOURCE_ROOT} handoff=canonical-geoparquet z=${MIN_Z}-${MAX_Z} threads=${PLANETILER_THREADS}" >&2
 
 bash "${ROOT_DIR}/scripts/run-planetiler-custom.sh" \
   "${PLANETILER_SCHEMA_PATH}" \
@@ -80,20 +86,20 @@ bash "${ROOT_DIR}/scripts/run-planetiler-custom.sh" \
   "--minzoom=${MIN_Z}" \
   "--maxzoom=${MAX_Z}" \
   "--threads=${PLANETILER_THREADS}" \
-  "--huc4_polygon=${SOURCE_ROOT}/huc4-polygon.geojson" \
-  "--huc4_line=${SOURCE_ROOT}/huc4-line.geojson" \
-  "--huc4_label=${SOURCE_ROOT}/huc4-label.geojson" \
-  "--huc6_polygon=${SOURCE_ROOT}/huc6-polygon.geojson" \
-  "--huc6_line=${SOURCE_ROOT}/huc6-line.geojson" \
-  "--huc6_label=${SOURCE_ROOT}/huc6-label.geojson" \
-  "--huc8_polygon=${SOURCE_ROOT}/huc8-polygon.geojson" \
-  "--huc8_line=${SOURCE_ROOT}/huc8-line.geojson" \
-  "--huc8_label=${SOURCE_ROOT}/huc8-label.geojson" \
-  "--huc10_polygon=${SOURCE_ROOT}/huc10-polygon.geojson" \
-  "--huc10_line=${SOURCE_ROOT}/huc10-line.geojson" \
-  "--huc10_label=${SOURCE_ROOT}/huc10-label.geojson" \
-  "--huc12_polygon=${SOURCE_ROOT}/huc12-polygon.geojson" \
-  "--huc12_line=${SOURCE_ROOT}/huc12-line.geojson"
+  "--huc4_polygon=${SOURCE_ROOT}/huc4-polygon.geojsonl" \
+  "--huc4_line=${SOURCE_ROOT}/huc4-line.geojsonl" \
+  "--huc4_label=${SOURCE_ROOT}/huc4-label.geojsonl" \
+  "--huc6_polygon=${SOURCE_ROOT}/huc6-polygon.geojsonl" \
+  "--huc6_line=${SOURCE_ROOT}/huc6-line.geojsonl" \
+  "--huc6_label=${SOURCE_ROOT}/huc6-label.geojsonl" \
+  "--huc8_polygon=${SOURCE_ROOT}/huc8-polygon.geojsonl" \
+  "--huc8_line=${SOURCE_ROOT}/huc8-line.geojsonl" \
+  "--huc8_label=${SOURCE_ROOT}/huc8-label.geojsonl" \
+  "--huc10_polygon=${SOURCE_ROOT}/huc10-polygon.geojsonl" \
+  "--huc10_line=${SOURCE_ROOT}/huc10-line.geojsonl" \
+  "--huc10_label=${SOURCE_ROOT}/huc10-label.geojsonl" \
+  "--huc12_polygon=${SOURCE_ROOT}/huc12-polygon.geojsonl" \
+  "--huc12_line=${SOURCE_ROOT}/huc12-line.geojsonl"
 
 echo "[tiles] PMTiles ready" >&2
 echo "PMTILES_PATH=${PMTILES_PATH}"

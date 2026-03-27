@@ -37,9 +37,6 @@ resolve_port() {
     web)
       printf '%s\n' "${MAP_WEB_PORT:-5143}"
       ;;
-    pipeline-monitor)
-      printf '%s\n' "${MAP_PIPELINE_MONITOR_PORT:-5144}"
-      ;;
     docs)
       printf '%s\n' "${MAP_DOCS_PORT:-5145}"
       ;;
@@ -223,7 +220,7 @@ main() {
   local target
   for target in "${targets[@]}"; do
     if [[ "${target}" == "all" ]]; then
-      ports+=("$(read_api_port)" "${MAP_WEB_PORT:-5143}" "${MAP_PIPELINE_MONITOR_PORT:-5144}" "${MAP_DOCS_PORT:-5145}" "3000")
+      ports+=("$(read_api_port)" "${MAP_WEB_PORT:-5143}" "${MAP_DOCS_PORT:-5145}" "3000")
       continue
     fi
 

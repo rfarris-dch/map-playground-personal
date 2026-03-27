@@ -21,6 +21,7 @@ import { createInterface } from "node:readline";
 import type { Writable } from "node:stream";
 import { mergeLakeManifestArtifacts } from "../packages/ops/src/etl/batch-artifact-layout";
 import { writeFloodCanonicalGeoParquet } from "../packages/ops/src/etl/environmental-flood-geoparquet";
+import { loadRunReproducibilityEnvFileIfPresent } from "../packages/ops/src/etl/run-reproducibility";
 import {
   ensureRunDirectories,
   materializeSource,
@@ -67,13 +68,14 @@ const HTTP_REQUEST_RETRY_BASE_DELAY_MS = 1000;
 const HTTP_REQUEST_TIMEOUT_MS = 120_000;
 const HTTP_GEOMETRY_REQUEST_TIMEOUT_MS = 30_000;
 const LOCAL_NORMALIZE_PROGRESS_INTERVAL_MS = 3000;
+const PROJECT_ROOT = resolveProjectRoot(import.meta.url);
 const MAPSERVER_PAGE_SIZE = 500;
 const MAPSERVER_GEOMETRY_BATCH_SIZE = 25;
 const MAPSERVER_MIN_PAGE_SIZE = 100;
 const LEADING_SLASH_PATTERN = /^\//;
 const TRAILING_SLASH_PATTERN = /\/$/;
 const ISO_MILLISECONDS_SUFFIX_PATTERN = /\.\d{3}Z$/;
-const MATERIALIZE_COUNT_ROW_PATTERN = /^\d+\t\d+$/;
+const MATERIALIZE_COUNT_ROW_PATTERN = /^\d+\t\d+\t\d+\t\d+$/;
 const NFHL_STATE_ZIP_PATTERN = /^NFHL_(\d{2})_\d{8}\.zip$/i;
 const ZIP_SUFFIX_PATTERN = /\.zip$/i;
 
@@ -133,6 +135,12 @@ interface FloodMaterializeBatch {
   readonly rangeEnd: number;
   readonly rangeStart: number;
   readonly rowCount: number;
+}
+
+interface FloodCanonicalCountsRecord {
+  readonly "100": number;
+  readonly "500": number;
+  readonly full: number;
 }
 
 interface ArcgisNormalizeSequenceArgs {
@@ -420,6 +428,29 @@ function readJsonRecord(path: string): Record<string, unknown> | null {
 
 function readFloodFeatureCount(runSummaryPath: string): number | null {
   return readNullableInteger(readJsonRecord(runSummaryPath)?.featureCount);
+}
+
+function readFloodCanonicalCountsRecord(value: unknown): FloodCanonicalCountsRecord | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return null;
+  }
+
+  const full = readNullableInteger(Reflect.get(value, "full"));
+  const hundredYearCount = readNullableInteger(Reflect.get(value, "100"));
+  const fiveHundredYearCount = readNullableInteger(Reflect.get(value, "500"));
+  if (full === null || hundredYearCount === null || fiveHundredYearCount === null) {
+    return null;
+  }
+
+  return {
+    "100": hundredYearCount,
+    "500": fiveHundredYearCount,
+    full,
+  };
+}
+
+function readFloodCanonicalCounts(runSummaryPath: string): FloodCanonicalCountsRecord | null {
+  return readFloodCanonicalCountsRecord(readJsonRecord(runSummaryPath)?.canonicalCounts);
 }
 
 function readFloodLoadProgress(path: string): FloodLoadProgressRecord | null {
@@ -839,7 +870,12 @@ async function runFloodMaterializeBatch(args: {
   readonly databaseUrl: string;
   readonly loadSourceSrid: number;
   readonly runId: string;
-}): Promise<{ readonly insertedRowCount: number; readonly processedRowCount: number }> {
+}): Promise<{
+  readonly insertedFlood100RowCount: number;
+  readonly insertedFlood500RowCount: number;
+  readonly insertedRowCount: number;
+  readonly processedRowCount: number;
+}> {
   const output = (
     await runCommandAsync("psql", [
       args.databaseUrl,
@@ -957,11 +993,19 @@ inserted_rows AS (
     insertable_stage.geom_3857 AS geom_3857
   FROM insertable_stage
   ON CONFLICT (feature_id) DO NOTHING
-  RETURNING 1
+  RETURNING is_flood_100, is_flood_500
 )
 SELECT
   (SELECT COUNT(*)::bigint FROM bounded_stage),
-  (SELECT COUNT(*)::bigint FROM inserted_rows);
+  (SELECT COUNT(*)::bigint FROM inserted_rows),
+  (
+    SELECT COUNT(*) FILTER (WHERE inserted_rows.is_flood_100)::bigint
+    FROM inserted_rows
+  ),
+  (
+    SELECT COUNT(*) FILTER (WHERE inserted_rows.is_flood_500)::bigint
+    FROM inserted_rows
+  );
 `,
     ])
   ).trim();
@@ -975,14 +1019,30 @@ SELECT
     throw new Error(`Flood materialize batch did not return a parseable count row.\n${output}`);
   }
 
-  const [processedRowCountText, insertedRowCountText] = countLine.split("\t");
+  const [
+    processedRowCountText,
+    insertedRowCountText,
+    insertedFlood100RowCountText,
+    insertedFlood500RowCountText,
+  ] = countLine.split("\t");
   const processedRowCount = readNullableInteger(processedRowCountText);
   const insertedRowCount = readNullableInteger(insertedRowCountText);
-  if (processedRowCount === null || insertedRowCount === null) {
-    throw new Error("Flood materialize batch did not return processed/inserted row counts.");
+  const insertedFlood100RowCount = readNullableInteger(insertedFlood100RowCountText);
+  const insertedFlood500RowCount = readNullableInteger(insertedFlood500RowCountText);
+  if (
+    processedRowCount === null ||
+    insertedRowCount === null ||
+    insertedFlood100RowCount === null ||
+    insertedFlood500RowCount === null
+  ) {
+    throw new Error(
+      "Flood materialize batch did not return processed/inserted/canonical row counts."
+    );
   }
 
   return {
+    insertedFlood100RowCount,
+    insertedFlood500RowCount,
     insertedRowCount,
     processedRowCount,
   };
@@ -1039,7 +1099,7 @@ async function materializeFloodCanonicalTable(args: {
   readonly runConfig: RunConfigRecord;
   readonly sourcePath: string;
   readonly sourceUrl: string;
-}): Promise<void> {
+}): Promise<FloodCanonicalCountsRecord> {
   runCommand("psql", [
     args.databaseUrl,
     "-v",
@@ -1094,6 +1154,9 @@ SET
   let materializeRangeEnd = canResumeMaterialize
     ? (currentLoadProgress?.materializeRangeEnd ?? 0)
     : 0;
+  let canonicalFullCount = 0;
+  let canonicalFlood100Count = 0;
+  let canonicalFlood500Count = 0;
 
   const persistMaterializeProgress = () => {
     writeFloodLoadProgress(loadProgressPath, {
@@ -1140,6 +1203,9 @@ SET
       (left, right) => left.batch.rangeStart - right.batch.rangeStart
     );
     for (const completedBatch of orderedCompletedBatches) {
+      canonicalFullCount += completedBatch.counts.insertedRowCount;
+      canonicalFlood100Count += completedBatch.counts.insertedFlood100RowCount;
+      canonicalFlood500Count += completedBatch.counts.insertedFlood500RowCount;
       materializeProcessedRowCount += completedBatch.counts.processedRowCount;
       materializeRangeEnd = completedBatch.batch.rangeEnd;
     }
@@ -1188,6 +1254,12 @@ ANALYZE environmental_meta.flood_runs;
 ANALYZE ${FLOOD_CURRENT_TABLE_NAME};
 `,
   ]);
+
+  return {
+    "100": canonicalFlood100Count,
+    "500": canonicalFlood500Count,
+    full: canonicalFullCount,
+  };
 }
 
 function readNormalizeProgress(path: string): NormalizeProgressRecord | null {
@@ -2860,12 +2932,7 @@ async function loadStep(): Promise<void> {
 
   const loadSourceLayer = resolveFloodLoadSourceLayer();
   const databaseUrl = requireDatabaseUrl();
-  const schemaPath = join(
-    resolveProjectRoot(import.meta.url),
-    "scripts",
-    "sql",
-    "environmental-flood-schema.sql"
-  );
+  const schemaPath = join(PROJECT_ROOT, "scripts", "sql", "environmental-flood-schema.sql");
   const ogrPostgresConnectionString = toOgrPostgresConnectionString(databaseUrl);
 
   runCommand("psql", [databaseUrl, "-v", "ON_ERROR_STOP=1", "-f", schemaPath]);
@@ -2929,7 +2996,7 @@ async function loadStep(): Promise<void> {
     loadSourceSrid,
     normalizedSource: normalizedFloodPath,
   });
-  await materializeFloodCanonicalTable({
+  const canonicalCounts = await materializeFloodCanonicalTable({
     activeStatusPath: join(context.runDir, "active-run.json"),
     context,
     databaseUrl,
@@ -2939,6 +3006,13 @@ async function loadStep(): Promise<void> {
     sourcePath,
     sourceUrl,
   });
+
+  const currentRunSummary = readJsonRecord(context.runSummaryPath) ?? {};
+  writeJsonFile(context.runSummaryPath, {
+    ...currentRunSummary,
+    canonicalCounts,
+    completedAt: new Date().toISOString(),
+  });
 }
 
 async function exportGeoparquetStep(): Promise<void> {
@@ -2947,10 +3021,13 @@ async function exportGeoparquetStep(): Promise<void> {
 
   const runConfig = readRunConfig(context.runConfigPath);
   const databaseUrl = requireDatabaseUrl();
+  const currentRunSummary = readJsonRecord(context.runSummaryPath) ?? {};
+  const expectedCounts = readFloodCanonicalCounts(context.runSummaryPath);
   const exportResult = await writeFloodCanonicalGeoParquet({
     context,
     dataVersion: runConfig.dataVersion,
     databaseUrl,
+    ...(expectedCounts === null ? {} : { expectedCounts }),
     runId: runConfig.runId,
   });
 
@@ -2960,9 +3037,9 @@ async function exportGeoparquetStep(): Promise<void> {
     layout: context,
   });
 
-  const currentRunSummary = readJsonRecord(context.runSummaryPath) ?? {};
   writeJsonFile(context.runSummaryPath, {
     ...currentRunSummary,
+    ...(expectedCounts === null ? { canonicalCounts: exportResult.counts } : {}),
     geoParquetExport: {
       artifactRelativePath: exportResult.artifact.relativePath,
       completedAt: new Date().toISOString(),
@@ -2973,6 +3050,7 @@ async function exportGeoparquetStep(): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  await loadRunReproducibilityEnvFileIfPresent(PROJECT_ROOT, process.env);
   const step = currentStep();
   if (step === "extract") {
     await extractStep();

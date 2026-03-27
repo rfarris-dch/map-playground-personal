@@ -57,6 +57,14 @@
       "types": "./dist/boundaries-http.d.ts",
       "default": "./dist/boundaries-http.js"
     },
+    "./confidence-http": {
+      "types": "./dist/confidence-http.d.ts",
+      "default": "./dist/confidence-http.js"
+    },
+    "./corridor-http": {
+      "types": "./dist/corridor-http.d.ts",
+      "default": "./dist/corridor-http.js"
+    },
     "./county-intelligence-http": {
       "types": "./dist/county-intelligence-http.d.ts",
       "default": "./dist/county-intelligence-http.js"
@@ -121,13 +129,21 @@
       "types": "./dist/parcel-scoring-http.d.ts",
       "default": "./dist/parcel-scoring-http.js"
     },
-    "./pipeline-http": {
-      "types": "./dist/pipeline-http.d.ts",
-      "default": "./dist/pipeline-http.js"
+    "./packet-http": {
+      "types": "./dist/packet-http.d.ts",
+      "default": "./dist/packet-http.js"
+    },
+    "./policy-posture-http": {
+      "types": "./dist/policy-posture-http.d.ts",
+      "default": "./dist/policy-posture-http.js"
     },
     "./providers-table-http": {
       "types": "./dist/providers-table-http.d.ts",
       "default": "./dist/providers-table-http.js"
+    },
+    "./run-reproducibility-http": {
+      "types": "./dist/run-reproducibility-http.d.ts",
+      "default": "./dist/run-reproducibility-http.js"
     },
     "./spatial-analysis-summary-http": {
       "types": "./dist/spatial-analysis-summary-http.d.ts",

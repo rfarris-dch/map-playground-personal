@@ -1,7 +1,6 @@
 import { cpSync, existsSync, mkdirSync, renameSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { ensureDirectory } from "./atomic-file-store";
-import { runBufferedCommand } from "./command-runner";
 import { runDuckDbCli } from "./duckdb-runner";
 import type {
   FloodCanonicalGeoParquetArtifactSpec,
@@ -18,7 +17,6 @@ const JSON_PAYLOAD_START_RE = /[[{]/;
 const FLOOD_CANONICAL_LAYER = "flood_hazard";
 const FLOOD_BANDS: readonly FloodCanonicalGeoParquetBand[] = ["full", "100", "500"];
 const PARQUET_FILE_NAME = "part-0.parquet";
-const PSQL_COUNT_ROW_RE = /^(\d+)\t(\d+)\t(\d+)$/;
 
 function isJsonRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -30,18 +28,6 @@ function toSqlStringLiteral(value: string): string {
 
 function normalizeManifestRelativePath(value: string): string {
   return value.replaceAll("\\", "/");
-}
-
-function copyProcessEnvironment(
-  envSource: NodeJS.ProcessEnv = process.env
-): Record<string, string> {
-  return Object.entries(envSource).reduce<Record<string, string>>((next, [key, value]) => {
-    if (typeof value === "string") {
-      next[key] = value;
-    }
-
-    return next;
-  }, {});
 }
 
 function summarizeCommandFailure(stdout: string, stderr: string): string {
@@ -280,76 +266,8 @@ SELECT
   ST_GeomFromWKB(geom_wkb) AS geom
 FROM postgres_query('flood_pg', ${toSqlStringLiteral(postgresSourceSql)});
 
-${copyStatements}`;
-}
-
-function decodeCountRow(output: string): FloodCanonicalGeoParquetValidationCounts | null {
-  const countLine = output
-    .split("\n")
-    .map((line) => line.trim())
-    .reverse()
-    .find((line) => PSQL_COUNT_ROW_RE.test(line));
-  if (typeof countLine !== "string") {
-    return null;
-  }
-
-  const match = countLine.match(PSQL_COUNT_ROW_RE);
-  const fullCount = readNullableNumber(match?.[1]);
-  const flood100Count = readNullableNumber(match?.[2]);
-  const flood500Count = readNullableNumber(match?.[3]);
-  if (fullCount === null || flood100Count === null || flood500Count === null) {
-    return null;
-  }
-
-  return {
-    "100": flood100Count,
-    "500": flood500Count,
-    full: fullCount,
-  };
-}
-
-function buildFloodExpectedCountsSql(runId: string): string {
-  return `SELECT
-  COUNT(*)::bigint AS full_count,
-  COUNT(*) FILTER (WHERE is_flood_100)::bigint AS flood_100_count,
-  COUNT(*) FILTER (WHERE is_flood_500)::bigint AS flood_500_count
-FROM environmental_current.flood_hazard
-WHERE run_id = ${toSqlStringLiteral(runId)};`;
-}
-
-async function queryExpectedFloodCounts(
-  args: Pick<FloodCanonicalGeoParquetWriteArgs, "databaseUrl" | "env" | "runId">
-): Promise<FloodCanonicalGeoParquetValidationCounts> {
-  const result = await runBufferedCommand({
-    args: [
-      args.databaseUrl,
-      "-At",
-      "-F",
-      "\t",
-      "-v",
-      "ON_ERROR_STOP=1",
-      "-c",
-      buildFloodExpectedCountsSql(args.runId),
-    ],
-    command: "psql",
-    env: copyProcessEnvironment(args.env),
-  });
-
-  if (result.exitCode !== 0) {
-    throw new Error(
-      `flood expected-count query failed: ${summarizeCommandFailure(result.stdout, result.stderr)}`
-    );
-  }
-
-  const counts = decodeCountRow(result.stdout);
-  if (counts === null) {
-    throw new Error("flood expected-count query did not return parseable counts");
-  }
-  if (counts.full === 0) {
-    throw new Error(`environmental_current.flood_hazard has no rows for run_id=${args.runId}`);
-  }
-
-  return counts;
+${copyStatements}
+`;
 }
 
 function buildFloodValidationSql(spec: FloodCanonicalGeoParquetArtifactSpec): string {
@@ -358,25 +276,33 @@ function buildFloodValidationSql(spec: FloodCanonicalGeoParquetArtifactSpec): st
       const bandLabel = bandOutput.band;
       return `SELECT
   ${toSqlStringLiteral(bandLabel)} AS flood_band,
-  typeof(geom) AS geometry_type,
+  ANY_VALUE(typeof(geom_value)) AS geometry_type,
   COUNT(*)::bigint AS row_count,
-  SUM(CASE WHEN geom IS NULL THEN 1 ELSE 0 END)::bigint AS null_geom_count,
+  SUM(CASE WHEN geom_value IS NULL THEN 1 ELSE 0 END)::bigint AS null_geom_count,
   MIN(xmin) AS min_xmin,
   MAX(xmax) AS max_xmax,
-  MIN(ST_XMin(geom)) AS min_geom_xmin,
-  MAX(ST_XMax(geom)) AS max_geom_xmax
-FROM read_parquet(${toSqlStringLiteral(bandOutput.outputPath)}, hive_partitioning = false)`;
+  MIN(ST_XMin(geom_value)) AS min_geom_xmin,
+  MAX(ST_XMax(geom_value)) AS max_geom_xmax
+FROM (
+  SELECT
+    *,
+    ST_GeomFromWKB(geom) AS geom_value
+  FROM read_parquet(${toSqlStringLiteral(bandOutput.outputPath)}, hive_partitioning = false)
+) AS band_rows`;
     })
     .join("\nUNION ALL\n");
 }
 
+function isDuckDbGeometryType(value: string): boolean {
+  return value === "GEOMETRY" || value.startsWith("GEOMETRY(");
+}
+
 export async function validateFloodCanonicalGeoParquetOutput(
-  args: Pick<FloodCanonicalGeoParquetWriteArgs, "context" | "databaseUrl" | "env" | "runId"> & {
+  args: Pick<FloodCanonicalGeoParquetWriteArgs, "context" | "env" | "runId"> & {
+    readonly expectedCounts?: FloodCanonicalGeoParquetValidationCounts;
     readonly spec: FloodCanonicalGeoParquetArtifactSpec;
   }
 ): Promise<FloodCanonicalGeoParquetValidationCounts> {
-  const expectedCounts = await queryExpectedFloodCounts(args);
-
   const result = await runDuckDbCli({
     bootstrapPath: args.context.runDuckDbBootstrapPath,
     cwd: args.context.runDir,
@@ -398,28 +324,33 @@ export async function validateFloodCanonicalGeoParquetOutput(
   }
 
   const actualCounts = collectFloodValidationCounts(rows);
+  if (actualCounts.full === 0) {
+    throw new Error(`environmental_current.flood_hazard has no rows for run_id=${args.runId}`);
+  }
 
-  if (actualCounts.full !== expectedCounts.full) {
-    throw new Error(
-      `flood GeoParquet full count mismatch: expected ${String(expectedCounts.full)}, got ${String(actualCounts.full)}`
-    );
-  }
-  if (actualCounts["100"] !== expectedCounts["100"]) {
-    throw new Error(
-      `flood GeoParquet 100 count mismatch: expected ${String(expectedCounts["100"])}, got ${String(actualCounts["100"])}`
-    );
-  }
-  if (actualCounts["500"] !== expectedCounts["500"]) {
-    throw new Error(
-      `flood GeoParquet 500 count mismatch: expected ${String(expectedCounts["500"])}, got ${String(actualCounts["500"])}`
-    );
+  if (args.expectedCounts !== undefined) {
+    if (actualCounts.full !== args.expectedCounts.full) {
+      throw new Error(
+        `flood GeoParquet full count mismatch: expected ${String(args.expectedCounts.full)}, got ${String(actualCounts.full)}`
+      );
+    }
+    if (actualCounts["100"] !== args.expectedCounts["100"]) {
+      throw new Error(
+        `flood GeoParquet 100 count mismatch: expected ${String(args.expectedCounts["100"])}, got ${String(actualCounts["100"])}`
+      );
+    }
+    if (actualCounts["500"] !== args.expectedCounts["500"]) {
+      throw new Error(
+        `flood GeoParquet 500 count mismatch: expected ${String(args.expectedCounts["500"])}, got ${String(actualCounts["500"])}`
+      );
+    }
   }
 
   return actualCounts;
 }
 
 function assertFloodValidationRow(row: FloodCanonicalGeoParquetValidationRow): void {
-  if (row.geometry_type !== "GEOMETRY") {
+  if (!isDuckDbGeometryType(row.geometry_type)) {
     throw new Error(
       `flood GeoParquet ${row.flood_band} band did not decode as GEOMETRY (got ${row.geometry_type})`
     );
@@ -555,13 +486,17 @@ export async function writeFloodCanonicalGeoParquet(
 
   const counts = await validateFloodCanonicalGeoParquetOutput({
     context: args.context,
-    databaseUrl: args.databaseUrl,
+    ...(args.expectedCounts === undefined ? {} : { expectedCounts: args.expectedCounts }),
     runId: args.runId,
     spec,
     ...(args.env === undefined ? {} : { env: args.env }),
   });
 
   publishStagedFloodVersion(spec);
+  rmSync(spec.stageVersionRootPath, {
+    force: true,
+    recursive: true,
+  });
 
   return {
     artifact: spec.artifact,

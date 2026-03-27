@@ -161,14 +161,15 @@ function aggregateClusterLeaves(
       (a.commissionedPowerMw + a.underConstructionPowerMw + a.plannedPowerMw)
   );
 
-  const topProviders: ClusterProviderSummary[] = Array.from(providerPowerMap.entries())
+  const allProviders = Array.from(providerPowerMap.entries())
     .map(([name, totalPowerMw]) => ({ name, totalPowerMw }))
-    .sort((a, b) => b.totalPowerMw - a.totalPowerMw)
-    .slice(0, 3);
+    .sort((a, b) => b.totalPowerMw - a.totalPowerMw);
+  const topProviders: ClusterProviderSummary[] = allProviders.slice(0, 3);
 
   return {
     ...clusterSummary,
     facilities,
+    providerCount: allProviders.length,
     topProviders,
     screenPoint,
   };

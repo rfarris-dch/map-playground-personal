@@ -105,6 +105,13 @@ function createCountyScore(): CountyScore {
     stateAbbrev: "TX",
     rankStatus: "ranked",
     attractivenessTier: "platinum-plus",
+    confidence: {
+      evidenceConfidence: "high",
+      methodConfidence: "medium",
+      coverageConfidence: "high",
+      freshnessState: "fresh",
+      suppressionState: "none",
+    },
     confidenceBadge: "high",
     marketPressureIndex: 94.2,
     demandPressureScore: 88.1,
